@@ -4,6 +4,7 @@
  * Oberfläche baut daraus die Raster. Alle Daten als Text JJJJ-MM-TT, gerechnet in UTC.
  */
 import { verschiebe } from './sichten';
+import { t } from './texte';
 
 /** Ansichten von „Zu erledigen“ (#725); die Wahl merkt sich Ablago je Benutzer. */
 export const ERLEDIGEN_ANSICHTEN = ['liste', 'monat', 'jahr'] as const;
@@ -65,9 +66,9 @@ export const jahresZeitraum = (jahr: number) => ({ von: `${String(jahr).padStart
  * Gibt den Grund zurück, wenn etwas nicht stimmt, sonst null.
  */
 export function zeitraumProblem(von: unknown, bis: unknown): string | null {
-  if (!istTag(von) || !istTag(bis)) return 'Der Zeitraum braucht „von“ und „bis“ als Datum JJJJ-MM-TT.';
-  if (bis < von) return '„bis“ liegt vor „von“.';
-  if (tageZwischen(von, bis) + 1 > ZEITRAUM_MAX_TAGE) return `Der Zeitraum darf höchstens ${ZEITRAUM_MAX_TAGE} Tage lang sein.`;
+  if (!istTag(von) || !istTag(bis)) return t('gemeinsam.kalender.der-zeitraum-braucht-von');
+  if (bis < von) return t('gemeinsam.kalender.bis-liegt-vor-von');
+  if (tageZwischen(von, bis) + 1 > ZEITRAUM_MAX_TAGE) return t('gemeinsam.kalender.der-zeitraum-darf-hoechstens', { ZEITRAUM_MAX_TAGE });
   return null;
 }
 

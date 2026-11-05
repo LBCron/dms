@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { MAX_DATEIGROESSE } from '../../shared/src/model';
 import { Fachfehler } from './fehler';
 import { bildArt } from './pdfseiten';
+import { t } from './sprache';
 
 /**
  * Fotostapel (#490, „Post fotografieren“): Das Handy lädt jedes Foto gleich nach der Aufnahme einzeln
@@ -19,19 +20,19 @@ export class Fotostapel {
   constructor(private wurzel = join(tmpdir(), 'dms-fotostapel'), private jetzt = () => Date.now()) {}
 
   private ordner(benutzerId: string) {
-    if (!ID.test(benutzerId)) throw new Fachfehler(403, 'Fotos ablegen geht nur angemeldet.');
+    if (!ID.test(benutzerId)) throw new Fachfehler(403, t('meldungen.fotostapel.fotos-ablegen-geht-nur'));
     return join(this.wurzel, benutzerId);
   }
 
   /** Ein Foto ablegen; liefert seine Kennung. */
   async lege(benutzerId: string, inhalt: unknown): Promise<string> {
-    if (!Buffer.isBuffer(inhalt) || !inhalt.length) throw new Fachfehler(422, 'Das Foto ist leer.');
-    if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Das Foto ist größer als 100 MB.');
-    if (!bildArt(inhalt)) throw new Fachfehler(422, 'Nur Fotos als JPEG oder PNG lassen sich als Seite übernehmen.');
+    if (!Buffer.isBuffer(inhalt) || !inhalt.length) throw new Fachfehler(422, t('meldungen.fotostapel.das-foto-ist-leer'));
+    if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.fotostapel.das-foto-ist-groesser'));
+    if (!bildArt(inhalt)) throw new Fachfehler(422, t('meldungen.fotostapel.nur-fotos-als-jpeg'));
     await this.aufraeumen();
     const o = this.ordner(benutzerId);
     await mkdir(o, { recursive: true });
-    if ((await readdir(o)).length >= FOTOS_MAX * 2) throw new Fachfehler(429, 'Zu viele Fotos auf einmal – bitte erst einen Beleg fertig machen.');
+    if ((await readdir(o)).length >= FOTOS_MAX * 2) throw new Fachfehler(429, t('meldungen.fotostapel.zu-viele-fotos-auf'));
     const id = randomUUID();
     await writeFile(join(o, id), inhalt);
     return id;
@@ -40,13 +41,13 @@ export class Fotostapel {
   /** Fotos in dieser Reihenfolge holen und aus dem Stapel nehmen. */
   async nimm(benutzerId: string, ids: unknown): Promise<Buffer[]> {
     const liste = Array.isArray(ids) ? ids.map(String) : [];
-    if (!liste.length) throw new Fachfehler(422, 'Keine Fotos.');
-    if (liste.length > FOTOS_MAX) throw new Fachfehler(422, `Höchstens ${FOTOS_MAX} Seiten auf einmal.`);
-    if (liste.some((id) => !ID.test(id))) throw new Fachfehler(422, 'Unbekanntes Foto.');
+    if (!liste.length) throw new Fachfehler(422, t('meldungen.fotostapel.keine-fotos'));
+    if (liste.length > FOTOS_MAX) throw new Fachfehler(422, t('meldungen.fotostapel.hoechstens-seiten-auf-einmal', { FOTOS_MAX }));
+    if (liste.some((id) => !ID.test(id))) throw new Fachfehler(422, t('meldungen.fotostapel.unbekanntes-foto'));
     const o = this.ordner(benutzerId);
     const bilder: Buffer[] = [];
     for (const id of liste) {
-      try { bilder.push(await readFile(join(o, id))); } catch { throw new Fachfehler(410, 'Ein Foto ist nicht mehr da (nach zwei Stunden verfallen) – bitte neu aufnehmen.'); }
+      try { bilder.push(await readFile(join(o, id))); } catch { throw new Fachfehler(410, t('meldungen.fotostapel.ein-foto-ist-nicht')); }
     }
     return bilder;
   }

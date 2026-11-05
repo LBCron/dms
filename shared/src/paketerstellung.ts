@@ -3,6 +3,7 @@
  * Prüfung und Erzeugung stecken im Server (paketerstellung.ts); diese Datei teilen Server und Oberfläche.
  */
 import { PAKET_ID, VERSION } from './pakete';
+import { t } from './texte';
 
 /** Freie Lizenzen der Registry (REGELN.md, Positivliste) – nur sie dürfen in den offiziellen Katalog. */
 export const LIZENZEN = ['MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'MPL-2.0', 'LGPL-3.0-or-later', 'GPL-3.0-or-later', 'AGPL-3.0-or-later', 'CC0-1.0'] as const;
@@ -39,7 +40,7 @@ export const lizenzArtVon = (l: string): LizenzArt => (istFreieLizenz(l) ? 'frei
 export function lizenzVerweis(name: string): string {
   const s = name.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
-  return `LicenseRef-${s || 'eigene'}`;
+  return t('gemeinsam.paketerstellung.licenseref', { wert: s || 'eigene' });
 }
 
 /** Grenzen aus dem Schema der Registry (manifest.schema.json). */

@@ -6,7 +6,7 @@ import { bereichName } from '../../../shared/src/werkbankansicht';
 import { heuteIn } from '../../../shared/src/sichten';
 import { AbwesenheitFormular, zeitraumText } from '../profil/Abwesenheit';
 import { api, type LinkErgebnis, type Systemkonto } from '../api';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
 import { geheZu, Link, loeseWache } from '../ort';
@@ -17,9 +17,10 @@ import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 import { SystemkontenGruppe, SystemkontoKennzeichen } from './Systemkonten';
 import { SYSTEMKONTEN_AUF } from '../../../shared/src/systemkonten';
+import { gebietsschema } from '../../../shared/src/sprache';
 
-const datumZeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'noch nie');
-const status = (b: Benutzer) => (!b.aktiv ? { text: 'deaktiviert', art: '' } : !b.hatPasswort ? { text: 'eingeladen', art: 'warn' } : { text: 'aktiv', art: 'gut' });
+const datumZeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : t('werkbank.benutzer.noch-nie'));
+const status = (b: Benutzer) => (!b.aktiv ? { text: t('werkbank.benutzer.status.deaktiviert'), art: '' } : !b.hatPasswort ? { text: t('werkbank.benutzer.status.eingeladen'), art: 'warn' } : { text: t('werkbank.benutzer.status.aktiv'), art: 'gut' });
 
 type RolleEintrag = { id: string; name: string; system: boolean };
 
@@ -28,7 +29,7 @@ function useRollen() {
   const d = useDaten();
   const [rollen, setRollen] = useState<RolleEintrag[] | null>(null);
   useEffect(() => { api.rollen().then(setRollen).catch(() => setRollen([])); }, [d.stand]);
-  return { weitere: (rollen ?? []).filter((r) => !r.system), geladen: rollen !== null, typ: d.typen.find((t) => t.system === 'rolle') };
+  return { weitere: (rollen ?? []).filter((r) => !r.system), geladen: rollen !== null, typ: d.typen.find((mappentyp) => mappentyp.system === 'rolle') };
 }
 
 /** Rollen als Haken; die Systemrolle Mitglied hat jeder. Verwalten ist keine Rolle (#818), sondern ein Recht. */
@@ -36,13 +37,13 @@ function WeitereRollen({ gewaehlt, setze, sperre }: { gewaehlt: string[]; setze:
   const r = useRollen();
   return (
     <fieldset className="wahl rollenwahl">
-      <legend>Rollen <small className="leise">z. B. als Verantwortliche in Verträgen</small></legend>
-      {r.geladen && !r.weitere.length && <p className="leise klein">Noch keine Rollen angelegt.</p>}
+      <legend>{tn('werkbank.benutzer.rollen', { klein: <small className="leise">{t('werkbank.benutzer.z-b-als-verantwortliche')}</small> })}</legend>
+      {r.geladen && !r.weitere.length && <p className="leise klein">{t('werkbank.benutzer.noch-keine-rollen-angelegt')}</p>}
       {r.weitere.map((x) => (
         <label key={x.id} className="haken"><input type="checkbox" disabled={sperre} checked={gewaehlt.includes(x.id)}
           onChange={(e) => setze(e.target.checked ? [...gewaehlt, x.id] : gewaehlt.filter((y) => y !== x.id))} /><span>{x.name}</span></label>
       ))}
-      {r.typ && <Link to={`/ablage/${r.typ.id}`} className="verweis klein">Rollen in der Ablage verwalten →</Link>}
+      {r.typ && <Link to={`/ablage/${r.typ.id}`} className="verweis klein">{t('werkbank.benutzer.rollen-in-der-ablage')}</Link>}
     </fieldset>
   );
 }
@@ -66,29 +67,29 @@ export function BenutzerListe({ liste: alle, offen, alltag }: { liste: Benutzer[
   const heute = heuteIn();
   return (
     <>
-      <Listenkopf titel="Benutzer" hilfe="werkbank.benutzer" beschreibung={<>{t('werkbank.verwaltungsrecht.liste')} {aktiv} gerade aktiv (in den letzten {AKTIV_MINUTEN} Minuten).</>}>
-        <Link to="/werkbank/benutzer/neu" className="knopf primaer klein">+ Neu</Link>
+      <Listenkopf titel={t('werkbank.benutzer.benutzer')} hilfe="werkbank.benutzer" beschreibung={<>{t('werkbank.benutzer.gerade-aktiv-in-den', { wert: t('werkbank.verwaltungsrecht.liste'), aktiv, AKTIV_MINUTEN })}</>}>
+        <Link to="/werkbank/benutzer/neu" className="knopf primaer klein">{t('werkbank.benutzer.neu')}</Link>
       </Listenkopf>
       {deaktiviert.length > 0 && (
         <label className="haken klein"><input type="checkbox" checked={zeigeDeaktivierte} onChange={(e) => d.setzeEinstellung('benutzer_deaktivierte', e.target.checked || null)} />
-          <span>Deaktivierte zeigen ({deaktiviert.length})</span></label>
+          <span>{t('werkbank.benutzer.deaktivierte-zeigen', { deaktiviert: deaktiviert.length })}</span></label>
       )}
       {/* Systemkonten über den Menschen, eingeklappt als Vorgabe (#817). */}
       <SystemkontenListe offen={offen} />
       <ul className="mappenliste">
-        {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">Neuer Benutzer</span><span className="unter">noch nicht angelegt</span></span></li>}
+        {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">{t('werkbank.benutzer.neuer-benutzer')}</span><span className="unter">{t('werkbank.benutzer.noch-nicht-angelegt')}</span></span></li>}
         {liste.map((b) => {
           const s = status(b);
           return (
             <li key={b.id}>
               <Link to={`/werkbank/benutzer/${b.id}`} className={`eintrag werk ${offen === b.id ? 'an' : ''} ${b.aktiv ? '' : 'grau'}`}>
-                <span className="titel">{b.aktiv ? b.name || b.email : <span className="person-ehemalig">{b.name || b.email}</span>}{b.id === ich.id && <span className="chip">du</span>}</span>
+                <span className="titel">{b.aktiv ? b.name || b.email : <span className="person-ehemalig">{b.name || b.email}</span>}{b.id === ich.id && <span className="chip">{t('werkbank.benutzer.du')}</span>}</span>
                 {b.id === alltag && <span className="unter"><span className="chip info">{t('werkbank.aufgabenempfaenger.chip')}</span></span>}
                 <span className="unter">{b.email}{darfVerwalten(b) && <> · <span className="chip">{hatGesamt(b) ? t('werkbank.verwaltungsrecht.chip.gesamt') : t('werkbank.verwaltungsrecht.chip.teil')}</span></>}</span>
-                <span className="unter">Letzte Anmeldung: {datumZeit(b.letzteAnmeldung)}</span>
-                <span><span className={`chip ${s.art}`}>{s.text}</span>{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}
-                  {b.aktiv && b.abwesenheit?.an && <> <span className="chip warn">{abwesenheitWirkt(b.abwesenheit, heute) ? 'abwesend' : 'demnächst abwesend'}{b.abwesenheit.bis ? ` bis ${b.abwesenheit.bis.split('-').reverse().join('.')}` : ''}</span></>}</span>
-                {b.aktiv && b.abwesenheit?.an && <span className="unter">vertreten durch {d.person(b.abwesenheit.vertreterId)}</span>}
+                <span className="unter">{t('werkbank.benutzer.letzte-anmeldung', { datumZeit: datumZeit(b.letzteAnmeldung) })}</span>
+                <span><span className={`chip ${s.art}`}>{s.text}</span>{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">{t('werkbank.benutzer.gerade-aktiv')}</span></>}
+                  {b.aktiv && b.abwesenheit?.an && <> <span className="chip warn">{abwesenheitWirkt(b.abwesenheit, heute) ? t('werkbank.benutzer.abwesend') : t('werkbank.benutzer.demnaechst-abwesend')}{b.abwesenheit.bis ? t('werkbank.benutzer.bis', { reverse: b.abwesenheit.bis.split('-').reverse().join('.') }) : ''}</span></>}</span>
+                {b.aktiv && b.abwesenheit?.an && <span className="unter">{t('werkbank.benutzer.vertreten-durch', { person: d.person(b.abwesenheit.vertreterId) })}</span>}
               </Link>
             </li>
           );
@@ -136,9 +137,9 @@ function SystemkontenListe({ offen }: { offen?: string }) {
 /** Rechte Spalte zu einem Systemkonto (#673): nur Angaben, nichts zu bearbeiten. */
 export function SystemkontoDetail({ id }: { id: string }) {
   const liste = useSystemkonten();
-  if (!liste) return <p className="leise">Lade …</p>;
+  if (!liste) return <p className="leise">{t('werkbank.benutzer.lade')}</p>;
   const k = liste.find((x) => x.id === id);
-  if (!k) return <div className="leer"><p>Dieses Konto gibt es nicht (mehr).</p></div>;
+  if (!k) return <div className="leer"><p>{t('werkbank.benutzer.dieses-konto-gibt-es')}</p></div>;
   const rolle = t(`konten.systemkonten.rolle.${k.rolle}`);
   return (
     <div className="blatt">
@@ -156,7 +157,7 @@ export function SystemkontoDetail({ id }: { id: string }) {
 export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => Promise<void> }) {
   const { ich, aktualisieren } = useKonto();
   const d = useDaten();
-  const benutzerTyp = d.typen.find((t) => t.system === 'benutzer');
+  const benutzerTyp = d.typen.find((mappentyp) => mappentyp.system === 'benutzer');
   // Löschen nur, solange eine Einladung nie angenommen wurde; sonst deaktivieren (#26).
   const loeschbar = !b.hatPasswort && !b.letzteAnmeldung;
   const [name, setName] = useState(b.name);
@@ -176,38 +177,38 @@ export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => P
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Benutzer</p>
+        <p className="ueber">{t('werkbank.benutzer.benutzer')}</p>
         <h1>{b.name || b.email}</h1>
         <dl className="index">
-          <div><dt>Status</dt><dd><span className={`chip ${s.art}`}>{s.text}</span></dd></div>
-          <div><dt>Angelegt</dt><dd>{datumZeit(b.erstellt)}</dd></div>
-          <div><dt>Letzte Anmeldung</dt><dd>{datumZeit(b.letzteAnmeldung)}</dd></div>
-          <div><dt>Zuletzt aktiv</dt><dd>{datumZeit(b.zuletztAktiv ?? null)}{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}</dd></div>
+          <div><dt>{t('werkbank.benutzer.status')}</dt><dd><span className={`chip ${s.art}`}>{s.text}</span></dd></div>
+          <div><dt>{t('werkbank.benutzer.angelegt')}</dt><dd>{datumZeit(b.erstellt)}</dd></div>
+          <div><dt>{t('werkbank.benutzer.letzte-anmeldung-2')}</dt><dd>{datumZeit(b.letzteAnmeldung)}</dd></div>
+          <div><dt>{t('werkbank.benutzer.zuletzt-aktiv')}</dt><dd>{datumZeit(b.zuletztAktiv ?? null)}{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">{t('werkbank.benutzer.gerade-aktiv')}</span></>}</dd></div>
         </dl>
-        {benutzerTyp && <p className="leise klein"><Link to={`/ablage/${benutzerTyp.id}/${b.id}`} className="verweis">Mappe in der Ablage →</Link></p>}
+        {benutzerTyp && <p className="leise klein"><Link to={`/ablage/${benutzerTyp.id}/${b.id}`} className="verweis">{t('werkbank.benutzer.mappe-in-der-ablage')}</Link></p>}
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       {ergebnis && <LinkAnzeige e={ergebnis} schliessen={() => setErgebnis(undefined)} />}
 
-      <form className="blatt" onKeyDown={ent.tasten} onSubmit={(e) => { e.preventDefault(); setSendet(true); void aktion(() => api.benutzerAendern(b.id, { name }), 'Gespeichert.').finally(() => setSendet(false)); }}>
+      <form className="blatt" onKeyDown={ent.tasten} onSubmit={(e) => { e.preventDefault(); setSendet(true); void aktion(() => api.benutzerAendern(b.id, { name }), t('werkbank.benutzer.gespeichert')).finally(() => setSendet(false)); }}>
         <div className="raster">
-          <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-          <label className="eigenschaft"><span>E-Mail-Adresse <small>{selbst ? 'änderst du unter Mein Konto' : 'ändert der Benutzer selbst'}</small></span><input value={b.email} readOnly disabled /></label>
+          <label className="eigenschaft"><span>{t('werkbank.benutzer.name')}</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
+          <label className="eigenschaft"><span>{tn('werkbank.benutzer.e-mail-adresse', { klein: <small>{selbst ? t('werkbank.benutzer.aenderst-du-unter-mein') : t('werkbank.benutzer.aendert-der-benutzer-selbst')}</small> })}</span><input value={b.email} readOnly disabled /></label>
         </div>
-        <WeitereRollen gewaehlt={b.rollen ?? []} setze={(rollen) => void aktion(() => api.benutzerAendern(b.id, { rollen }), 'Rollen gespeichert.')} />
-        <Speicherleiste ent={ent} gegenstand="Name" sendet={sendet} />
+        <WeitereRollen gewaehlt={b.rollen ?? []} setze={(rollen) => void aktion(() => api.benutzerAendern(b.id, { rollen }), t('werkbank.benutzer.rollen-gespeichert'))} />
+        <Speicherleiste ent={ent} gegenstand={t('werkbank.benutzer.name')} sendet={sendet} />
       </form>
 
       <Verwaltungsrecht key={`${b.id}-${(b.verwaltung ?? []).join(',')}`} b={b} aktion={aktion} />
 
       <div className="blatt">
-        <h2 className="h3">Zugang</h2>
+        <h2 className="h3">{t('werkbank.benutzer.zugang')}</h2>
         <p className="leise">{b.hatPasswort
-          ? 'Ein Passwort-Link ist eine Stunde gültig und funktioniert einmal. Das bisherige Passwort gilt, bis ein neues gesetzt ist.'
-          : 'Der Benutzer hat sein Passwort noch nicht festgelegt. Eine neue Einladung macht die alte ungültig.'}
-          {' '}{loeschbar ? 'Solange die Einladung nicht angenommen ist, lässt sich der Benutzer löschen.' : 'Wer schon angemeldet war, wird deaktiviert statt gelöscht – Verweise und „angelegt von“ bleiben so erhalten.'}</p>
+          ? t('werkbank.benutzer.ein-passwort-link-ist')
+          : t('werkbank.benutzer.der-benutzer-hat-sein')}
+          {' '}{loeschbar ? t('werkbank.benutzer.solange-die-einladung-nicht') : t('werkbank.benutzer.wer-schon-angemeldet-war')}</p>
         <div className="knoepfe">
-          <button className="knopf" onClick={() => void aktion(async () => setErgebnis(await api.neuerLink(b.id)))}>{b.hatPasswort ? 'Passwort-Link erzeugen' : 'Einladung erneut senden'}</button>
+          <button className="knopf" onClick={() => void aktion(async () => setErgebnis(await api.neuerLink(b.id)))}>{b.hatPasswort ? t('werkbank.benutzer.passwort-link-erzeugen') : t('werkbank.benutzer.einladung-erneut-senden')}</button>
         </div>
       </div>
 
@@ -222,13 +223,13 @@ export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => P
 
       {!selbst && b.aktiv && (
         <div className="blatt">
-          <h2 className="h3">Fehler nachstellen</h2>
-          <p className="leise">Du siehst und bedienst Ablago dann genau so wie {b.name || b.email}, mit den Rechten dieses Kontos. Oben steht die ganze Zeit ein Warnhinweis mit dem Weg zurück. {b.name || b.email} erfährt bei der nächsten Anmeldung, dass und wann du unter diesem Konto gearbeitet hast.</p>
+          <h2 className="h3">{t('werkbank.benutzer.fehler-nachstellen')}</h2>
+          <p className="leise">{t('werkbank.benutzer.du-siehst-und-bedienst', { wert: b.name || b.email })}</p>
           <div className="knoepfe"><button className="knopf" onClick={async () => {
-            if (await rueckfrage({ titel: `Als ${b.name || b.email} anmelden?`, text: 'Deine eigene Sitzung endet dabei; zurück geht es über den Warnhinweis oben.', ja: 'Anmelden' })) {
+            if (await rueckfrage({ titel: t('werkbank.benutzer.als-anmelden', { wert: b.name || b.email }), text: t('werkbank.benutzer.deine-eigene-sitzung-endet'), ja: t('werkbank.benutzer.anmelden') })) {
               void aktion(async () => { await api.vertreten(b.id); geheZu('/ablage', true); await aktualisieren(); });
             }
-          }}>Als {b.name || b.email} anmelden</button></div>
+          }}>{t('werkbank.benutzer.als-anmelden-2', { wert: b.name || b.email })}</button></div>
         </div>
       )}
 
@@ -248,32 +249,32 @@ function ZugangSperren({ b, selbst, loeschbar, aktion }: { b: Benutzer; selbst: 
   const offen = b.offeneAufgaben ?? 0;
   if (!b.aktiv) return (
     <div className="blatt">
-      <h2 className="h3">Zugang wieder freigeben</h2>
-      <p className="leise">{name} ist deaktiviert{b.deaktiviert ? ` seit ${datumZeit(b.deaktiviert)}` : ''}{vertreter ? `; Aufgaben, die noch für ${name} entstehen, gehen an ${vertreter}` : ''}. Aktivieren gibt den Zugang wieder frei; das Passwort gilt weiter.</p>
-      <div className="knoepfe"><button className="knopf primaer" onClick={() => void aktion(() => api.benutzerAendern(b.id, { aktiv: true }), 'Aktiviert.')}>Benutzer aktivieren</button></div>
+      <h2 className="h3">{t('werkbank.benutzer.zugang-wieder-freigeben')}</h2>
+      <p className="leise">{t('werkbank.benutzer.ist-deaktiviert-aktivieren-gibt', { name, wert: b.deaktiviert ? t('werkbank.benutzer.seit', { datumZeit: datumZeit(b.deaktiviert) }) : '', wert2: vertreter ? t('werkbank.benutzer.aufgaben-die-noch-fuer', { name, vertreter }) : '' })}</p>
+      <div className="knoepfe"><button className="knopf primaer" onClick={() => void aktion(() => api.benutzerAendern(b.id, { aktiv: true }), t('werkbank.benutzer.aktiviert'))}>{t('werkbank.benutzer.benutzer-aktivieren')}</button></div>
     </div>
   );
   if (selbst) return null;
-  const gruende = [!vertreter && 'Es ist kein Vertreter hinterlegt – wähle oben unter „Abwesenheit“ einen.', offen > 0 && `${name} hat noch ${offen === 1 ? 'eine offene Aufgabe' : `${offen} offene Aufgaben`}${vertreter ? ` – gib sie oben an ${vertreter}.` : '.'}`].filter(Boolean) as string[];
+  const gruende = [!vertreter && t('werkbank.benutzer.es-ist-kein-vertreter'), offen > 0 && t('werkbank.benutzer.hat-noch-offene-aufgaben', { anzahl: offen, name, wert: vertreter ? t('werkbank.benutzer.gib-sie-oben-an', { vertreter }) : '.' })].filter(Boolean) as string[];
   return (
     <div className="blatt gefahrenzone">
-      <h2 className="h3">Zugang sperren <Hilfe ort="benutzer.sperren" /></h2>
+      <h2 className="h3">{tn('werkbank.benutzer.zugang-sperren', { hilfe: <Hilfe ort="benutzer.sperren" /> })}</h2>
       <ul className="leise">
-        <li>Der Zugang ist sofort gesperrt, alle Sitzungen werden beendet.</li>
-        <li>Die Mappe bleibt erhalten; der Name erscheint überall durchgestrichen. Verweise und „angelegt von“ bleiben gültig.</li>
-        <li>Der Vertreter bleibt hinterlegt und bekommt dauerhaft, was noch für {name} entsteht (z. B. „passt nicht“ an Mappen, die {name} angelegt hat).</li>
-        <li><strong>Aktivieren</strong> macht es jederzeit rückgängig.</li>
+        <li>{t('werkbank.benutzer.der-zugang-ist-sofort')}</li>
+        <li>{t('werkbank.benutzer.die-mappe-bleibt-erhalten')}</li>
+        <li>{t('werkbank.benutzer.der-vertreter-bleibt-hinterlegt', { name })}</li>
+        <li>{tn('werkbank.benutzer.macht-es-jederzeit-rueckgaengig', { b: <strong>{t('werkbank.benutzer.aktivieren')}</strong> })}</li>
       </ul>
       {gruende.length > 0 && <div className="hinweis warn stapel"><p>{t('konten.sperren.nochnicht')}</p><ul>{gruende.map((g) => <li key={g}>{g}</li>)}</ul></div>}
       <div className="knoepfe">
         {loeschbar && <button className="knopf gefahr-rand" onClick={async () => {
-          if (await rueckfrage({ titel: 'Einladung löschen?', text: `Die Einladung an ${b.email} wird zurückgezogen und der Benutzer gelöscht.`, ja: 'Einladung löschen', gefahr: true })) void aktion(async () => { await api.benutzerLoeschen(b.id); loeseWache(); geheZu('/werkbank/benutzer'); });
-        }}>Einladung löschen</button>}
+          if (await rueckfrage({ titel: t('werkbank.benutzer.einladung-loeschen'), text: t('werkbank.benutzer.die-einladung-an-wird', { email: b.email }), ja: t('werkbank.benutzer.einladung-loeschen-2'), gefahr: true })) void aktion(async () => { await api.benutzerLoeschen(b.id); loeseWache(); geheZu('/werkbank/benutzer'); });
+        }}>{t('werkbank.benutzer.einladung-loeschen-2')}</button>}
         <button className="knopf gefahr" disabled={gruende.length > 0} onClick={async () => {
-          if (await rueckfrage({ titel: `${name} deaktivieren?`, text: `Der Zugang ist sofort gesperrt, alle Sitzungen enden. Aufgaben, die noch für ${name} entstehen, gehen an ${vertreter}.`, ja: 'Deaktivieren', gefahr: true })) {
-            void aktion(() => api.benutzerAendern(b.id, { aktiv: false }), 'Deaktiviert – alle Sitzungen beendet.');
+          if (await rueckfrage({ titel: t('werkbank.benutzer.deaktivieren', { name }), text: t('werkbank.benutzer.der-zugang-ist-sofort-2', { name, vertreter: String(vertreter) }), ja: t('werkbank.benutzer.deaktivieren-2'), gefahr: true })) {
+            void aktion(() => api.benutzerAendern(b.id, { aktiv: false }), t('werkbank.benutzer.deaktiviert-alle-sitzungen-beendet'));
           }
-        }}>Benutzer deaktivieren</button>
+        }}>{t('werkbank.benutzer.benutzer-deaktivieren')}</button>
       </div>
     </div>
   );
@@ -288,15 +289,15 @@ function ZweifaktorVon({ b }: { b: Benutzer }) {
   const name = b.name || b.email;
   return (
     <div className="blatt">
-      <h2 className="h3">Zwei-Faktor-Anmeldung</h2>
-      {!stand ? !meldung && <p className="leise">Lade …</p> : stand.aktiv ? <>
-        <p><span className="chip gut punkt">eingerichtet</span>{stand.seit && <> seit {new Date(stand.seit).toLocaleDateString('de-DE')}</>} · {stand.codesUebrig} Wiederherstellungscodes übrig</p>
+      <h2 className="h3">{t('werkbank.benutzer.zwei-faktor-anmeldung')}</h2>
+      {!stand ? !meldung && <p className="leise">{t('werkbank.benutzer.lade')}</p> : stand.aktiv ? <>
+        <p><span className="chip gut punkt">{t('werkbank.benutzer.eingerichtet')}</span>{stand.seit && <> {' '}{t('werkbank.benutzer.seit-2', { datum: new Date(stand.seit).toLocaleDateString(gebietsschema()) })}</>} {' '}{t('werkbank.benutzer.wiederherstellungscodes-uebrig', { codesUebrig: stand.codesUebrig })}</p>
         <div className="knoepfe"><button type="button" className="knopf gefahr-rand" onClick={async () => {
-          if (await rueckfrage({ titel: `Zwei-Faktor-Anmeldung von ${name} zurücksetzen?`, text: `Danach reicht das Passwort – ist sie vorgeschrieben, richtet ${name} sie bei der nächsten Anmeldung neu ein.`, ja: 'Zurücksetzen', gefahr: true })) {
-            void api.benutzerZweifaktorZuruecksetzen(b.id).then(() => { setMeldung({ art: 'gut', text: 'Zurückgesetzt.' }); return laden(); }).catch((e) => setMeldung({ art: 'schlecht', text: (e as Error).message }));
+          if (await rueckfrage({ titel: t('werkbank.benutzer.zwei-faktor-anmeldung-von', { name }), text: t('werkbank.benutzer.danach-reicht-das-passwort', { name }), ja: t('werkbank.benutzer.zuruecksetzen'), gefahr: true })) {
+            void api.benutzerZweifaktorZuruecksetzen(b.id).then(() => { setMeldung({ art: 'gut', text: t('werkbank.benutzer.zurueckgesetzt') }); return laden(); }).catch((e) => setMeldung({ art: 'schlecht', text: (e as Error).message }));
           }
-        }}>Zurücksetzen</button></div>
-      </> : <p className="leise">Nicht eingerichtet.</p>}
+        }}>{t('werkbank.benutzer.zuruecksetzen')}</button></div>
+      </> : <p className="leise">{t('werkbank.benutzer.nicht-eingerichtet')}</p>}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
     </div>
   );
@@ -314,29 +315,29 @@ function Sitzungen({ b, neuLaden }: { b: Benutzer; neuLaden: () => Promise<void>
   }
   return (
     <div className="blatt">
-      <h2 className="h3">Angemeldet auf {liste?.length ?? '…'} {liste?.length === 1 ? 'Gerät' : 'Geräten'}</h2>
+      <h2 className="h3">{t('werkbank.benutzer.angemeldet-auf', { wert: liste?.length ?? '…', wert2: liste?.length === 1 ? t('werkbank.benutzer.geraet') : t('werkbank.benutzer.geraeten') })}</h2>
       {fehler && <p className="fehlertext">{fehler}</p>}
-      {liste && !liste.length && <p className="leise">Gerade nirgends angemeldet.</p>}
+      {liste && !liste.length && <p className="leise">{t('werkbank.benutzer.gerade-nirgends-angemeldet')}</p>}
       {liste && liste.length > 0 && (
         <ul className="sitzungsliste">
           {liste.map((s) => (
             <li key={s.id}>
               <div>
                 <strong>{geraetText(s.geraet)}</strong>
-                {s.aktuell && <> <span className="chip">diese Sitzung</span></>}
+                {s.aktuell && <> <span className="chip">{t('werkbank.benutzer.diese-sitzung')}</span></>}
                 {s.vertretungId && <> <span className="chip warn">{t('werkbank.verwaltungsrecht.vertretung')}</span></>}
-                {istGeradeAktiv(s.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}
-                <span className="leise klein blockzeile">Zuletzt aktiv {datumZeit(s.zuletztAktiv)} · angemeldet seit {datumZeit(s.erstellt)}{s.ip ? ` · ${s.ip}` : ''}</span>
+                {istGeradeAktiv(s.zuletztAktiv) && <> <span className="chip gut punkt">{t('werkbank.benutzer.gerade-aktiv')}</span></>}
+                <span className="leise klein blockzeile">{t('werkbank.benutzer.zuletzt-aktiv-angemeldet-seit', { datumZeit: datumZeit(s.zuletztAktiv), datumZeit2: datumZeit(s.erstellt), wert: s.ip ? ` · ${s.ip}` : '' })}</span>
               </div>
-              <button className="textknopf gefahr" onClick={() => void beende(() => api.sitzungBeenden(b.id, s.id), !!s.aktuell)}>Abmelden</button>
+              <button className="textknopf gefahr" onClick={() => void beende(() => api.sitzungBeenden(b.id, s.id), !!s.aktuell)}>{t('werkbank.benutzer.abmelden')}</button>
             </li>
           ))}
         </ul>
       )}
       {liste && liste.length > 1 && (
         <div className="knoepfe"><button className="knopf gefahr-rand" onClick={async () => {
-          if (await rueckfrage({ titel: `${b.name || b.email} auf allen ${liste.length} Geräten abmelden?`, ja: 'Überall abmelden', gefahr: true })) void beende(() => api.alleSitzungenBeenden(b.id), liste.some((s) => s.aktuell));
-        }}>Überall abmelden</button></div>
+          if (await rueckfrage({ titel: t('werkbank.benutzer.auf-allen-geraeten-abmelden', { wert: b.name || b.email, liste: liste.length }), ja: t('werkbank.benutzer.ueberall-abmelden'), gefahr: true })) void beende(() => api.alleSitzungenBeenden(b.id), liste.some((s) => s.aktuell));
+        }}>{t('werkbank.benutzer.ueberall-abmelden')}</button></div>
       )}
     </div>
   );
@@ -362,25 +363,25 @@ export function BenutzerNeu({ neuLaden }: { neuLaden: () => Promise<void> }) {
 
   if (ergebnis) return (
     <div className="einspaltig">
-      <div className="mappenkopf"><p className="ueber">Benutzer</p><h1>{ergebnis.benutzer.name || ergebnis.benutzer.email} ist angelegt</h1></div>
+      <div className="mappenkopf"><p className="ueber">{t('werkbank.benutzer.benutzer')}</p><h1>{t('werkbank.benutzer.ist-angelegt', { wert: ergebnis.benutzer.name || ergebnis.benutzer.email })}</h1></div>
       <LinkAnzeige e={ergebnis} />
-      <div className="knoepfe"><Link to={`/werkbank/benutzer/${ergebnis.benutzer.id}`} className="knopf">Zum Benutzer</Link></div>
+      <div className="knoepfe"><Link to={`/werkbank/benutzer/${ergebnis.benutzer.id}`} className="knopf">{t('werkbank.benutzer.zum-benutzer')}</Link></div>
     </div>
   );
 
   return (
     <form className="einspaltig" onSubmit={anlegen} onKeyDown={ent.tasten}>
-      <div className="mappenkopf"><p className="ueber">Benutzer</p><h1>Neuer Benutzer</h1>
-        <p className="leise">{mail ? 'Er bekommt eine E-Mail mit einem Link, über den er sein Passwort festlegt.' : 'Kein E-Mail-Versand eingerichtet: Nach dem Anlegen erscheint ein Link, den du selbst weitergibst.'}</p></div>
+      <div className="mappenkopf"><p className="ueber">{t('werkbank.benutzer.benutzer')}</p><h1>{t('werkbank.benutzer.neuer-benutzer')}</h1>
+        <p className="leise">{mail ? t('werkbank.benutzer.er-bekommt-eine-e') : t('werkbank.benutzer.kein-e-mail-versand')}</p></div>
       <div className="blatt">
         <div className="raster">
-          <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
-          <label className="eigenschaft"><span>E-Mail-Adresse</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+          <label className="eigenschaft"><span>{t('werkbank.benutzer.name')}</span><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
+          <label className="eigenschaft"><span>{t('werkbank.benutzer.e-mail-adresse-2')}</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
         </div>
         <p className="leise klein">{t('werkbank.verwaltungsrecht.neu')}</p>
         <WeitereRollen gewaehlt={rollen} setze={setRollen} />
         {fehler && <p className="fehlertext">{fehler}</p>}
-        <Speicherleiste ent={ent} gegenstand="Benutzer" sendet={sendet} haupttext={mail ? 'Benutzer anlegen und einladen' : undefined} />
+        <Speicherleiste ent={ent} gegenstand={t('werkbank.benutzer.benutzer')} sendet={sendet} haupttext={mail ? t('werkbank.benutzer.benutzer-anlegen-und-einladen') : undefined} />
       </div>
     </form>
   );
@@ -435,15 +436,15 @@ function Verwaltungsrecht({ b, aktion }: { b: Benutzer; aktion: (fn: () => Promi
 
 function LinkAnzeige({ e, schliessen }: { e: LinkErgebnis; schliessen?: () => void }) {
   const [kopiert, setKopiert] = useState(false);
-  if (e.mailVerschickt) return <div className="hinweis gut"><p>E-Mail an {e.benutzer.email} ist verschickt.</p>{schliessen && <button className="textknopf" onClick={schliessen}>Schließen</button>}</div>;
+  if (e.mailVerschickt) return <div className="hinweis gut"><p>{t('werkbank.benutzer.e-mail-an-ist', { email: e.benutzer.email })}</p>{schliessen && <button className="textknopf" onClick={schliessen}>{t('werkbank.benutzer.schliessen')}</button>}</div>;
   return (
     <div className="hinweis info stapel">
-      <p>{e.mailFehler ? `Die E-Mail an ${e.benutzer.email} konnte nicht verschickt werden (${e.mailFehler}).` : `Schicke diesen Link an ${e.benutzer.email}.`} Er funktioniert nur einmal.</p>
+      <p>{t('werkbank.benutzer.er-funktioniert-nur-einmal', { wert: e.mailFehler ? t('werkbank.benutzer.die-e-mail-an', { email: e.benutzer.email, mailFehler: e.mailFehler }) : t('werkbank.benutzer.schicke-diesen-link-an', { email: e.benutzer.email }) })}</p>
       <div className="linkzeile">
-        <input readOnly value={e.link} onFocus={(ev) => ev.target.select()} aria-label="Link zum Passwort setzen" className="mono" />
-        <button className="knopf klein" onClick={async () => { try { await navigator.clipboard.writeText(e.link!); setKopiert(true); } catch { /* Feld ist markierbar */ } }}>{kopiert ? 'Kopiert' : 'Kopieren'}</button>
+        <input readOnly value={e.link} onFocus={(ev) => ev.target.select()} aria-label={t('werkbank.benutzer.link-zum-passwort-setzen')} className="mono" />
+        <button className="knopf klein" onClick={async () => { try { await navigator.clipboard.writeText(e.link!); setKopiert(true); } catch { /* Feld ist markierbar */ } }}>{kopiert ? t('werkbank.benutzer.kopiert') : t('werkbank.benutzer.kopieren')}</button>
       </div>
-      {schliessen && <button className="textknopf" onClick={schliessen}>Schließen</button>}
+      {schliessen && <button className="textknopf" onClick={schliessen}>{t('werkbank.benutzer.schliessen')}</button>}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { api, type Region, type RegionStand } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Einstellungen → Region (#726): Land, Bundesland und Zeitzone an einer Stelle,
@@ -18,7 +19,7 @@ export function useRegion(offen: boolean) {
 }
 export type RegionZustand = ReturnType<typeof useRegion>;
 
-const datum = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+const datum = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString(gebietsschema(), { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' });
 
 export function RegionPanel({ z }: { z: RegionZustand }) {
   const s = z.stand;

@@ -1,4 +1,4 @@
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { useEffect, useState, type ReactNode } from 'react';
 import { beschreibeRegelBedingung, type Wirkung } from '../../../shared/src/rechte';
 import {
@@ -45,8 +45,8 @@ export function sichtRechteKurz(e: Pick<SichtDaten, 'elternId' | 'berechtigungen
   const kette = elternkette(alle, e.elternId);
   const geerbt = kette.reduce((n, s) => n + sichtRegelwerkVon(s).regeln.length, 0);
   const teile = [
-    kette.length ? `erbt von „${kette.at(-1)!.name}“${geerbt ? ` (${geerbt} Regel${geerbt === 1 ? '' : 'n'})` : ''}` : `Standard: ${kurzSicht(rw.grund)}`,
-    rw.regeln.length ? `${rw.regeln.length} eigene Regel${rw.regeln.length === 1 ? '' : 'n'}` : 'keine eigenen Regeln',
+    kette.length ? t('werkbank.sichtrechte.erbt-von', { name: kette.at(-1)!.name, wert: geerbt ? t('werkbank.sichtrechte.regeln', { anzahl: geerbt }) : '' }) : t('werkbank.sichtrechte.standard', { kurzSicht: kurzSicht(rw.grund) }),
+    rw.regeln.length ? t('werkbank.sichtrechte.eigene-regeln', { anzahl: rw.regeln.length }) : t('werkbank.sichtrechte.keine-eigenen-regeln'),
   ];
   return teile.join(' · ');
 }
@@ -54,7 +54,7 @@ export function sichtRechteKurz(e: Pick<SichtDaten, 'elternId' | 'berechtigungen
 function useNamen() {
   const d = useDaten();
   const [titel, setTitel] = useState<Record<string, string>>({});
-  const merke = (id: string, t: string) => setTitel((x) => (x[id] === t ? x : { ...x, [id]: t }));
+  const merke = (id: string, text2: string) => setTitel((x) => (x[id] === text2 ? x : { ...x, [id]: text2 }));
   const text = (b: SichtBedingung) => beschreibeRegelBedingung(b, { benutzer: (id) => titel[id] ?? d.person(id), rolle: (id) => titel[id] ?? '…', feld: () => '' });
   // Namen für Kurzformen nachladen.
   const laden = (ids: string[]) => { for (const x of ids.filter((y) => !titel[y])) api.mappe(x).then((m) => merke(x, m.mappe.titel ?? '')).catch(() => merke(x, '(gelöscht)')); };
@@ -80,7 +80,7 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
   const verschiebe = (i: number, r: number) => setRw((x) => {
     const j = i + r;
     if (j < 0 || j >= x.regeln.length) return x;
-    setAnsage(`${x.regeln[i].name || 'Regel'} steht jetzt an Stelle ${j + 1}.`);
+    setAnsage(t('werkbank.sichtrechte.steht-jetzt-an-stelle', { wert: x.regeln[i].name || t('werkbank.sichtrechte.regel'), wert2: j + 1 }));
     return { ...x, regeln: umgestellt(x.regeln, i, j, r < 0 ? 'vor' : 'nach') };
   });
   const ids = [...kette.flatMap((s) => sichtRegelwerkVon(s).regeln), ...rw.regeln].flatMap((r) => r.wenn.flatMap((b) => (b.art === 'rolle' ? b.rollen : b.benutzer)));
@@ -88,25 +88,25 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
   useEffect(() => { if (fehlend) namen.laden(fehlend.split(',')); }, [fehlend]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Bereich id="berechtigungen" titel="Berechtigungen" hilfe={<Hilfe ort="sicht.berechtigungen" />} klappe={klappe} kurz={sichtRechteKurz(e, alle)}
-      beschreibung={<>Wer die Ansicht in der Ablage sieht (R) und dort „+ Neu“ bekommt (C). Ob eine Mappe lesbar ist, regelt weiter der <strong>Mappentyp</strong>. Im Verwaltungsmodus gelten die Regeln nicht.</>}>
+    <Bereich id="berechtigungen" titel={t('werkbank.sichtrechte.berechtigungen')} hilfe={<Hilfe ort="sicht.berechtigungen" />} klappe={klappe} kurz={sichtRechteKurz(e, alle)}
+      beschreibung={<>{tn('werkbank.sichtrechte.wer-die-ansicht-in', { b: <strong>{t('werkbank.sichtrechte.mappentyp')}</strong> })}</>}>
       {untersicht ? (
         <>
-          <h3 className="zwischen">Geerbt</h3>
-          <p className="leise klein">Diese Regeln kommen von den Elternsichten und gelten hier zuerst. Ändern lassen sie sich nur dort.</p>
+          <h3 className="zwischen">{t('werkbank.sichtrechte.geerbt')}</h3>
+          <p className="leise klein">{t('werkbank.sichtrechte.diese-regeln-kommen-von')}</p>
           {kette.map((s, i) => {
             const x = sichtRegelwerkVon(s);
             return (
               <div key={s.id} className="geerbt">
                 <p className="klein"><strong><Link to={`/werkbank/sichten/${s.id}#berechtigungen`} className="verweis">{s.name}</Link></strong>
-                  {i === 0 && <> · Standard <span className="chip">{kurzSicht({ ...x.grund })}</span></>}
-                  {!x.regeln.length && <span className="leise"> · keine Regeln</span>}</p>
+                  {i === 0 && <> {' '}{tn('werkbank.sichtrechte.standard-2', { span: <span className="chip">{kurzSicht({ ...x.grund })}</span> })}</>}
+                  {!x.regeln.length && <span className="leise"> {' '}{t('werkbank.sichtrechte.keine-regeln')}</span>}</p>
                 {x.regeln.length > 0 && (
                   <ol className="regeln geerbt">
                     {x.regeln.map((r) => (
                       <li key={r.id}><div className="regel zu gesperrt"><div className="regelkopf"><span className="regelsumme">
-                        <strong>{r.name}</strong><span className="chip">{kurzSichtRegel(r.dann)}{r.stopp ? ' · Stopp' : ''}</span>
-                        <span className="leise klein">wenn {r.wenn.map(namen.text).join(' und ')}</span>
+                        <strong>{r.name}</strong><span className="chip">{kurzSichtRegel(r.dann)}{r.stopp ? t('werkbank.sichtrechte.stopp') : ''}</span>
+                        <span className="leise klein">{t('werkbank.sichtrechte.wenn')}{' '}{r.wenn.map(namen.text).join(' und ')}</span>
                       </span></div></div></li>
                     ))}
                   </ol>
@@ -117,12 +117,12 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
         </>
       ) : (
         <>
-          <h3 className="zwischen">Standard <Hilfe ort="sicht.berechtigungen" /></h3>
-          <p className="leise klein">Gilt, solange keine Regel etwas anderes sagt. Unteransichten erben ihn.</p>
-          <div className="rechtewahl" role="group" aria-label="Standard je Recht">
+          <h3 className="zwischen">{tn('werkbank.sichtrechte.standard-3', { hilfe: <Hilfe ort="sicht.berechtigungen" /> })}</h3>
+          <p className="leise klein">{t('werkbank.sichtrechte.gilt-solange-keine-regel')}</p>
+          <div className="rechtewahl" role="group" aria-label={t('werkbank.sichtrechte.standard-je-recht')}>
             {SICHT_RECHTE_LISTE.map((k) => (
               <button key={k} type="button" className={`rechtknopf ${rw.grund[k] ? 'erteilen' : 'entziehen'}`}
-                aria-label={`Standard ${SICHT_RECHTE[k]}: ${rw.grund[k] ? 'erteilt' : 'entzogen'}`} title={`${SICHT_RECHTE[k]}: klicken zum Wechseln`}
+                aria-label={t('werkbank.sichtrechte.standard-4', { SICHT_RECHTE: SICHT_RECHTE[k], wert: rw.grund[k] ? t('werkbank.sichtrechte.erteilt') : t('werkbank.sichtrechte.entzogen') })} title={t('werkbank.sichtrechte.klicken-zum-wechseln', { SICHT_RECHTE: SICHT_RECHTE[k] })}
                 onClick={() => setRw((x) => ({ ...x, grund: { ...x.grund, [k]: !x.grund[k] } }))}>
                 <span className="buchstabe">{k}</span><span aria-hidden="true">{rw.grund[k] ? '✓' : '✗'}</span>
               </button>
@@ -131,10 +131,10 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
         </>
       )}
 
-      <h3 className="zwischen">{untersicht ? 'Eigene Regeln' : 'Regeln'}</h3>
+      <h3 className="zwischen">{untersicht ? t('werkbank.sichtrechte.eigene-regeln-2') : t('werkbank.sichtrechte.regeln-2')}</h3>
       <p className="leise klein">{untersicht
-        ? 'Kommen nach den geerbten und können nur weiter einschränken (✗): Ein Recht gilt hier nur, wenn es an der Elternsicht gilt und keine eigene Regel es entzieht.'
-        : 'Von oben nach unten: Jede zutreffende Regel setzt ihre ✓ und ✗; „Stopp“ beendet die Prüfung. Bedingungen gibt es nur über den Benutzer.'}</p>
+        ? t('werkbank.sichtrechte.kommen-nach-den-geerbten')
+        : t('werkbank.sichtrechte.von-oben-nach-unten')}</p>
       {rw.regeln.length > 0 && (
         <ol className="regeln">
           {rw.regeln.map((r, i) => (
@@ -143,7 +143,7 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
                 umschalten={() => setOffen((x) => { const n = new Set(x); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}
                 setze={(n) => setRw((x) => ({ ...x, regeln: x.regeln.map((y, j) => (j === i ? n : y)) }))}
                 weg={() => setRw((x) => ({ ...x, regeln: x.regeln.filter((y) => y.id !== r.id) }))}
-                griff={<button {...zieh.griff(r.id, r.name || 'Regel')} onKeyDown={(ev) => ziehTasten(ev, { hoch: () => verschiebe(i, -1), runter: () => verschiebe(i, 1) })}><span aria-hidden="true">⠿</span></button>} />
+                griff={<button {...zieh.griff(r.id, r.name || t('werkbank.sichtrechte.regel'))} onKeyDown={(ev) => ziehTasten(ev, { hoch: () => verschiebe(i, -1), runter: () => verschiebe(i, 1) })}><span aria-hidden="true">⠿</span></button>} />
             </li>
           ))}
         </ol>
@@ -153,7 +153,7 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
         const id = neueId();
         setOffen((x) => new Set([...x, id]));
         setRw((x) => ({ ...x, regeln: [...x.regeln, { id, name: '', wenn: [{ art: 'rolle', rollen: [] }], dann: {}, stopp: false }] }));
-      }}>+ Regel</button></div>
+      }}>{t('werkbank.sichtrechte.regel-2')}</button></div>
     </Bereich>
   );
 }
@@ -164,8 +164,8 @@ function SichtRegelKarte({ r, untersicht, namen, offen, umschalten, setze, weg, 
 }) {
   const d = useDaten();
   const problem = sichtRegelProblem(r, untersicht);
-  const rollenTyp = d.typen.find((t) => t.system === 'rolle')?.id;
-  const benutzerTyp = d.typen.find((t) => t.system === 'benutzer')?.id;
+  const rollenTyp = d.typen.find((mappentyp) => mappentyp.system === 'rolle')?.id;
+  const benutzerTyp = d.typen.find((mappentyp) => mappentyp.system === 'benutzer')?.id;
   const setzeB = (i: number, b: SichtBedingung) => setze({ ...r, wenn: r.wenn.map((x, j) => (j === i ? b : x)) });
   // In Untersichten nur „–“ ↔ „✗“ (#148).
   const naechste = (w: '' | Wirkung): '' | Wirkung => (untersicht ? (w === 'entziehen' ? '' : 'entziehen') : w === '' ? 'erteilen' : w === 'erteilen' ? 'entziehen' : '');
@@ -175,9 +175,9 @@ function SichtRegelKarte({ r, untersicht, namen, offen, umschalten, setze, weg, 
       <div className="regelkopf">
         {griff}
         <button type="button" className="regelsumme" aria-expanded={false} onClick={umschalten}>
-          <strong>{r.name || 'Ohne Namen'}</strong>
-          <span className="chip">{kurzSichtRegel(r.dann)}{r.stopp ? ' · Stopp' : ''}</span>
-          <span className="leise klein">wenn {r.wenn.map(namen.text).join(' und ') || '…'}</span>
+          <strong>{r.name || t('werkbank.sichtrechte.ohne-namen')}</strong>
+          <span className="chip">{kurzSichtRegel(r.dann)}{r.stopp ? t('werkbank.sichtrechte.stopp') : ''}</span>
+          <span className="leise klein">{t('werkbank.sichtrechte.wenn')}{' '}{r.wenn.map(namen.text).join(' und ') || '…'}</span>
         </button>
       </div>
       {problem && <p className="fehlertext klein">{problem}</p>}
@@ -188,45 +188,45 @@ function SichtRegelKarte({ r, untersicht, namen, offen, umschalten, setze, weg, 
     <div className={`regel ${problem ? 'fehlerhaft' : ''}`}>
       <div className="regelkopf">
         {griff}
-        <input aria-label="Name der Regel" placeholder="Name, z. B. „Kinder sehen das nicht“" value={r.name} onChange={(x) => setze({ ...r, name: x.target.value })} />
-        <span className="chip">{kurzSichtRegel(r.dann)}{r.stopp ? ' · Stopp' : ''}</span>
+        <input aria-label={t('werkbank.sichtrechte.name-der-regel')} placeholder={t('werkbank.sichtrechte.name-z-b-kinder')} value={r.name} onChange={(x) => setze({ ...r, name: x.target.value })} />
+        <span className="chip">{kurzSichtRegel(r.dann)}{r.stopp ? t('werkbank.sichtrechte.stopp') : ''}</span>
       </div>
-      <p className="ueber klein">Wenn</p>
+      <p className="ueber klein">{t('werkbank.sichtrechte.wenn-2')}</p>
       <ul className="bedingungen">
         {r.wenn.map((b, i) => (
           <li key={i}>
             <div className="bedingungszeile">
-              <select aria-label="Art der Bedingung" value={b.art} onChange={(x) => setzeB(i, x.target.value === 'rolle' ? { art: 'rolle', rollen: [], nicht: b.nicht } : { art: 'benutzer', benutzer: [], nicht: b.nicht })}>
-                <option value="rolle">Benutzer hat Rolle</option>
-                <option value="benutzer">Benutzer ist</option>
+              <select aria-label={t('werkbank.sichtrechte.art-der-bedingung')} value={b.art} onChange={(x) => setzeB(i, x.target.value === 'rolle' ? { art: 'rolle', rollen: [], nicht: b.nicht } : { art: 'benutzer', benutzer: [], nicht: b.nicht })}>
+                <option value="rolle">{t('werkbank.sichtrechte.benutzer-hat-rolle')}</option>
+                <option value="benutzer">{t('werkbank.sichtrechte.benutzer-ist')}</option>
               </select>
-              <label className="haken klein"><input type="checkbox" checked={!!b.nicht} onChange={(x) => setzeB(i, { ...b, nicht: x.target.checked || undefined })} /><span>nicht</span></label>
+              <label className="haken klein"><input type="checkbox" checked={!!b.nicht} onChange={(x) => setzeB(i, { ...b, nicht: x.target.checked || undefined })} /><span>{t('werkbank.sichtrechte.nicht')}</span></label>
               {b.art === 'rolle' && rollenTyp && <MappenSuche typId={rollenTyp} gewaehlt={b.rollen} titel={namen.titel} merke={namen.merke} setze={(ids) => setzeB(i, { ...b, rollen: ids })} />}
               {b.art === 'benutzer' && benutzerTyp && <MappenSuche typId={benutzerTyp} gewaehlt={b.benutzer} titel={namen.titel} merke={namen.merke} setze={(ids) => setzeB(i, { ...b, benutzer: ids })} />}
-              <button type="button" className="textknopf gefahr klein" onClick={() => setze({ ...r, wenn: r.wenn.filter((_, j) => j !== i) })}>Bedingung entfernen</button>
+              <button type="button" className="textknopf gefahr klein" onClick={() => setze({ ...r, wenn: r.wenn.filter((_, j) => j !== i) })}>{t('werkbank.sichtrechte.bedingung-entfernen')}</button>
             </div>
             <p className="leise klein">{namen.text(b)}</p>
           </li>
         ))}
       </ul>
-      <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setze({ ...r, wenn: [...r.wenn, { art: 'rolle', rollen: [] }] })}>+ Bedingung</button>{r.wenn.length > 1 && <span className="leise klein">Alle Bedingungen müssen zutreffen.</span>}</div>
-      <p className="ueber klein">Dann</p>
-      <div className="rechtewahl" role="group" aria-label="Wirkung je Recht">
+      <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setze({ ...r, wenn: [...r.wenn, { art: 'rolle', rollen: [] }] })}>{t('werkbank.sichtrechte.bedingung')}</button>{r.wenn.length > 1 && <span className="leise klein">{t('werkbank.sichtrechte.alle-bedingungen-muessen-zutreffen')}</span>}</div>
+      <p className="ueber klein">{t('werkbank.sichtrechte.dann')}</p>
+      <div className="rechtewahl" role="group" aria-label={t('werkbank.sichtrechte.wirkung-je-recht')}>
         {SICHT_RECHTE_LISTE.map((k) => {
           const w = r.dann[k] ?? '';
           return (
-            <button key={k} type="button" className={`rechtknopf ${w}`} aria-label={`${SICHT_RECHTE[k]}: ${w || 'unverändert'}`} title={`${SICHT_RECHTE[k]}: klicken zum Wechseln`}
+            <button key={k} type="button" className={`rechtknopf ${w}`} aria-label={`${SICHT_RECHTE[k]}: ${w || 'unverändert'}`} title={t('werkbank.sichtrechte.klicken-zum-wechseln', { SICHT_RECHTE: SICHT_RECHTE[k] })}
               onClick={() => { const n = naechste(w); const dann = { ...r.dann }; if (n) dann[k] = n; else delete dann[k]; setze({ ...r, dann }); }}>
               <span className="buchstabe">{k}</span><span aria-hidden="true">{ZEICHEN[w]}</span>
             </button>
           );
         })}
-        <label className="haken"><input type="checkbox" checked={r.stopp} onChange={(x) => setze({ ...r, stopp: x.target.checked })} /><span>Stopp <small className="leise">– trifft die Regel zu, folgende nicht mehr prüfen</small></span></label>
+        <label className="haken"><input type="checkbox" checked={r.stopp} onChange={(x) => setze({ ...r, stopp: x.target.checked })} /><span>{tn('werkbank.sichtrechte.stopp-2', { klein: <small className="leise">{t('werkbank.sichtrechte.trifft-die-regel-zu')}</small> })}</span></label>
       </div>
       {problem && <p className="fehlertext klein">{problem}</p>}
       <div className="knoepfe">
-        <button type="button" className="textknopf gefahr klein" onClick={weg}>Regel entfernen</button>
-        <button type="button" className="knopf klein" onClick={umschalten}>Zuklappen</button>
+        <button type="button" className="textknopf gefahr klein" onClick={weg}>{t('werkbank.sichtrechte.regel-entfernen')}</button>
+        <button type="button" className="knopf klein" onClick={umschalten}>{t('werkbank.sichtrechte.zuklappen')}</button>
       </div>
     </div>
   );
@@ -245,35 +245,35 @@ export function SichtTestlauf({ id, e, klappe }: { id: string | null; e: SichtDa
   const { erg, fehler, los } = useTestlauf(schluessel, b,
     () => api.sichtTestlauf({ sichtId: id, benutzerId: b, elternId: e.elternId, berechtigungen: e.berechtigungen ?? null }));
   return (
-    <Bereich id="testlauf" titel="Testlauf" hilfe={<Hilfe ort="sicht.berechtigungen" />} klappe={klappe}
-      kurz="Was ein Benutzer an dieser Ansicht darf – auch mit ungespeicherten Regeln"
-      beschreibung="Sieht ein Benutzer diese Ansicht, und bekommt er „+ Neu“? Geprüft werden die Regeln, wie sie oben stehen, mit den geerbten.">
+    <Bereich id="testlauf" titel={t('werkbank.sichtrechte.testlauf')} hilfe={<Hilfe ort="sicht.berechtigungen" />} klappe={klappe}
+      kurz={t('werkbank.sichtrechte.was-ein-benutzer-an')}
+      beschreibung={t('werkbank.sichtrechte.sieht-ein-benutzer-diese')}>
       <div className="formular">
         <TestBenutzerWahl id="sicht-testlauf-benutzer" wert={b} setze={setB} />
       </div>
-      {!schluessel && <p className="leise klein">Wähle einen Benutzer – das Ergebnis erscheint sofort.</p>}
-      {schluessel && !erg && !fehler && <div className="knoepfe"><button type="button" className="knopf klein primaer" onClick={() => void los()}>Prüfen</button></div>}
+      {!schluessel && <p className="leise klein">{t('werkbank.sichtrechte.waehle-einen-benutzer-das')}</p>}
+      {schluessel && !erg && !fehler && <div className="knoepfe"><button type="button" className="knopf klein primaer" onClick={() => void los()}>{t('werkbank.sichtrechte.pruefen')}</button></div>}
       {fehler && <p className="fehlertext klein">{fehler}</p>}
       {erg && (
         <div className="testlauf" role="status">
           {erg.admin
-            ? <p><strong>{erg.benutzer.name}</strong> ist Administrator – für ihn gelten die Regeln nicht, er sieht alles.</p>
+            ? <p>{tn('werkbank.sichtrechte.ist-administrator-fuer-ihn', { b: <strong>{erg.benutzer.name}</strong> })}</p>
             : <>
-                <p><strong>{erg.benutzer.name}</strong> an „{e.name || 'dieser Ansicht'}“: <RechteZeile r={erg.wirksam!} />
-                  {!erg.wirksam!.R && <span className="leise"> – die Ansicht fehlt in seinem Baum, ihre Mappen auch in den Elternsichten.</span>}</p>
+                <p>{tn('werkbank.sichtrechte.an', { b: <strong>{erg.benutzer.name}</strong>, wert: e.name || t('werkbank.sichtrechte.dieser-ansicht') })}{' '}<RechteZeile r={erg.wirksam!} />
+                  {!erg.wirksam!.R && <span className="leise"> {' '}{t('werkbank.sichtrechte.die-ansicht-fehlt-in')}</span>}</p>
                 <table className="tabelle klein">
-                  <thead><tr><th>Ansicht</th><th>Schritt</th><th>trifft zu?</th><th>setzt</th><th>Stand danach</th></tr></thead>
+                  <thead><tr><th>{t('werkbank.sichtrechte.ansicht')}</th><th>{t('werkbank.sichtrechte.schritt')}</th><th>{t('werkbank.sichtrechte.trifft-zu')}</th><th>{t('werkbank.sichtrechte.setzt')}</th><th>{t('werkbank.sichtrechte.stand-danach')}</th></tr></thead>
                   <tbody>
                     {erg.kette.flatMap((k) => [
-                      ...(k.grund ? [<tr key={`${k.sicht}-g`}><td>{k.name}</td><td>Standard</td><td>–</td><td>–</td><td><RechteZeile r={k.grund} /></td></tr>] : []),
+                      ...(k.grund ? [<tr key={`${k.sicht}-g`}><td>{k.name}</td><td>{t('werkbank.sichtrechte.standard-5')}</td><td>–</td><td>–</td><td><RechteZeile r={k.grund} /></td></tr>] : []),
                       ...k.spur.map((s) => (
                         <tr key={`${k.sicht}-${s.regel}`} className={s.traf ? 'traf' : ''}>
-                          <td>{k.name}</td><td>{s.name || 'Regel'}{s.stopp && s.traf ? ' · Stopp' : ''}</td>
-                          <td>{s.traf === null ? 'nicht geprüft (Stopp davor)' : s.traf ? 'ja' : 'nein'}</td>
+                          <td>{k.name}</td><td>{s.name || t('werkbank.sichtrechte.regel')}{s.stopp && s.traf ? t('werkbank.sichtrechte.stopp') : ''}</td>
+                          <td>{s.traf === null ? t('werkbank.sichtrechte.nicht-geprueft-stopp-davor') : s.traf ? t('werkbank.sichtrechte.ja') : t('werkbank.sichtrechte.nein')}</td>
                           <td>{s.traf ? kurzSichtRegel(s.gesetzt) : '–'}</td><td><RechteZeile r={s.stand} /></td>
                         </tr>
                       )),
-                      <tr key={`${k.sicht}-e`} className="summe"><td>{k.name}</td><td>{k.untersicht ? 'mit Elternsicht (UND)' : 'Ergebnis'}</td><td /><td /><td><RechteZeile r={k.stand} /></td></tr>,
+                      <tr key={`${k.sicht}-e`} className="summe"><td>{k.name}</td><td>{k.untersicht ? t('werkbank.sichtrechte.mit-elternsicht-und') : t('werkbank.sichtrechte.ergebnis')}</td><td /><td /><td><RechteZeile r={k.stand} /></td></tr>,
                     ])}
                   </tbody>
                 </table>

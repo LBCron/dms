@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { t } from './sprache';
 
 /**
  * Eigene Rückfragen statt `confirm()`/`alert()` (#355): einheitlich, mit Verb auf dem Knopf,
@@ -42,7 +43,7 @@ export function rueckfrage(r: Rueckfrage): Promise<boolean> {
 /** Nur ein Hinweis mit einem Knopf (statt `alert()`). */
 export function hinweis(r: { titel: string; text?: ReactNode; ok?: string }): Promise<void> {
   return new Promise((fertig) => {
-    const o: Offen = { nr: ++naechste, titel: r.titel, text: r.text, ja: r.ok ?? 'Verstanden', nurHinweis: true, fertig: () => fertig() };
+    const o: Offen = { nr: ++naechste, titel: r.titel, text: r.text, ja: r.ok ?? t('oberflaeche.rueckfrage.verstanden'), nurHinweis: true, fertig: () => fertig() };
     if (zeige) zeige(o); else wartend.push(o);
   });
 }
@@ -82,15 +83,15 @@ function Dialog({ r, schliesse }: { r: Offen; schliesse(ok: boolean): void }) {
       onCancel={(e) => { e.preventDefault(); schliesse(false); }}>
       <form method="dialog" onSubmit={(e) => { e.preventDefault(); if (passt) schliesse(true); }}>
         <h2 id={`${id}-t`}>{r.titel}</h2>
-        {r.text && <div id={`${id}-x`} className="rueckfrage-text">{typeof r.text === 'string' ? r.text.split('\n\n').map((t, i) => <p key={i}>{t}</p>) : r.text}</div>}
+        {r.text && <div id={`${id}-x`} className="rueckfrage-text">{typeof r.text === 'string' ? r.text.split('\n\n').map((text, i) => <p key={i}>{text}</p>) : r.text}</div>}
         {r.bestaetigeMit && (
           <label className="eigenschaft">
-            <span>Zum Bestätigen „{r.bestaetigeMit}“ eintippen</span>
+            <span>{t('oberflaeche.rueckfrage.zum-bestaetigen-eintippen', { bestaetigeMit: r.bestaetigeMit })}</span>
             <input ref={feld} value={eingabe} onChange={(e) => setEingabe(e.target.value)} autoComplete="off" spellCheck={false} />
           </label>
         )}
         <div className="rueckfrage-knoepfe">
-          {!r.nurHinweis && <button ref={sicher} type="button" className="knopf" onClick={() => schliesse(false)}>{r.nein ?? 'Abbrechen'}</button>}
+          {!r.nurHinweis && <button ref={sicher} type="button" className="knopf" onClick={() => schliesse(false)}>{r.nein ?? t('oberflaeche.rueckfrage.abbrechen')}</button>}
           <button ref={jaKnopf} type="submit" className={`knopf ${r.gefahr ? 'gefahr' : 'primaer'}`} disabled={!passt}>{r.ja}</button>
         </div>
       </form>

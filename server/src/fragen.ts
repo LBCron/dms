@@ -15,6 +15,8 @@ import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import type { Repo } from './repo';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 const log = protokoll.modul('ablage');
 
@@ -44,9 +46,9 @@ export class FragenAnDieAblage {
   }
   async setzeGrenzen(e: unknown): Promise<FragenGrenzen> {
     const s = this.einst();
-    if (!s) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!s) throw new Fachfehler(404, t('meldungen.fragen.einstellungen-sind-nicht'));
     const r = pruefeGrenzen(e);
-    if (Object.keys(r.fehler).length) throw new Fachfehler(422, 'Bitte die markierten Angaben prüfen.', { felderFehler: r.fehler, gruende: Object.values(r.fehler) });
+    if (Object.keys(r.fehler).length) throw new Fachfehler(422, t('meldungen.fragen.bitte-die-markierten-angaben'), { felderFehler: r.fehler, gruende: Object.values(r.fehler) });
     await s.schreibe('fragen', r.grenzen.ausschnitte === FRAGEN_STANDARD.ausschnitte && r.grenzen.zeichen === FRAGEN_STANDARD.zeichen ? null : r.grenzen);
     return this.grenzen();
   }
@@ -126,7 +128,7 @@ export class FragenAnDieAblage {
     switch (f.typ) {
       case 'referenz': return (Array.isArray(v) ? v : [v]).map((id) => titel(String(id))).filter(Boolean).join(', ');
       case 'janein': return v === true ? 'ja' : v === false ? 'nein' : '';
-      case 'betrag': { const b = v as { betrag?: unknown; waehrung?: unknown }; return typeof b?.betrag === 'number' ? `${b.betrag.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${String(b.waehrung ?? 'EUR')}` : ''; }
+      case 'betrag': { const b = v as { betrag?: unknown; waehrung?: unknown }; return typeof b?.betrag === 'number' ? `${b.betrag.toLocaleString(gebietsschema(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${String(b.waehrung ?? 'EUR')}` : ''; }
       case 'auswahl': return Array.isArray(v) ? v.map(String).join(', ') : auswahlText(v);
       default: return typeof v === 'object' ? '' : String(v).slice(0, 2000);
     }
@@ -139,11 +141,11 @@ export class FragenAnDieAblage {
   async frage(z: Zugriff, eingabe: unknown, schreibe: (z: FrageZeile) => void): Promise<void> {
     const e = (eingabe ?? {}) as { frage?: unknown; verlauf?: unknown };
     const frage = typeof e.frage === 'string' ? saeubere(e.frage).slice(0, FRAGE_MAX) : '';
-    if (!frage) throw new Fachfehler(422, 'Bitte eine Frage eingeben.');
+    if (!frage) throw new Fachfehler(422, t('meldungen.fragen.bitte-eine-frage-eingeben'));
     const paket = this.anbieter?.paket();
-    if (!paket || !this.anbieter) throw new Fachfehler(409, 'Es ist kein Paket installiert, das Fragen beantwortet.');
-    if (this.laufend.has(z.ich.id)) throw new Fachfehler(429, 'Deine vorige Frage läuft noch. Bitte warte die Antwort ab.');
-    if (this.laufend.size >= GLEICHZEITIG) throw new Fachfehler(429, 'Gerade werden schon mehrere Fragen beantwortet. Bitte gleich noch einmal.');
+    if (!paket || !this.anbieter) throw new Fachfehler(409, t('meldungen.fragen.es-ist-kein-paket'));
+    if (this.laufend.has(z.ich.id)) throw new Fachfehler(429, t('meldungen.fragen.deine-vorige-frage-laeuft'));
+    if (this.laufend.size >= GLEICHZEITIG) throw new Fachfehler(429, t('meldungen.fragen.gerade-werden-schon-mehrere'));
     this.laufend.add(z.ich.id);
     const start = Date.now();
     let ausschnitte: FrageAusschnitt[] = [];
@@ -159,7 +161,7 @@ export class FragenAnDieAblage {
       const r = await this.anbieter.antworte(paket.id, {
         frage, verlauf, hinweis: KI_HINWEIS, sprache: 'de',
         // Für das Paket: die Ausschnitte einzeln und – als Daten gekennzeichnet – fertig als Text.
-        ausschnitte: ausschnitte.map((a) => ({ nr: a.nr, mappe: a.mappe.titel, typ: a.typ, quelle: a.quelle.art === 'dokument' ? a.quelle.name : 'Angaben der Mappe', text: a.text })),
+        ausschnitte: ausschnitte.map((a) => ({ nr: a.nr, mappe: a.mappe.titel, typ: a.typ, quelle: a.quelle.art === 'dokument' ? a.quelle.name : t('meldungen.fragen.angaben-der-mappe'), text: a.text })),
         ausschnitte_text: ausschnitteAlsText(ausschnitte),
       }, (t) => schreibe({ art: 'teil', text: t }));
       const a = liesAntwort(r.text, ausschnitte.map((x) => x.nr));
@@ -170,12 +172,12 @@ export class FragenAnDieAblage {
       const ok = await this.d.lesbare(z, [...jeMappe.keys()]);
       const quellen = [...jeMappe].filter(([id]) => ok.has(id)).map(([id, nr]) => { const m = ausschnitte.find((y) => y.mappe.id === id)!.mappe; return { id, typId: m.typId, titel: m.titel, nr }; });
       // Hat das Paket für den Dienst gekürzt (#564), sieht der Fragende das: welche Ausschnitte hingingen, ob Chat wegfiel.
-      schreibe({ art: 'fertig', text: a.text || 'Das Paket hat keine Antwort geliefert.', quellen, ms: Date.now() - start, ...(a.gekuerzt ? { gekuerzt: a.gekuerzt } : {}) });
+      schreibe({ art: 'fertig', text: a.text || t('meldungen.fragen.das-paket-hat-keine'), quellen, ms: Date.now() - start, ...(a.gekuerzt ? { gekuerzt: a.gekuerzt } : {}) });
       log.info('Frage an die Ablage gestellt', { von: z.ich.id, paket: paket.id, ausschnitte: ausschnitte.length, mappen, quellen: quellen.length, ms: Date.now() - start, ...(a.gekuerzt ? { geschickt: a.gekuerzt.geschickt.length, verlaufWeg: a.gekuerzt.verlauf } : {}) });
     } catch (x) {
       if (!geschrieben) throw x;
       log.warn('Frage an die Ablage nicht beantwortet', { von: z.ich.id, paket: paket.id, ausschnitte: ausschnitte.length, ms: Date.now() - start, fehler: (x as Error).message.slice(0, 300) });
-      schreibe({ art: 'fehler', text: `Keine Antwort: ${(x as Error).message}` });
+      schreibe({ art: 'fehler', text: t('meldungen.fragen.keine-antwort', { message: (x as Error).message }) });
     } finally {
       this.laufend.delete(z.ich.id);
     }

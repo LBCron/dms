@@ -27,6 +27,7 @@ import { liesSchluessel, nurTestschluessel, projektSchluessel, pruefeSignatur, S
 import type { Projektschluessel } from './projektschluessel';
 import { t } from './sprache';
 import { crc32 } from './zip';
+import { gebietsschema } from '../../shared/src/sprache';
 
 const log = protokoll.modul('werkbank');
 
@@ -44,12 +45,12 @@ const PAKET_GRENZEN: ZipGrenzen = { dateien: DATEIEN_MAX, entpackt: ENTPACKT_MAX
 
 /** Einträge des Inhaltsverzeichnisses (Central Directory), ohne etwas zu entpacken. */
 function zipEintraege(buf: Buffer, max: number) {
-  const kaputt = () => new Fachfehler(422, 'Das Archiv ist kein gültiges ZIP.');
+  const kaputt = () => new Fachfehler(422, t('meldungen.pakete.das-archiv-ist-kein'));
   let e = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 65535); i--) if (buf.readUInt32LE(i) === 0x06054b50) { e = i; break; }
   if (e < 0) throw kaputt();
   const anzahl = buf.readUInt16LE(e + 10);
-  if (anzahl > max) throw new Fachfehler(422, `Das Archiv enthält mehr als ${max} Dateien.`);
+  if (anzahl > max) throw new Fachfehler(422, t('meldungen.pakete.das-archiv-enthaelt-mehr', { max }));
   let p = buf.readUInt32LE(e + 16);
   const liste: Array<{ name: string; flags: number; methode: number; crc: number; csize: number; usize: number; lokal: number }> = [];
   for (let n = 0; n < anzahl; n++) {
@@ -69,25 +70,25 @@ export const zipNamen = (buf: Buffer, max = DATEIEN_MAX): string[] => zipEintrae
 
 /** Liest ein ZIP-Archiv (gespeichert oder Deflate) mit Obergrenzen gegen ZIP-Bomben. */
 export function liesZip(buf: Buffer, grenzen: ZipGrenzen = PAKET_GRENZEN): Map<string, Buffer> {
-  const kaputt = () => new Fachfehler(422, 'Das Archiv ist kein gültiges ZIP.');
+  const kaputt = () => new Fachfehler(422, t('meldungen.pakete.das-archiv-ist-kein'));
   const dateien = new Map<string, Buffer>();
   let gesamt = 0, code = 0;
   for (const { name, flags, methode, crc, csize, usize, lokal } of zipEintraege(buf, grenzen.dateien)) {
     if (name.endsWith('/')) continue;
-    if (flags & 1) throw new Fachfehler(422, 'Verschlüsselte Archive gehen nicht.');
-    if (name.startsWith('/') || name.split('/').includes('..')) throw new Fachfehler(422, `Ungültiger Dateiname im Archiv: ${name}`);
-    if (dateien.has(name)) throw new Fachfehler(422, `Die Datei ${name} steht zweimal im Archiv.`);
+    if (flags & 1) throw new Fachfehler(422, t('meldungen.pakete.verschluesselte-archive-gehen-nicht'));
+    if (name.startsWith('/') || name.split('/').includes('..')) throw new Fachfehler(422, t('meldungen.pakete.ungueltiger-dateiname-im-archiv', { name }));
+    if (dateien.has(name)) throw new Fachfehler(422, t('meldungen.pakete.die-datei-steht-zweimal', { name }));
     if (name.startsWith('code/')) code += usize; else gesamt += usize;
-    if (gesamt > grenzen.entpackt) throw new Fachfehler(422, 'Das Archiv ist entpackt zu groß.');
+    if (gesamt > grenzen.entpackt) throw new Fachfehler(422, t('meldungen.pakete.das-archiv-ist-entpackt'));
     // Grobe Obergrenze gegen ZIP-Bomben; die genaue Meldung zu code/ kommt aus liesCode.
-    if (code > 2 * CODE_MAX) throw new Fachfehler(422, `Die Dateien unter code/ sind zu groß (höchstens ${CODE_MAX / 1048576} MB je Paket).`);
-    if (grenzen.budget && (grenzen.budget.rest -= usize) < 0) throw new Fachfehler(422, 'Die Pakete der Sammeldatei sind entpackt zusammen zu groß.');
+    if (code > 2 * CODE_MAX) throw new Fachfehler(422, t('meldungen.pakete.die-dateien-unter-code', { wert: CODE_MAX / 1048576 }));
+    if (grenzen.budget && (grenzen.budget.rest -= usize) < 0) throw new Fachfehler(422, t('meldungen.pakete.die-pakete-der-sammeldatei'));
     if (lokal + 30 > buf.length || buf.readUInt32LE(lokal) !== 0x04034b50) throw kaputt();
     const start = lokal + 30 + buf.readUInt16LE(lokal + 26) + buf.readUInt16LE(lokal + 28);
     const roh = buf.subarray(start, start + csize);
     let daten: Buffer;
     try {
-      daten = methode === 0 ? Buffer.from(roh) : methode === 8 ? inflateRawSync(roh, { maxOutputLength: Math.max(1, usize) }) : (() => { throw new Fachfehler(422, `Kompression ${methode} wird nicht unterstützt.`); })();
+      daten = methode === 0 ? Buffer.from(roh) : methode === 8 ? inflateRawSync(roh, { maxOutputLength: Math.max(1, usize) }) : (() => { throw new Fachfehler(422, t('meldungen.pakete.kompression-wird-nicht-unterstuetzt', { methode })); })();
     } catch (x) { if (x instanceof Fachfehler) throw x; throw kaputt(); }
     if (daten.length !== usize || ((crc32(daten) ^ 0xffffffff) >>> 0) !== crc) throw kaputt();
     dateien.set(name, daten);
@@ -195,19 +196,19 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   const fehler: string[] = [];
   const yaml = (name: string): unknown => {
     const d = dateien.get(name);
-    if (!d) { fehler.push(`${name} fehlt im Paket.`); return undefined; }
+    if (!d) { fehler.push(t('meldungen.pakete.fehlt-im-paket', { name })); return undefined; }
     try { return yamlLesen(d.toString('utf8'), { maxAliasCount: 50 }); } catch (e) { fehler.push(`${name}: kein gültiges YAML (${(e as Error).message.split('\n')[0]}).`); return undefined; }
   };
   const m = yaml('manifest.yaml');
-  if (!istObjekt(m)) throw new Fachfehler(422, 'Das Paket ist ungültig.', { gruende: fehler.length ? fehler : ['manifest.yaml ist leer.'] });
-  if (m.schema !== 1) fehler.push(`manifest.yaml: Format ${str(m.schema) || '–'} kennt diese Ablago-Version nicht.`);
-  if (!PAKET_ID.test(str(m.id))) fehler.push('manifest.yaml: ungültige Id.');
-  if (str(m.id) === 'dms') fehler.push('manifest.yaml: Die Id „dms“ ist für Verweise auf Mappentypen von Ablago reserviert.');
-  if (!VERSION.test(str(m.version))) fehler.push('manifest.yaml: ungültige Version (z. B. 1.0.0).');
-  if (!str(m.name).trim()) fehler.push('manifest.yaml: Name fehlt.');
-  if (!BEREICH.test(str(m.dms))) fehler.push('manifest.yaml: ungültige Ablago-Version (z. B. >=0.63.0).');
+  if (!istObjekt(m)) throw new Fachfehler(422, t('meldungen.pakete.das-paket-ist-ungueltig'), { gruende: fehler.length ? fehler : [t('meldungen.pakete.manifest-yaml-ist-leer')] });
+  if (m.schema !== 1) fehler.push(t('meldungen.pakete.manifest-yaml-format-kennt', { wert: str(m.schema) || '–' }));
+  if (!PAKET_ID.test(str(m.id))) fehler.push(t('meldungen.pakete.manifest-yaml-ungueltige-id'));
+  if (str(m.id) === 'dms') fehler.push(t('meldungen.pakete.manifest-yaml-die-id'));
+  if (!VERSION.test(str(m.version))) fehler.push(t('meldungen.pakete.manifest-yaml-ungueltige-version'));
+  if (!str(m.name).trim()) fehler.push(t('meldungen.pakete.manifest-yaml-name-fehlt'));
+  if (!BEREICH.test(str(m.dms))) fehler.push(t('meldungen.pakete.manifest-yaml-ungueltige-ablago'));
   const abh = istObjekt(m.abhaengigkeiten) ? m.abhaengigkeiten : {};
-  for (const [k, v] of Object.entries(abh)) if (!PAKET_ID.test(k) || !BEREICH.test(str(v))) fehler.push(`manifest.yaml: Abhängigkeit „${k}: ${str(v)}“ ist ungültig.`);
+  for (const [k, v] of Object.entries(abh)) if (!PAKET_ID.test(k) || !BEREICH.test(str(v))) fehler.push(t('meldungen.pakete.manifest-yaml-abhaengigkeit-ist', { k, str: str(v) }));
   // Ergänzung eines anderen Pakets (#405): steht auch unter abhaengigkeiten.
   const erg = liesErgaenzt(m.ergaenzt, abh);
   fehler.push(...erg.fehler.map((f) => `manifest.yaml: ${f}`));
@@ -244,14 +245,14 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
     return { schluessel: str(t.schluessel), name: str(t.name).trim(), beschreibung: str(t.beschreibung), titelVorlage: t.titelVorlage ? str(t.titelVorlage) : undefined, felder, register, trefferliste: Array.isArray(t.trefferliste) ? t.trefferliste.map(str) : undefined };
   });
   const sichten = liste('sichten').map((s, i): PaketSicht => {
-    if (!SCHLUESSEL.test(str(s.schluessel))) fehler.push(`sichten[${i + 1}]: ungültige Kennung.`);
-    if (!str(s.name).trim()) fehler.push(`sichten[${i + 1}]: Name fehlt.`);
+    if (!SCHLUESSEL.test(str(s.schluessel))) fehler.push(t('meldungen.pakete.sichten-ungueltige-kennung', { wert: i + 1 }));
+    if (!str(s.name).trim()) fehler.push(t('meldungen.pakete.sichten-name-fehlt', { wert: i + 1 }));
     return {
       schluessel: str(s.schluessel), name: str(s.name).trim(), beschreibung: s.beschreibung ? str(s.beschreibung) : undefined, eltern: s.eltern ? str(s.eltern) : undefined,
       typen: Array.isArray(s.typen) ? s.typen.map(str) : [], trefferliste: s.trefferliste ? str(s.trefferliste) : undefined,
       ...(s.fremde_typen !== undefined ? { fremdeTypen: (Array.isArray(s.fremde_typen) ? s.fremde_typen : []).map((f, j): FremderTyp => {
         const k = istObjekt(f) ? str(f.kennung) : '';
-        if (!SCHLUESSEL.test(k)) fehler.push(`sichten[${i + 1}]: fremde_typen[${j + 1}]: ungültige Kennung „${k}“.`);
+        if (!SCHLUESSEL.test(k)) fehler.push(t('meldungen.pakete.sichten-fremde-typen-ungueltige', { wert: i + 1, wert2: j + 1, k }));
         return { kennung: k, name: istObjekt(f) ? str(f.name).trim() || k : k };
       }) } : {}),
       // Symbol (#428): unbekannte Namen (Paket für eine neuere Version) heißen „ohne Symbol“, kein Fehler.
@@ -260,24 +261,24 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
     };
   });
   const beispiele = liste('beispiele').map((b, i): PaketBeispiel => {
-    if (b.schluessel !== undefined && !SCHLUESSEL.test(str(b.schluessel))) fehler.push(`beispiele[${i + 1}]: ungültiger Schlüssel „${str(b.schluessel)}“.`);
+    if (b.schluessel !== undefined && !SCHLUESSEL.test(str(b.schluessel))) fehler.push(t('meldungen.pakete.beispiele-ungueltiger-schluessel', { wert: i + 1, str: str(b.schluessel) }));
     return { typ: str(b.typ), werte: istObjekt(b.werte) ? b.werte : {}, ...(b.schluessel !== undefined ? { schluessel: str(b.schluessel) } : {}) };
   });
   // Verweise zwischen Beispielen (#347): Schlüssel eindeutig, Ziele vorhanden bzw. aus einer Abhängigkeit, keine Kreise.
   {
     const eigene = new Set(beispiele.map((b) => b.schluessel).filter((s): s is string => !!s));
     const schl = beispiele.map((b) => b.schluessel).filter((s): s is string => !!s);
-    for (const s of new Set(schl.filter((x, j) => schl.indexOf(x) !== j))) fehler.push(`beispiele: Schlüssel „${s}“ doppelt.`);
+    for (const s of new Set(schl.filter((x, j) => schl.indexOf(x) !== j))) fehler.push(t('meldungen.pakete.beispiele-schluessel-doppelt', { s }));
     for (const [i, b] of beispiele.entries()) {
       for (const z of beispielVerweise(b.werte)) {
-        if (!TYPVERWEIS.test(z)) { fehler.push(`beispiele[${i + 1}]: Verweis „${z}“ ist kein gültiger Schlüssel.`); continue; }
+        if (!TYPVERWEIS.test(z)) { fehler.push(t('meldungen.pakete.beispiele-verweis-ist-kein', { wert: i + 1, z })); continue; }
         const [p, s] = z.includes(':') ? z.split(':') : [str(m.id), z];
-        if (p === str(m.id)) { if (!eigene.has(s)) fehler.push(`beispiele[${i + 1}]: Verweis auf das Beispiel „${s}“, das es im Paket nicht gibt.`); }
-        else if (p === 'dms' || !(p in abh)) fehler.push(`beispiele[${i + 1}]: Verweis „${z}“ – das Paket „${p}“ steht nicht unter abhaengigkeiten.`);
+        if (p === str(m.id)) { if (!eigene.has(s)) fehler.push(t('meldungen.pakete.beispiele-verweis-auf-das', { wert: i + 1, s })); }
+        else if (p === 'dms' || !(p in abh)) fehler.push(t('meldungen.pakete.beispiele-verweis-das-paket', { wert: i + 1, z, p }));
       }
     }
     if (!ordneBeispiele(beispiele.map((b) => ({ ...b, werte: eigeneVerweise(b.werte, str(m.id)) })))) {
-      fehler.push('beispiele: Die Verweise zwischen den Beispielen bilden einen Kreis (A zeigt auf B, B auf A). Ein Verweis muss weg.');
+      fehler.push(t('meldungen.pakete.beispiele-die-verweise-zwischen'));
     }
   }
   // Mitgelieferte Automatisierungen (#712): Schlüssel, Name, genau eine Wenn-Karte; Typen als eigener Schlüssel oder paket:typ.
@@ -294,20 +295,20 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
     if (empf.some((e) => e.art === 'person' || e.art === 'rolle')) fehler.push(`${wo}: feste Personen und Rollen gibt es in Paketen nicht – Empfänger aus einem Feld oder der Ersteller der Mappe.`);
     return { schluessel: str(a.schluessel), name: str(a.name).trim(), beschreibung: str(a.beschreibung ?? ''), wenn: istObjekt(a.wenn) ? a.wenn : {}, und: istObjekt(a.und) ? a.und : undefined, dann: Array.isArray(a.dann) ? a.dann : [] };
   });
-  for (const k of new Set(automatisierungen.map((a) => a.schluessel).filter((x, j, l) => l.indexOf(x) !== j))) fehler.push(`automatisierungen: Schlüssel „${k}“ doppelt.`);
+  for (const k of new Set(automatisierungen.map((a) => a.schluessel).filter((x, j, l) => l.indexOf(x) !== j))) fehler.push(t('meldungen.pakete.automatisierungen-schluessel-doppelt', { k }));
   // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche, z. B. - woerter: [Kfz, Auto, PKW].
   const wortlisten = liste('wortlisten').map((w, i): string[] => {
     const g = liesWortgruppe(Array.isArray(w.woerter) ? w.woerter : null);
-    if (!Array.isArray(w.woerter)) fehler.push(`wortlisten[${i + 1}]: erwartet woerter: [Wort, Wort, …].`);
+    if (!Array.isArray(w.woerter)) fehler.push(t('meldungen.pakete.wortlisten-erwartet-woerter-wort', { wert: i + 1 }));
     else if (g.fehler) fehler.push(`wortlisten[${i + 1}]: ${g.fehler}`);
     return g.woerter;
   }).filter((g) => g.length);
-  if (wortlisten.length > WORTLISTEN_MAX) fehler.push(`wortlisten: höchstens ${WORTLISTEN_MAX} Gruppen.`);
+  if (wortlisten.length > WORTLISTEN_MAX) fehler.push(t('meldungen.pakete.wortlisten-hoechstens-gruppen', { WORTLISTEN_MAX }));
   const doppelt = (l: string[]) => l.filter((x, i) => l.indexOf(x) !== i);
-  for (const s of doppelt(typen.map((t) => t.schluessel))) fehler.push(`mappentypen: Kennung „${s}“ doppelt.`);
-  for (const s of doppelt(sichten.map((t) => t.schluessel))) fehler.push(`sichten: Kennung „${s}“ doppelt.`);
+  for (const s of doppelt(typen.map((t) => t.schluessel))) fehler.push(t('meldungen.pakete.mappentypen-kennung-doppelt', { s }));
+  for (const s of doppelt(sichten.map((t) => t.schluessel))) fehler.push(t('meldungen.pakete.sichten-kennung-doppelt', { s }));
   for (const vw of new Set(typverweise(typen, sichten).filter(istDmsVerweis))) {
-    if (!DMS_TYPEN[vw.slice(DMS_PRAEFIX.length)]) fehler.push(`Verweis „${vw}“: Diesen Mappentyp bringt Ablago nicht mit. Erlaubt sind ${Object.keys(DMS_TYPEN).map((k) => DMS_PRAEFIX + k).join(', ')}.`);
+    if (!DMS_TYPEN[vw.slice(DMS_PRAEFIX.length)]) fehler.push(t('meldungen.pakete.verweis-diesen-mappentyp-bringt', { vw, map: Object.keys(DMS_TYPEN).map((k) => DMS_PRAEFIX + k).join(', ') }));
   }
   // Einstellungen (#197): code.einstellungen und code.aktionen.
   const einst = liesBeschreibung(m.code);
@@ -316,17 +317,17 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   const cl = liesCode(m.code, [...dateien].map(([name, inhalt]) => ({ name, groesse: inhalt.length })));
   fehler.push(...cl.fehler.map((f) => (f.startsWith('code/:') ? f.slice('code/: '.length) : `manifest.yaml: ${f}`)));
   // Mappen-Ereignisse (#670): Schlüssel ohne Präfix sind eigene Mappentypen; fremde (paket:typ, dms:post) und „*“ seit #686.
-  for (const k of cl.code?.mappentypen ?? []) if (k !== '*' && !k.includes(':') && !typen.some((t) => t.schluessel === k)) fehler.push(`manifest.yaml: code.mappentypen: „${k}“ ist kein Mappentyp dieses Pakets (inhalt) – fremde Mappentypen bitte mit Präfix, z. B. basis:vertrag.`);
+  for (const k of cl.code?.mappentypen ?? []) if (k !== '*' && !k.includes(':') && !typen.some((t) => t.schluessel === k)) fehler.push(t('meldungen.pakete.manifest-yaml-code-mappentypen', { k }));
   let code: PaketCodeTeil | null = null;
   if (cl.code) {
     const modul = dateien.get('code/modul.wasm');
     // Ohne gebautes Modul (z. B. nur Einstellungen) lässt sich das Paket installieren; es läuft dann kein Code.
     if (!modul) { /* Hinweis in der Vorschau */ }
-    else if (modul.length < 8 || !modul.subarray(0, 8).equals(WASM_KOPF)) fehler.push('code/modul.wasm ist kein WebAssembly-Modul.');
+    else if (modul.length < 8 || !modul.subarray(0, 8).equals(WASM_KOPF)) fehler.push(t('meldungen.pakete.code-modul-wasm-ist'));
     // Andere Dateien unter code/ (Quellcode) stören nicht; geladen werden nur modul.wasm und daten/….
     if (modul) code = { info: cl.code, dateien: [...dateien].filter(([n]) => CODE_DATEI.test(n)).map(([n, inhalt]) => ({ name: n.slice('code/'.length), inhalt })) };
   }
-  if (fehler.length) throw new Fachfehler(422, 'Das Paket ist ungültig.', { gruende: fehler });
+  if (fehler.length) throw new Fachfehler(422, t('meldungen.pakete.das-paket-ist-ungueltig'), { gruende: fehler });
   return {
     manifest: {
       id: str(m.id), name: str(m.name).trim(), version: str(m.version), beschreibung: str(m.beschreibung),
@@ -453,7 +454,7 @@ function nachEltern(sichten: PaketSicht[]): PaketSicht[] {
 
 /** Bedingung aus dem Paket in die Form der Werkbank. */
 function bedingungAus(b: { feld: string; operator: string; wert?: unknown }): Bedingung {
-  if (!(b.operator in OPERATOREN)) throw new Fachfehler(422, `Unbekannter Operator „${b.operator}“ in einer Ansicht.`);
+  if (!(b.operator in OPERATOREN)) throw new Fachfehler(422, t('meldungen.pakete.unbekannter-operator-in-einer', { operator: b.operator }));
   const op = b.operator as Operator;
   const fest = (w: unknown) => (istObjekt(w) && typeof w.art === 'string' ? w as never : { art: 'fest' as const, wert: w as string });
   if ((op === 'zwischen' || op === 'ausserhalb') && Array.isArray(b.wert) && b.wert.length === 2) return { art: 'feld', feld: b.feld, op, wert: fest(b.wert[0]), bis: fest(b.wert[1]) };
@@ -508,7 +509,7 @@ const WEITERLEITUNGEN_MAX = 5;
  */
 export async function holeDaten(url: string, max = ARCHIV_MAX): Promise<Buffer> {
   let u = new URL(url);
-  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) throw new Fachfehler(422, 'Pakete gibt es nur über HTTPS.');
+  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) throw new Fachfehler(422, t('meldungen.pakete.pakete-gibt-es-nur'));
   // 20 s bis zur Antwort; große Archive (#644) dürfen danach bis zu 5 Minuten laden. Die 20 s gelten nur bis zu
   // den Köpfen (eigene Uhr, nach der Antwort gelöscht) – AbortSignal.timeout bräche sonst auch das Lesen ab.
   const gesamt = new AbortController();
@@ -586,18 +587,18 @@ export interface SammelVerzeichnis { format: 1; erstellt: string; quelle: string
 
 /** Prüft sammeldatei.json; wirft mit allen Fehlern auf einmal. */
 export function liesSammelVerzeichnis(roh: Buffer | undefined): SammelVerzeichnis {
-  const ungueltig = (gruende: string[]) => new Fachfehler(422, 'Das ist keine gültige Sammeldatei.', { gruende });
+  const ungueltig = (gruende: string[]) => new Fachfehler(422, t('meldungen.pakete.das-ist-keine-gueltige'), { gruende });
   if (!roh) throw ungueltig([`${SAMMEL_VERZEICHNIS} fehlt.`]);
-  if (roh.length > VERZEICHNIS_MAX) throw ungueltig([`${SAMMEL_VERZEICHNIS} ist zu groß.`]);
+  if (roh.length > VERZEICHNIS_MAX) throw ungueltig([t('meldungen.pakete.ist-zu-gross', { SAMMEL_VERZEICHNIS })]);
   let j: unknown;
-  try { j = JSON.parse(roh.toString('utf8')); } catch { throw ungueltig([`${SAMMEL_VERZEICHNIS} ist kein gültiges JSON.`]); }
-  if (!istObjekt(j)) throw ungueltig([`${SAMMEL_VERZEICHNIS} ist leer.`]);
+  try { j = JSON.parse(roh.toString('utf8')); } catch { throw ungueltig([t('meldungen.pakete.ist-kein-gueltiges-json', { SAMMEL_VERZEICHNIS })]); }
+  if (!istObjekt(j)) throw ungueltig([t('meldungen.pakete.ist-leer', { SAMMEL_VERZEICHNIS })]);
   const fehler: string[] = [];
   if (j.art !== 'dms-sammeldatei') fehler.push(`${SAMMEL_VERZEICHNIS}: „art“ muss „dms-sammeldatei“ sein.`);
-  if (j.format !== 1) fehler.push(`Sammeldatei-Format ${str(j.format) || '–'} kennt diese Ablago-Version nicht – bitte Ablago aktualisieren.`);
+  if (j.format !== 1) fehler.push(t('meldungen.pakete.sammeldatei-format-kennt-diese', { wert: str(j.format) || '–' }));
   const liste = Array.isArray(j.pakete) ? j.pakete : [];
-  if (!liste.length) fehler.push('Die Sammeldatei enthält keine Pakete.');
-  if (liste.length > SAMMEL_PAKETE_MAX) fehler.push(`Die Sammeldatei enthält mehr als ${SAMMEL_PAKETE_MAX} Pakete.`);
+  if (!liste.length) fehler.push(t('meldungen.pakete.die-sammeldatei-enthaelt-keine'));
+  if (liste.length > SAMMEL_PAKETE_MAX) fehler.push(t('meldungen.pakete.die-sammeldatei-enthaelt-mehr', { SAMMEL_PAKETE_MAX }));
   const pakete: SammelEintrag[] = [];
   for (const [i, x] of liste.slice(0, SAMMEL_PAKETE_MAX).entries()) {
     const wo = `pakete[${i + 1}]`;
@@ -642,11 +643,11 @@ export interface Sammeldatei {
 const SAMMEL_KATALOG = 'katalog.json';
 
 const mitPruefung = (v: Vorschau, pruefung: HerkunftPruefung): Vorschau => ({ ...v, pruefung });
-const zeitText = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }); };
+const zeitText = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }); };
 /** Herkunft nicht bestätigt (#189, #594). */
 const herkunftFehler = (p: HerkunftPruefung) => new Fachfehler(409, p.art === 'ungueltig'
   ? t('pakete.herkunft.fehler.ungueltig')
-  : 'Dieses Paket kommt nicht aus dem offiziellen Katalog und ist nicht vom Ablago-Projekt geprüft. Bitte die Herkunft bestätigen.', { warnung: true });
+  : t('meldungen.pakete.dieses-paket-kommt-nicht'), { warnung: true });
 
 export class Paketverwaltung {
   private kataloge = new Map<string, { katalog: Katalog; pruefung: HerkunftPruefung; zeit: number }>();
@@ -694,11 +695,11 @@ export class Paketverwaltung {
   async quelleHinzufuegen(e: { url?: unknown; fingerabdruck?: unknown }, von: Handelnder): Promise<Quelle[]> {
     let u: URL;
     try { u = new URL(String(e.url ?? '').trim()); } catch { throw new Fachfehler(422, 'Bitte eine vollständige Adresse eingeben, z. B. https://example.org/katalog.json.'); }
-    if (u.protocol !== 'https:') throw new Fachfehler(422, 'Kataloge gehen nur über HTTPS.');
+    if (u.protocol !== 'https:') throw new Fachfehler(422, t('meldungen.pakete.kataloge-gehen-nur-ueber'));
     const url = u.toString();
     const liste = await this.d.paketQuellen();
-    if (url === this.katalogUrl || liste.some((q) => q.url === url)) throw new Fachfehler(409, 'Diese Adresse ist schon eingetragen.');
-    if (liste.length >= 20) throw new Fachfehler(422, 'Höchstens 20 weitere Kataloge.');
+    if (url === this.katalogUrl || liste.some((q) => q.url === url)) throw new Fachfehler(409, t('meldungen.pakete.diese-adresse-ist-schon'));
+    if (liste.length >= 20) throw new Fachfehler(422, t('meldungen.pakete.hoechstens-20-weitere-kataloge'));
     // Eigener Schlüssel (#594): nur nach Bestätigung des Fingerabdrucks, nie stillschweigend.
     const k = await this.schluesselVon(url);
     if (k) Paketverwaltung.fingerabdruckBestaetigt(k.s, e);
@@ -715,7 +716,7 @@ export class Paketverwaltung {
   async quelleSchluessel(e: { url?: unknown; fingerabdruck?: unknown }, von: Handelnder): Promise<Quelle[]> {
     const url = String(e.url ?? '');
     const q = (await this.d.paketQuellen()).find((x) => x.url === url);
-    if (!q) throw new Fachfehler(404, 'Diese Quelle gibt es nicht.');
+    if (!q) throw new Fachfehler(404, t('meldungen.pakete.diese-quelle-gibt-es'));
     const k = await this.schluesselVon(url);
     if (!k) throw new Fachfehler(404, t('pakete.herkunft.fehler.keinschluessel', { url }));
     Paketverwaltung.fingerabdruckBestaetigt(k.s, e);
@@ -733,7 +734,7 @@ export class Paketverwaltung {
   async quelleSchalten(e: { url?: unknown; aktiv?: unknown }, von: Handelnder): Promise<Quelle[]> {
     const url = String(e.url ?? '');
     const liste = await this.d.paketQuellen();
-    if (!liste.some((q) => q.url === url)) throw new Fachfehler(404, 'Diese Quelle gibt es nicht.');
+    if (!liste.some((q) => q.url === url)) throw new Fachfehler(404, t('meldungen.pakete.diese-quelle-gibt-es'));
     const aktiv = e.aktiv === true;
     await this.d.setzePaketQuellen(liste.map((q) => (q.url === url ? { ...q, aktiv } : q)));
     this.kataloge.delete(url);
@@ -743,7 +744,7 @@ export class Paketverwaltung {
 
   async quelleEntfernen(url: string, von: Handelnder): Promise<Quelle[]> {
     const liste = await this.d.paketQuellen();
-    if (!liste.some((q) => q.url === url)) throw new Fachfehler(404, 'Diese Quelle gibt es nicht.');
+    if (!liste.some((q) => q.url === url)) throw new Fachfehler(404, t('meldungen.pakete.diese-quelle-gibt-es'));
     await this.d.setzePaketQuellen(liste.filter((q) => q.url !== url));
     this.kataloge.delete(url);
     log.warn('Paketquelle entfernt', { von: von.email, url });
@@ -754,7 +755,7 @@ export class Paketverwaltung {
   private async erlaubt(url: string | undefined): Promise<string> {
     if (!url || url === this.katalogUrl) return this.katalogUrl;
     if ((await this.quellen()).some((q) => q.url === url && q.aktiv)) return url;
-    throw new Fachfehler(422, 'Diese Katalogquelle ist nicht (mehr) eingerichtet oder abgeschaltet.');
+    throw new Fachfehler(422, t('meldungen.pakete.diese-katalogquelle-ist-nicht'));
   }
 
   /* ---------- Katalog ---------- */
@@ -764,7 +765,7 @@ export class Paketverwaltung {
     const u = await this.erlaubt(url);
     let daten: Buffer, katalog: Katalog;
     try { daten = await this.abruf(u, KLEIN_MAX); katalog = liesKatalog(JSON.parse(daten.toString('utf8'))); }
-    catch (e) { throw new Fachfehler(502, `Der Katalog lässt sich nicht abrufen: ${(e as Error).message}`); }
+    catch (e) { throw new Fachfehler(502, t('meldungen.pakete.der-katalog-laesst-sich', { message: (e as Error).message })); }
     const pruefung = await this.pruefeKatalog(u, daten, katalog);
     this.kataloge.set(u, { katalog, pruefung, zeit: Date.now() });
     return { url: u, katalog, pruefung, abgerufen: new Date().toISOString() };
@@ -793,7 +794,7 @@ export class Paketverwaltung {
     if (q.gesperrt) throw new Fachfehler(409, t('pakete.herkunft.fehler.gesperrt', { url, fingerabdruck: q.gesperrt.fingerabdruck }), { gesperrt: true });
     let schluessel = liesSchluessel(q.schluessel.pem);
     let wechsel = false;
-    let r: ReturnType<typeof pruefeSignatur> = sig ? pruefeSignatur(daten, sig, [schluessel]) : { ok: false, grund: `${SIGNATUR_DATEI} fehlt` };
+    let r: ReturnType<typeof pruefeSignatur> = sig ? pruefeSignatur(daten, sig, [schluessel]) : { ok: false, grund: t('meldungen.pakete.fehlt', { SIGNATUR_DATEI }) };
     if (!r.ok) {
       // Passt die Signatur nicht, hat der Anbieter vielleicht den Schlüssel gewechselt.
       const neu = await this.schluesselVon(url).catch(() => null);
@@ -816,7 +817,7 @@ export class Paketverwaltung {
     }
     const stand = r.ok ? await this.stand(url, katalog, true) : null;
     if (!r.ok || !stand) {
-      const grund = r.ok ? 'ohne Zeitpunkt (erstellt)' : r.grund;
+      const grund = r.ok ? t('meldungen.pakete.ohne-zeitpunkt-erstellt') : r.grund;
       log.warn('Katalogsignatur ungültig', { url, grund });
       throw new Fachfehler(502, t('pakete.herkunft.fehler.signatur', { url, grund }));
     }
@@ -870,16 +871,16 @@ export class Paketverwaltung {
   async lade(id: string, version?: string, quelle?: string): Promise<{ paket: Paket; kp: KatalogPaket; v: KatalogVersion; url: string; katalog: Katalog; pruefung: HerkunftPruefung }> {
     const { katalog, url, pruefung } = await this.aktuellerKatalog(quelle);
     const kp = katalog.pakete.find((p) => p.id === id);
-    if (!kp) throw new Fachfehler(404, `Das Paket „${id}“ gibt es im Katalog nicht.`);
+    if (!kp) throw new Fachfehler(404, t('meldungen.pakete.das-paket-gibt-es', { id }));
     const v = version ? kp.versionen.find((x) => x.version === version) : kp.versionen.find((x) => x.version === kp.aktuell) ?? kp.versionen[0];
-    if (!v) throw new Fachfehler(404, `Version ${version} von „${kp.name}“ gibt es im Katalog nicht.`);
-    if (v.groesse > ARCHIV_MAX) throw new Fachfehler(422, `Das Paket lässt sich nicht herunterladen: ${t('pakete.groesse.zuGross', { groesse: inMB(v.groesse), max: inMB(ARCHIV_MAX) })}`);
+    if (!v) throw new Fachfehler(404, t('meldungen.pakete.version-von-gibt-es', { version: String(version), name: kp.name }));
+    if (v.groesse > ARCHIV_MAX) throw new Fachfehler(422, t('meldungen.pakete.das-paket-laesst-sich', { wert: t('pakete.groesse.zuGross', { groesse: inMB(v.groesse), max: inMB(ARCHIV_MAX) }) }));
     let daten: Buffer;
     try { daten = await this.abruf(new URL(v.archiv, url).toString()); }
-    catch (e) { throw new Fachfehler(502, `Das Paket lässt sich nicht herunterladen: ${(e as Error).message}`); }
-    if (createHash('sha256').update(daten).digest('hex') !== v.sha256) throw new Fachfehler(422, `Die Prüfsumme von „${kp.name}“ ${v.version} passt nicht zum Katalog. Das Paket wird nicht installiert.`);
+    catch (e) { throw new Fachfehler(502, t('meldungen.pakete.das-paket-laesst-sich-2', { message: (e as Error).message })); }
+    if (createHash('sha256').update(daten).digest('hex') !== v.sha256) throw new Fachfehler(422, t('meldungen.pakete.die-pruefsumme-von-passt', { name: kp.name, version: v.version }));
     const paket = liesPaket(liesZip(daten));
-    if (paket.manifest.id !== id || paket.manifest.version !== v.version) throw new Fachfehler(422, `Das Archiv enthält ${paket.manifest.id} ${paket.manifest.version} statt ${id} ${v.version}.`);
+    if (paket.manifest.id !== id || paket.manifest.version !== v.version) throw new Fachfehler(422, t('meldungen.pakete.das-archiv-enthaelt-statt', { id: paket.manifest.id, version: paket.manifest.version, id2: id, version2: v.version }));
     return { paket, kp, v, url, katalog, pruefung };
   }
 
@@ -890,7 +891,7 @@ export class Paketverwaltung {
    * Prüfsumme im (schon abgerufenen) offiziellen Katalog, zeigt die Vorschau die Katalogversion (#594).
    */
   async hochladen(daten: unknown, von: Handelnder): Promise<{ upload: string; vorschau: Vorschau }> {
-    if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, 'Bitte eine .zip-Datei hochladen.');
+    if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, t('meldungen.pakete.bitte-eine-zip-datei'));
     if (daten.length > ARCHIV_MAX) throw new Fachfehler(422, t('pakete.groesse.zuGross', { groesse: inMB(daten.length), max: inMB(ARCHIV_MAX) }));
     const paket = liesPaket(liesZip(daten));
     const sha256 = createHash('sha256').update(daten).digest('hex');
@@ -905,7 +906,7 @@ export class Paketverwaltung {
 
   /** Hochgeladene Datei (#461): eine Sammeldatei erkennt das DMS an sammeldatei.json, sonst ein einzelnes Paket. */
   async hochladenDatei(daten: unknown, von: Handelnder): Promise<{ upload: string; vorschau: Vorschau } | { sammeldatei: Sammeldatei }> {
-    if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, 'Bitte eine .zip-Datei hochladen.');
+    if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, t('meldungen.pakete.bitte-eine-zip-datei'));
     if (daten.length > SAMMEL_MAX) throw new Fachfehler(422, t('pakete.groesse.sammelZuGross', { groesse: inMB(daten.length), max: inMB(SAMMEL_MAX) }));
     if (zipNamen(daten).includes(SAMMEL_VERZEICHNIS)) return { sammeldatei: await this.sammeldatei(daten, von) };
     return this.hochladen(daten, von);
@@ -949,7 +950,7 @@ export class Paketverwaltung {
     const imKatalog = (e: SammelEintrag) => version(katalog, e);
     for (const e of vz.pakete) {
       const a = dateien.get(e.archiv);
-      if (!a) { gruende.push(`${e.archiv} fehlt.`); continue; }
+      if (!a) { gruende.push(t('meldungen.pakete.fehlt-2', { archiv: e.archiv })); continue; }
       if (a.length !== e.groesse) gruende.push(`${e.name} ${e.version}: Die Größe passt nicht zum Verzeichnis.`);
       else if (createHash('sha256').update(a).digest('hex') !== e.sha256) gruende.push(`${e.name} ${e.version}: Die Prüfsumme passt nicht zum Verzeichnis.`);
       const kv = imKatalog(e);
@@ -957,20 +958,20 @@ export class Paketverwaltung {
       const sv = version(signiert.katalog, e);
       if (sv && sv.sha256 !== e.sha256) gruende.push(t('pakete.herkunft.fehler.sammel', { name: e.name, version: e.version }));
     }
-    if (gruende.length) throw new Fachfehler(422, 'Die Sammeldatei ist beschädigt oder verändert. Es wird nichts installiert.', { gruende });
+    if (gruende.length) throw new Fachfehler(422, t('meldungen.pakete.die-sammeldatei-ist-beschaedigt'), { gruende });
     const budget = { rest: SAMMEL_ENTPACKT_MAX };
     const gelesen = vz.pakete.map((e) => {
       let paket: Paket;
       try { paket = liesPaket(liesZip(dateien.get(e.archiv)!, { ...PAKET_GRENZEN, budget })); }
       catch (x) {
         if (!(x instanceof Fachfehler)) throw x;
-        throw new Fachfehler(422, `${e.name} ${e.version} in der Sammeldatei: ${x.message} Es wird nichts installiert.`, x.details);
+        throw new Fachfehler(422, t('meldungen.pakete.in-der-sammeldatei-es', { name: e.name, version: e.version, message: x.message }), x.details);
       }
-      if (paket.manifest.id !== e.id || paket.manifest.version !== e.version) throw new Fachfehler(422, `Das Archiv ${e.archiv} enthält ${paket.manifest.id} ${paket.manifest.version}. Es wird nichts installiert.`);
+      if (paket.manifest.id !== e.id || paket.manifest.version !== e.version) throw new Fachfehler(422, t('meldungen.pakete.das-archiv-enthaelt-es', { archiv: e.archiv, id: paket.manifest.id, version: paket.manifest.version }));
       return { e, paket, id: e.id, abhaengigkeiten: paket.manifest.abhaengigkeiten };
     });
     const reihenfolge = nachAbhaengigkeiten(gelesen);
-    if (!reihenfolge) throw new Fachfehler(422, 'Die Abhängigkeiten der Pakete in der Sammeldatei bilden einen Kreis. Es wird nichts installiert.');
+    if (!reihenfolge) throw new Fachfehler(422, t('meldungen.pakete.die-abhaengigkeiten-der-pakete'));
     // Gültig signierter Stand: merken, wenn er neuer ist (ohne Internet wird nichts abgelehnt, nur angezeigt).
     if (signiert.katalog) await this.stand(this.katalogUrl, signiert.katalog, false);
     for (const [k, u] of this.uploads) if (Date.now() - u.zeit > UPLOAD_GUELTIG) this.uploads.delete(k);
@@ -1006,7 +1007,7 @@ export class Paketverwaltung {
 
   private hochgeladen(token: unknown): Hochgeladen {
     const u = this.uploads.get(String(token ?? ''));
-    if (!u || Date.now() - u.zeit > UPLOAD_GUELTIG) throw new Fachfehler(410, 'Das hochgeladene Paket ist abgelaufen. Bitte noch einmal hochladen.');
+    if (!u || Date.now() - u.zeit > UPLOAD_GUELTIG) throw new Fachfehler(410, t('meldungen.pakete.das-hochgeladene-paket-ist'));
     return u;
   }
 
@@ -1035,23 +1036,23 @@ export class Paketverwaltung {
     const probleme: string[] = [];
     const dmsVersion = this.o.version();
     const dmsOk = dmsPasst(dmsVersion, m.dms);
-    if (!dmsOk) probleme.push(`Das Paket braucht Ablago ${m.dms}; diese Installation hat Version ${dmsVersion}. Bitte zuerst Ablago aktualisieren.`);
+    if (!dmsOk) probleme.push(t('meldungen.pakete.das-paket-braucht-ablago', { dms: m.dms, dmsVersion }));
     const hinweise: string[] = [];
     // Code läuft erst mit dem Paket-Läufer; Einstellungen lassen sich schon pflegen (#197).
-    if (m.code !== undefined && !paket.code) hinweise.push('Das Paket enthält Code, aber kein gebautes Modul (code/modul.wasm) – im Paket-Läufer läuft deshalb nichts; Einstellungen lassen sich schon pflegen.');
-    if (ich && vergleicheVersion(m.version, ich.version) <= 0) probleme.push(`Version ${ich.version} ist schon installiert.`);
+    if (m.code !== undefined && !paket.code) hinweise.push(t('meldungen.pakete.das-paket-enthaelt-code'));
+    if (ich && vergleicheVersion(m.version, ich.version) <= 0) probleme.push(t('meldungen.pakete.version-ist-schon-installiert', { version: ich.version }));
     // Verweise auf Mappentypen des DMS (#310), z. B. dms:ablageort.
     const dmsTypen = await this.dmsTypen();
     const genutzt = [...new Set(typverweise(paket.typen, paket.sichten).filter(istDmsVerweis).map((vw) => vw.slice(DMS_PRAEFIX.length)))];
-    for (const k of genutzt.filter((k) => !dmsTypen.has(k))) probleme.push(`Das Paket verweist auf den Mappentyp „${DMS_TYPEN[k] ?? k}“ von Ablago, den es hier nicht gibt. Bitte Ablago aktualisieren (ab ${DMS_VERWEISE_AB}).`);
+    for (const k of genutzt.filter((k) => !dmsTypen.has(k))) probleme.push(t('meldungen.pakete.das-paket-verweist-auf', { wert: DMS_TYPEN[k] ?? k, DMS_VERWEISE_AB }));
     const da = genutzt.filter((k) => dmsTypen.has(k));
-    if (da.length) hinweise.push(`Nutzt Mappentypen aus Ablago: ${da.map((k) => `${dmsTypen.get(k)!.name} (aus Ablago)`).join(', ')}.`);
+    if (da.length) hinweise.push(t('meldungen.pakete.nutzt-mappentypen-aus-ablago', { map: da.map((k) => t('meldungen.pakete.aus-ablago', { name: dmsTypen.get(k)!.name })).join(', ') }));
     // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche.
-    if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche und Volltext).`);
+    if (paket.wortlisten.length) hinweise.push(t('meldungen.pakete.bringt-gruppen-gleichbedeutender', { anzahl: paket.wortlisten.length }));
     // Beispiele, die auf Beispiele einer Abhängigkeit zeigen (#347): ohne diese bleiben die Verweise leer.
     for (const p of new Set(paket.beispiele.flatMap((b) => beispielVerweise(b.werte)).filter((z) => z.includes(':') && !z.startsWith(`${m.id}:`)).map((z) => z.split(':')[0]))) {
       const da = installierte.find((x) => x.id === p);
-      if (da && !Object.keys(da.beispiele ?? {}).length) hinweise.push(`Einige Beispiele zeigen auf Beispiele von „${da.name}“. Die sind hier nicht installiert – diese Verweise bleiben leer.`);
+      if (da && !Object.keys(da.beispiele ?? {}).length) hinweise.push(t('meldungen.pakete.einige-beispiele-zeigen-auf', { name: da.name }));
     }
     const abhaengigkeiten = Object.entries(m.abhaengigkeiten).map(([id, bereich]): AbhaengigkeitPlan => {
       const da = installierte.find((p) => p.id === id);
@@ -1059,7 +1060,7 @@ export class Paketverwaltung {
       return { id, bereich, installiert: da?.version ?? null, ok: !!da && passt(da.version, bereich), verfuegbar: kp ? neuestePassende(kp, bereich)?.version ?? null : null };
     });
     for (const a of abhaengigkeiten) {
-      if (a.installiert && !a.ok) probleme.push(`„${a.id}“ ist in Version ${a.installiert} installiert, das Paket braucht ${a.bereich}. Bitte „${a.id}“ zuerst aktualisieren.`);
+      if (a.installiert && !a.ok) probleme.push(t('meldungen.pakete.ist-in-version-installiert', { id: a.id, installiert: a.installiert, bereich: a.bereich }));
     }
     const belegt = new Set([...typen.map((t) => t.name.trim().toLowerCase()), ...(geplant?.typen ?? [])]);
     // Text → Verweis (#534): Angaben im alten Textfeld, deren Verweis noch leer ist.
@@ -1074,28 +1075,28 @@ export class Paketverwaltung {
       }
       return erg;
     };
-    const typPlaene = await Promise.all(paket.typen.map(async (t): Promise<TypPlan> => {
-      const dmsSchluessel = `${m.id}_${t.schluessel}`;
-      const vorhandenId = ich?.typen[t.schluessel];
+    const typPlaene = await Promise.all(paket.typen.map(async (paketTyp): Promise<TypPlan> => {
+      const dmsSchluessel = `${m.id}_${paketTyp.schluessel}`;
+      const vorhandenId = ich?.typen[paketTyp.schluessel];
       const vorhanden = vorhandenId ? typen.find((x) => x.id === vorhandenId) : undefined;
       if (vorhanden) {
         return {
-          schluessel: t.schluessel, dmsSchluessel, name: vorhanden.name, felder: t.felder.length, vorhanden: true,
-          neueFelder: t.felder.filter((f) => !vorhanden.felder.some((g) => g.key === f.key)).map((f) => f.label),
-          neueRegister: t.register.filter((r) => !vorhanden.register.some((g) => g.key === r.key)).map((r) => r.name),
-          erkennung: erkennungNeu(t, vorhanden).map((f) => f.label),
-          umwandeln: await umwandelbar(t),
-          formate: formatNeu(t, vorhanden).map((f) => f.label),
+          schluessel: paketTyp.schluessel, dmsSchluessel, name: vorhanden.name, felder: paketTyp.felder.length, vorhanden: true,
+          neueFelder: paketTyp.felder.filter((f) => !vorhanden.felder.some((g) => g.key === f.key)).map((f) => f.label),
+          neueRegister: paketTyp.register.filter((r) => !vorhanden.register.some((g) => g.key === r.key)).map((r) => r.name),
+          erkennung: erkennungNeu(paketTyp, vorhanden).map((f) => f.label),
+          umwandeln: await umwandelbar(paketTyp),
+          formate: formatNeu(paketTyp, vorhanden).map((f) => f.label),
           konflikt: null, vorschlag: null,
         };
       }
-      if (vorhandenId) return { schluessel: t.schluessel, dmsSchluessel, name: t.name, felder: t.felder.length, vorhanden: false, neueFelder: [], neueRegister: [], konflikt: null, vorschlag: null, geloescht: true };
-      if (typen.some((x) => x.schluessel === dmsSchluessel)) probleme.push(`Die Kennung „${dmsSchluessel}“ hat schon ein Mappentyp. Dieses Paket war wohl schon einmal installiert; benenne den Typ in der Werkbank um oder lösche ihn.`);
-      const name = (namen[t.schluessel] ?? t.name).trim();
-      const konflikt = belegt.has(name.toLowerCase()) ? `Einen Mappentyp „${name}“ gibt es schon.` : null;
+      if (vorhandenId) return { schluessel: paketTyp.schluessel, dmsSchluessel, name: paketTyp.name, felder: paketTyp.felder.length, vorhanden: false, neueFelder: [], neueRegister: [], konflikt: null, vorschlag: null, geloescht: true };
+      if (typen.some((x) => x.schluessel === dmsSchluessel)) probleme.push(t('meldungen.pakete.die-kennung-hat-schon', { dmsSchluessel }));
+      const name = (namen[paketTyp.schluessel] ?? paketTyp.name).trim();
+      const konflikt = belegt.has(name.toLowerCase()) ? t('meldungen.pakete.einen-mappentyp-gibt-es', { name }) : null;
       const vorschlag = konflikt ? freierName(name, m.name, belegt) : null;
       belegt.add(name.toLowerCase());
-      return { schluessel: t.schluessel, dmsSchluessel, name, felder: t.felder.length, vorhanden: false, neueFelder: [], neueRegister: [], konflikt, vorschlag };
+      return { schluessel: paketTyp.schluessel, dmsSchluessel, name, felder: paketTyp.felder.length, vorhanden: false, neueFelder: [], neueRegister: [], konflikt, vorschlag };
     }));
     for (const n of belegt) geplant?.typen.add(n);
     // Ansichten mit Mappentypen, die das Paket nicht mitbringt (#656): fehlt einer, kommt die Ansicht ohne ihn; fehlen
@@ -1111,14 +1112,14 @@ export class Paketverwaltung {
     const sichtPlaene = paket.sichten.map((s): SichtPlan => {
       if (ausgelassen.has(s.schluessel) && !ich?.sichten[s.schluessel]) return { schluessel: s.schluessel, name: s.name, eltern: s.eltern ?? null, vorhanden: false, konflikt: null, vorschlag: null, ausgelassen: ausgelassen.get(s.schluessel)! };
       const ohne = (s.fremdeTypen ?? []).filter((f) => !typen.some((t) => t.schluessel === f.kennung)).map((f) => f.name);
-      if (ohne.length && !ich?.sichten[s.schluessel]) hinweise.push(`Ansicht „${s.name}“ kommt ohne den Mappentyp ${ohne.map((n) => `„${n}“`).join(', ')} – den gibt es in dieser Installation nicht.`);
+      if (ohne.length && !ich?.sichten[s.schluessel]) hinweise.push(t('meldungen.pakete.ansicht-kommt-ohne-den', { name: s.name, map: ohne.map((n) => `„${n}“`).join(', ') }));
       const vorhandenId = ich?.sichten[s.schluessel];
       const vorhanden = vorhandenId ? sichten.find((x) => x.id === vorhandenId) : undefined;
       if (vorhanden || vorhandenId) return { schluessel: s.schluessel, name: vorhanden?.name ?? s.name, eltern: s.eltern ?? null, vorhanden: true, konflikt: null, vorschlag: null };
       const name = (sichtNamen[s.schluessel] ?? s.name).trim();
       // Konflikt nur auf oberster Ebene: Untersichten stehen unter der neuen Elternsicht.
       const geschwister = s.eltern ? [] : [...sichten.filter((x) => !x.elternId).map((x) => x.name.trim().toLowerCase()), ...(geplant?.sichten ?? [])];
-      const konflikt = geschwister.includes(name.toLowerCase()) ? `Eine Ansicht „${name}“ gibt es schon.` : null;
+      const konflikt = geschwister.includes(name.toLowerCase()) ? t('meldungen.pakete.eine-ansicht-gibt-es', { name }) : null;
       if (!s.eltern) geplant?.sichten.add(name.toLowerCase());
       return { schluessel: s.schluessel, name, eltern: s.eltern ?? null, vorhanden: false, konflikt, vorschlag: konflikt ? freierName(name, m.name, new Set(geschwister)) : null, ...(ohne.length ? { ohne } : {}) };
     });
@@ -1146,7 +1147,7 @@ export class Paketverwaltung {
   /** Rechte eines Pakets mit Code verlangen eine ausdrückliche Bestätigung (#338). */
   private static rechteBestaetigen(plan: Vorschau, e: { rechteBestaetigt?: boolean }) {
     if (plan.laeufer?.bestaetigen && e.rechteBestaetigt !== true) {
-      throw new Fachfehler(409, `„${plan.paket.name}“ enthält Code, der in Ablago laufen soll. Bitte die Rechte bestätigen.`, { rechte: rechteZeilen(plan.laeufer.rechte) });
+      throw new Fachfehler(409, t('meldungen.pakete.enthaelt-code-der-in', { name: plan.paket.name }), { rechte: rechteZeilen(plan.laeufer.rechte) });
     }
   }
 
@@ -1165,14 +1166,14 @@ export class Paketverwaltung {
     const alt = (await this.d.listePakete()).find((p) => p.id === id) ?? null;
     if (alt) {
       // Ein hochgeladenes Paket aktualisiert man durch erneutes Hochladen einer höheren Version.
-      if (!hoch) throw new Fachfehler(409, `„${alt.name}“ ist schon installiert. Aktualisieren geht über „Aktualisieren“.`);
-      if (alt.herkunft.art !== 'hochgeladen') throw new Fachfehler(409, `„${alt.name}“ stammt aus einem Katalog; Updates kommen nur von dort.`);
+      if (!hoch) throw new Fachfehler(409, t('meldungen.pakete.ist-schon-installiert-aktualisieren', { name: alt.name }));
+      if (alt.herkunft.art !== 'hochgeladen') throw new Fachfehler(409, t('meldungen.pakete.stammt-aus-einem-katalog', { name: alt.name }));
     }
     const herkunft: InstalliertesPaket['herkunft'] = hoch ? { art: 'hochgeladen', von: hoch.von.email, am: hoch.am } : { art: 'katalog', url: quelle! };
     const vorschau = await this.plane(paket, v, geladen.katalog, e.namen ?? {}, e.sichtNamen ?? {});
     const fehlen = vorschau.abhaengigkeiten.filter((a) => !a.installiert);
     if (fehlen.length && (!e.mitAbhaengigkeiten || alt)) {
-      throw new Fachfehler(409, `Es fehlen Pakete, die „${paket.manifest.name}“ braucht: ${fehlen.map((a) => `${a.id} ${a.bereich}`).join(', ')}.`, { gruende: fehlen.map((a) => (a.verfuegbar ? `${a.id}: im Katalog gibt es ${a.verfuegbar}` : `${a.id}: nicht im Katalog`)) });
+      throw new Fachfehler(409, t('meldungen.pakete.es-fehlen-pakete-die', { name: paket.manifest.name, map: fehlen.map((a) => `${a.id} ${a.bereich}`).join(', ') }), { gruende: fehlen.map((a) => (a.verfuegbar ? `${a.id}: im Katalog gibt es ${a.verfuegbar}` : `${a.id}: nicht im Katalog`)) });
     }
     if (vorschau.probleme.length) throw new Fachfehler(409, vorschau.probleme[0], { gruende: vorschau.probleme });
     Paketverwaltung.rechteBestaetigen(vorschau, e);
@@ -1180,16 +1181,16 @@ export class Paketverwaltung {
     for (const a of fehlen) {
       if (!a.verfuegbar) continue;
       const dep = await this.lade(a.id, a.verfuegbar, quelle ?? this.katalogUrl);
-      if (dep.paket.code) throw new Fachfehler(409, `Die Abhängigkeit „${dep.paket.manifest.name}“ enthält Code. Bitte installiere sie zuerst selbst – dabei bestätigst du ihre Rechte.`, { gruende: [`${a.id}: enthält Code`] });
+      if (dep.paket.code) throw new Fachfehler(409, t('meldungen.pakete.die-abhaengigkeit-enthaelt-code', { name: dep.paket.manifest.name }), { gruende: [`${a.id}: enthält Code`] });
     }
     for (const a of fehlen) {
-      if (!a.verfuegbar) throw new Fachfehler(409, `Die Abhängigkeit „${a.id}“ (${a.bereich}) gibt es im Katalog nicht.`);
+      if (!a.verfuegbar) throw new Fachfehler(409, t('meldungen.pakete.die-abhaengigkeit-gibt-es', { id: a.id, bereich: a.bereich }));
       // Abhängigkeiten aus derselben Quelle; bei hochgeladenen Paketen aus dem offiziellen Katalog.
       // Beispiele der Abhängigkeit mit, wenn welche gewünscht sind – die eigenen Beispiele können auf sie zeigen (#347).
       await this.installiere({ id: a.id, version: a.verfuegbar, beispiele: e.beispiele === true, mitAbhaengigkeiten: true, quelle: quelle ?? this.katalogUrl, bestaetigt: e.bestaetigt }, von);
     }
     const konflikte = [...vorschau.typen, ...vorschau.sichten].filter((x) => x.konflikt);
-    if (konflikte.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: konflikte.map((x) => `${x.konflikt} Vorschlag: „${x.vorschlag}“.`), konflikte: true });
+    if (konflikte.length) throw new Fachfehler(409, t('meldungen.pakete.einige-namen-gibt-es'), { gruende: konflikte.map((x) => `${x.konflikt} Vorschlag: „${x.vorschlag}“.`), konflikte: true });
     const datensatz = await this.lege(paket, herkunft, v, vorschau, e.beispiele === true && !alt, von, alt, schluesselListe(e.automatisierungen));
     if (hoch) this.uploads.delete(String(e.upload));
     log.info(alt ? 'Paket aktualisiert (hochgeladen)' : 'Paket installiert', { von: von.email, paket: id, version: paket.manifest.version, ...(alt ? { vorher: alt.version } : {}), herkunft: hoch ? 'hochgeladen' : quelle, pruefung: geladen.pruefung.art + (geladen.pruefung.stand ? ` (Katalog vom ${geladen.pruefung.stand})` : ''), typen: Object.keys(datensatz.typen).length, sichten: Object.keys(datensatz.sichten).length });
@@ -1213,17 +1214,17 @@ export class Paketverwaltung {
     const ziel = (vw: string, nurAngelegt: boolean): string | null => {
       const [p, s] = vw.includes(':') ? vw.split(':') : [m.id, vw];
       if (p === 'dms') {
-        const t = dmsTypen.get(s);
-        if (!t) throw new Fachfehler(422, `Der Verweis „${vw}“ lässt sich nicht auflösen: Diesen Mappentyp gibt es in dieser Installation nicht (Verweise auf Mappentypen von Ablago ab ${DMS_VERWEISE_AB}).`);
-        return t.id;
+        const eintrag = dmsTypen.get(s);
+        if (!eintrag) throw new Fachfehler(422, t('meldungen.pakete.der-verweis-laesst-sich', { vw, DMS_VERWEISE_AB }));
+        return eintrag.id;
       }
       if (p !== m.id) {
         const fremd = installierte.find((x) => x.id === p)?.typen[s];
-        if (!fremd || !vorher.has(fremd)) throw new Fachfehler(422, `Der Verweis „${vw}“ lässt sich nicht auflösen: Paket „${p}“ bzw. sein Typ „${s}“ fehlt.`);
+        if (!fremd || !vorher.has(fremd)) throw new Fachfehler(422, t('meldungen.pakete.der-verweis-laesst-sich-2', { vw, p, s }));
         return fremd;
       }
       const id = ids.get(s);
-      if (!id) throw new Fachfehler(422, `Der Verweis „${vw}“ zeigt auf keinen Typ dieses Pakets.`);
+      if (!id) throw new Fachfehler(422, t('meldungen.pakete.der-verweis-zeigt-auf', { vw }));
       return !nurAngelegt || angelegt.has(s) || vorher.has(id) ? id : null;
     };
     const eingabe = (t: PaketTyp, nurAngelegt: boolean) => {
@@ -1261,35 +1262,35 @@ export class Paketverwaltung {
       const nachtragen: PaketTyp[] = [];
       while (rest.length) {
         const i = rest.findIndex((t) => !eingabe(t, true).unvollstaendig);
-        const t = rest.splice(i < 0 ? 0 : i, 1)[0];
-        const x = eingabe(t, true);
-        try { await this.d.legeTypAn(x.daten); } catch (f) { throw new Fachfehler((f as Fachfehler).status ?? 422, `Mappentyp „${x.daten.name}“: ${meldungen(f)}`); }
-        angelegt.add(t.schluessel);
-        typMap[t.schluessel] = ids.get(t.schluessel)!;
-        if (x.unvollstaendig) nachtragen.push(t);
+        const paketTyp = rest.splice(i < 0 ? 0 : i, 1)[0];
+        const x = eingabe(paketTyp, true);
+        try { await this.d.legeTypAn(x.daten); } catch (f) { throw new Fachfehler((f as Fachfehler).status ?? 422, t('meldungen.pakete.mappentyp', { name: x.daten.name, meldungen: meldungen(f) })); }
+        angelegt.add(paketTyp.schluessel);
+        typMap[paketTyp.schluessel] = ids.get(paketTyp.schluessel)!;
+        if (x.unvollstaendig) nachtragen.push(paketTyp);
       }
-      for (const t of nachtragen) {
-        try { await this.d.aendereTyp(ids.get(t.schluessel)!, eingabe(t, false).daten); } catch (f) { throw new Fachfehler(422, `Mappentyp „${t.name}“: ${meldungen(f)}`); }
+      for (const paketTyp of nachtragen) {
+        try { await this.d.aendereTyp(ids.get(paketTyp.schluessel)!, eingabe(paketTyp, false).daten); } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.mappentyp', { name: paketTyp.name, meldungen: meldungen(f) })); }
       }
       // 2. Update: vorhandene Typen um neue Felder und Register ergänzen – sonst nichts ändern.
-      for (const t of paket.typen) {
-        const p = plan.typen.find((x) => x.schluessel === t.schluessel)!;
+      for (const paketTyp of paket.typen) {
+        const p = plan.typen.find((x) => x.schluessel === paketTyp.schluessel)!;
         if (!p.vorhanden || (!p.neueFelder.length && !p.neueRegister.length && !p.erkennung?.length && !p.formate?.length)) continue;
-        const aktuell = vorher.get(ids.get(t.schluessel)!)!;
-        const neu = eingabe(t, false).daten;
+        const aktuell = vorher.get(ids.get(paketTyp.schluessel)!)!;
+        const neu = eingabe(paketTyp, false).daten;
         // Erkennung (#336): Markierung des Pakets an vorhandene Felder, an denen der Administrator nichts eingestellt hat.
-        const markiert = new Map(erkennungNeu(t, aktuell).map((f) => [f.key, f.erkennung]));
+        const markiert = new Map(erkennungNeu(paketTyp, aktuell).map((f) => [f.key, f.erkennung]));
         // Formate und Datumsgrenzen (#535) genauso: nur an Feldern ohne eigene Einstellung.
-        const vorgaben = new Map(formatNeu(t, aktuell).map((f) => [f.key, f.vorgaben]));
+        const vorgaben = new Map(formatNeu(paketTyp, aktuell).map((f) => [f.key, f.vorgaben]));
         const felder = [...aktuell.felder.map((f) => ({ ...f, ...(markiert.has(f.key) ? { erkennung: markiert.get(f.key) } : {}), ...vorgaben.get(f.key) })), ...neu.felder.filter((f) => !aktuell.felder.some((g) => g.key === f.key))];
         const register = aktuell.register.map((r) => {
-          const pr = t.register.find((x) => x.key === r.key);
+          const pr = paketTyp.register.find((x) => x.key === r.key);
           const dazu = (pr?.felder ?? []).filter((k) => !aktuell.felder.some((g) => g.key === k) && r.art === 'felder');
           return dazu.length ? { ...r, felder: [...(r.felder ?? []), ...dazu] } : r;
         });
         for (const r of neu.register) if (!register.some((g) => g.key === r.key)) register.push(r as Register);
         geaendert.push(aktuell);
-        try { await this.d.aendereTyp(aktuell.id, { ...aktuell, felder, register }); } catch (f) { throw new Fachfehler(422, `Mappentyp „${aktuell.name}“: ${meldungen(f)}`); }
+        try { await this.d.aendereTyp(aktuell.id, { ...aktuell, felder, register }); } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.mappentyp', { name: aktuell.name, meldungen: meldungen(f) })); }
       }
       // 3. Neue Sichten, Elternsichten zuerst, am Ende ihrer Ebene.
       for (const s of nachEltern(paket.sichten)) {
@@ -1297,7 +1298,7 @@ export class Paketverwaltung {
         if (sp.vorhanden || sp.ausgelassen) continue;
         const alle = await this.d.listeSichten();
         const elternId = s.eltern ? sichtMap[s.eltern] ?? null : null;
-        if (s.eltern && !elternId) throw new Fachfehler(422, `Ansicht „${s.name}“: Elternsicht „${s.eltern}“ fehlt.`);
+        if (s.eltern && !elternId) throw new Fachfehler(422, t('meldungen.pakete.ansicht-elternsicht-fehlt', { name: s.name, eltern: s.eltern }));
         const position = Math.max(0, ...kinderVon(alle, elternId).map((x) => x.position)) + 10;
         // „*“ (#725): Ansicht über alle Mappentypen – bleibt, wie es ist.
         const jetzt = await this.d.listeTypen();
@@ -1308,7 +1309,7 @@ export class Paketverwaltung {
           const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}), ...(s.symbol ? { symbol: s.symbol } : {}) });
           neueSichten.push(neu.id);
           sichtMap[s.schluessel] = neu.id;
-        } catch (f) { throw new Fachfehler(422, `Ansicht „${sp.name}“: ${meldungen(f)}`); }
+        } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.ansicht', { name: sp.name, meldungen: meldungen(f) })); }
       }
       // 4. Beispiele (nur bei der Installation, auf Wunsch).
       if (beispiele && !alt) {
@@ -1336,7 +1337,7 @@ export class Paketverwaltung {
             else werte[k] = w;
           }
           let mappeId: string;
-          try { mappeId = (await this.d.ohneEreignisse(() => this.d.legeMappeAn({ typId, werte }, von.id))).id; } catch (f) { throw new Fachfehler(422, `Beispiel: ${meldungen(f)}`); }
+          try { mappeId = (await this.d.ohneEreignisse(() => this.d.legeMappeAn({ typId, werte }, von.id))).id; } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.beispiel', { meldungen: meldungen(f) })); }
           mappen.push(mappeId);
           if (b.schluessel) beispielIds.set(b.schluessel, mappeId);
         }
@@ -1441,14 +1442,14 @@ export class Paketverwaltung {
   /** Update aus der Quelle des Pakets: ergänzt nur – neue Typen, Felder, Register, Sichten. */
   async aktualisiere(id: string, e: { version?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean; automatisierungen?: string[] }, von: Handelnder): Promise<InstalliertesPaket> {
     const alt = (await this.d.listePakete()).find((p) => p.id === id);
-    if (!alt) throw new Fachfehler(404, `„${id}“ ist nicht installiert.`);
-    if (alt.herkunft.art !== 'katalog') throw new Fachfehler(409, 'Ein hochgeladenes Paket aktualisierst du durch erneutes Hochladen einer höheren Version.');
+    if (!alt) throw new Fachfehler(404, t('meldungen.pakete.ist-nicht-installiert', { id }));
+    if (alt.herkunft.art !== 'katalog') throw new Fachfehler(409, t('meldungen.pakete.ein-hochgeladenes-paket'));
     const quelle = await this.erlaubt(alt.herkunft.url);
     const { paket, v, katalog, pruefung } = await this.lade(id, e.version ? String(e.version) : undefined, quelle);
     if (pruefung.bestaetigen && e.bestaetigt !== true) throw herkunftFehler(pruefung);
     const plan = await this.plane(paket, v, katalog);
     const fehlen = plan.abhaengigkeiten.filter((a) => !a.installiert);
-    if (fehlen.length) plan.probleme.push(`Es fehlen Pakete: ${fehlen.map((a) => `${a.id} ${a.bereich}`).join(', ')}.`);
+    if (fehlen.length) plan.probleme.push(t('meldungen.pakete.es-fehlen-pakete', { map: fehlen.map((a) => `${a.id} ${a.bereich}`).join(', ') }));
     if (plan.probleme.length) throw new Fachfehler(409, plan.probleme[0], { gruende: plan.probleme });
     Paketverwaltung.rechteBestaetigen(plan, e);
     const neu = await this.lege(paket, alt.herkunft, v, plan, false, von, alt, schluesselListe(e.automatisierungen));
@@ -1621,7 +1622,7 @@ export class Paketverwaltung {
       throw new Fachfehler(409, t(e.rechteStand ? 'pakete.ablauf.fehler.rechteneu' : 'pakete.ablauf.fehler.rechte'), { rechte, rechteStand: plan.rechte.stand });
     }
     const konflikte = plan.pakete.flatMap((p) => [...p.vorschau.typen, ...p.vorschau.sichten].filter((x) => x.konflikt).map((x) => `${p.name}: ${x.konflikt} Vorschlag: „${x.vorschlag}“.`));
-    if (konflikte.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: konflikte, konflikte: true });
+    if (konflikte.length) throw new Fachfehler(409, t('meldungen.pakete.einige-namen-gibt-es'), { gruende: konflikte, konflikte: true });
     // Pflicht-Einstellungen: ausgefüllt und gültig – oder bewusst später.
     const spaeter = new Set(Array.isArray(e.spaeter) ? e.spaeter.map(String) : []);
     const eingaben = e.einstellungen && typeof e.einstellungen === 'object' ? e.einstellungen as Record<string, Record<string, unknown>> : {};
@@ -1659,7 +1660,7 @@ export class Paketverwaltung {
         const vorschau = await this.plane(x.paket, x.v, x.katalog ?? await this.offiziell(), namen[p.id] ?? {}, sichtNamen[p.id] ?? {});
         if (vorschau.probleme.length) throw new Fachfehler(409, vorschau.probleme[0], { gruende: vorschau.probleme });
         const k = [...vorschau.typen, ...vorschau.sichten].filter((y) => y.konflikt);
-        if (k.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: k.map((y) => `${y.konflikt} Vorschlag: „${y.vorschlag}“.`), konflikte: true });
+        if (k.length) throw new Fachfehler(409, t('meldungen.pakete.einige-namen-gibt-es'), { gruende: k.map((y) => `${y.konflikt} Vorschlag: „${y.vorschlag}“.`), konflikte: true });
         const ds = await this.lege(x.paket, x.herkunft, x.v, vorschau, beispiele.has(p.id) && !alt, von, alt, schluesselListe(ein[p.id]));
         if (x.upload) this.uploads.delete(x.upload);
         log.info(alt ? 'Paket aktualisiert (Ablauf)' : 'Paket installiert (Ablauf)', { von: von.email, paket: p.id, version: ds.version, ...(alt ? { vorher: alt.version } : {}), herkunft: x.herkunft.art === 'katalog' ? x.herkunft.url : 'hochgeladen', pruefung: x.pruefung.art, gebrauchtVon: p.fuer.join(', ') || '–' });
@@ -1684,8 +1685,8 @@ export class Paketverwaltung {
 
   private async beschreibungVon(id: string) {
     const p = (await this.d.listePakete()).find((x) => x.id === id);
-    if (!p) throw new Fachfehler(404, `„${id}“ ist nicht installiert.`);
-    if (!p.einstellungen) throw new Fachfehler(404, `„${p.name}“ hat keine Einstellungen.`);
+    if (!p) throw new Fachfehler(404, t('meldungen.pakete.ist-nicht-installiert', { id }));
+    if (!p.einstellungen) throw new Fachfehler(404, t('meldungen.pakete.hat-keine-einstellungen', { name: p.name }));
     return { p, b: p.einstellungen };
   }
 
@@ -1749,13 +1750,13 @@ export class Paketverwaltung {
         for (const f of l.felder) e[f.schluessel] = geheim(f, e[f.schluessel], vorher?.[f.schluessel], `${l.schluessel}.${i + 1}.${f.schluessel}`);
       });
     }
-    if (Object.keys(r.fehler).length) throw new Fachfehler(422, 'Bitte die markierten Einstellungen prüfen.', { felderFehler: r.fehler, gruende: Object.values(r.fehler) });
+    if (Object.keys(r.fehler).length) throw new Fachfehler(422, t('meldungen.pakete.bitte-die-markierten-einstellungen'), { felderFehler: r.fehler, gruende: Object.values(r.fehler) });
     const geaendert = Object.keys(r.werte).filter((k) => JSON.stringify(r.werte[k]) !== JSON.stringify(alt.werte[k]));
     // Dienst-Adresse (#444): Eine neue oder geänderte Adresse gilt erst, wenn der Administrator den Hinweis bestätigt –
     // dorthin schickt das Paket Daten. Gespeichert wird nur eine bestätigte Adresse; nur zu ihr lässt der Läufer Netz zu.
     const adressen = adressfelder(b).filter((f) => geaendert.includes(f.schluessel) && r.werte[f.schluessel]);
     if (adressen.length && (eingabe as { adresseBestaetigt?: unknown } | null)?.adresseBestaetigt !== true) {
-      throw new Fachfehler(409, `Bitte die Adresse bestätigen: „${p.name}“ schickt Daten an ${adressen.map((f) => String(r.werte[f.schluessel])).join(', ')}.`, { adresse: adressen.map((f) => ({ feld: f.name, wert: r.werte[f.schluessel] })) });
+      throw new Fachfehler(409, t('meldungen.pakete.bitte-die-adresse-bestaetigen', { name: p.name, map: adressen.map((f) => String(r.werte[f.schluessel])).join(', ') }), { adresse: adressen.map((f) => ({ feld: f.name, wert: r.werte[f.schluessel] })) });
     }
     await this.d.setzePaketEinstellungen(id, { ...alt, werte: r.werte });
     if (geaendert.length) {
@@ -1793,10 +1794,10 @@ export class Paketverwaltung {
   async aktion(id: string, schluessel: string, von: Handelnder): Promise<{ ok: boolean; text: string }> {
     const { p, b } = await this.beschreibungVon(id);
     const a = b.aktionen.find((x) => x.schluessel === schluessel);
-    if (!a) throw new Fachfehler(404, 'Diese Aktion gibt es nicht.');
+    if (!a) throw new Fachfehler(404, t('meldungen.pakete.diese-aktion-gibt-es'));
     const fehlend = fehlendePflicht(b, (await this.d.paketEinstellungen(id))?.werte ?? {});
-    if (fehlend.length) return { ok: false, text: `Einstellungen nötig: ${fehlend.join(', ')}.` };
-    if (!this.o.laeufer) return { ok: false, text: 'Pakete mit Code laufen in dieser Installation noch nicht (der Paket-Läufer fehlt). Die Aktion lässt sich deshalb noch nicht ausführen.' };
+    if (fehlend.length) return { ok: false, text: t('meldungen.pakete.einstellungen-noetig', { fehlend: fehlend.join(', ') }) };
+    if (!this.o.laeufer) return { ok: false, text: t('meldungen.pakete.pakete-mit-code-laufen') };
     log.info(`Aktion „${a.name}“ von Paket ${p.name}`, { von: von.email, paket: id, aktion: schluessel });
     let uhr: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -1813,11 +1814,11 @@ export class Paketverwaltung {
   async entferne(id: string, von: Handelnder, behalten = false): Promise<void> {
     const alle = await this.d.listePakete();
     const p = alle.find((x) => x.id === id);
-    if (!p) throw new Fachfehler(404, `„${id}“ ist nicht installiert.`);
-    const gruende: string[] = alle.filter((x) => x.id !== id && id in x.abhaengigkeiten).map((x) => `Das Paket „${x.name}“ braucht „${p.name}“.`);
+    if (!p) throw new Fachfehler(404, t('meldungen.pakete.ist-nicht-installiert', { id }));
+    const gruende: string[] = alle.filter((x) => x.id !== id && id in x.abhaengigkeiten).map((x) => t('meldungen.pakete.das-paket-braucht', { name: x.name, name2: p.name }));
     const typIds = Object.values(p.typen);
     gruende.push(...await this.d.belegteTypen(typIds));
-    if (gruende.length) throw new Fachfehler(409, `„${p.name}“ lässt sich noch nicht entfernen.`, { gruende });
+    if (gruende.length) throw new Fachfehler(409, t('meldungen.pakete.laesst-sich-noch-nicht', { name: p.name }), { gruende });
     // Untersichten zuerst, dann die Typen (Verweise untereinander: mehrere Runden).
     const sichten: Sicht[] = await this.d.listeSichten();
     const tiefe = (sid: string): number => { const s = sichten.find((x) => x.id === sid); return s?.elternId ? 1 + tiefe(s.elternId) : 0; };
@@ -1832,7 +1833,7 @@ export class Paketverwaltung {
       const rest = new Set((await this.d.listeTypen()).map((x) => x.id));
       offen = offen.filter((t) => rest.has(t));
       if (!offen.length) break;
-      if (runde > 0 && offen.length === vorher) throw new Fachfehler(409, `„${p.name}“ lässt sich nicht ganz entfernen.`, { gruende: fehler });
+      if (runde > 0 && offen.length === vorher) throw new Fachfehler(409, t('meldungen.pakete.laesst-sich-nicht-ganz', { name: p.name }), { gruende: fehler });
       // Kein Fortschritt: Typen des Pakets verweisen im Kreis aufeinander – diese Verweise zuerst lösen.
       if (offen.length === vorher) {
         const bleibt = new Set(offen);

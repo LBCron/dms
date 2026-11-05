@@ -33,6 +33,7 @@ import { Fachfehler } from '../fehler';
 import { MIN_ERSPARNIS, STANDARD_STUFE, STUFEN, type Stufe } from '../../../shared/src/verkleinern';
 import { jpegMasse } from './bild';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 /* ---------- Inhaltsströme lesen: Bilder und ihre Größe auf der Seite ---------- */
 
@@ -210,9 +211,9 @@ function bildInfos(doc: PDFDocument): BildInfo[] {
     const info: BildInfo = { ref, breite, hoehe, bytes: st.getContentsSize(), filter, grau: fr === 'grau', p };
     const maske = ctx.lookup(d.get(PDFName.of('ImageMask')));
     if (maske && maske.toString() === 'true') info.aus = 'Bildmaske';
-    else if (d.has(PDFName.of('Mask'))) info.aus = 'Farbschlüssel-Maske';
+    else if (d.has(PDFName.of('Mask'))) info.aus = t('meldungen.verkleinern.farbschluessel-maske');
     else if (!breite || !hoehe || bpc === undefined) info.aus = 'unvollständig';
-    else if (bpc < 8 || /CCITT|JBIG2/.test(filter)) info.aus = 'Schwarz-Weiß';
+    else if (bpc < 8 || /CCITT|JBIG2/.test(filter)) info.aus = t('meldungen.verkleinern.schwarz-weiss');
     else if (fr === 'nein') info.aus = 'Farbraum';
     else if (p.breiteZoll <= 0.01 || p.hoeheZoll <= 0.01) info.aus = 'unsichtbar';
     r.push(info);
@@ -271,8 +272,8 @@ async function lade(inhalt: Buffer): Promise<PDFDocument> {
     doc.getPageCount();
     return doc;
   } catch (e) {
-    if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht verkleinern.');
-    throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');
+    if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, t('meldungen.verkleinern.das-pdf-ist-mit'));
+    throw new Fachfehler(422, t('meldungen.verkleinern.die-datei-laesst-sich'));
   }
 }
 
@@ -335,12 +336,12 @@ async function rechne(doc: PDFDocument, plaene: Plan[], grau: boolean, qualitaet
   try {
     await starte('pdftoppm', ['-r', '72', '-jpeg', '-jpegopt', `quality=${qualitaet},optimize=y`, '-aaVector', 'no', ...(grau ? ['-gray'] : []), ein, join(dir, tag)]);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Fachfehler(503, 'pdftoppm fehlt – PDFs lassen sich hier nicht verkleinern.');
-    throw new Fachfehler(422, `Die Bilder ließen sich nicht umrechnen: ${(e as Error).message}`);
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Fachfehler(503, t('meldungen.verkleinern.pdftoppm-fehlt-pdfs-lassen'));
+    throw new Fachfehler(422, t('meldungen.verkleinern.die-bilder-liessen-sich', { message: (e as Error).message }));
   }
   const dateien = (await readdir(dir)).filter((n) => n.startsWith(`${tag}-`) && n.endsWith('.jpg'))
     .sort((a, b) => Number(a.slice(tag.length + 1, -4)) - Number(b.slice(tag.length + 1, -4)));
-  if (dateien.length !== plaene.length) throw new Fachfehler(422, 'Die Bilder ließen sich nicht umrechnen.');
+  if (dateien.length !== plaene.length) throw new Fachfehler(422, t('meldungen.verkleinern.die-bilder-liessen-sich-2'));
   return Promise.all(dateien.map((n) => readFile(join(dir, n))));
 }
 
@@ -449,7 +450,7 @@ export async function verkleinere(inhalt: Buffer, stufe: Stufe = STANDARD_STUFE)
   const { qualitaet } = STUFEN[stufe];
   const hinweise: Ergebnis['hinweise'] = [];
   let plaene: Plan[] = [];
-  try { plaene = plane(bildInfos(doc), stufe); } catch (e) { hinweise.push({ text: 'PDF verkleinern: Bilder nicht verortet', fehler: (e as Error).message }); }
+  try { plaene = plane(bildInfos(doc), stufe); } catch (e) { hinweise.push({ text: t('meldungen.verkleinern.pdf-verkleinern-bilder-nicht'), fehler: (e as Error).message }); }
   const dir = await mkdtemp(join(tmpdir(), 'dms-klein-'));
   let neu = 0;
   try {
@@ -464,7 +465,7 @@ export async function verkleinere(inhalt: Buffer, stufe: Stufe = STANDARD_STUFE)
         const alt = doc.context.lookup(p.b.ref) as PDFRawStream;
         const d = doc.context.obj({
           Type: 'XObject', Subtype: 'Image', Width: m.breite, Height: m.hoehe,
-          ColorSpace: m.komponenten === 1 ? 'DeviceGray' : 'DeviceRGB', BitsPerComponent: 8, Filter: 'DCTDecode',
+          ColorSpace: t('meldungen.verkleinern.devicergb', { anzahl: m.komponenten }), BitsPerComponent: 8, Filter: 'DCTDecode',
         });
         for (const k of ['SMask', 'Interpolate', 'Intent', 'OC', 'Metadata', 'StructParent']) {
           const v = alt.dict.get(PDFName.of(k));
@@ -484,7 +485,7 @@ export async function verkleinere(inhalt: Buffer, stufe: Stufe = STANDARD_STUFE)
         await starte('qpdf', ['--object-streams=generate', '--compress-streams=y', '--recompress-flate', '--compression-level=9', '--warning-exit-0', join(dir, 'ein.pdf'), join(dir, 'aus.pdf')]);
         const q = await readFile(join(dir, 'aus.pdf'));
         if (q.length < erg.length) erg = q;
-      } catch (e) { hinweise.push({ text: 'PDF verkleinern: qpdf übersprungen', fehler: (e as Error).message }); }
+      } catch (e) { hinweise.push({ text: t('meldungen.verkleinern.pdf-verkleinern-qpdf-uebersprungen'), fehler: (e as Error).message }); }
     }
     const lohnt = erg.length <= inhalt.length * (1 - MIN_ERSPARNIS);
     return { inhalt: lohnt ? erg : inhalt, vorher: inhalt.length, nachher: lohnt ? erg.length : inhalt.length, lohnt, stufe, bilder: neu, seiten, hinweise };

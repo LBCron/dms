@@ -1,6 +1,7 @@
 import { WIEDERHOLEN_MIN, type KatalogArt, type KatalogEreignis, type Ausloeser } from '../../shared/src/ereignisse';
 import type { GespeichertesKatalogEreignis, Repo } from './repo';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Verteiler des Ereigniskatalogs (#670, #724): **der eine Ausgangskorb** (`ereignisse`). Der Kern schreibt jedes
@@ -91,7 +92,7 @@ export class Ereignisverteiler {
     if (!fehler.length) return true;
     const warte = WIEDERHOLEN_MIN[g.versuche];
     await this.o.repo().katalogEreignisFehlgeschlagen(g.id, fehler.join('; '), warte === undefined ? null : new Date(Date.now() + warte * 60_000));
-    log[warte === undefined ? 'error' : 'warn'](warte === undefined ? 'Ereignis aufgegeben' : 'Ereignis wird wiederholt', { art: g.art, id: g.id, versuch: g.versuche + 1, fehler: fehler.join('; ') });
+    log[warte === undefined ? 'error' : 'warn'](warte === undefined ? t('meldungen.ereignisse.ereignis-aufgegeben') : t('meldungen.ereignisse.ereignis-wird-wiederholt'), { art: g.art, id: g.id, versuch: g.versuche + 1, fehler: fehler.join('; ') });
     return false;
   }
 }

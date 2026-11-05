@@ -1,3 +1,4 @@
+import { t } from './sprache';
 /** Wie in tresor.ts (dort importiert diese Datei – daher kein Import zurück). */
 export interface Betroffen { bereich: string; was: string; wo?: string }
 const istVerschluesselt = (v: unknown): v is string => typeof v === 'string' && v.startsWith('dms1$');
@@ -29,19 +30,19 @@ export interface ArtStand { art: GeheimArt; name: string; anzahl: number; unlesb
 
 /** Namen in der Reihenfolge der Anzeige; `wo` sagt, wo man einen nicht lesbaren Wert neu eingibt. */
 export const GEHEIM_ARTEN: Record<GeheimArt, { name: string; bereich: string; wo: string; intern?: true }> = {
-  passwortfeld: { name: 'Passwortfelder in Mappen', bereich: 'Ablage', wo: 'in der Ablage neu eingeben' },
-  papierkorb: { name: 'Passwortfelder im Papierkorb', bereich: 'Papierkorb', wo: 'nach dem Wiederherstellen in der Ablage neu eingeben' },
-  mail: { name: 'E-Mail-Versand (Passwort des Mailservers)', bereich: 'E-Mail und Adresse', wo: 'in der Werkbank unter „E-Mail und Adresse“ neu eingeben' },
-  postfach: { name: 'Postfächer (IMAP-Passwort)', bereich: 'Postfächer', wo: 'in der Werkbank unter „Postfächer“ neu eingeben' },
-  postfach_oauth_app: { name: 'Postfächer (OAuth: App-Geheimnis)', bereich: 'Postfächer', wo: 'in der Werkbank unter „Postfächer“ bei der App neu eingeben' },
-  postfach_oauth: { name: 'Postfächer (OAuth-Anmeldung)', bereich: 'Postfächer', wo: 'in der Werkbank unter „Postfächer“ neu anmelden' },
-  oidc: { name: 'Anmeldung über einen Anbieter (OIDC: Client-Secret)', bereich: 'Anmeldeschutz', wo: 'in der Werkbank unter „Anmeldeschutz“ neu eingeben' },
-  zweifaktor: { name: 'Zwei-Faktor-Anmeldung', bereich: 'Benutzer', wo: 'unter „Benutzer“ zurücksetzen; der Benutzer richtet sie neu ein' },
-  dokpasswort: { name: 'Gemerkte Passwörter für Dokumente', bereich: 'Benutzer', wo: 'der Benutzer löscht sie unter „Mein Konto → Sicherheit“ und merkt sie sich neu' },
-  paket: { name: 'Paket-Einstellungen (Geheimnisse)', bereich: 'Pakete', wo: 'in den Einstellungen des Pakets neu eingeben' },
-  webhook: { name: 'Webhooks (Geheimnis für die Signatur)', bereich: 'Webhooks', wo: 'im Profil des Benutzers unter „Webhooks“ ein neues Geheimnis erzeugen' },
-  pruefwort: { name: 'Prüfwort (zeigt, ob der Schlüssel passt)', bereich: 'Verschlüsselung', wo: 'wird mit einem neuen Schlüssel neu gesetzt', intern: true },
-  sonstige: { name: 'Weitere Einstellungen', bereich: 'Einstellungen', wo: 'bitte melden – diese Art kennt die Anzeige noch nicht' },
+  passwortfeld: { name: t('meldungen.geheimnisse.passwortfelder-in-mappen'), bereich: 'Ablage', wo: t('meldungen.geheimnisse.in-der-ablage-neu') },
+  papierkorb: { name: t('meldungen.geheimnisse.passwortfelder-im-papierkorb'), bereich: 'Papierkorb', wo: t('meldungen.geheimnisse.nach-dem-wiederherstellen-in') },
+  mail: { name: t('meldungen.geheimnisse.e-mail-versand-passwort'), bereich: t('meldungen.geheimnisse.e-mail-und-adresse'), wo: t('meldungen.geheimnisse.in-der-werkbank-unter') },
+  postfach: { name: t('meldungen.geheimnisse.postfaecher-imap-passwort'), bereich: 'Postfächer', wo: t('meldungen.geheimnisse.in-der-werkbank-unter-2') },
+  postfach_oauth_app: { name: t('meldungen.geheimnisse.postfaecher-oauth-app-geheimnis'), bereich: 'Postfächer', wo: t('meldungen.geheimnisse.in-der-werkbank-unter-3') },
+  postfach_oauth: { name: t('meldungen.geheimnisse.postfaecher-oauth-anmeldung'), bereich: 'Postfächer', wo: t('meldungen.geheimnisse.in-der-werkbank-unter-4') },
+  oidc: { name: t('meldungen.geheimnisse.anmeldung-ueber-einen-anbieter'), bereich: 'Anmeldeschutz', wo: t('meldungen.geheimnisse.in-der-werkbank-unter-5') },
+  zweifaktor: { name: t('meldungen.geheimnisse.zwei-faktor-anmeldung'), bereich: 'Benutzer', wo: t('meldungen.geheimnisse.unter-benutzer-zuruecksetzen-der') },
+  dokpasswort: { name: t('meldungen.geheimnisse.gemerkte-passwoerter-fuer-dokumente'), bereich: 'Benutzer', wo: t('meldungen.geheimnisse.der-benutzer-loescht-sie') },
+  paket: { name: t('meldungen.geheimnisse.paket-einstellungen-geheimnisse'), bereich: 'Pakete', wo: t('meldungen.geheimnisse.in-den-einstellungen-des') },
+  webhook: { name: t('meldungen.geheimnisse.webhooks-geheimnis-fuer-die'), bereich: 'Webhooks', wo: t('meldungen.geheimnisse.im-profil-des-benutzers') },
+  pruefwort: { name: t('meldungen.geheimnisse.pruefwort-zeigt-ob-der'), bereich: 'Verschlüsselung', wo: t('meldungen.geheimnisse.wird-mit-einem-neuen'), intern: true },
+  sonstige: { name: t('meldungen.geheimnisse.weitere-einstellungen'), bereich: 'Einstellungen', wo: t('meldungen.geheimnisse.bitte-melden-diese-art') },
 };
 
 /** Art eines Fundes nach Quelle und Schlüssel der Einstellung. */
@@ -93,17 +94,17 @@ export function bestandAus(funde: Fundstelle[], lesbar: (v: string) => boolean, 
       if (ohneListe.has(art) || GEHEIM_ARTEN[art].intern) continue;
       const a = GEHEIM_ARTEN[art];
       let was: string;
-      if (art === 'papierkorb') was = `${f.titel || 'Mappe ohne Titel'}: ${String(w.pfad.at(-1) ?? 'Passwort')}`;
-      else if (art === 'postfach') was = `Postfach „${(Array.isArray(f.wert) && typeof w.pfad[0] === 'number' ? name(f.wert[w.pfad[0]]) : '') || 'ohne Namen'}“: Passwort`;
-      else if (art === 'postfach_oauth_app') was = `App für ${String(w.pfad[0] ?? 'OAuth')}: Client-Secret`;
-      else if (art === 'postfach_oauth') was = `Postfach „${postfachName(f.schluessel.slice('postfach_oauth_'.length)) || 'ohne Namen'}“: Anmeldung beim Anbieter`;
-      else if (art === 'oidc') was = 'Client-Secret des Anbieters';
-      else if (art === 'zweifaktor') was = `Zwei-Faktor-Anmeldung von ${f.titel || 'einem Benutzer'}`;
-      else if (art === 'dokpasswort') was = `Gemerktes Passwort für Dokumente von ${f.titel || 'einem Benutzer'}`;
+      if (art === 'papierkorb') was = `${f.titel || t('meldungen.geheimnisse.mappe-ohne-titel')}: ${String(w.pfad.at(-1) ?? 'Passwort')}`;
+      else if (art === 'postfach') was = t('meldungen.geheimnisse.postfach-passwort', { wert: (Array.isArray(f.wert) && typeof w.pfad[0] === 'number' ? name(f.wert[w.pfad[0]]) : '') || t('meldungen.geheimnisse.ohne-namen') });
+      else if (art === 'postfach_oauth_app') was = t('meldungen.geheimnisse.app-fuer-client-secret', { wert: String(w.pfad[0] ?? 'OAuth') });
+      else if (art === 'postfach_oauth') was = t('meldungen.geheimnisse.postfach-anmeldung-beim-anbieter', { wert: postfachName(f.schluessel.slice('postfach_oauth_'.length)) || t('meldungen.geheimnisse.ohne-namen') });
+      else if (art === 'oidc') was = t('meldungen.geheimnisse.client-secret-des-anbieters');
+      else if (art === 'zweifaktor') was = t('meldungen.geheimnisse.zwei-faktor-anmeldung-von', { wert: f.titel || t('meldungen.geheimnisse.einem-benutzer') });
+      else if (art === 'dokpasswort') was = t('meldungen.geheimnisse.gemerktes-passwort-fuer-dokumente', { wert: f.titel || t('meldungen.geheimnisse.einem-benutzer') });
       else if (art === 'paket') was = `Paket „${f.schluessel.slice('paket:'.length)}“: ${String(w.pfad.filter((x) => typeof x === 'string' && x !== 'werte').join('.') || 'Geheimnis')}`;
-      else if (art === 'webhook') was = `Webhook „${f.titel || 'ohne Namen'}“: Geheimnis`;
-      else if (art === 'mail') was = 'Passwort des Mailservers';
-      else if (art === 'passwortfeld') was = `${f.titel || 'Mappe ohne Titel'}: ${String(w.pfad.at(-1) ?? 'Passwort')}`;
+      else if (art === 'webhook') was = t('meldungen.geheimnisse.webhook-geheimnis', { wert: f.titel || t('meldungen.geheimnisse.ohne-namen') });
+      else if (art === 'mail') was = t('meldungen.geheimnisse.passwort-des-mailservers');
+      else if (art === 'passwortfeld') was = `${f.titel || t('meldungen.geheimnisse.mappe-ohne-titel')}: ${String(w.pfad.at(-1) ?? 'Passwort')}`;
       else was = `Einstellung „${f.schluessel}“`;
       betroffen.push({ bereich: a.bereich, was, wo: a.wo });
     }

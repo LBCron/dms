@@ -54,7 +54,7 @@ const ENCRYPT = Buffer.from('/Encrypt');
 
 /** Falsches Passwort (qpdf: „invalid password“). */
 export class FalschesPasswort extends Error {
-  constructor() { super('Falsches Passwort'); }
+  constructor() { super(t('meldungen.entsperren.falsches-passwort')); }
 }
 
 interface Lauf { code: number | null; stderr: string }

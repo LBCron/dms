@@ -70,6 +70,7 @@ import type { Dokumentart } from '../../shared/src/demodaten';
 import { merkeAnfrage } from './diagnose';
 import { erreichbarkeit, NICHT_ERREICHBAR } from './erreichbar';
 import { istAusfall } from '../../shared/src/erreichbarkeit';
+import { t } from './sprache';
 
 export class ApiFehler extends Error {
   constructor(public status: number, message: string, public details?: unknown) { super(message); }
@@ -103,7 +104,7 @@ export async function speichereDatei(url: string, body: unknown, ersatzname: str
   } catch { throw new ApiFehler(0, NICHT_ERREICHBAR); }
   if (!r.ok) {
     const d = await r.json().catch(() => null) as { fehler?: string; details?: unknown } | null;
-    throw new ApiFehler(r.status, d?.fehler ?? `Fehler ${r.status}`, d?.details);
+    throw new ApiFehler(r.status, d?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }), d?.details);
   }
   const kopf = r.headers.get('content-disposition') ?? '';
   const m = /filename\*=UTF-8''([^;]+)/i.exec(kopf);
@@ -157,7 +158,7 @@ export async function heikleDatei(url: string, ersatzname: string, rueckfragen =
     const x = r.status === 403 ? d?.details : undefined;
     if (rueckfragen > 0 && bestaetigung && x && (x.verwaltungsmodus || x.frisch) && await bestaetigung(x.verwaltungsmodus ? 'modus' : 'frisch', x)) return heikleDatei(url, ersatzname, rueckfragen - 1);
     if (r.status === 401) dispatchEvent(new Event(ABGEMELDET));
-    throw new ApiFehler(r.status, d?.fehler ?? `Fehler ${r.status}`, d?.details);
+    throw new ApiFehler(r.status, d?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }), d?.details);
   }
   const m = /filename\*=UTF-8''([^;]+)/i.exec(r.headers.get('content-disposition') ?? '');
   const blob = await r.blob();
@@ -200,8 +201,8 @@ async function anfrageEinmal<T>(methode: string, url: string, body?: unknown): P
   erreichbarkeit.antwort();
   if (r.status === 401 && !url.startsWith('/api/konto/')) dispatchEvent(new Event(ABGEMELDET));
   if (!r.ok) {
-    merkeAnfrage(methode, url, r.status, daten?.fehler ?? `Fehler ${r.status}`);
-    throw new ApiFehler(r.status, daten?.fehler ?? `Fehler ${r.status}`, daten?.details);
+    merkeAnfrage(methode, url, r.status, daten?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }));
+    throw new ApiFehler(r.status, daten?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }), daten?.details);
   }
   return daten as T;
 }
@@ -234,7 +235,7 @@ export async function frageStellen(frage: string, verlauf: VerlaufEintrag[], zei
   if (!r.ok || !r.body) {
     const d = await r.json().catch(() => null) as { fehler?: string; details?: unknown } | null;
     if (r.status === 401) dispatchEvent(new Event(ABGEMELDET));
-    throw new ApiFehler(r.status, d?.fehler ?? `Fehler ${r.status}`, d?.details);
+    throw new ApiFehler(r.status, d?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }), d?.details);
   }
   const leser = r.body.pipeThrough(new TextDecoderStream()).getReader();
   let rest = '';
@@ -566,8 +567,8 @@ export const api = {
   hinweiseGesehen: () => anfrage<null>('POST', '/api/konto/hinweise/gesehen'),
 
   typen: () => anfrage<Mappentyp[]>('GET', '/api/typen'),
-  typAnlegen: (t: unknown) => anfrage<Mappentyp>('POST', '/api/typen', t),
-  typAendern: (id: string, t: unknown) => anfrage<Mappentyp>('PUT', `/api/typen/${id}`, t),
+  typAnlegen: (eintrag: unknown) => anfrage<Mappentyp>('POST', '/api/typen', eintrag),
+  typAendern: (id: string, eintrag: unknown) => anfrage<Mappentyp>('PUT', `/api/typen/${id}`, eintrag),
   typLoeschen: (id: string) => anfrage<null>('DELETE', `/api/typen/${id}`),
   /** Eine Seite einer Sicht („eingang“, Sicht- oder Typ-Id; „link“ mit den Parametern eines sprechenden Links, #98). */
   seite: (sicht: string, von = 0, anzahl = 100, suche = '', sortierung?: Sortierung | null, volltext = false, notizen = false, link?: string, eigene?: Werte, gesamt?: number) =>
@@ -607,7 +608,7 @@ export const api = {
     const r = await fetch(`/api/designs/${id}/logo`, { method: 'PUT', credentials: 'same-origin', headers: { 'x-dms': '1', 'content-type': 'application/octet-stream' }, body: f });
     const daten = await r.json().catch(() => null);
     if (istAusfall(r.status, daten)) { erreichbarkeit.ausfall(); throw new ApiFehler(r.status, NICHT_ERREICHBAR); }
-    if (!r.ok) throw new ApiFehler(r.status, daten?.fehler ?? `Fehler ${r.status}`);
+    if (!r.ok) throw new ApiFehler(r.status, daten?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }));
     return daten as Design;
   },
   designLogoEntfernen: (id: string) => anfrage<Design>('DELETE', `/api/designs/${id}/logo`),
@@ -1009,7 +1010,7 @@ async function sendeDatei(url: string, datei: Blob): Promise<unknown> {
     const d = await r.json().catch(() => null);
     if (istAusfall(r.status, d)) { erreichbarkeit.ausfall(); throw new ApiFehler(r.status, NICHT_ERREICHBAR); }
     if (r.status === 401) dispatchEvent(new Event(ABGEMELDET));
-    if (!r.ok) throw new ApiFehler(r.status, d?.fehler ?? (r.status === 413 ? 'Die Datei ist zu groß.' : `Fehler ${r.status}`), d?.details);
+    if (!r.ok) throw new ApiFehler(r.status, d?.fehler ?? (r.status === 413 ? t('oberflaeche.api.die-datei-ist-zu') : t('oberflaeche.api.fehler', { status: r.status })), d?.details);
     return d;
 }
 

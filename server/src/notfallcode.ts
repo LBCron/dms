@@ -14,6 +14,7 @@ import { mailtexte } from './mail';
 import { protokoll } from './protokoll';
 import type { ProxyVertrauen } from './proxy';
 import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Notfallzugang mit dem Notfallcode vom Notfallblatt (#815): ausgesperrt, trotzdem wieder hinein – ohne Dateien auf dem
@@ -137,7 +138,7 @@ export interface NotfallDeps {
   entschluessele?: (wert: string) => string | null;
 }
 
-const datumText = (d: Date) => d.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
+const datumText = (d: Date) => d.toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
 
 export class Notfallcode {
   readonly sperre: NotfallSperre;

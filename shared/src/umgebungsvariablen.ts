@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Umgebungsvariablen, die nicht mehr nötig sind (#115, #119, #478): je Variable der passende Grund
  * und der Text für den Hinweis in Werkbank → Übersicht. Server-Protokoll (index.ts, mandant.ts)
@@ -14,16 +15,16 @@ export interface UeberfluessigeVariable {
 }
 
 export const VARIABLEN_GRUND: Record<VariablenArt, string> = {
-  ordner: 'Die Ordner im Container sind fest; welcher Ordner des NAS dahinter liegt, bestimmen die Volumes.',
-  datenbank: 'Die Datenbank-Anbindung steht jetzt in einer Datei im Datenordner (Werkbank → Datenbank-Anbindung).',
-  haushalt: 'Die Ablage-Id ist gespeichert.',
+  ordner: t('gemeinsam.umgebungsvariablen.die-ordner-im-container'),
+  datenbank: t('gemeinsam.umgebungsvariablen.die-datenbank-anbindung-steht'),
+  haushalt: t('gemeinsam.umgebungsvariablen.die-ablage-id-ist'),
 };
 
 /** Kurzform für den Hinweis („… – die Datenbank-Anbindung steht jetzt in einer Datei“). */
 const KURZ: Record<VariablenArt, string> = {
-  ordner: 'die Ordner im Container sind fest, welcher Ordner des NAS dahinter liegt, bestimmen die Volumes',
-  datenbank: 'die Datenbank-Anbindung steht jetzt in einer Datei im Datenordner',
-  haushalt: 'die Ablage-Id ist gespeichert',
+  ordner: t('gemeinsam.umgebungsvariablen.die-ordner-im-container-2'),
+  datenbank: t('gemeinsam.umgebungsvariablen.die-datenbank-anbindung-steht-2'),
+  haushalt: t('gemeinsam.umgebungsvariablen.die-ablage-id-ist-2'),
 };
 
 /** Liste der überflüssigen Variablen in fester Reihenfolge: Ordner, DATABASE_URL, HAUSHALT_ID. */
@@ -53,10 +54,10 @@ export function variablenHinweis(v: UeberfluessigeVariable[]): VariablenHinweis 
   // Nur DATABASE_URL: direkt zur Datenbank-Anbindung, sonst zur Technik (dort stehen alle Variablen).
   const nurDatenbank = v.every((x) => x.art === 'datenbank');
   return {
-    titel: 'Nicht mehr nötig:',
+    titel: t('gemeinsam.umgebungsvariablen.nicht-mehr-noetig'),
     zeilen: v.map((x) => ({ name: x.name, grund: KURZ[x.art] })),
-    schluss: eine ? 'Entferne die Variable beim nächsten Update aus der Compose-Datei.' : 'Entferne diese Variablen beim nächsten Update aus der Compose-Datei.',
+    schluss: eine ? t('gemeinsam.umgebungsvariablen.entferne-die-variable-beim') : t('gemeinsam.umgebungsvariablen.entferne-diese-variablen-beim'),
     ziel: nurDatenbank ? '/werkbank/anbindung' : '/werkbank/systemzustand#version',
-    knopf: nurDatenbank ? 'Zur Anbindung' : 'Zur Technik',
+    knopf: nurDatenbank ? t('gemeinsam.umgebungsvariablen.zur-anbindung') : t('gemeinsam.umgebungsvariablen.zur-technik'),
   };
 }

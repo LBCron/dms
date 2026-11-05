@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 import { open, stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { createGunzip, createGzip } from 'node:zlib';
+import { t } from './sprache';
 
 /**
  * Dateiformat einer Sicherung (#103), Version 1.
@@ -60,7 +61,7 @@ export interface Geschrieben { bytes: number; sha256: string }
  */
 export async function schreibeSicherung(ziel: string, schluessel: Buffer, fingerabdruck: string, eintraege: AsyncIterable<Eintrag>, fortschritt: (bytes: number) => void = () => {}): Promise<Geschrieben> {
   const nonce = randomBytes(12);
-  const kopf: Dateikopf = { format: FORMAT, verfahren: 'AES-256-GCM', ableitung: `HKDF-SHA256 „${ZWECK}“ aus dem Schlüssel der Werkbank`, kompression: 'gzip', fingerabdruck, nonce: nonce.toString('base64url') };
+  const kopf: Dateikopf = { format: FORMAT, verfahren: 'AES-256-GCM', ableitung: t('meldungen.sicherungsformat.hkdf-sha256-aus-dem', { ZWECK }), kompression: 'gzip', fingerabdruck, nonce: nonce.toString('base64url') };
   const kopfBytes = Buffer.from(JSON.stringify(kopf), 'utf8');
   const vorspann = Buffer.concat([MAGIE, u32(kopfBytes.length), kopfBytes]);
   const cipher = createCipheriv('aes-256-gcm', schluessel, nonce);

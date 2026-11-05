@@ -3,11 +3,12 @@
  * eindeutig machen, Pfade zerlegen, XML erzeugen, Ratenbegrenzung. Die Anbindung steht in webdav.ts.
  */
 import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
+import { t } from './sprache';
 
 /** Wurzel des Laufwerks. */
 export const WEBDAV_PFAD = '/webdav';
 /** Ordner der obersten Ebene. */
-export const NEUE_POST = 'Neue Post';
+export const NEUE_POST = t('meldungen.webdavbaum.neue-post');
 export const ABLAGE = 'Ablage';
 /** Ordner je Mappe mit den verknüpften Mappen (nur eine Ebene tief, s. webdav.ts). */
 export const VERKNUEPFT = 'Verknüpft';
@@ -23,7 +24,7 @@ const MAX_NAME = 120;
 export const schluessel = (name: string) => name.normalize('NFC').toLowerCase();
 
 /** Ein Name, den alle Systeme als Datei- oder Ordnernamen annehmen. */
-export function bereinige(name: string, ersatz = 'Ohne Titel'): string {
+export function bereinige(name: string, ersatz = t('meldungen.webdavbaum.ohne-titel')): string {
   let s = String(name ?? '').normalize('NFC').replace(VERBOTEN, '_').replace(/\s+/g, ' ').trim();
   // Endpunkte und Leerzeichen am Ende verträgt Windows nicht.
   s = s.replace(/[. ]+$/, '');
@@ -68,7 +69,7 @@ function mitZusatz(name: string, zusatz: string, datei?: boolean) {
  * Namen, die schon vergeben sind (z. B. „Verknüpft“). Liefert die Namen in derselben Reihenfolge.
  */
 export function eindeutig(eintraege: Benennbar[], belegt: string[] = []): string[] {
-  const basis = eintraege.map((e) => bereinige(e.name, e.datei ? 'Dokument' : 'Ohne Titel'));
+  const basis = eintraege.map((e) => bereinige(e.name, e.datei ? 'Dokument' : t('meldungen.webdavbaum.ohne-titel')));
   const anzahl = new Map<string, number>();
   for (const b of basis) anzahl.set(schluessel(b), (anzahl.get(schluessel(b)) ?? 0) + 1);
   const vergeben = new Set(belegt.map(schluessel));

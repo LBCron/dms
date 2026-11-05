@@ -8,6 +8,8 @@ import { Person } from '../Person';
 import { Listenkopf } from '../Listenkopf';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { hinweis, rueckfrage } from '../rueckfrage';
+import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Papierkorb (#43). In der Ablage sieht jeder, was er selbst gelöscht hat; in der Werkbank
@@ -16,7 +18,7 @@ import { hinweis, rueckfrage } from '../rueckfrage';
 
 const GEAENDERT = 'dms:papierkorb';
 const melde = () => dispatchEvent(new Event(GEAENDERT));
-const datumZeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const datumZeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 const basis = (werkbank: boolean) => (werkbank ? '/werkbank/papierkorb' : '/ablage/papierkorb');
 
 export function usePapierkorb(werkbank: boolean, aktiv = true) {
@@ -44,8 +46,8 @@ export type PapierkorbZustand = ReturnType<typeof usePapierkorb>;
 
 /** Aufbewahrung in Worten. */
 export function aufbewahrung(tage: number | undefined | null) {
-  if (!tage) return 'Gelöschte Mappen und Dokumente werden sofort endgültig gelöscht.';
-  return `Gelöschte Mappen und Dokumente bleiben ${tage === 1 ? 'einen Tag' : `${tage} Tage`} hier und werden danach endgültig gelöscht.`;
+  if (!tage) return t('ablage.papierkorb.geloeschte-mappen-und-dokumente');
+  return t('ablage.papierkorb.geloeschte-mappen-und-dokumente-2', { anzahl: tage });
 }
 
 export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; werkbank: boolean; offen?: string }) {
@@ -66,8 +68,8 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
   }, []);
 
   async function leeren() {
-    const was = [liste.length ? (liste.length === 1 ? 'eine Mappe (samt Dokumenten)' : `${liste.length} Mappen (samt Dokumenten)`) : '', z.dokumente.length ? (z.dokumente.length === 1 ? 'ein Dokument' : `${z.dokumente.length} Dokumente`) : ''].filter(Boolean).join(' und ');
-    if (!(await rueckfrage({ titel: `${werkbank ? 'Den ganzen Papierkorb (alle Benutzer)' : 'Deinen Papierkorb'} leeren?`, text: `${was.charAt(0).toUpperCase()}${was.slice(1)} ${liste.length + z.dokumente.length === 1 ? 'wird' : 'werden'} endgültig gelöscht.`, ja: 'Papierkorb leeren', gefahr: true }))) return;
+    const was = [liste.length ? (t('ablage.papierkorb.mappen-samt-dokumenten', { anzahl: liste.length })) : '', z.dokumente.length ? (t('ablage.papierkorb.dokumente', { anzahl: z.dokumente.length })) : ''].filter(Boolean).join(` ${t('ablage.papierkorb.und')} `);
+    if (!(await rueckfrage({ titel: t('ablage.papierkorb.leeren', { wert: werkbank ? t('ablage.papierkorb.den-ganzen-papierkorb-alle') : t('ablage.papierkorb.deinen-papierkorb') }), text: t('ablage.papierkorb.werden-endgueltig-geloescht', { anzahl: liste.length + z.dokumente.length, charAt: was.charAt(0).toUpperCase(), was: was.slice(1) }), ja: t('ablage.papierkorb.papierkorb-leeren'), gefahr: true }))) return;
     setLaeuft(true); setMeldung(undefined);
     try { await api.papierkorbLeeren(werkbank); melde(); await d.neuLaden(); geheZu(basis(werkbank)); }
     catch (e) { setMeldung((e as Error).message); }
@@ -75,14 +77,14 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
   }
 
   const spalten: Array<[string, (e: PapierkorbEintrag) => string]> = [
-    ['Mappentyp', (e) => d.typ(e.typId)?.name ?? ''],
+    [t('ablage.papierkorb.mappentyp'), (e) => d.typ(e.typId)?.name ?? ''],
     [SYSTEMSPALTEN._titel, (e) => titelOder(e.titel)],
     [SYSTEMSPALTEN._erstelltVon, (e) => d.person(e.erstelltVon)],
     [SYSTEMSPALTEN._erstellt, (e) => datumZeit(e.erstellt)],
     [SYSTEMSPALTEN._geaendertVon, (e) => d.person(e.geaendertVon)],
     [SYSTEMSPALTEN._geaendert, (e) => datumZeit(e.geaendert)],
-    ...(werkbank ? [['Gelöscht von', (e: PapierkorbEintrag) => d.person(e.geloeschtVon)] as [string, (e: PapierkorbEintrag) => string]] : []),
-    ['Gelöscht', (e) => datumZeit(e.geloescht)],
+    ...(werkbank ? [[t('ablage.papierkorb.geloescht-von'), (e: PapierkorbEintrag) => d.person(e.geloeschtVon)] as [string, (e: PapierkorbEintrag) => string]] : []),
+    [t('ablage.papierkorb.geloescht'), (e) => datumZeit(e.geloescht)],
   ];
 
   // Mit verknüpften Mappen gelöscht (#424): Mappen eines Vorgangs gehören zusammen.
@@ -90,16 +92,16 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
   for (const e of liste) if (e.vorgang) imVorgang.set(e.vorgang, (imVorgang.get(e.vorgang) ?? 0) + 1);
   const vorgangChip = (e: PapierkorbEintrag) => {
     const n = e.vorgang ? imVorgang.get(e.vorgang) ?? 0 : 0;
-    return n > 1 ? <span className="chip lb-chip" title={`Zusammen mit ${n - 1} weiteren Mappen gelöscht – lassen sich gemeinsam wiederherstellen`}>{e.id === e.vorgang ? `mit ${n - 1} verknüpften` : 'verknüpft'}</span> : null;
+    return n > 1 ? <span className="chip lb-chip" title={t('ablage.papierkorb.zusammen-mit-weiteren-mappen', { wert: n - 1 })}>{e.id === e.vorgang ? t('ablage.papierkorb.mit-verknuepften', { wert: n - 1 }) : t('ablage.papierkorb.verknuepft')}</span> : null;
   };
   const tabelle = breite >= spalten.length * 110;
   const leerenKnopf = liste.length + z.dokumente.length > 0
-    ? <button type="button" className="knopf klein gefahr-rand" disabled={laeuft} onClick={() => void leeren()}>{laeuft ? 'Leere …' : 'Papierkorb leeren'}</button> : null;
+    ? <button type="button" className="knopf klein gefahr-rand" disabled={laeuft} onClick={() => void leeren()}>{laeuft ? t('ablage.papierkorb.leere') : t('ablage.papierkorb.papierkorb-leeren')}</button> : null;
   return (
     <>
       <div ref={mess} className="breitenmesser" aria-hidden="true" />
-      <Listenkopf titel="Papierkorb" hilfe={werkbank ? 'werkbank.papierkorb' : 'ablage.papierkorb'}
-        beschreibung={<>{werkbank ? 'Was alle Benutzer gelöscht haben. ' : 'Was du gelöscht hast. '}{aufbewahrung(tage)}</>}>
+      <Listenkopf titel={t('ablage.papierkorb.papierkorb')} hilfe={werkbank ? 'werkbank.papierkorb' : 'ablage.papierkorb'}
+        beschreibung={<>{werkbank ? t('ablage.papierkorb.was-alle-benutzer-geloescht') : t('ablage.papierkorb.was-du-geloescht-hast')}{aufbewahrung(tage)}</>}>
         {!werkbank && leerenKnopf}
       </Listenkopf>
       {/* Werkbank (#366): Aufbewahrung und Leeren gehören zusammen, oben in der Mitte. */}
@@ -108,18 +110,18 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
       {meldung && <div className="hinweis schlecht"><p>{meldung}</p></div>}
       <div className="listenrumpf">
       {z.eintraege === null
-        ? <p className="leise">Lade …</p>
+        ? <p className="leise">{t('ablage.papierkorb.lade')}</p>
         : !liste.length && !z.dokumente.length
-          ? <p className="leise leerliste">Der Papierkorb ist leer.</p>
+          ? <p className="leise leerliste">{t('ablage.papierkorb.der-papierkorb-ist-leer')}</p>
           : !liste.length ? <DokumenteImKorb z={z} werkbank={werkbank} /> : <>
-              <p className="listenzahl leise klein">{liste.length} {liste.length === 1 ? 'Mappe' : 'Mappen'}{z.dokumente.length ? ` · ${z.dokumente.length} ${z.dokumente.length === 1 ? 'Dokument' : 'Dokumente'} (unten)` : ''}</p>
+              <p className="listenzahl leise klein">{liste.length} {t('ablage.papierkorb.mappen', { anzahl: liste.length })}{z.dokumente.length ? t('ablage.papierkorb.dokumente-unten', { anzahl: z.dokumente.length }) : ''}</p>
               {!tabelle && (
                 <ul className="mappenliste">
                   {liste.map((e) => (
                     <li key={e.id}>
                       <Link to={`${basis(werkbank)}/${e.id}`} className={`eintrag ${offen === e.id ? 'an' : ''}`}>
                         <span className="titel">{titelOder(e.titel)}{vorgangChip(e)}</span>
-                        <span className="unter">{d.typ(e.typId)?.name ?? ''} · gelöscht {datumZeit(e.geloescht)}{werkbank ? ` von ${d.person(e.geloeschtVon)}` : ''}</span>
+                        <span className="unter">{t('ablage.papierkorb.geloescht-2', { wert: d.typ(e.typId)?.name ?? '', datumZeit: datumZeit(e.geloescht), wert2: werkbank ? t('ablage.papierkorb.von', { person: d.person(e.geloeschtVon) }) : '' })}</span>
                       </Link>
                     </li>
                   ))}
@@ -162,12 +164,12 @@ function DokumenteImKorb({ z, werkbank }: { z: PapierkorbZustand; werkbank: bool
     try {
       const r = await api.dokumentWiederherstellen(x.id, werkbank);
       melde(); await d.neuLaden();
-      setMeldung({ art: 'gut', text: <>„{x.name}“ liegt wieder in <Link to={`/ablage/${r.typId}/${x.mappeId}`} className="verweis">{titelOder(x.mappeTitel)}</Link> (Register {x.register}).</> });
+      setMeldung({ art: 'gut', text: <>{tn('ablage.papierkorb.liegt-wieder-in-register', { name: x.name, link: <Link to={`/ablage/${r.typId}/${x.mappeId}`} className="verweis">{titelOder(x.mappeTitel)}</Link>, register: x.register })}</> });
     } catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
     finally { setLaeuft(undefined); }
   }
   async function weg(x: DokumentImKorb) {
-    if (!(await rueckfrage({ titel: `„${x.name}“${x.versionen ? ` mit allen ${x.versionen + 1} Versionen` : ''} endgültig löschen?`, text: 'Das lässt sich nicht rückgängig machen.', ja: 'Endgültig löschen', gefahr: true }))) return;
+    if (!(await rueckfrage({ titel: t('ablage.papierkorb.endgueltig-loeschen', { name: x.name, wert: x.versionen ? t('ablage.papierkorb.mit-allen-versionen', { wert: x.versionen + 1 }) : '' }), text: t('ablage.papierkorb.das-laesst-sich-nicht'), ja: t('ablage.papierkorb.endgueltig-loeschen-2'), gefahr: true }))) return;
     setLaeuft(x.id); setMeldung(undefined);
     try { await api.dokumentEndgueltig(x.id, werkbank); melde(); await d.neuLaden(); }
     catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
@@ -175,25 +177,22 @@ function DokumenteImKorb({ z, werkbank }: { z: PapierkorbZustand; werkbank: bool
   }
   return (
     <section className="korbdokumente">
-      <h2 className="h3">Dokumente</h2>
-      <p className="listenzahl leise klein">{z.dokumente.length} {z.dokumente.length === 1 ? 'Dokument' : 'Dokumente'}, einzeln aus einer Mappe gelöscht</p>
+      <h2 className="h3">{t('ablage.papierkorb.dokumente-2')}</h2>
+      <p className="listenzahl leise klein">{t('ablage.papierkorb.dokumente-einzeln-aus-einer', { anzahl: z.dokumente.length })}</p>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       <ul className="mappenliste">
         {z.dokumente.map((x) => (
           <li key={x.id} className="korbdokument">
             <div className="eintrag">
-              <span className="titel"><span className="chip" title="Art">Dokument</span> {x.name}</span>
+              <span className="titel"><span className="chip" title={t('ablage.papierkorb.art')}>{t('ablage.papierkorb.dokument')}</span> {x.name}</span>
               <span className="unter">
-                aus {x.mappe === 'da' ? <Link to={`/ablage/${x.typId}/${x.mappeId}`} className="verweis">{titelOder(x.mappeTitel)}</Link> : titelOder(x.mappeTitel)}
-                {' '}· Register {x.register} · {groesseText(x.groesse)}{x.versionen ? ` · ${x.versionen + 1} Versionen` : ''}
-                {' '}· gelöscht {datumZeit(x.geloescht)}{werkbank ? ` von ${d.person(x.geloeschtVon)}` : ''}
-              </span>
-              {x.mappe === 'papierkorb' && <span className="leise klein">Die Mappe liegt selbst im Papierkorb – stelle zuerst die Mappe wieder her.</span>}
-              {x.mappe === 'weg' && <span className="leise klein">Die Mappe gibt es nicht mehr.</span>}
+                {tn('ablage.papierkorb.aus-register-geloescht', { wert: x.mappe === 'da' ? <Link to={`/ablage/${x.typId}/${x.mappeId}`} className="verweis">{titelOder(x.mappeTitel)}</Link> : titelOder(x.mappeTitel), register: x.register, groesseText: groesseText(x.groesse), wert2: x.versionen ? t('ablage.papierkorb.versionen', { wert: x.versionen + 1 }) : '', datumZeit: datumZeit(x.geloescht), wert3: werkbank ? t('ablage.papierkorb.von', { person: d.person(x.geloeschtVon) }) : '' })}</span>
+              {x.mappe === 'papierkorb' && <span className="leise klein">{t('ablage.papierkorb.die-mappe-liegt-selbst')}</span>}
+              {x.mappe === 'weg' && <span className="leise klein">{t('ablage.papierkorb.die-mappe-gibt-es')}</span>}
             </div>
             <div className="knoepfe">
-              <button type="button" className="knopf klein" disabled={!!laeuft || x.mappe !== 'da'} onClick={() => void zurueck(x)}>{laeuft === x.id ? '…' : 'Wiederherstellen'}</button>
-              <button type="button" className="textknopf gefahr" disabled={!!laeuft} onClick={() => void weg(x)}>Endgültig löschen</button>
+              <button type="button" className="knopf klein" disabled={!!laeuft || x.mappe !== 'da'} onClick={() => void zurueck(x)}>{laeuft === x.id ? '…' : t('ablage.papierkorb.wiederherstellen')}</button>
+              <button type="button" className="textknopf gefahr" disabled={!!laeuft} onClick={() => void weg(x)}>{t('ablage.papierkorb.endgueltig-loeschen-2')}</button>
             </div>
           </li>
         ))}
@@ -220,8 +219,8 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
     }, () => setE('fehlt'));
   }, [id, werkbank]);
 
-  if (e === null) return <p className="leise">Lade …</p>;
-  if (e === 'fehlt') return <div className="leer"><p>Diese Mappe liegt nicht (mehr) im Papierkorb.</p></div>;
+  if (e === null) return <p className="leise">{t('ablage.papierkorb.lade')}</p>;
+  if (e === 'fehlt') return <div className="leer"><p>{t('ablage.papierkorb.diese-mappe-liegt-nicht')}</p></div>;
   const typ = d.typ(e.typId);
   const zusammen = e.vorgang ? (gruppe ?? []).filter((x) => x.vorgang === e.vorgang) : [];
 
@@ -231,7 +230,7 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
     try {
       const r = await api.vorgangWiederherstellen(e.vorgang, werkbank);
       melde(); await d.neuLaden();
-      await hinweis({ titel: 'Wiederhergestellt', text: `${r.mappen} ${r.mappen === 1 ? 'Mappe' : 'Mappen'} samt Dokumenten${r.verweiseWieder ? `; ${r.verweiseWieder === 1 ? 'ein entfernter Verweis ist' : `${r.verweiseWieder} entfernte Verweise sind`} wieder gesetzt` : ''}${r.verweiseEntfallen ? `; ${r.verweiseEntfallen} ${r.verweiseEntfallen === 1 ? 'Verweis' : 'Verweise'} auf Mappen, die es nicht mehr gibt, entfallen` : ''}.` });
+      await hinweis({ titel: t('ablage.papierkorb.wiederhergestellt'), text: t('ablage.papierkorb.mappen-samt-dokumenten-2', { anzahl: r.mappen, wert: r.verweiseWieder ? t('ablage.papierkorb.entfernte-verweise-sind-wieder', { anzahl: r.verweiseWieder }) : '', wert2: r.verweiseEntfallen ? t('ablage.papierkorb.verweise-auf-mappen-die', { anzahl: r.verweiseEntfallen }) : '' }) });
       const start = r.startId ? zusammen.find((x) => x.id === r.startId) : undefined;
       geheZu(start ? `/ablage/${start.typId}/${start.id}` : basis(werkbank));
     } catch (x) { setMeldung((x as Error).message); setLaeuft(null); }
@@ -243,13 +242,13 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
       const r = await api.wiederherstellen(id, werkbank);
       melde(); await d.neuLaden();
       // Nach den Berechtigungen nicht mehr sichtbar (#126): Bescheid sagen und in den Papierkorb zurück.
-      if (r.hinweis) { await hinweis({ titel: 'Wiederhergestellt', text: r.hinweis }); geheZu(basis(werkbank)); return; }
+      if (r.hinweis) { await hinweis({ titel: t('ablage.papierkorb.wiederhergestellt'), text: r.hinweis }); geheZu(basis(werkbank)); return; }
       // Passt sie nicht mehr (z. B. eindeutiger Wert inzwischen vergeben), zeigt die Mappe selbst den Grund.
       geheZu(`/ablage/${r.mappe.passt === false ? 'eingang' : r.mappe.typId}/${r.mappe.id}`);
     } catch (x) { setMeldung((x as Error).message); setLaeuft(null); }
   }
   async function endgueltig() {
-    if (!(await rueckfrage({ titel: `„${titelOder(e && e !== 'fehlt' ? e.titel : '')}“ endgültig löschen?`, text: 'Das lässt sich nicht rückgängig machen.', ja: 'Endgültig löschen', gefahr: true }))) return;
+    if (!(await rueckfrage({ titel: t('ablage.papierkorb.endgueltig-loeschen-3', { titelOder: titelOder(e && e !== 'fehlt' ? e.titel : '') }), text: t('ablage.papierkorb.das-laesst-sich-nicht'), ja: t('ablage.papierkorb.endgueltig-loeschen-2'), gefahr: true }))) return;
     setLaeuft('weg'); setMeldung(undefined);
     try { await api.endgueltigLoeschen(id, werkbank); melde(); await d.neuLaden(); geheZu(basis(werkbank)); }
     catch (x) { setMeldung((x as Error).message); setLaeuft(null); }
@@ -259,12 +258,12 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">{typ?.name ?? 'Mappe'} · im Papierkorb</p>
+        <p className="ueber">{t('ablage.papierkorb.im-papierkorb', { wert: typ?.name ?? t('ablage.papierkorb.mappe') })}</p>
         <h1>{titelOder(e.titel)}</h1>
         <dl className="index">
-          <div><dt>Gelöscht</dt><dd>{datumZeit(e.geloescht)}{werkbank && <> von <Person id={e.geloeschtVon} /></>}</dd></div>
-          <div><dt>Angelegt</dt><dd>{datumZeit(e.erstellt)} von <Person id={e.erstelltVon} /></dd></div>
-          <div><dt>Zuletzt geändert</dt><dd>{datumZeit(e.geaendert)} von <Person id={e.geaendertVon} /></dd></div>
+          <div><dt>{t('ablage.papierkorb.geloescht')}</dt><dd>{datumZeit(e.geloescht)}{werkbank && <> {' '}{t('ablage.papierkorb.von-2')}{' '}<Person id={e.geloeschtVon} /></>}</dd></div>
+          <div><dt>{t('ablage.papierkorb.angelegt')}</dt><dd>{t('ablage.papierkorb.von-3', { datumZeit: datumZeit(e.erstellt) })}{' '}<Person id={e.erstelltVon} /></dd></div>
+          <div><dt>{t('ablage.papierkorb.zuletzt-geaendert')}</dt><dd>{t('ablage.papierkorb.von-3', { datumZeit: datumZeit(e.geaendert) })}{' '}<Person id={e.geaendertVon} /></dd></div>
         </dl>
       </div>
       <section className="blatt">
@@ -272,26 +271,23 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
           {felder.map((f) => {
             const v = e.werte[f.key];
             const text = f.typ === 'referenz'
-              ? (Array.isArray(v) ? v.length : v ? 1 : 0) ? `${Array.isArray(v) ? v.length : 1} verknüpfte Mappe${Array.isArray(v) && v.length !== 1 ? 'n' : ''}` : ''
+              ? (Array.isArray(v) ? v.length : v ? 1 : 0) ? t('ablage.papierkorb.verknuepfte-mappe', { wert: Array.isArray(v) ? v.length : 1, wert2: Array.isArray(v) && v.length !== 1 ? 'n' : '' }) : ''
               : formatiere(f, v);
             return <div key={f.key} style={{ display: 'contents' }}><dt>{f.label}</dt><dd>{text || <span className="leise">–</span>}</dd></div>;
           })}
-          <dt>Dokumente</dt><dd>{e.dokumente || <span className="leise">keine</span>}</dd>
+          <dt>{t('ablage.papierkorb.dokumente-2')}</dt><dd>{e.dokumente || <span className="leise">{t('ablage.papierkorb.keine')}</span>}</dd>
         </dl>
       </section>
       {zusammen.length > 1 && (
         <div className="hinweis info"><p>
-          Zusammen mit {zusammen.length - 1} weiteren {zusammen.length === 2 ? 'Mappe' : 'Mappen'} gelöscht („mit verknüpften Mappen löschen“)
-          {zusammen.some((x) => x.id === x.vorgang) ? <>, ausgehend von „{titelOder(zusammen.find((x) => x.id === x.vorgang)!.titel)}“</> : null}.
-          {' '}<strong>Alle wiederherstellen</strong> holt alle zurück – samt der Verweise untereinander und der Verweise, die dabei an anderen Mappen entfernt wurden.
-        </p></div>
+          {t('ablage.papierkorb.zusammen-mit-weiteren-geloescht', { wert: zusammen.length - 1, wert2: zusammen.length === 2 ? t('ablage.papierkorb.mappe') : t('ablage.papierkorb.mappen-2') })}{zusammen.some((x) => x.id === x.vorgang) ? <>{t('ablage.papierkorb.ausgehend-von')}{titelOder(zusammen.find((x) => x.id === x.vorgang)!.titel)}“</> : null}{tn('ablage.papierkorb.holt-alle-zurueck-samt', { b: <strong>{t('ablage.papierkorb.alle-wiederherstellen')}</strong> })}</p></div>
       )}
-      <p className="leise klein">Beim Wiederherstellen kommen Dokumente und Verweise mit. Verweise auf Mappen, die es nicht mehr gibt, entfallen; ist ein eindeutiger Wert inzwischen vergeben, landet die Mappe unter „Zu erledigen“.</p>
+      <p className="leise klein">{t('ablage.papierkorb.beim-wiederherstellen-kommen')}</p>
       {meldung && <div className="hinweis schlecht"><p>{meldung}</p></div>}
       <div className="knoepfe">
-        <button type="button" className="knopf gefahr-rand" disabled={!!laeuft} onClick={() => void endgueltig()}>{laeuft === 'weg' ? 'Lösche …' : 'Endgültig löschen'}</button>
-        <button type="button" className={`knopf ${zusammen.length > 1 ? '' : 'gruen'}`} disabled={!!laeuft} onClick={() => void wiederherstellen()}>{laeuft === 'zurueck' ? 'Stelle wieder her …' : zusammen.length > 1 ? 'Nur diese wiederherstellen' : 'Wiederherstellen'}</button>
-        {zusammen.length > 1 && <button type="button" className="knopf gruen" disabled={!!laeuft} onClick={() => void alleWiederherstellen()}>{laeuft === 'alle' ? 'Stelle wieder her …' : `Alle ${zusammen.length} wiederherstellen`}</button>}
+        <button type="button" className="knopf gefahr-rand" disabled={!!laeuft} onClick={() => void endgueltig()}>{laeuft === 'weg' ? t('ablage.papierkorb.loesche') : t('ablage.papierkorb.endgueltig-loeschen-2')}</button>
+        <button type="button" className={`knopf ${zusammen.length > 1 ? '' : 'gruen'}`} disabled={!!laeuft} onClick={() => void wiederherstellen()}>{laeuft === 'zurueck' ? t('ablage.papierkorb.stelle-wieder-her') : zusammen.length > 1 ? t('ablage.papierkorb.nur-diese-wiederherstellen') : t('ablage.papierkorb.wiederherstellen')}</button>
+        {zusammen.length > 1 && <button type="button" className="knopf gruen" disabled={!!laeuft} onClick={() => void alleWiederherstellen()}>{laeuft === 'alle' ? t('ablage.papierkorb.stelle-wieder-her') : t('ablage.papierkorb.alle-wiederherstellen-2', { zusammen: zusammen.length })}</button>}
       </div>
     </div>
   );
@@ -312,23 +308,23 @@ function PapierkorbEinstellungen({ z, leeren }: { z: PapierkorbZustand; leeren?:
   });
   async function speichern() {
     const anzahl = (z.eintraege?.length ?? 0) + z.dokumente.length;
-    if (n === 0 && anzahl && !(await rueckfrage({ titel: 'Papierkorb ausschalten?', text: `${anzahl === 1 ? 'Was darin liegt, wird' : `Alle ${anzahl} Einträge darin werden`} sofort endgültig gelöscht.`, ja: 'Ausschalten und leeren', gefahr: true }))) return;
+    if (n === 0 && anzahl && !(await rueckfrage({ titel: t('ablage.papierkorb.papierkorb-ausschalten'), text: t('ablage.papierkorb.alle-eintraege-darin-werden', { anzahl }), ja: t('ablage.papierkorb.ausschalten-und-leeren'), gefahr: true }))) return;
     try {
       const r = await api.papierkorbTage({ tage: n, historieTage: h });
       z.setTage(r.tage); z.setHistorieTage(r.historieTage); melde(); await d.neuLaden();
-      setMeldung({ art: 'gut', text: `Gespeichert.${r.geleert ? ` ${r.geleert} ${r.geleert === 1 ? 'Mappe' : 'Mappen'} endgültig gelöscht.` : ''}` });
+      setMeldung({ art: 'gut', text: t('ablage.papierkorb.gespeichert', { wert: r.geleert ? t('ablage.papierkorb.mappen-endgueltig-geloescht', { anzahl: r.geleert }) : '' }) });
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
   return (
       <form className="blatt" id="aufbewahrung" onSubmit={(ev) => { ev.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
-        <div className="blattkopf zeile-zwischen"><h2 className="h3">Aufbewahrung</h2>{leeren}</div>
-        <label className="eigenschaft"><span>Tage <small>0 = kein Papierkorb, Löschen ist sofort endgültig</small></span>
+        <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.papierkorb.aufbewahrung')}</h2>{leeren}</div>
+        <label className="eigenschaft"><span>{tn('ablage.papierkorb.tage', { klein: <small>{t('ablage.papierkorb.0-kein-papierkorb-loeschen')}</small> })}</span>
           <input type="number" min={0} max={3650} value={tage} onChange={(ev) => { setTage(ev.target.value); setMeldung(undefined); }} /></label>
-        <p className="leise klein">Gelöschte Mappen und einzeln gelöschte Dokumente kommen in den Papierkorb. Nur das Entfernen der Demo-Daten ist immer sofort endgültig.</p>
-        <label className="eigenschaft"><span>Historie endgültig gelöschter Mappen behalten <small>Tage, danach wird ihre Änderungshistorie gelöscht</small></span>
+        <p className="leise klein">{t('ablage.papierkorb.geloeschte-mappen-und-einzeln')}</p>
+        <label className="eigenschaft"><span>{tn('ablage.papierkorb.historie-endgueltig-geloeschter', { klein: <small>{t('ablage.papierkorb.tage-danach-wird-ihre')}</small> })}</span>
           <input type="number" min={0} max={36500} value={hTage} onChange={(ev) => { setHTage(ev.target.value); setMeldung(undefined); }} /></label>
         {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-        <Speicherleiste ent={ent} gegenstand="Aufbewahrung" ungueltig={!Number.isInteger(n) || n < 0 || !Number.isInteger(h) || h < 0} />
+        <Speicherleiste ent={ent} gegenstand={t('ablage.papierkorb.aufbewahrung')} ungueltig={!Number.isInteger(n) || n < 0 || !Number.isInteger(h) || h < 0} />
       </form>
   );
 }

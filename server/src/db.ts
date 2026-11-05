@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import postgres from 'postgres';
+import { t } from './sprache';
 
 /**
  * Zahl der Verbindungen zur Datenbank (#544). Vorgabe bleibt 10: Im Lasttest mit 100 gleichzeitigen Anfragen
@@ -21,7 +22,7 @@ export function verbindungenAus(env: Record<string, string | undefined>): Verbin
   if (!roh) return { max: VERBINDUNGEN_VORGABE, quelle: 'vorgabe' };
   const n = Number(roh);
   if (!Number.isInteger(n) || n < VERBINDUNGEN_MIN || n > VERBINDUNGEN_MAX) {
-    return { max: VERBINDUNGEN_VORGABE, quelle: 'vorgabe', fehler: `DMS_DB_VERBINDUNGEN=${roh} ist keine Zahl von ${VERBINDUNGEN_MIN} bis ${VERBINDUNGEN_MAX} und wird ignoriert.` };
+    return { max: VERBINDUNGEN_VORGABE, quelle: 'vorgabe', fehler: t('meldungen.db.dms-db-verbindungen-ist', { roh, VERBINDUNGEN_MIN, VERBINDUNGEN_MAX }) };
   }
   return { max: n, quelle: 'umgebung' };
 }
@@ -105,8 +106,7 @@ export async function beiVerklemmungWiederholen<T>(f: () => Promise<T>, o: { ver
 export class NeuereDatenbankFehler extends Error {
   constructor(readonly unbekannt: string[]) {
     super(
-      `Diese Datenbank stammt von einer neueren Version von Ablago (unbekannte Migration ${unbekannt[unbekannt.length - 1]}). ` +
-        'Bitte diese oder eine neuere Version verwenden – zurück auf eine ältere Version geht nur über eine Sicherung von vor dem Update.',
+      t('meldungen.db.bitte-diese-oder-eine', { wert: t('meldungen.db.diese-datenbank-stammt-von', { unbekannt: unbekannt[unbekannt.length - 1] }) }),
     );
     this.name = 'NeuereDatenbankFehler';
   }

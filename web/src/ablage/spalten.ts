@@ -1,12 +1,13 @@
 import { altesTextfeldVon, formatiere, istLeer, istSystemspalte, SYSTEMSPALTEN, type Mappe, type Mappentyp } from '../../../shared/src/model';
 import type { Bezuege } from '../api';
 import { titelOder } from '../seiten';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Spalten von Trefferlisten: Überschrift und Zelleninhalt (Ablage und Verknüpfungsregister). */
 export function spaltenName(k: string, typ?: Mappentyp): string {
   return istSystemspalte(k) ? SYSTEMSPALTEN[k] : typ?.felder.find((f) => f.key === k)?.label ?? k;
 }
-const datumZeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const datumZeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 /** Inhalt einer Zelle, formatiert wie in der Mappe. */
 export function zelle(k: string, m: Mappe, typ: Mappentyp | undefined, bezuege: Bezuege, person: (id: string | null) => string): string {
   switch (k) {

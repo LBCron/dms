@@ -36,6 +36,10 @@ let aktuell = AUSGANGSSPRACHE;
 export const setzeSprache = (sprache: string) => { aktuell = sprache; };
 export const sprache = () => aktuell;
 
+/** Gebietsschema der Sprache für Datum, Zahlen und Beträge (#727) – statt `'de-DE'` fest im Code. */
+const GEBIET: Readonly<Record<string, string>> = { de: 'de-DE', en: 'en-GB' };
+export const gebietsschema = () => GEBIET[aktuell] ?? aktuell;
+
 /** Platzhalter eines Textes, sortiert und ohne Doppelte – für die Prüfung zwischen Sprachen. */
 export function platzhalter(text: string): string[] {
   return [...new Set([...text.matchAll(/\{([A-Za-z0-9_]+)\}/g)].map((m) => m[1]))].sort();

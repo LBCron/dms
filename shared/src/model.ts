@@ -12,6 +12,7 @@ import { alsText } from './markdown';
 import { kreisImStandard, kreisVon } from './nummernkreis';
 import { ibanGruppen, pruefeFormatDefinition } from './feldformate';
 import { datumsformat } from './region';
+import { t } from './texte';
 export { zeitzone } from './region';
 
 export const FELDTYPEN = {
@@ -226,20 +227,20 @@ export const darfLoeschen = (t: { system?: Systemtyp | null } | undefined, m?: P
  * z. B. ein Mitglied die E-Mail-Adresse eines Administrators ändern und dessen Konto übernehmen.
  * Systemrollen: der Name.
  */
-export function geschuetzteFelder(t: Pick<Mappentyp, 'system' | 'felder'> | undefined, m?: Pick<Mappe, 'systemKennung'> & { werte?: Werte }): Record<string, string> {
-  if (t?.system === 'benutzer') {
-    return Object.fromEntries(t.felder.filter((f) => f.system).map((f) => [f.key, 'Wird im Profil und in der Benutzerverwaltung gepflegt.']));
+export function geschuetzteFelder(eintrag: Pick<Mappentyp, 'system' | 'felder'> | undefined, m?: Pick<Mappe, 'systemKennung'> & { werte?: Werte }): Record<string, string> {
+  if (eintrag?.system === 'benutzer') {
+    return Object.fromEntries(eintrag.felder.filter((f) => f.system).map((f) => [f.key, t('gemeinsam.model.wird-im-profil-und')]));
   }
-  if (t?.system === 'rolle' && istSystemrolle(m)) return { name: 'Der Name einer Systemrolle ist fest.' };
-  if (t?.system === 'post') {
+  if (eintrag?.system === 'rolle' && istSystemrolle(m)) return { name: t('gemeinsam.model.der-name-einer-systemrolle') };
+  if (eintrag?.system === 'post') {
     // Post (#192): Kanal hält das System fest, „Zugeordnet zu“ setzt „Zuordnen“; eine versendete E-Mail bleibt, wie sie verschickt wurde.
-    const fest: Record<string, string> = { kanal: 'Wird beim Eingang festgehalten.', bezug: 'Wird über „Zuordnen“ gesetzt.' };
-    if (istVersendet(m?.werte)) for (const k of ['betreff', 'an', 'absender', 'datum', 'nachricht', 'richtung']) fest[k] = 'Wird beim Versand festgehalten.';
+    const fest: Record<string, string> = { kanal: t('gemeinsam.model.wird-beim-eingang-festgehalten'), bezug: t('gemeinsam.model.wird-ueber-zuordnen-gesetzt') };
+    if (istVersendet(m?.werte)) for (const k of ['betreff', 'an', 'absender', 'datum', 'nachricht', 'richtung']) fest[k] = t('gemeinsam.model.wird-beim-versand-festgehalten');
     return fest;
   }
   // Nummernkreis (#171): die Nummer vergibt das DMS.
-  const nummern = (t?.felder ?? []).filter((f) => kreisVon(f));
-  if (nummern.length) return Object.fromEntries(nummern.map((f) => [f.key, m ? 'Fortlaufende Nummer – lässt sich nicht ändern.' : 'Wird beim Speichern vergeben.']));
+  const nummern = (eintrag?.felder ?? []).filter((f) => kreisVon(f));
+  if (nummern.length) return Object.fromEntries(nummern.map((f) => [f.key, m ? t('gemeinsam.model.fortlaufende-nummer-laesst-sich') : t('gemeinsam.model.wird-beim-speichern-vergeben')]));
   return {};
 }
 
@@ -422,7 +423,7 @@ export interface Vertretung { id: string; benutzerId: string; adminId: string | 
 
 /** Kurzbeschreibung eines Browsers aus dem User-Agent, z. B. „Firefox auf Windows“. */
 export function geraetText(ua: string): string {
-  if (!ua) return 'Unbekanntes Gerät';
+  if (!ua) return t('gemeinsam.model.unbekanntes-geraet');
   const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /curl|node|undici/i.test(ua) ? 'Programm' : 'Browser';
   const system = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
   return system ? `${browser} auf ${system}` : browser;
@@ -474,93 +475,93 @@ export interface TypKontext {
 /** Allgemeine Meldung mit Bereich des Editors (#144). */
 function melde(p: Pruefergebnis, ort: string, text: string) { p.allgemein.push(text); (p.orte ??= []).push(ort); }
 
-function pruefeRegister(t: MappentypDaten, ctx: TypKontext, p: Pruefergebnis) {
-  const reg = t.register ?? [];
-  if (!reg.length) { melde(p, 'register', 'Der Mappentyp braucht mindestens ein Register.'); return; }
+function pruefeRegister(mappentypDaten: MappentypDaten, ctx: TypKontext, p: Pruefergebnis) {
+  const reg = mappentypDaten.register ?? [];
+  if (!reg.length) { melde(p, 'register', t('gemeinsam.model.der-mappentyp-braucht-mindestens')); return; }
   const keys = new Set<string>();
   const feldAuf = new Map<string, string>();
   for (const r of reg) {
     const name = (r.name ?? '').trim() || r.key;
-    if (!(r.name ?? '').trim()) melde(p, 'register', 'Jedes Register braucht einen Namen.');
-    if (!SCHLUESSEL_MUSTER.test(r.key ?? '')) melde(p, 'register', `Register „${name}“: ungültige Kennung.`);
-    else if (keys.has(r.key)) melde(p, 'register', `Die Register-Kennung „${r.key}“ kommt doppelt vor.`);
+    if (!(r.name ?? '').trim()) melde(p, 'register', t('gemeinsam.model.jedes-register-braucht-einen'));
+    if (!SCHLUESSEL_MUSTER.test(r.key ?? '')) melde(p, 'register', t('gemeinsam.model.register-ungueltige-kennung', { name }));
+    else if (keys.has(r.key)) melde(p, 'register', t('gemeinsam.model.die-register-kennung-kommt', { key: r.key }));
     keys.add(r.key);
-    if (!(r.art in REGISTERARTEN)) melde(p, 'register', `Register „${name}“: unbekannte Art.`);
+    if (!(r.art in REGISTERARTEN)) melde(p, 'register', t('gemeinsam.model.register-unbekannte-art', { name }));
     if (r.art === 'felder') {
       for (const k of r.felder ?? []) {
-        if (feldAuf.has(k)) melde(p, 'register', `Das Feld „${t.felder.find((f) => f.key === k)?.label ?? k}“ liegt auf zwei Registern.`);
+        if (feldAuf.has(k)) melde(p, 'register', t('gemeinsam.model.das-feld-liegt-auf', { wert: mappentypDaten.felder.find((f) => f.key === k)?.label ?? k }));
         feldAuf.set(k, r.key);
       }
     }
     if (r.art === 'verknuepfungen') {
       for (const q of r.quellen ?? []) {
-        const felder = q.typId === ctx.eigeneId ? t.felder : ctx.felderVon?.(q.typId);
+        const felder = q.typId === ctx.eigeneId ? mappentypDaten.felder : ctx.felderVon?.(q.typId);
         const f = felder?.find((x) => x.key === q.feldKey);
-        if (!f || f.typ !== 'referenz' || (f.zielTyp !== ctx.eigeneId && f.zielTyp !== BELIEBIGER_TYP)) melde(p, 'register', `Register „${name}“: Eine Quelle verweist nicht (mehr) auf diesen Mappentyp.`);
+        if (!f || f.typ !== 'referenz' || (f.zielTyp !== ctx.eigeneId && f.zielTyp !== BELIEBIGER_TYP)) melde(p, 'register', t('gemeinsam.model.register-eine-quelle-verweist', { name }));
       }
     }
   }
-  if (t.felder.length && !reg.some((r) => r.art === 'felder')) melde(p, 'register', 'Es gibt Felder, aber kein Feldregister.');
-  const ohne = t.felder.filter((f) => !feldAuf.has(f.key));
-  if (ohne.length && reg.some((r) => r.art === 'felder')) melde(p, 'register', `Diese Felder liegen auf keinem Register: ${ohne.map((f) => f.label || f.key).join(', ')}.`);
+  if (mappentypDaten.felder.length && !reg.some((r) => r.art === 'felder')) melde(p, 'register', t('gemeinsam.model.es-gibt-felder-aber'));
+  const ohne = mappentypDaten.felder.filter((f) => !feldAuf.has(f.key));
+  if (ohne.length && reg.some((r) => r.art === 'felder')) melde(p, 'register', t('gemeinsam.model.diese-felder-liegen-auf', { map: ohne.map((f) => f.label || f.key).join(', ') }));
 }
 
-export function pruefeMappentyp(t: MappentypDaten, ctx: TypKontext): Pruefergebnis {
+export function pruefeMappentyp(mappentypDaten: MappentypDaten, ctx: TypKontext): Pruefergebnis {
   const p: Pruefergebnis = { allgemein: [], felder: {} };
-  const name = (t.name ?? '').trim();
-  if (!name) melde(p, 'grunddaten', 'Der Mappentyp braucht einen Namen.');
+  const name = (mappentypDaten.name ?? '').trim();
+  if (!name) melde(p, 'grunddaten', t('gemeinsam.model.der-mappentyp-braucht-einen'));
   else if (ctx.namenAndererTypen.some((n) => n.trim().toLowerCase() === name.toLowerCase()))
-    melde(p, 'grunddaten', `Es gibt bereits einen Mappentyp „${name}“.`);
-  if (t.schluessel !== undefined) {
-    if (!SCHLUESSEL_MUSTER.test(t.schluessel)) melde(p, 'grunddaten', 'Kennung des Mappentyps: nur Kleinbuchstaben, Ziffern und _, beginnt mit einem Buchstaben.');
-    else if ((ctx.schluesselAndererTypen ?? []).includes(t.schluessel)) melde(p, 'grunddaten', `Die Kennung „${t.schluessel}“ hat schon ein anderer Mappentyp.`);
+    melde(p, 'grunddaten', t('gemeinsam.model.es-gibt-bereits-einen', { name }));
+  if (mappentypDaten.schluessel !== undefined) {
+    if (!SCHLUESSEL_MUSTER.test(mappentypDaten.schluessel)) melde(p, 'grunddaten', t('gemeinsam.model.kennung-des-mappentyps-nur'));
+    else if ((ctx.schluesselAndererTypen ?? []).includes(mappentypDaten.schluessel)) melde(p, 'grunddaten', t('gemeinsam.model.die-kennung-hat-schon', { schluessel: mappentypDaten.schluessel }));
   }
-  if (!Array.isArray(t.felder)) {
-    melde(p, 'felder', 'Die Felder fehlen.');
+  if (!Array.isArray(mappentypDaten.felder)) {
+    melde(p, 'felder', t('gemeinsam.model.die-felder-fehlen'));
     return p;
   }
-  const unbekannt = vorlageFelder(t.titelVorlage ?? '').filter((k) => !istIndexplatzhalter(k) && !t.felder.some((f) => f.key === k));
-  if (unbekannt.length) melde(p, 'titel', `Die Titel-Vorlage nennt unbekannte Felder: ${unbekannt.map((k) => `{${k}}`).join(', ')}.`);
-  const geheim = vorlageFelder(t.titelVorlage ?? '').filter((k) => t.felder.some((f) => f.key === k && f.typ === 'passwort'));
-  if (geheim.length) melde(p, 'titel', `Passwortfelder dürfen nicht im Titel stehen: ${geheim.map((k) => `{${k}}`).join(', ')}.`);
-  for (const x of pruefeTitelFilter({ felder: t.felder, titelVorlage: t.titelVorlage ?? '' })) melde(p, 'titel', x);
-  if ((t.trefferliste ?? []).some((k) => t.felder.some((f) => f.key === k && f.typ === 'passwort'))) melde(p, 'trefferlisten', 'Passwortfelder können keine Spalte der Trefferliste sein.');
-  pruefeRegister(t, ctx, p);
+  const unbekannt = vorlageFelder(mappentypDaten.titelVorlage ?? '').filter((k) => !istIndexplatzhalter(k) && !mappentypDaten.felder.some((f) => f.key === k));
+  if (unbekannt.length) melde(p, 'titel', t('gemeinsam.model.die-titel-vorlage-nennt', { map: unbekannt.map((k) => `{${k}}`).join(', ') }));
+  const geheim = vorlageFelder(mappentypDaten.titelVorlage ?? '').filter((k) => mappentypDaten.felder.some((f) => f.key === k && f.typ === 'passwort'));
+  if (geheim.length) melde(p, 'titel', t('gemeinsam.model.passwortfelder-duerfen-nicht-im', { map: geheim.map((k) => `{${k}}`).join(', ') }));
+  for (const x of pruefeTitelFilter({ felder: mappentypDaten.felder, titelVorlage: mappentypDaten.titelVorlage ?? '' })) melde(p, 'titel', x);
+  if ((mappentypDaten.trefferliste ?? []).some((k) => mappentypDaten.felder.some((f) => f.key === k && f.typ === 'passwort'))) melde(p, 'trefferlisten', t('gemeinsam.model.passwortfelder-koennen-keine-spalte'));
+  pruefeRegister(mappentypDaten, ctx, p);
 
   const gesehen = new Set<string>();
-  t.felder.forEach((f, i) => {
+  mappentypDaten.felder.forEach((f, i) => {
     const m: string[] = [];
-    if (!(f.label ?? '').trim()) m.push('Bezeichnung fehlt.');
-    if (!(f.typ in FELDTYPEN)) m.push('Unbekannte Feldart.');
-    if (!SCHLUESSEL_MUSTER.test(f.key ?? '')) m.push('Kennung: nur Kleinbuchstaben, Ziffern und _, beginnt mit einem Buchstaben.');
-    else if (gesehen.has(f.key)) m.push(`Kennung „${f.key}“ kommt doppelt vor.`);
-    else if (istIndexplatzhalter(f.key)) m.push(`Kennung „${f.key}“ ist für den Indexwert „${INDEXPLATZHALTER[f.key as Indexplatzhalter]}“ reserviert.`);
+    if (!(f.label ?? '').trim()) m.push(t('gemeinsam.model.bezeichnung-fehlt'));
+    if (!(f.typ in FELDTYPEN)) m.push(t('gemeinsam.model.unbekannte-feldart'));
+    if (!SCHLUESSEL_MUSTER.test(f.key ?? '')) m.push(t('gemeinsam.model.kennung-nur-kleinbuchstaben-ziffern'));
+    else if (gesehen.has(f.key)) m.push(t('gemeinsam.model.kennung-kommt-doppelt-vor', { key: f.key }));
+    else if (istIndexplatzhalter(f.key)) m.push(t('gemeinsam.model.kennung-ist-fuer-den', { key: f.key, INDEXPLATZHALTER: INDEXPLATZHALTER[f.key as Indexplatzhalter] }));
     gesehen.add(f.key);
     if (f.typ === 'referenz') {
-      if (!f.zielTyp) m.push('Ziel-Mappentyp auswählen.');
-      else if (f.zielTyp === BELIEBIGER_TYP) { if (!f.system) m.push('Ziel-Mappentyp auswählen.'); }
-      else if (f.zielTyp !== ctx.eigeneId && !ctx.existiertTyp(f.zielTyp)) m.push('Der Ziel-Mappentyp existiert nicht.');
+      if (!f.zielTyp) m.push(t('gemeinsam.model.ziel-mappentyp-auswaehlen'));
+      else if (f.zielTyp === BELIEBIGER_TYP) { if (!f.system) m.push(t('gemeinsam.model.ziel-mappentyp-auswaehlen')); }
+      else if (f.zielTyp !== ctx.eigeneId && !ctx.existiertTyp(f.zielTyp)) m.push(t('gemeinsam.model.der-ziel-mappentyp-existiert'));
       else if (f.auswahlFilter?.length && ctx.auswahlProbleme) {
         // Auswahlfilter (#172): Bedingungen gegen die Felder des Zieltyps.
-        const ziel = f.zielTyp === ctx.eigeneId ? t.felder : ctx.felderVon?.(f.zielTyp);
-        if (ziel) for (const x of ctx.auswahlProbleme(f.auswahlFilter, ziel, { felder: t.felder, feldKey: f.key })) m.push(`Auswahlfilter: ${x}`);
+        const ziel = f.zielTyp === ctx.eigeneId ? mappentypDaten.felder : ctx.felderVon?.(f.zielTyp);
+        if (ziel) for (const x of ctx.auswahlProbleme(f.auswahlFilter, ziel, { felder: mappentypDaten.felder, feldKey: f.key })) m.push(`Auswahlfilter: ${x}`);
       }
     }
-    if (f.typ === 'auswahl' && !(f.optionen ?? []).length) m.push('Mindestens einen Auswahlwert eintragen.');
+    if (f.typ === 'auswahl' && !(f.optionen ?? []).length) m.push(t('gemeinsam.model.mindestens-einen-auswahlwert'));
     if ((f.typ === 'text' || f.typ === 'langtext' || f.typ === 'formatiert') && f.minLen != null && f.maxLen != null && f.minLen > f.maxLen)
-      m.push('Mindestlänge ist größer als Höchstlänge.');
+      m.push(t('gemeinsam.model.mindestlaenge-ist-groesser-als'));
     if ((f.typ === 'zahl' || f.typ === 'betrag') && typeof f.min === 'number' && typeof f.max === 'number' && f.min > f.max)
-      m.push('Minimum ist größer als Maximum.');
+      m.push(t('gemeinsam.model.minimum-ist-groesser-als'));
     // Format und Datumsgrenzen (#535).
-    m.push(...pruefeFormatDefinition(f, t.felder));
+    m.push(...pruefeFormatDefinition(f, mappentypDaten.felder));
     if (f.typ === 'text' && f.muster) {
-      try { new RegExp(f.muster); } catch { m.push('Das Muster ist kein gültiger regulärer Ausdruck.'); }
+      try { new RegExp(f.muster); } catch { m.push(t('gemeinsam.model.das-muster-ist-kein')); }
     }
     // Nummernkreis im Standardwert (#171): nur an Textfeldern, den Kreis muss es geben.
     const kreis = kreisImStandard(f.standard);
     if (kreis) {
-      if (f.typ !== 'text') m.push('Einen Nummernkreis gibt es nur für Textfelder.');
-      else if (ctx.nummernkreise && !ctx.nummernkreise.includes(kreis)) m.push(`Den Nummernkreis „${kreis}“ gibt es nicht.`);
+      if (f.typ !== 'text') m.push(t('gemeinsam.model.einen-nummernkreis-gibt-es'));
+      else if (ctx.nummernkreise && !ctx.nummernkreise.includes(kreis)) m.push(t('gemeinsam.model.den-nummernkreis-gibt-es', { kreis }));
     }
     if (m.length) p.felder[String(i)] = m;
   });
@@ -575,71 +576,71 @@ export interface MappenKontext {
 }
 
 /** Prüft die Werte einer Mappe gegen die aktuelle Definition ihres Typs. */
-export function pruefeMappe(t: Pick<Mappentyp, 'felder'>, werte: Werte, ctx: MappenKontext): Pruefergebnis {
+export function pruefeMappe(pick: Pick<Mappentyp, 'felder'>, werte: Werte, ctx: MappenKontext): Pruefergebnis {
   const p: Pruefergebnis = { allgemein: [], felder: {} };
   const fehler = (k: string, msg: string) => { p.felder[k] = [msg]; };
 
-  for (const f of t.felder) {
+  for (const f of pick.felder) {
     const v = werte?.[f.key];
     // Nummernkreis (#171): Wert vergibt das DMS, keine Prüfung der Eingabe.
     if (kreisVon(f)) continue;
     if (istLeer(v)) {
-      if (f.pflicht && f.typ !== 'janein') fehler(f.key, 'Pflichtfeld – bitte ausfüllen.');
+      if (f.pflicht && f.typ !== 'janein') fehler(f.key, t('gemeinsam.model.pflichtfeld-bitte-ausfuellen'));
       continue;
     }
     switch (f.typ) {
       case 'text':
       case 'langtext':
       case 'formatiert': {
-        if (typeof v !== 'string') { fehler(f.key, 'Text erwartet.'); break; }
-        if (f.minLen != null && v.length < f.minLen) fehler(f.key, `Mindestens ${f.minLen} Zeichen.`);
-        else if (f.maxLen != null && v.length > f.maxLen) fehler(f.key, `Höchstens ${f.maxLen} Zeichen.`);
+        if (typeof v !== 'string') { fehler(f.key, t('gemeinsam.model.text-erwartet')); break; }
+        if (f.minLen != null && v.length < f.minLen) fehler(f.key, t('gemeinsam.model.mindestens-zeichen', { minLen: f.minLen }));
+        else if (f.maxLen != null && v.length > f.maxLen) fehler(f.key, t('gemeinsam.model.hoechstens-zeichen', { maxLen: f.maxLen }));
         else if (f.typ === 'text' && f.muster) {
-          try { if (!new RegExp('^(?:' + f.muster + ')$').test(v)) fehler(f.key, 'Passt nicht zum vorgegebenen Muster.'); } catch { /* Definition prüft das */ }
+          try { if (!new RegExp('^(?:' + f.muster + ')$').test(v)) fehler(f.key, t('gemeinsam.model.passt-nicht-zum-vorgegebenen')); } catch { /* Definition prüft das */ }
         }
         break;
       }
       case 'zahl':
       case 'betrag': {
         const x = f.typ === 'betrag' ? (v as Betrag)?.betrag : v;
-        if (typeof x !== 'number' || !Number.isFinite(x)) { fehler(f.key, f.typ === 'betrag' ? 'Kein gültiger Betrag.' : 'Keine gültige Zahl.'); break; }
-        if (typeof f.min === 'number' && x < f.min) fehler(f.key, `Mindestens ${f.min.toLocaleString('de-DE')}.`);
-        else if (typeof f.max === 'number' && x > f.max) fehler(f.key, `Höchstens ${f.max.toLocaleString('de-DE')}.`);
+        if (typeof x !== 'number' || !Number.isFinite(x)) { fehler(f.key, f.typ === 'betrag' ? t('gemeinsam.model.kein-gueltiger-betrag') : t('gemeinsam.model.keine-gueltige-zahl')); break; }
+        if (typeof f.min === 'number' && x < f.min) fehler(f.key, t('gemeinsam.model.mindestens', { min: f.min.toLocaleString('de-DE') }));
+        else if (typeof f.max === 'number' && x > f.max) fehler(f.key, t('gemeinsam.model.hoechstens', { max: f.max.toLocaleString('de-DE') }));
         else if (f.typ === 'zahl' && f.nachkomma != null && (String(x).split('.')[1] ?? '').length > f.nachkomma)
-          fehler(f.key, `Höchstens ${f.nachkomma} Nachkommastellen.`);
+          fehler(f.key, t('gemeinsam.model.hoechstens-nachkommastellen', { nachkomma: f.nachkomma }));
         if (f.typ === 'betrag' && !p.felder[f.key] && !/^[A-Z]{3}$/.test((v as Betrag).waehrung ?? ''))
-          fehler(f.key, 'Währung als dreistelliger Code, z. B. EUR.');
+          fehler(f.key, t('gemeinsam.model.waehrung-als-dreistelliger-code'));
         break;
       }
       case 'datum':
-        if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v))) fehler(f.key, 'Kein gültiges Datum.');
+        if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v))) fehler(f.key, t('gemeinsam.model.kein-gueltiges-datum'));
         break;
       case 'janein':
-        if (typeof v !== 'boolean') fehler(f.key, 'Ja oder Nein erwartet.');
+        if (typeof v !== 'boolean') fehler(f.key, t('gemeinsam.model.ja-oder-nein-erwartet'));
         break;
       case 'auswahl': {
         const liste = Array.isArray(v) ? v : [v];
-        if (!f.mehrfach && Array.isArray(v)) { fehler(f.key, 'Nur ein Wert erlaubt.'); break; }
+        if (!f.mehrfach && Array.isArray(v)) { fehler(f.key, t('gemeinsam.model.nur-ein-wert-erlaubt')); break; }
         const falsch = liste.filter((x) => !(f.optionen ?? []).includes(String(x)));
-        if (falsch.length) fehler(f.key, `Nicht in der Auswahlliste: ${falsch.join(', ')}.`);
+        if (falsch.length) fehler(f.key, t('gemeinsam.model.nicht-in-der-auswahlliste', { falsch: falsch.join(', ') }));
         break;
       }
       case 'passwort':
         // Auf dem Server verschlüsselt (Text), in der Oberfläche als PasswortWert.
-        if (typeof v !== 'string' && !istPasswortWert(v)) fehler(f.key, 'Ungültiger Wert für ein Passwort.');
+        if (typeof v !== 'string' && !istPasswortWert(v)) fehler(f.key, t('gemeinsam.model.ungueltiger-wert-fuer-ein'));
         break;
       case 'referenz': {
         const ids = Array.isArray(v) ? v : [v];
-        if (!f.mehrfach && Array.isArray(v)) { fehler(f.key, 'Nur ein Verweis erlaubt.'); break; }
-        if (ids.some((id) => typeof id !== 'string' || ctx.typVon(id) === undefined)) fehler(f.key, 'Verweist auf eine Mappe, die es nicht gibt.');
-        else if (f.zielTyp !== BELIEBIGER_TYP && ids.some((id) => ctx.typVon(id as string) !== f.zielTyp)) fehler(f.key, 'Verweist auf eine Mappe eines anderen Mappentyps.');
+        if (!f.mehrfach && Array.isArray(v)) { fehler(f.key, t('gemeinsam.model.nur-ein-verweis-erlaubt')); break; }
+        if (ids.some((id) => typeof id !== 'string' || ctx.typVon(id) === undefined)) fehler(f.key, t('gemeinsam.model.verweist-auf-eine-mappe'));
+        else if (f.zielTyp !== BELIEBIGER_TYP && ids.some((id) => ctx.typVon(id as string) !== f.zielTyp)) fehler(f.key, t('gemeinsam.model.verweist-auf-eine-mappe-2'));
         break;
       }
     }
     if (!p.felder[f.key] && f.eindeutig && (f.typ === 'text' || f.typ === 'zahl')) {
       const titel = ctx.doppelt(f.key, v as string | number);
       // Leer: die andere Mappe darf der Benutzer nicht sehen – dann ohne ihren Titel (#743).
-      if (titel !== undefined) fehler(f.key, titel ? `Bereits vergeben in „${titel}“.` : 'Bereits vergeben.');
+      if (titel !== undefined) fehler(f.key, titel ? t('gemeinsam.model.bereits-vergeben-in', { titel }) : t('gemeinsam.model.bereits-vergeben'));
     }
   }
   return p;
@@ -817,7 +818,7 @@ export interface Dokument {
 }
 
 /** Herkunft einer Dokumentversion (#194). */
-export const HERKUNFT = { hochgeladen: 'hochgeladen', api: 'über die Schnittstelle', webdav: 'über WebDAV', paket: 'von einem Paket', eingang: 'Eingangskanal', zurueckgeholt: 'zurückgeholt', bearbeitet: 'in Ablago bearbeitet', geschwaerzt: 'in Ablago geschwärzt' } as const;
+export const HERKUNFT = { hochgeladen: 'hochgeladen', api: t('gemeinsam.model.ueber-die-schnittstelle'), webdav: t('gemeinsam.model.ueber-webdav'), paket: t('gemeinsam.model.von-einem-paket'), eingang: 'Eingangskanal', zurueckgeholt: 'zurückgeholt', bearbeitet: t('gemeinsam.model.in-ablago-bearbeitet'), geschwaerzt: t('gemeinsam.model.in-ablago-geschwaerzt') } as const;
 export type Herkunft = keyof typeof HERKUNFT;
 /** Eine ältere Version eines Dokuments (#194). */
 export interface DokumentVersion {
@@ -826,7 +827,7 @@ export interface DokumentVersion {
 }
 
 /* ---------- Aufgaben (#54, #56) ---------- */
-export const AUFGABENARTEN = { passung: 'Passt nicht', erwaehnung: 'Erwähnung', manuell: 'Zugewiesen', vertretung: 'Vertretung', frist: 'Frist', erinnerung: 'Erinnerung', post: 'Post für dich', auskunft: 'Auskunft', aenderung: 'Geändert', zugeordnet: 'Automatisch zugeordnet' } as const;
+export const AUFGABENARTEN = { passung: t('gemeinsam.model.passt-nicht'), erwaehnung: 'Erwähnung', manuell: 'Zugewiesen', vertretung: 'Vertretung', frist: 'Frist', erinnerung: 'Erinnerung', post: t('gemeinsam.model.post-fuer-dich'), auskunft: 'Auskunft', aenderung: 'Geändert', zugeordnet: t('gemeinsam.model.automatisch-zugeordnet') } as const;
 export type Aufgabenart = keyof typeof AUFGABENARTEN;
 export interface Aufgabe {
   id: string; mappeId: string;
@@ -877,20 +878,20 @@ export const NOTIZ_MAX = 20_000;
 
 /* ---------- Änderungshistorie (#57) ---------- */
 export const HISTORIENARTEN = {
-  angelegt: 'angelegt', geaendert: 'geändert', dokument_hochgeladen: 'Dokument hochgeladen', dokument_geloescht: 'Dokument gelöscht',
-  papierkorb: 'in den Papierkorb gelegt', wiederhergestellt: 'wiederhergestellt', endgueltig: 'endgültig gelöscht',
-  passwort_angezeigt: 'Passwort angezeigt', notiz: 'Notiz', aufgabe: 'Aufgabe', email: 'E-Mail versendet', abwesenheit: 'Abwesenheit',
-  zugeordnet: 'Post zugeordnet', uebernommen: 'übernommen', dokument_version: 'neue Version',
-  dokument_papierkorb: 'Dokument in den Papierkorb', dokument_wiederhergestellt: 'Dokument wiederhergestellt',
-  pdf_bearbeitet: 'PDF bearbeitet', post_geteilt: 'Post geteilt',
-  archivnummer: 'Archivnummer', volltext: 'Volltext gesetzt', weitergegeben: 'weitergegeben',
-  geschwaerzt: 'geschwärzte Fassung erstellt', auskunft: 'Auskunft erteilt',
-  umgewandelt: 'umgewandelte Fassung erstellt',
-  archivfassung: 'Archivfassung (PDF/A) abgelegt',
-  leserecht: 'Leserecht auf Zeit',
-  entsperrt: 'Passwortschutz entfernt',
+  angelegt: 'angelegt', geaendert: 'geändert', dokument_hochgeladen: t('gemeinsam.model.dokument-hochgeladen'), dokument_geloescht: t('gemeinsam.model.dokument-geloescht'),
+  papierkorb: t('gemeinsam.model.in-den-papierkorb-gelegt'), wiederhergestellt: 'wiederhergestellt', endgueltig: t('gemeinsam.model.endgueltig-geloescht'),
+  passwort_angezeigt: t('gemeinsam.model.passwort-angezeigt'), notiz: 'Notiz', aufgabe: 'Aufgabe', email: t('gemeinsam.model.e-mail-versendet'), abwesenheit: 'Abwesenheit',
+  zugeordnet: t('gemeinsam.model.post-zugeordnet'), uebernommen: 'übernommen', dokument_version: t('gemeinsam.model.neue-version'),
+  dokument_papierkorb: t('gemeinsam.model.dokument-in-den-papierkorb'), dokument_wiederhergestellt: t('gemeinsam.model.dokument-wiederhergestellt'),
+  pdf_bearbeitet: 'PDF bearbeitet', post_geteilt: t('gemeinsam.model.post-geteilt'),
+  archivnummer: 'Archivnummer', volltext: t('gemeinsam.model.volltext-gesetzt'), weitergegeben: 'weitergegeben',
+  geschwaerzt: t('gemeinsam.model.geschwaerzte-fassung-erstellt'), auskunft: t('gemeinsam.model.auskunft-erteilt'),
+  umgewandelt: t('gemeinsam.model.umgewandelte-fassung-erstellt'),
+  archivfassung: t('gemeinsam.model.archivfassung-pdf-a-abgelegt'),
+  leserecht: t('gemeinsam.model.leserecht-auf-zeit'),
+  entsperrt: t('gemeinsam.model.passwortschutz-entfernt'),
   /** #820: im Verwaltungsmodus geöffnet, heruntergeladen, geändert … – nicht löschbar, nie ausgeblendet. */
-  verwaltungsmodus: 'im Verwaltungsmodus',
+  verwaltungsmodus: t('gemeinsam.model.im-verwaltungsmodus'),
 } as const;
 /** Was im Verwaltungsmodus mit einer fremden Mappe geschah (#820). */
 export type Modusspur = 'angesehen' | 'heruntergeladen' | 'geaendert' | 'exportiert' | 'versendet';
@@ -927,9 +928,9 @@ export interface Ausschnitt { dokument: string; text: string }
 export const TREFFER_ANFANG = '\u0002';
 export const TREFFER_ENDE = '\u0003';
 export const OCR_STAENDE = {
-  keiner: 'ohne Volltext', wartet: 'wartet', laeuft: 'läuft', fertig: 'fertig', fehler: 'Fehler', ausgelassen: 'ausgelassen',
+  keiner: t('gemeinsam.model.ohne-volltext'), wartet: 'wartet', laeuft: 'läuft', fertig: 'fertig', fehler: t('gemeinsam.model.fehler'), ausgelassen: 'ausgelassen',
   /** #458: Textebene gelesen, das Paket für die Texterkennung ist dran (bzw. noch nicht installiert). */
-  paket: 'wartet auf Texterkennung',
+  paket: t('gemeinsam.model.wartet-auf-texterkennung'),
 } as const;
 export type OcrStandArt = keyof typeof OCR_STAENDE;
 export interface OcrStand {

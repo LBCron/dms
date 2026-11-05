@@ -26,8 +26,8 @@ export function Vorschaubild({ d }: { d: { id: string; name: string; mime: strin
   useEffect(() => { setVersuch(0); setFehlt(ohne); }, [d.id, d.sha256, moeglich, ohne]);
   useEffect(() => {
     if (!fehlt || !moeglich || versuch >= 2) return;
-    const t = setTimeout(() => { setVersuch((v) => v + 1); setFehlt(false); }, 2500 * (versuch + 1));
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => { setVersuch((v) => v + 1); setFehlt(false); }, 2500 * (versuch + 1));
+    return () => clearTimeout(timer);
   }, [fehlt, moeglich, versuch]);
   return fehlt
     ? <span className="vorschaubild ohne" aria-hidden="true">{endung(d.name, d.mime)}</span>

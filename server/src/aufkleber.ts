@@ -1,4 +1,5 @@
 import { aufkleberbogenPdf } from './pdf';
+import { t } from './sprache';
 
 /**
  * Archivnummern (#345): Aufkleberbogen als PDF mit Barcode (Code 128, Zeichensatz B) und Klartext.
@@ -38,9 +39,9 @@ export function code128Breiten(text: string): number[] {
 
 /** Etikettenformate (A4): Breite × Höhe in mm, Spalten × Zeilen; Ränder ergeben sich zentriert. */
 export const ETIKETTEN = {
-  '48x25': { name: '48,5 × 25,4 mm (40 je Bogen, z. B. Avery L4736/3657)', breite: 48.5, hoehe: 25.4, spalten: 4, zeilen: 10 },
-  '38x21': { name: '38,1 × 21,2 mm (65 je Bogen, z. B. Avery L7651)', breite: 38.1, hoehe: 21.2, spalten: 5, zeilen: 13 },
-  '70x37': { name: '70 × 37 mm (24 je Bogen, z. B. Avery 3474)', breite: 70, hoehe: 37, spalten: 3, zeilen: 8 },
+  '48x25': { name: t('meldungen.aufkleber.48-5-25-4'), breite: 48.5, hoehe: 25.4, spalten: 4, zeilen: 10 },
+  '38x21': { name: t('meldungen.aufkleber.38-1-21-2'), breite: 38.1, hoehe: 21.2, spalten: 5, zeilen: 13 },
+  '70x37': { name: t('meldungen.aufkleber.70-37-mm-24'), breite: 70, hoehe: 37, spalten: 3, zeilen: 8 },
 } as const;
 export type Etikett = keyof typeof ETIKETTEN;
 

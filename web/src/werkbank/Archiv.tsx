@@ -7,6 +7,7 @@ import { datumText } from '../../../shared/src/archiv';
 import { titelOder } from '../seiten';
 import { mitGrund } from '../ablage/Loeschgrund';
 import { fortschrittText } from '../../../shared/src/auftrag';
+import { t, tn } from '../sprache';
 
 /** Werkbank → Aufbewahrung abgelaufen (#212, bis #725 „Darf weg“): Mappen im Archivmodus, deren Aufbewahrungsfrist abgelaufen ist. */
 
@@ -33,35 +34,35 @@ export function DarfWegPanel({ z }: { z: DarfWegZustand }) {
     const ids = liste.filter((m) => gewaehlt.has(m.id)).map((m) => m.id);
     if (!ids.length) return;
     // Löschprotokoll (#470): Grund „Frist abgelaufen“ vorgeschlagen.
-    const anlass = await mitGrund({ titel: `${ids.length === 1 ? 'Diese Mappe' : `Diese ${ids.length} Mappen`} löschen?`, text: 'Mit eingeschaltetem Papierkorb landen sie dort, sonst sind sie endgültig weg.', ja: 'Löschen', gefahr: true }, 'frist');
+    const anlass = await mitGrund({ titel: t('werkbank.archiv.diese-mappen-loeschen', { anzahl: ids.length }), text: t('werkbank.archiv.mit-eingeschaltetem-papierkorb'), ja: t('werkbank.archiv.loeschen'), gefahr: true }, 'frist');
     if (!anlass) return;
     setLaeuft(true); setMeldung(undefined);
     const fehler: string[] = [];
     for (const id of ids) { try { await api.mappeLoeschen(id, anlass); } catch (e) { fehler.push((e as Error).message); } }
     setLaeuft(false); setGewaehlt(new Set());
-    setMeldung(fehler.length ? { art: 'schlecht', text: `${ids.length - fehler.length} gelöscht, ${fehler.length} nicht: ${fehler[0]}` } : { art: 'gut', text: `${ids.length} gelöscht.` });
+    setMeldung(fehler.length ? { art: 'schlecht', text: t('werkbank.archiv.geloescht-nicht', { wert: ids.length - fehler.length, fehler: fehler.length, fehler2: fehler[0] }) } : { art: 'gut', text: t('werkbank.archiv.geloescht', { ids: ids.length }) });
     await z.laden(); await d.neuLaden();
   }
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Aufbewahrung abgelaufen</h1>
-        <p className="leise">Mappen aus Mappentypen im Archivmodus, deren Aufbewahrungsfrist abgelaufen ist. Gelöscht wird nichts automatisch – entscheide selbst, was weg darf. <Hilfe ort="werkbank.aufbewahrung" /></p>
+        <p className="ueber">{t('werkbank.archiv.werkbank')}</p>
+        <h1>{t('werkbank.archiv.aufbewahrung-abgelaufen')}</h1>
+        <p className="leise">{tn('werkbank.archiv.mappen-aus-mappentypen-im', { hilfe: <Hilfe ort="werkbank.aufbewahrung" /> })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
-      {!z.liste ? <p className="leise">Lade …</p> : !liste.length && <p className="leise">Nichts – keine Frist ist abgelaufen.</p>}
+      {!z.liste ? <p className="leise">{t('werkbank.archiv.lade')}</p> : !liste.length && <p className="leise">{t('werkbank.archiv.nichts-keine-frist-ist')}</p>}
       {liste.length > 0 && (
         <div className="blatt">
-          <label className="haken"><input type="checkbox" checked={alle} onChange={() => setGewaehlt(alle ? new Set() : new Set(liste.map((m) => m.id)))} /><span>{gewaehlt.size ? `${gewaehlt.size} von ${liste.length} ausgewählt` : 'Alle auswählen'}</span></label>
+          <label className="haken"><input type="checkbox" checked={alle} onChange={() => setGewaehlt(alle ? new Set() : new Set(liste.map((m) => m.id)))} /><span>{gewaehlt.size ? t('werkbank.archiv.von-ausgewaehlt', { size: gewaehlt.size, liste: liste.length }) : t('werkbank.archiv.alle-auswaehlen')}</span></label>
           <ul className="stapel">
             {liste.map((m) => (
               <li key={m.id}><label className="haken"><input type="checkbox" checked={gewaehlt.has(m.id)} onChange={(e) => setGewaehlt((x) => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} />
-                <span><Link to={`/ablage/${m.typId}/${m.id}`} className="verweis">{titelOder(m.titel)}</Link> <small className="leise">{m.typ} · Frist abgelaufen am {datumText(m.aufbewahrenBis)}</small></span></label></li>
+                <span><Link to={`/ablage/${m.typId}/${m.id}`} className="verweis">{titelOder(m.titel)}</Link> <small className="leise">{t('werkbank.archiv.frist-abgelaufen-am', { typ: m.typ, datumText: datumText(m.aufbewahrenBis) })}</small></span></label></li>
             ))}
           </ul>
-          <div className="knoepfe"><button type="button" className="knopf gefahr" disabled={!gewaehlt.size || laeuft} onClick={() => void loeschen()}>{laeuft ? 'Lösche …' : 'Ausgewählte löschen'}</button></div>
+          <div className="knoepfe"><button type="button" className="knopf gefahr" disabled={!gewaehlt.size || laeuft} onClick={() => void loeschen()}>{laeuft ? t('werkbank.archiv.loesche') : t('werkbank.archiv.ausgewaehlte-loeschen')}</button></div>
         </div>
       )}
     </div>
@@ -74,22 +75,22 @@ export function DateienPruefen() {
   const [fehler, setFehler] = useState<string>();
   useEffect(() => {
     if (auftrag?.status !== 'laeuft') return;
-    const t = setInterval(() => void api.auftrag().then(setAuftrag), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void api.auftrag().then(setAuftrag), 1000);
+    return () => clearInterval(timer);
   }, [auftrag?.status]);
   const e = auftrag?.status === 'fertig' && auftrag.art === 'dateien-pruefen'
     ? auftrag.ergebnis as { dateien: number; abweichungen: Array<{ sha256: string; grund: string; dokumente: Array<{ name: string; mappeId: string; version: number }> }> } : null;
   return (
     <section className="blatt" id="dateien">
-      <h2 className="h3">Alle Dateien prüfen <Hilfe ort="werkbank.dateienpruefen" /></h2>
-      <p className="leise">Liest jede gespeicherte Datei – auch ältere Versionen – und vergleicht sie mit ihrem Prüfwert. So fällt auf, wenn eine Datei auf dem Speicher verändert wurde oder fehlt. Das Ergebnis steht auch im Protokoll.</p>
-      {auftrag?.status === 'laeuft' && <p className="leise" role="status">{fortschrittText(auftrag, 'Dateien')}</p>}
+      <h2 className="h3">{tn('werkbank.archiv.alle-dateien-pruefen', { hilfe: <Hilfe ort="werkbank.dateienpruefen" /> })}</h2>
+      <p className="leise">{t('werkbank.archiv.liest-jede-gespeicherte-datei')}</p>
+      {auftrag?.status === 'laeuft' && <p className="leise" role="status">{fortschrittText(auftrag, t('werkbank.archiv.dateien'))}</p>}
       {e && (e.abweichungen.length
-        ? <div className="hinweis schlecht"><p>{e.abweichungen.length} von {e.dateien} Dateien weichen ab:</p>
-            <ul>{e.abweichungen.map((a) => <li key={a.sha256}>{a.grund}: {a.dokumente.map((x, i) => <span key={i}>{i > 0 && ', '}<Link to={`/ablage/eingang/${x.mappeId}`} className="verweis">{x.name}</Link>{x.version > 1 ? ` (Version ${x.version})` : ''}</span>)}</li>)}</ul></div>
-        : <p className="gutertext" role="status">Alle {e.dateien} Dateien sind in Ordnung.</p>)}
+        ? <div className="hinweis schlecht"><p>{t('werkbank.archiv.von-dateien-weichen-ab', { abweichungen: e.abweichungen.length, dateien: e.dateien })}</p>
+            <ul>{e.abweichungen.map((a) => <li key={a.sha256}>{a.grund}: {a.dokumente.map((x, i) => <span key={i}>{i > 0 && ', '}<Link to={`/ablage/eingang/${x.mappeId}`} className="verweis">{x.name}</Link>{x.version > 1 ? t('werkbank.archiv.version', { version: x.version }) : ''}</span>)}</li>)}</ul></div>
+        : <p className="gutertext" role="status">{t('werkbank.archiv.alle-dateien-sind-in', { dateien: e.dateien })}</p>)}
       {(fehler || auftrag?.status === 'fehler') && <p className="fehlertext">{fehler ?? auftrag?.fehler}</p>}
-      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={auftrag?.status === 'laeuft'} onClick={() => void api.dateienPruefen().then(setAuftrag).catch((x) => setFehler((x as Error).message))}>Jetzt prüfen</button></div>
+      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={auftrag?.status === 'laeuft'} onClick={() => void api.dateienPruefen().then(setAuftrag).catch((x) => setFehler((x as Error).message))}>{t('werkbank.archiv.jetzt-pruefen')}</button></div>
     </section>
   );
 }

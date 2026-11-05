@@ -1,4 +1,5 @@
 import { kinderVon, type Sicht } from './sichten';
+import { t } from './texte';
 
 /**
  * Ansicht wählen am Handy (#498): statt 40 Reitern in einer Zeile eine Liste mit Suche, angehefteten
@@ -63,6 +64,6 @@ export function ansichtAbschnitte(sichten: Sicht[], o: { angeheftet?: unknown; a
     if (eintraege.length > 1) gruppen.push({ schluessel: wurzel.id, name: wurzel.name, eintraege });
     else weitere.push(...eintraege);
   }
-  if (weitere.length) gruppen.push({ schluessel: 'weitere', name: gruppen.length ? 'Weitere Ansichten' : 'Ansichten', eintraege: weitere });
+  if (weitere.length) gruppen.push({ schluessel: 'weitere', name: gruppen.length ? t('gemeinsam.ansichtwahl.weitere-ansichten') : 'Ansichten', eintraege: weitere });
   return { meine, zuletzt, gruppen, treffer: null, ausgeblendet: weg.size };
 }

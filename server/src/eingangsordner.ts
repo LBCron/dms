@@ -7,6 +7,7 @@ import type { Dienst } from './dienst';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Eingangsordner (#195): Das DMS prüft einen Ordner (im Container /eingang) regelmäßig und macht
@@ -71,9 +72,9 @@ const MAX_EREIGNISSE = 20;
 export function pruefeEingangEinstellung(x: unknown, alt: EingangEinstellung): EingangEinstellung {
   const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
   const abstand = o.abstand === undefined ? alt.abstand : Math.round(Number(o.abstand));
-  if (!Number.isFinite(abstand) || abstand < 5 || abstand > 3600) throw new Fachfehler(422, 'Prüfabstand: 5 bis 3600 Sekunden.');
+  if (!Number.isFinite(abstand) || abstand < 5 || abstand > 3600) throw new Fachfehler(422, t('meldungen.eingangsordner.pruefabstand-5-bis-3600'));
   const nachher = o.nachher === undefined ? alt.nachher : o.nachher;
-  if (nachher !== 'erledigt' && nachher !== 'loeschen') throw new Fachfehler(422, 'Nach dem Übernehmen: verschieben (erledigt) oder löschen.');
+  if (nachher !== 'erledigt' && nachher !== 'loeschen') throw new Fachfehler(422, t('meldungen.eingangsordner.nach-dem-uebernehmen-verschieben'));
   const doppelteUeberspringen = o.doppelteUeberspringen === undefined ? alt.doppelteUeberspringen === true : o.doppelteUeberspringen === true;
   return { aktiv: o.aktiv === undefined ? alt.aktiv : o.aktiv === true, abstand, nachher, doppelteUeberspringen };
 }
@@ -205,15 +206,15 @@ export class Eingangsordner {
   private async uebernimm(pfad: string, groesse: number, e: EingangEinstellung): Promise<boolean> {
     const rel = relative(this.pfad, pfad);
     const anzeige = `eingang/${rel.split(sep).join('/')}`;
-    if (groesse === 0) { await this.ablehnen(pfad, rel, 'Die Datei ist leer.'); return false; }
-    if (groesse > MAX_DATEIGROESSE) { await this.ablehnen(pfad, rel, 'Die Datei ist größer als 100 MB.'); return false; }
+    if (groesse === 0) { await this.ablehnen(pfad, rel, t('meldungen.eingangsordner.die-datei-ist-leer')); return false; }
+    if (groesse > MAX_DATEIGROESSE) { await this.ablehnen(pfad, rel, t('meldungen.eingangsordner.die-datei-ist-groesser')); return false; }
     let inhalt: Buffer;
     try { inhalt = await readFile(pfad); } catch (x) { log.warn('Eingangsordner: Datei nicht lesbar', { datei: anzeige, fehler: (x as Error).message }); return false; }
     const sha256 = createHash('sha256').update(inhalt).digest('hex');
     // Doppelt (#333): auf Wunsch gar nicht erst als Post übernehmen.
     if (e.doppelteUeberspringen && (await this.d.dienst.dokumenteMitInhalt(sha256)).length) {
       await this.nachher(pfad, rel, e);
-      await this.merke('uebernommen', { datei: anzeige, zeit: new Date().toISOString(), grund: 'doppelt – liegt schon in Ablago, übersprungen' });
+      await this.merke('uebernommen', { datei: anzeige, zeit: new Date().toISOString(), grund: t('meldungen.eingangsordner.doppelt-liegt-schon-in') });
       log.info('Eingangsordner: doppelte Datei übersprungen', { datei: anzeige });
       return true;
     }
@@ -226,7 +227,7 @@ export class Eingangsordner {
       const post = await this.d.dienst.legePostAn({ betreff: basename(rel, extname(rel)).slice(0, 250), ...(fuer ? { fuer } : {}) },
         { id: null, name: SYSTEMNAME }, undefined, POST_KANAL.ordner,
         // Doppelt (#333): nur die Anzahl – Titel sähe jeder, der die Post lesen darf, auch für fremde Mappen.
-        { text: `aus dem Eingangsordner übernommen (${anzeige})`, datei: anzeige, ...(gleich.length ? { doppelt: gleich.length } : {}) });
+        { text: t('meldungen.eingangsordner.aus-dem-eingangsordner-uebernommen', { anzeige }), datei: anzeige, ...(gleich.length ? { doppelt: gleich.length } : {}) });
       mappeId = post.id;
       await this.d.einstellungen.schreibe('eingangsordner_journal', { ...journal, mappeId });
       const typ = await this.d.dienst.postTyp();
@@ -236,7 +237,7 @@ export class Eingangsordner {
       await this.d.einstellungen.schreibe('eingangsordner_journal', null);
       const f = x as Error & { status?: number };
       // Speicherplatz-Grenze: Die Datei bleibt liegen und kommt beim nächsten Mal dran.
-      if (x instanceof Fachfehler && x.status === 507) { await this.merke('fehler', { datei: anzeige, zeit: new Date().toISOString(), grund: `${f.message} – die Datei bleibt im Eingangsordner.` }); return false; }
+      if (x instanceof Fachfehler && x.status === 507) { await this.merke('fehler', { datei: anzeige, zeit: new Date().toISOString(), grund: t('meldungen.eingangsordner.die-datei-bleibt-im', { message: f.message }) }); return false; }
       await this.ablehnen(pfad, rel, f.message);
       return false;
     }

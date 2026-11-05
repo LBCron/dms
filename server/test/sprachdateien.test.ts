@@ -58,6 +58,13 @@ describe('Sprachdateien (#473)', () => {
     assert.match(m, /„zahl“ hat Mehrzahlformen, aber kein „zahl_other“/);
     assert.match(m, /mappen“ hat Mehrzahlformen, aber kein „mappen_other“/);
     assert.match(m, /ungültiger Schlüssel „Gross“/);
+    // Platzhalter (#727): Der Aufruf muss liefern, was der Text braucht – auch verschachtelt und in der Mehrzahl.
+    const werte = pruefeSprachdateien({ de: { p: { 'gruss': 'Hallo {name}', 'n_one': 'eine {art}', 'n_other': '{anzahl} {art}n' } } }, [{ datei: 'c.ts', text:
+      "t('p.gruss', { nam: f({ name: 1 }) });\nt('p.n', { anzahl: 2 });\nt('p.gruss', { name: x ? t('p.n', { anzahl, art }) : '' });\nt('p.gruss', { ...rest })" }]);
+    assert.deepEqual(werte, [
+      'c.ts:1: „p.gruss“ braucht {name}, der Aufruf liefert nur {nam}.',
+      'c.ts:2: „p.n“ braucht {art}, der Aufruf liefert nur {anzahl}.',
+    ]);
     // Zusammengesetzte Schlüssel zählen über ihren festen Anfang als benutzt.
     assert.deepEqual(pruefeSprachdateien({ de: { w: { 'g.a': 'A', 'g.b': 'B' } } }, [{ datei: 'b.ts', text: 't.frei(`w.g.${x}`)' }]), []);
   });

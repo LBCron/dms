@@ -7,6 +7,7 @@ import { Person } from '../Person';
 import { rueckfrage } from '../rueckfrage';
 import { titelOder } from '../seiten';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Aufgaben → Aufgaben bei Personen ohne Leserecht (#798). Grundsatz: Wer eine Aufgabe bekommt, darf die
@@ -14,7 +15,7 @@ import { t } from '../sprache';
  * vergangenen mit Zeitraum, Person, Mappe und ob ein Leserecht auf Zeit gegeben wurde. Je Fall Sprung zur Mappe und
  * zum Testlauf der Rechte; bei offenen Fällen der Knopf für das Leserecht auf Zeit. Rechte vergibt nur der Admin.
  */
-const tag = (iso: string) => new Date(iso).toLocaleDateString('de-DE');
+const tag = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema());
 
 export function useOhneLeserecht(aktiv: boolean) {
   const [stand, setStand] = useState<{ offen: FallOhneLeserecht[]; vergangen: FallOhneLeserecht[] } | null>(null);

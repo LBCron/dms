@@ -4,7 +4,8 @@ import { Mehrfachauswahl } from '../ablage/Mehrfachauswahl';
 import { api, ApiFehler, type PaketEinstellungenStand } from '../api';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Pakete → Paket → Einstellungen (#197): Formular aus der Beschreibung im Manifest.
@@ -12,7 +13,7 @@ import { t } from '../sprache';
  */
 
 type Werte = Record<string, unknown>;
-const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 let zaehler = 0;
 const neueId = () => `n${Date.now().toString(36)}${(zaehler++).toString(36)}`;
 
@@ -42,14 +43,14 @@ export function PaketEinstellungen({ id, gespeichert }: { id: string; gespeicher
     api.paketEinstellungen(id).then((s) => { if (aktuell) { setStand(s); setWerte(zumFormular(s)); } }, (e) => aktuell && setMeldung({ art: 'schlecht', text: (e as Error).message }));
     return () => { aktuell = false; };
   }, [id]);
-  if (!stand) return meldung ? <div className="hinweis schlecht"><p>{meldung.text}</p></div> : <p className="leise">Lade …</p>;
+  if (!stand) return meldung ? <div className="hinweis schlecht"><p>{meldung.text}</p></div> : <p className="leise">{t('werkbank.paketeinstellungen.lade')}</p>;
 
   async function speichern(adresseBestaetigt = false) {
     setLaeuft(true); setMeldung(undefined); setFehler({});
     try {
       const s = await api.paketEinstellungenSpeichern(id, werte, adresseBestaetigt);
       setStand(s); setWerte(zumFormular(s));
-      setMeldung({ art: 'gut', text: 'Gespeichert.' });
+      setMeldung({ art: 'gut', text: t('werkbank.paketeinstellungen.gespeichert') });
       gespeichert?.();
     } catch (e) {
       // Dienst-Adresse (#444): erst bestätigen – dorthin schickt das Paket Daten.
@@ -65,7 +66,7 @@ export function PaketEinstellungen({ id, gespeichert }: { id: string; gespeicher
     } finally { setLaeuft(false); }
   }
   async function aktion(a: { schluessel: string; name: string; bestaetigen?: boolean }) {
-    if (a.bestaetigen && !(await rueckfrage({ titel: `„${a.name}“ jetzt ausführen?`, ja: 'Ausführen' }))) return;
+    if (a.bestaetigen && !(await rueckfrage({ titel: t('werkbank.paketeinstellungen.jetzt-ausfuehren', { name: a.name }), ja: t('werkbank.paketeinstellungen.ausfuehren') }))) return;
     setLaeuft(true); setMeldung(undefined);
     try { const r = await api.paketAktion(id, a.schluessel); setMeldung({ art: r.ok ? 'gut' : 'schlecht', text: r.text }); }
     catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
@@ -74,24 +75,24 @@ export function PaketEinstellungen({ id, gespeichert }: { id: string; gespeicher
   const b = stand.beschreibung;
   return (
     <div className="stapel paketeinstellungen" onKeyDown={ent.tasten}>
-      {stand.fehlend.length > 0 && <div className="hinweis warn" role="status"><p><strong>Einstellungen nötig.</strong> Es fehlen: {stand.fehlend.join(', ')}. Erst danach läuft das Paket.</p></div>}
+      {stand.fehlend.length > 0 && <div className="hinweis warn" role="status"><p>{tn('werkbank.paketeinstellungen.es-fehlen-erst-danach', { b: <strong>{t('werkbank.paketeinstellungen.einstellungen-noetig')}</strong>, fehlend: stand.fehlend.join(', ') })}</p></div>}
       {meldung && <div className={`hinweis ${meldung.art}`} role="status"><p>{meldung.text}</p></div>}
       {b.bloecke.map((blk, i) => <Block key={`${runde}-${i}`} blk={blk} werte={werte} setze={setWerte} fehler={fehler} auswahl={stand.auswahl} />)}
-      <Speicherleiste ent={ent} gegenstand="Einstellungen" sendet={laeuft} speicherbar={stand.fehlend.length > 0} speichern={() => void speichern()} />
+      <Speicherleiste ent={ent} gegenstand={t('werkbank.paketeinstellungen.einstellungen')} sendet={laeuft} speicherbar={stand.fehlend.length > 0} speichern={() => void speichern()} />
       {b.aktionen.length > 0 && (
         <section className="blatt">
-          <h2 className="h3">Aktionen</h2>
-          {!stand.laeufer && <p className="leise klein">Pakete mit Code laufen in dieser Installation noch nicht. Aktionen melden das, statt etwas zu tun.</p>}
+          <h2 className="h3">{t('werkbank.paketeinstellungen.aktionen')}</h2>
+          {!stand.laeufer && <p className="leise klein">{t('werkbank.paketeinstellungen.pakete-mit-code-laufen')}</p>}
           <div className="knoepfe">
             {b.aktionen.map((a) => <button key={a.schluessel} type="button" className="knopf" disabled={laeuft} title={a.hilfe} onClick={() => void aktion(a)}>{a.name}</button>)}
           </div>
         </section>
       )}
-      <section className="blatt" aria-label="Status">
-        <h2 className="h3">Status</h2>
-        <p className="leise klein">Schreibt nur das Paket selbst.</p>
-        <dl className="eigenschaften"><dt>Letzter Lauf</dt><dd>{zeit(stand.status?.letzterLauf ?? null)}</dd></dl>
-        {stand.status?.meldungen.length ? <ul className="klein">{stand.status.meldungen.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="leise klein">Noch keine Meldungen.</p>}
+      <section className="blatt" aria-label={t('werkbank.paketeinstellungen.status')}>
+        <h2 className="h3">{t('werkbank.paketeinstellungen.status')}</h2>
+        <p className="leise klein">{t('werkbank.paketeinstellungen.schreibt-nur-das-paket')}</p>
+        <dl className="eigenschaften"><dt>{t('werkbank.paketeinstellungen.letzter-lauf')}</dt><dd>{zeit(stand.status?.letzterLauf ?? null)}</dd></dl>
+        {stand.status?.meldungen.length ? <ul className="klein">{stand.status.meldungen.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="leise klein">{t('werkbank.paketeinstellungen.noch-keine-meldungen')}</p>}
       </section>
     </div>
   );
@@ -157,16 +158,16 @@ function Block({ blk, werte, setze, fehler, auswahl }: { blk: EinstellungBlock; 
     <section className="blatt">
       <h2 className="h3">{blk.name}</h2>
       {blk.hilfe && <p className="leise klein">{blk.hilfe}</p>}
-      {!eintraege.length && <p className="leise klein">Noch keine Einträge.</p>}
+      {!eintraege.length && <p className="leise klein">{t('werkbank.paketeinstellungen.noch-keine-eintraege')}</p>}
       <ol className="stapel paketliste">
         {eintraege.map((e, i) => (
           <li key={String(e[EINTRAG_ID])} className="paketeintrag">
             <div className="zeile-zwischen">
               <strong className="klein">{blk.eintrag} {i + 1}</strong>
               <span className="knoepfe">
-                {blk.sortierbar && <><button type="button" className="textknopf klein" disabled={i === 0} aria-label={`${blk.eintrag} ${i + 1} nach oben`} onClick={() => schiebe(i, -1)}>↑</button>
-                  <button type="button" className="textknopf klein" disabled={i === eintraege.length - 1} aria-label={`${blk.eintrag} ${i + 1} nach unten`} onClick={() => schiebe(i, 1)}>↓</button></>}
-                <button type="button" className="textknopf klein gefahr" onClick={() => setzeListe(eintraege.filter((_, j) => j !== i))}>Löschen</button>
+                {blk.sortierbar && <><button type="button" className="textknopf klein" disabled={i === 0} aria-label={t('werkbank.paketeinstellungen.nach-oben', { eintrag: blk.eintrag, wert: i + 1 })} onClick={() => schiebe(i, -1)}>↑</button>
+                  <button type="button" className="textknopf klein" disabled={i === eintraege.length - 1} aria-label={t('werkbank.paketeinstellungen.nach-unten', { eintrag: blk.eintrag, wert: i + 1 })} onClick={() => schiebe(i, 1)}>↓</button></>}
+                <button type="button" className="textknopf klein gefahr" onClick={() => setzeListe(eintraege.filter((_, j) => j !== i))}>{t('werkbank.paketeinstellungen.loeschen')}</button>
               </span>
             </div>
             {blk.felder.map((f) => <Eingabe key={f.schluessel} f={f} wert={e[f.schluessel]} fehler={fehler[`${blk.schluessel}.${i + 1}.${f.schluessel}`]} auswahl={auswahl}
@@ -186,7 +187,7 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id, ausgeschlossen }:
   let ctl: React.ReactNode;
   const liste = (optionen: Array<{ id: string; name: string }>) => (
     <select id={id} value={String(wert ?? '')} onChange={(e) => setze(e.target.value || null)}>
-      <option value="">– keine Auswahl –</option>
+      <option value="">{t('werkbank.paketeinstellungen.keine-auswahl')}</option>
       {optionen.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
     </select>
   );
@@ -201,7 +202,7 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id, ausgeschlossen }:
     case 'janein': ctl = <label className="haken"><input id={id} type="checkbox" checked={wert === true} onChange={(e) => setze(e.target.checked)} /><span>{f.name}</span></label>; break;
     case 'auswahl': ctl = (
       <select id={id} value={String(wert ?? '')} onChange={(e) => setze(e.target.value || null)}>
-        <option value="">– keine Auswahl –</option>{(f.optionen ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+        <option value="">{t('werkbank.paketeinstellungen.keine-auswahl')}</option>{(f.optionen ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
     ); break;
     case 'mehrfachauswahl': {
@@ -212,8 +213,8 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id, ausgeschlossen }:
     case 'geheim': {
       const gesetzt = !!wert && typeof wert === 'object';
       ctl = gesetzt && !geheimNeu
-        ? <div className="zeile"><span className="chip gut">gesetzt</span><button type="button" className="textknopf klein" onClick={() => setGeheimNeu(true)}>Ändern</button><button type="button" className="textknopf klein gefahr" onClick={() => setze(null)}>Löschen</button></div>
-        : <input id={id} type="password" autoComplete="new-password" placeholder={wert === null && !geheimNeu ? 'nicht gesetzt' : 'neuer Wert'} value={typeof wert === 'string' ? wert : ''} onChange={(e) => setze(e.target.value || (warGesetzt && geheimNeu ? { behalten: true } : null))} />;
+        ? <div className="zeile"><span className="chip gut">{t('werkbank.paketeinstellungen.gesetzt')}</span><button type="button" className="textknopf klein" onClick={() => setGeheimNeu(true)}>{t('werkbank.paketeinstellungen.aendern')}</button><button type="button" className="textknopf klein gefahr" onClick={() => setze(null)}>{t('werkbank.paketeinstellungen.loeschen')}</button></div>
+        : <input id={id} type="password" autoComplete="new-password" placeholder={wert === null && !geheimNeu ? t('werkbank.paketeinstellungen.nicht-gesetzt') : t('werkbank.paketeinstellungen.neuer-wert')} value={typeof wert === 'string' ? wert : ''} onChange={(e) => setze(e.target.value || (warGesetzt && geheimNeu ? { behalten: true } : null))} />;
       break;
     }
     case 'mappentyp': ctl = liste(auswahl.typen); break;
@@ -222,10 +223,10 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id, ausgeschlossen }:
     case 'sicht': ctl = liste(auswahl.sichten); break;
     case 'feld': {
       const v = wert as FeldVerweis | null;
-      const optionen = auswahl.typen.flatMap((t) => t.felder.map((g) => ({ id: `${t.id}|${g.key}`, name: `${t.name} › ${g.label}` })));
+      const optionen = auswahl.typen.flatMap((eintrag) => eintrag.felder.map((g) => ({ id: `${eintrag.id}|${g.key}`, name: `${eintrag.name} › ${g.label}` })));
       ctl = (
         <select id={id} value={v ? `${v.typ}|${v.feld}` : ''} onChange={(e) => { const [typ, feld] = e.target.value.split('|'); setze(e.target.value ? { typ, feld } : null); }}>
-          <option value="">– keine Auswahl –</option>{optionen.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          <option value="">{t('werkbank.paketeinstellungen.keine-auswahl')}</option>{optionen.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       );
       break;

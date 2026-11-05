@@ -10,8 +10,9 @@
  */
 import { istLeer, type Mappe, type Mappentyp } from './model';
 import { bedingungsProblem, bereinigeBedingungen, erfuellt, filterFuer, type Aufloesung, type Bedingung, type Filter, type Zaehlquelle } from './sichten';
+import { t } from './texte';
 
-export const RECHTE = { C: 'Anlegen', R: 'Lesen', U: 'Bearbeiten', D: 'Löschen', P: 'Passwörter sehen' } as const;
+export const RECHTE = { C: 'Anlegen', R: 'Lesen', U: 'Bearbeiten', D: 'Löschen', P: t('gemeinsam.rechte.passwoerter-sehen') } as const;
 export type Recht = keyof typeof RECHTE;
 export const RECHTE_LISTE = Object.keys(RECHTE) as Recht[];
 export type Rechte = Record<Recht, boolean>;
@@ -313,14 +314,14 @@ function bereinigeBedingung(e: unknown): RegelBedingung | null {
 
 /** Warum eine Regel nicht (mehr) passt – z. B. ein entferntes Feld. null = in Ordnung. */
 export function regelProblem(r: Regel, typ: Mappentyp): string | null {
-  if (!r.name) return 'Bitte der Regel einen Namen geben.';
-  if (!r.wenn.length) return `„${r.name}“: Mindestens eine Bedingung angeben.`;
-  if (!RECHTE_LISTE.some((k) => r.dann[k]) && !r.stopp) return `„${r.name}“ ändert nichts – mindestens ein Recht erteilen oder entziehen oder Stopp setzen.`;
+  if (!r.name) return t('gemeinsam.rechte.bitte-der-regel-einen');
+  if (!r.wenn.length) return t('gemeinsam.rechte.mindestens-eine-bedingung-angeben', { name: r.name });
+  if (!RECHTE_LISTE.some((k) => r.dann[k]) && !r.stopp) return t('gemeinsam.rechte.aendert-nichts-mindestens-ein', { name: r.name });
   for (const b of r.wenn) {
     if (b.art === 'feld') { const p = bedingungsProblem(b.bedingung, [typ]); if (p) return `„${r.name}“: ${p}`; }
-    if (b.art === 'benutzer' && !b.benutzer.length) return `„${r.name}“: Benutzer auswählen.`;
-    if (b.art === 'rolle' && !b.rollen.length) return `„${r.name}“: Rolle auswählen.`;
-    if (b.art === 'eigeneMappe' && typ.system !== 'benutzer') return `„${r.name}“: „Mappe ist die des aktuellen Benutzers“ gibt es nur beim Mappentyp Benutzer.`;
+    if (b.art === 'benutzer' && !b.benutzer.length) return t('gemeinsam.rechte.benutzer-auswaehlen', { name: r.name });
+    if (b.art === 'rolle' && !b.rollen.length) return t('gemeinsam.rechte.rolle-auswaehlen', { name: r.name });
+    if (b.art === 'eigeneMappe' && typ.system !== 'benutzer') return t('gemeinsam.rechte.mappe-ist-die-des', { name: r.name });
   }
   return null;
 }
@@ -340,10 +341,10 @@ export function kopiereRegel(r: Regel, ziel: Mappentyp): { regel: Regel; ausgela
 export function beschreibeRegelBedingung(b: RegelBedingung, namen: { benutzer(id: string): string; rolle(id: string): string; feld(b: Extract<Bedingung, { art: 'feld' }>): string }): string {
   const n = b.nicht;
   switch (b.art) {
-    case 'benutzer': return `Benutzer ${n ? 'ist nicht' : 'ist'} ${b.benutzer.map(namen.benutzer).join(' oder ') || '…'}`;
-    case 'rolle': return `Benutzer ${n ? 'hat nicht' : 'hat'} Rolle ${b.rollen.map(namen.rolle).join(' oder ') || '…'}`;
-    case 'aufgabe': return `Mappe hat ${n ? 'keine' : 'eine'} offene Aufgabe für den aktuellen Benutzer`;
-    case 'eigeneMappe': return `Mappe ist ${n ? 'nicht ' : ''}die des aktuellen Benutzers`;
+    case 'benutzer': return t('gemeinsam.rechte.benutzer', { wert: n ? t('gemeinsam.rechte.ist-nicht') : 'ist', wert2: b.benutzer.map(namen.benutzer).join(' oder ') || '…' });
+    case 'rolle': return t('gemeinsam.rechte.benutzer-rolle', { wert: n ? t('gemeinsam.rechte.hat-nicht') : 'hat', wert2: b.rollen.map(namen.rolle).join(' oder ') || '…' });
+    case 'aufgabe': return t('gemeinsam.rechte.mappe-hat-offene-aufgabe', { wert: n ? 'keine' : 'eine' });
+    case 'eigeneMappe': return t('gemeinsam.rechte.mappe-ist-die-des-2', { wert: n ? 'nicht ' : '' });
     case 'feld': return `${n ? 'nicht: ' : ''}${namen.feld(b.bedingung)}`;
   }
 }

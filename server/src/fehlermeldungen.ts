@@ -4,6 +4,8 @@ import type { Dateispeicher } from './dateispeicher';
 import { erkenneAnzeigbar } from './dienst';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Fehlermeldungen von Benutzern an die Administratoren (#70): eigene Beschreibung, bis zu zwei
@@ -48,18 +50,18 @@ export class Fehlermeldungen {
   async melde(benutzerId: string | null, eingabe: unknown): Promise<{ id: string }> {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const text = typeof e.text === 'string' ? e.text.replace(/\r\n?/g, '\n').trim() : '';
-    if (!text) throw new Fachfehler(422, 'Bitte beschreibe kurz, was passiert ist.');
-    if (text.length > FEHLER_TEXT_MAX) throw new Fachfehler(422, `Höchstens ${FEHLER_TEXT_MAX.toLocaleString('de-DE')} Zeichen.`);
+    if (!text) throw new Fachfehler(422, t('meldungen.fehlermeldungen.bitte-beschreibe-kurz-was'));
+    if (text.length > FEHLER_TEXT_MAX) throw new Fachfehler(422, t('meldungen.fehlermeldungen.hoechstens-zeichen', { FEHLER_TEXT_MAX: FEHLER_TEXT_MAX.toLocaleString(gebietsschema()) }));
     const roh = Array.isArray(e.bilder) ? e.bilder : [];
-    if (roh.length > FEHLER_BILDER_MAX) throw new Fachfehler(422, `Höchstens ${FEHLER_BILDER_MAX} Bilder.`);
+    if (roh.length > FEHLER_BILDER_MAX) throw new Fachfehler(422, t('meldungen.fehlermeldungen.hoechstens-bilder', { FEHLER_BILDER_MAX }));
     const bilder: FehlerBild[] = [];
     for (const [i, b] of roh.entries()) {
       const x = (b ?? {}) as Record<string, unknown>;
       const inhalt = typeof x.daten === 'string' ? Buffer.from(x.daten.replace(/^data:[^,]*,/, ''), 'base64') : Buffer.alloc(0);
-      if (!inhalt.length) throw new Fachfehler(422, 'Ein Bild ist leer.');
-      if (inhalt.length > FEHLER_BILD_BYTES) throw new Fachfehler(413, `Ein Bild darf höchstens ${FEHLER_BILD_BYTES / 1024 / 1024} MB groß sein.`);
+      if (!inhalt.length) throw new Fachfehler(422, t('meldungen.fehlermeldungen.ein-bild-ist-leer'));
+      if (inhalt.length > FEHLER_BILD_BYTES) throw new Fachfehler(413, t('meldungen.fehlermeldungen.ein-bild-darf-hoechstens', { wert: FEHLER_BILD_BYTES / 1024 / 1024 }));
       const mime = erkenneAnzeigbar(inhalt);
-      if (!mime || !BILDTYPEN.has(mime)) throw new Fachfehler(422, 'Bilder bitte als PNG, JPEG oder WebP.');
+      if (!mime || !BILDTYPEN.has(mime)) throw new Fachfehler(422, t('meldungen.fehlermeldungen.bilder-bitte-als-png'));
       const sha256 = createHash('sha256').update(inhalt).digest('hex');
       await this.dateien.schreibe(sha256, inhalt);
       const name = typeof x.name === 'string' && x.name.trim() ? x.name.trim().slice(0, 120) : `Bild ${i + 1}`;
@@ -77,14 +79,14 @@ export class Fehlermeldungen {
 
   async hole(id: string) {
     const m = await this.repo.hole(id);
-    if (!m) throw new Fachfehler(404, 'Diese Fehlermeldung gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.fehlermeldungen.diese-fehlermeldung-gibt-es'));
     return m;
   }
 
   async bild(id: string, nr: number) {
     const m = await this.hole(id);
     const b = m.bilder.find((x) => x.nr === nr);
-    if (!b) throw new Fachfehler(404, 'Dieses Bild gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.fehlermeldungen.dieses-bild-gibt-es'));
     return { bild: b, inhalt: await this.dateien.lies(b.sha256) };
   }
 

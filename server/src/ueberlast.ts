@@ -28,7 +28,7 @@ export function maxAnfragenAus(env: Record<string, string | undefined>): Ueberla
   if (!roh) return { max: MAX_ANFRAGEN_VORGABE, quelle: 'vorgabe' };
   const n = Number(roh);
   if (!Number.isInteger(n) || n < MAX_ANFRAGEN_MIN || n > MAX_ANFRAGEN_MAX) {
-    return { max: MAX_ANFRAGEN_VORGABE, quelle: 'vorgabe', fehler: `DMS_MAX_ANFRAGEN=${roh} ist keine Zahl von ${MAX_ANFRAGEN_MIN} bis ${MAX_ANFRAGEN_MAX} und wird ignoriert.` };
+    return { max: MAX_ANFRAGEN_VORGABE, quelle: 'vorgabe', fehler: t('meldungen.ueberlast.dms-max-anfragen-ist', { roh, MAX_ANFRAGEN_MIN, MAX_ANFRAGEN_MAX }) };
   }
   return { max: n, quelle: 'umgebung' };
 }

@@ -41,7 +41,7 @@ export function WebhooksPanel({ z }: { z: WebhooksZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
+        <p className="ueber">{t('werkbank.webhooks.werkbank')}</p>
         <h1>{t('webhook.werkbank.titel')}</h1>
         <p className="leise">{t('webhook.werkbank.text')} <Hilfe ort="werkbank.webhooks" /></p>
       </div>

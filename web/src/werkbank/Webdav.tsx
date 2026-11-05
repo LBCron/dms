@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type WebdavEinstellung, type WebdavStand } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → WebDAV-Laufwerk (#346, Stufe 1): an/aus (Standard aus), Stempel beim Lesen und „nur lesend“ (#722), Adresse zum Einbinden,
@@ -10,7 +11,7 @@ import { t } from '../sprache';
  * Ohne mittlere Spalte (#366): die letzten Zugriffe stehen rechts mit fester Höhe, neueste oben.
  */
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'medium' });
 
 export function useWebdav(offen: boolean) {
   const [stand, setStand] = useState<WebdavStand | null>(null);
@@ -21,8 +22,8 @@ export function useWebdav(offen: boolean) {
   useEffect(() => { if (offen) void laden(); }, [offen, laden]);
   useEffect(() => {
     if (!offen) return;
-    const t = setInterval(() => void laden(), 15_000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void laden(), 15_000);
+    return () => clearInterval(timer);
   }, [offen, laden]);
   return { stand, fehler, laden, setStand };
 }
@@ -35,24 +36,24 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
   const [sendet, setSendet] = useState(false);
   useEffect(() => { if (s?.einstellung && !e) setE(s.einstellung); }, [s, e]);
   const ent = useEntwurf(s?.einstellung ?? null, e, { aus: !e, zuruecksetzen: () => { setE(s?.einstellung ?? null); setMeldung(undefined); } });
-  if (!s || !e) return z.fehler ? <div className="hinweis schlecht"><p>{z.fehler}</p></div> : <p className="leise">Lade …</p>;
+  if (!s || !e) return z.fehler ? <div className="hinweis schlecht"><p>{z.fehler}</p></div> : <p className="leise">{t('werkbank.webdav.lade')}</p>;
   async function speichern() {
     setSendet(true);
-    try { const n = await api.webdavSetzen(e!); z.setStand(n); setE(n.einstellung); setMeldung({ art: 'gut', text: 'Gespeichert.' }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
+    try { const n = await api.webdavSetzen(e!); z.setStand(n); setE(n.einstellung); setMeldung({ art: 'gut', text: t('werkbank.webdav.gespeichert') }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
   }
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>WebDAV-Laufwerk</h1>
-        <p className="leise">Die Ablage als Laufwerk im Explorer, im Finder oder in der Dateien-App: Ordner lesen, Dokumente öffnen (mit Exportrecht) und Dateien in „Neue Post“ oder einen Register-Ordner legen. Angemeldet wird mit der E-Mail-Adresse und einem API-Schlüssel, nie mit dem Passwort. <Hilfe ort="werkbank.webdav" /></p>
+        <p className="ueber">{t('werkbank.webdav.werkbank')}</p>
+        <h1>{t('werkbank.webdav.webdav-laufwerk')}</h1>
+        <p className="leise">{tn('werkbank.webdav.die-ablage-als-laufwerk', { hilfe: <Hilfe ort="werkbank.webdav" /> })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
-      {!s.https && <div className="hinweis warn"><p>Die Adresse von Ablago beginnt nicht mit <code>https://</code>. Windows bindet ein Laufwerk mit Anmeldung nur über HTTPS ein, und ohne HTTPS gingen die API-Schlüssel offen über das Netz. Richte zuerst HTTPS ein (Werkbank → E-Mail und Adresse, Reverse-Proxy).</p></div>}
+      {!s.https && <div className="hinweis warn"><p>{tn('werkbank.webdav.die-adresse-von-ablago', { code: <code>{'https://'}</code> })}</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
-        <h2 className="h3">Einstellungen</h2>
+        <h2 className="h3">{t('werkbank.webdav.einstellungen')}</h2>
         <label className="haken"><input id="webdav-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} />
-          <span>WebDAV-Laufwerk einschalten <small className="leise">– ausgeschaltet antwortet <code>/webdav/</code> mit „nicht gefunden“</small></span></label>
+          <span>{tn('werkbank.webdav.webdav-laufwerk-einschalten', { klein: <small className="leise">{tn('werkbank.webdav.ausgeschaltet-antwortet-mit-nicht', { code: <code>{'/webdav/'}</code> })}</small> })}</span></label>
         {/* Stempel beim Lesen (#722): Vorgabe ist die mitgelieferte Vorlage; Pflicht-Stempel der Mappentypen gelten immer. */}
         <label className="eigenschaft"><span>{t('werkbank.webdav.stempel')} <Hilfe ort="webdav.stempel" /></span>
           <select id="webdav-stempel" value={e.stempel ?? ''} onChange={(x) => setE({ ...e, stempel: x.target.value || null })}>
@@ -62,34 +63,34 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
           <small className="leise">{t('werkbank.webdav.stempel.hinweis')}</small></label>
         <label className="haken"><input id="webdav-nur-lesend" type="checkbox" checked={e.nurLesend} onChange={(x) => setE({ ...e, nurLesend: x.target.checked })} />
           <span><span className="haken-titel">{t('werkbank.webdav.nur-lesend')}&nbsp;<Hilfe ort="webdav.nurLesend" /></span><small className="leise">{t('werkbank.webdav.nur-lesend.hinweis')}</small></span></label>
-        <Speicherleiste ent={ent} gegenstand="Einstellungen" sendet={sendet} />
+        <Speicherleiste ent={ent} gegenstand={t('werkbank.webdav.einstellungen')} sendet={sendet} />
       </form>
       <div className="blatt">
-        <h2 className="h3">Stand</h2>
+        <h2 className="h3">{t('werkbank.webdav.stand')}</h2>
         <dl className="eigenschaften">
-          <dt>Zustand</dt><dd>{s.einstellung.aktiv ? (s.einstellung.nurLesend ? t('werkbank.webdav.stand.nur-lesend') : 'eingeschaltet') : 'ausgeschaltet'}</dd>
+          <dt>{t('werkbank.webdav.zustand')}</dt><dd>{s.einstellung.aktiv ? (s.einstellung.nurLesend ? t('werkbank.webdav.stand.nur-lesend') : t('werkbank.webdav.eingeschaltet')) : t('werkbank.webdav.ausgeschaltet')}</dd>
           <dt>{t('werkbank.webdav.stempel')}</dt><dd>{s.einstellung.stempel ? s.vorlagen.find((v) => v.id === s.einstellung.stempel)?.name ?? s.einstellung.stempel : t('werkbank.webdav.stempel.aus')}</dd>
-          <dt>Adresse zum Einbinden</dt><dd><code>{s.adresse}</code></dd>
-          <dt>Anfragen seit dem Start</dt><dd>{s.anfragen}</dd>
-          <dt>Grenze</dt><dd>{s.grenze} Anfragen je Benutzer und Minute</dd>
+          <dt>{t('werkbank.webdav.adresse-zum-einbinden')}</dt><dd><code>{s.adresse}</code></dd>
+          <dt>{t('werkbank.webdav.anfragen-seit-dem-start')}</dt><dd>{s.anfragen}</dd>
+          <dt>{t('werkbank.webdav.grenze')}</dt><dd>{t('werkbank.webdav.anfragen-je-benutzer-und', { grenze: s.grenze })}</dd>
         </dl>
-        <p className="leise klein">Benutzer erzeugen den Schlüssel selbst unter Mein Konto → Sicherheit → API-Schlüssel („lesen und schreiben“, damit sie ablegen können). Auch wer verwaltet, nutzt das Laufwerk mit seinen Alltagsrechten – ein Schlüssel bekommt nie Verwaltungsrechte.</p>
+        <p className="leise klein">{t('werkbank.webdav.benutzer-erzeugen-den-schluessel')}</p>
       </div>
       {/* #366: früher die mittlere Spalte; ganz unten, mit fester Höhe (etwa zehn Einträge), neueste oben. */}
       <div className="blatt" id="zugriffe">
-        <h2 className="h3">Letzte Zugriffe{s.zugriffe.length > 0 && <> <span className="chip">{s.zugriffe.length}</span></>}</h2>
-        {!s.zugriffe.length ? <p className="leise">Seit dem letzten Start noch keine Zugriffe.</p> : (
+        <h2 className="h3">{t('werkbank.webdav.letzte-zugriffe')}{s.zugriffe.length > 0 && <> <span className="chip">{s.zugriffe.length}</span></>}</h2>
+        {!s.zugriffe.length ? <p className="leise">{t('werkbank.webdav.seit-dem-letzten-start')}</p> : (
           <ul className="sitzungsliste festhoehe">
             {s.zugriffe.map((z, i) => (
               <li key={`${z.zeit}-${i}`}>
                 <span><strong className="mono">{z.methode}</strong> <span className="mono umbrechen">{z.pfad}</span>
                   <span className="leise klein"> – {zeit(z.zeit)} · {z.benutzer}</span></span>
-                <span className={`chip ${z.status >= 400 ? 'schlecht' : ''}`} title="HTTP-Status">{z.status}</span>
+                <span className={`chip ${z.status >= 400 ? 'schlecht' : ''}`} title={t('werkbank.webdav.http-status')}>{z.status}</span>
               </li>
             ))}
           </ul>
         )}
-        <p className="leise klein">Nur im Arbeitsspeicher; nach einem Neustart ist die Liste leer.</p>
+        <p className="leise klein">{t('werkbank.webdav.nur-im-arbeitsspeicher-nach')}</p>
       </div>
     </div>
   );

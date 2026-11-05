@@ -3,6 +3,7 @@ import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Einrichtungscode (#119): schützt den Assistenten, solange das DMS nicht eingerichtet ist –
@@ -68,12 +69,12 @@ export class Einrichtungscode {
   /** Wirft 403, wenn der Code fehlt oder falsch ist; nach 10 Fehlversuchen 10 Minuten Sperre. */
   pruefe(eingabe: unknown) {
     if (this.abgeschaltet) return;
-    if (!this.code) throw new Fachfehler(409, 'Die Einrichtung ist bereits abgeschlossen.');
-    if (this.gesperrtBis > this.jetzt()) throw new Fachfehler(429, 'Zu viele falsche Einrichtungscodes. Bitte in 10 Minuten noch einmal versuchen.');
+    if (!this.code) throw new Fachfehler(409, t('meldungen.einrichtungscode.die-einrichtung-ist-bereits'));
+    if (this.gesperrtBis > this.jetzt()) throw new Fachfehler(429, t('meldungen.einrichtungscode.zu-viele-falsche-einrichtungscodes'));
     const ok = typeof eingabe === 'string' && norm(eingabe).length === 12 && timingSafeEqual(hash(eingabe), hash(this.code));
     if (!ok) {
       if (++this.fehlversuche >= MAX_FEHLVERSUCHE) { this.gesperrtBis = this.jetzt() + SPERRE_MS; this.fehlversuche = 0; log.warn('Einrichtungscode: zu viele Fehlversuche, 10 Minuten gesperrt'); }
-      throw new Fachfehler(403, typeof eingabe === 'string' && eingabe ? 'Der Einrichtungscode stimmt nicht.' : 'Bitte den Einrichtungscode eingeben.');
+      throw new Fachfehler(403, typeof eingabe === 'string' && eingabe ? t('meldungen.einrichtungscode.der-einrichtungscode-stimmt-nicht') : t('meldungen.einrichtungscode.bitte-den-einrichtungscode-eingeben'));
     }
     this.fehlversuche = 0;
   }

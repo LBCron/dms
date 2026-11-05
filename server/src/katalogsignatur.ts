@@ -15,6 +15,7 @@
  */
 import { createHash, createPublicKey, verify, type KeyObject } from 'node:crypto';
 import { PROJEKT_SCHLUESSEL, type Projektschluessel } from './projektschluessel';
+import { t } from './sprache';
 
 export const SIGNATUR_DATEI = 'katalog.sig';
 export const SCHLUESSEL_DATEI = 'katalog.schluessel';
@@ -66,7 +67,7 @@ export function pruefeSignatur(daten: Buffer, sigRoh: Buffer, erlaubt: Schluesse
   // Die Kennung wählt nur die Reihenfolge; geprüft wird gegen jeden erlaubten Schlüssel.
   const reihe = [...erlaubt].sort((a, b) => Number(b.kennung === s.schluessel) - Number(a.kennung === s.schluessel));
   for (const k of reihe) if (verify(null, daten, k.key, s.signatur)) return { ok: true, schluessel: k };
-  return { ok: false, grund: s.schluessel && !erlaubt.some((k) => k.kennung === s.schluessel) ? `unbekannter Schlüssel ${s.schluessel}` : 'Signatur passt nicht zum Inhalt' };
+  return { ok: false, grund: s.schluessel && !erlaubt.some((k) => k.kennung === s.schluessel) ? t('meldungen.katalogsignatur.unbekannter-schluessel', { schluessel: s.schluessel }) : t('meldungen.katalogsignatur.signatur-passt-nicht-zum') };
 }
 
 /** Zeitpunkt aus `erstellt` (ISO); NaN, wenn keiner. */

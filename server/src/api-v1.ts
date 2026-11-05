@@ -4,6 +4,7 @@ import { FELDTYPEN, HERKUNFT, REGISTERARTEN, type Benutzer } from '../../shared/
 import { TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { Fachfehler } from './fehler';
 import type { Anfrage, Antwort, Route } from './routen';
+import { t } from './sprache';
 
 /** Sprachkennungen für Dokumente (#400). */
 const SPRACHKENNUNGEN = Object.keys(TEXTSPRACHEN);
@@ -98,7 +99,7 @@ export const V1_TABELLE: V1[] = [
     ],
     antwort: 'Seite',
     handler: async (a, intern) => {
-      if (!a.query.sicht) throw new Fachfehler(422, 'Bitte „sicht“ angeben: die Id eines Mappentyps oder „eingang“.');
+      if (!a.query.sicht) throw new Fachfehler(422, t('meldungen.apiv1.sicht-angeben'));
       return intern('GET', '/api/mappen').handler(a);
     },
   },

@@ -4,6 +4,7 @@ import { t } from './sprache';
 import { NOTFALL_HILFE, NOTFALL_HILFE_EN, NOTFALL_QR } from './notfallqr';
 import { zeitzone } from '../../shared/src/region';
 import { notfallcodeInGruppen } from '../../shared/src/notfallcode';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Notfallblatt (#106, neu gestaltet mit #814): eine Seite A4 in Ablago-Optik, auch in Schwarzweiß lesbar.
@@ -68,8 +69,8 @@ export interface NotfallblattPlan {
 }
 
 export function notfallblattPlan(d: Notfalldaten): NotfallblattPlan {
-  const datum = d.erstellt.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
-  const kurz = d.erstellt.toLocaleDateString('de-DE', { timeZone: zeitzone(), dateStyle: 'medium' });
+  const datum = d.erstellt.toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
+  const kurz = d.erstellt.toLocaleDateString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'medium' });
   const ziele = (d.aussenziele ?? []).map((z) => {
     const ort = z.adresse ? blattAdresse(z.adresse).text : z.ziel ? blattAdresse(z.ziel).text : null;
     return ort ? `${z.name} (${ort})` : z.name;

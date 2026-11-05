@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { HANDBUCH_BASIS, HANDBUCH_ONLINE_ORDNER } from '../../shared/src/hilfe';
+import { t } from './sprache';
 
 /**
  * Offline-Hilfe (#219): Die Handbücher liegen im Image unter web/dist/hilfe und werden wie die
@@ -38,5 +39,5 @@ export function hilfeAntwort(url: string, webDir: string | undefined): HilfeAntw
 export function hilfeSenden(reply: { redirect(url: string, code: number): unknown; sendFile(p: string): unknown; code(c: number): { type(t: string): { send(b: string): unknown } } }, a: HilfeAntwort) {
   if ('umleiten' in a) return reply.redirect(a.umleiten, a.status);
   if ('datei' in a) return reply.sendFile(a.datei);
-  return reply.code(404).type('text/plain; charset=utf-8').send('Diese Seite gibt es in der Hilfe nicht.');
+  return reply.code(404).type('text/plain; charset=utf-8').send(t('meldungen.hilfe.diese-seite-gibt-es'));
 }

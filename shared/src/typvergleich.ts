@@ -4,6 +4,7 @@
  * Felder (hinzugefügt, entfernt, geändert), Register, Beschreibung, Titel.
  */
 import type { Feld, Mappentyp } from './model';
+import { t } from './texte';
 
 /** Was vom Mappentyp verglichen wird – ohne Ids anderer Typen (Verweisziele bleiben als Id, die bleibt im selben DMS gleich). */
 export interface TypBild {
@@ -15,9 +16,9 @@ export interface TypBild {
 /** Eigenschaften eines Felds, die eine inhaltliche Änderung sind (Name extra, damit „umbenannt“ lesbar wird). */
 const FELD = ['typ', 'pflicht', 'eindeutig', 'hilfe', 'standard', 'minLen', 'maxLen', 'muster', 'min', 'max', 'nachkomma', 'waehrung', 'optionen', 'mehrfach', 'zielTyp', 'verweisart', 'frist', 'auswahlFilter', 'erkennung', 'format', 'landFeld'] as const;
 const NAMEN: Record<string, string> = {
-  typ: 'Art', pflicht: 'Pflicht', eindeutig: 'eindeutig', hilfe: 'Hilfetext', standard: 'Vorgabe', minLen: 'Mindestlänge', maxLen: 'Höchstlänge', muster: 'Muster',
+  typ: 'Art', pflicht: 'Pflicht', eindeutig: 'eindeutig', hilfe: t('gemeinsam.typvergleich.hilfetext'), standard: 'Vorgabe', minLen: 'Mindestlänge', maxLen: 'Höchstlänge', muster: 'Muster',
   min: 'Untergrenze', max: 'Obergrenze', nachkomma: 'Nachkommastellen', waehrung: 'Währung', optionen: 'Auswahlwerte', mehrfach: 'Mehrfachauswahl', zielTyp: 'Ziel',
-  verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Erkennung', format: 'Format', landFeld: 'Land-Feld',
+  verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Erkennung', format: 'Format', landFeld: t('gemeinsam.typvergleich.land-feld'),
   name: 'Name', art: 'Art', felder: 'Felder', quellen: 'Quellen',
 };
 /** Leere Werte (undefined, null, false, '', []) gelten als „nicht gesetzt“ – Speichern ohne Änderung zählt nicht. */
@@ -47,34 +48,34 @@ export function typUnterschiede(alt: TypBild, neu: TypBild): TypUnterschiede | n
   let plus = 0, minus = 0, anders = 0, register = 0;
   const altF = new Map(alt.felder.map((f) => [f.key, f] as const));
   const neuF = new Map(neu.felder.map((f) => [f.key, f] as const));
-  for (const f of neu.felder) if (!altF.has(f.key)) { plus++; liste.push(`Feld „${f.label}“ hinzugefügt`); }
-  for (const f of alt.felder) if (!neuF.has(f.key)) { minus++; liste.push(`Feld „${f.label}“ entfernt`); }
+  for (const f of neu.felder) if (!altF.has(f.key)) { plus++; liste.push(t('gemeinsam.typvergleich.feld-hinzugefuegt', { label: f.label })); }
+  for (const f of alt.felder) if (!neuF.has(f.key)) { minus++; liste.push(t('gemeinsam.typvergleich.feld-entfernt', { label: f.label })); }
   for (const f of neu.felder) {
     const a = altF.get(f.key);
     if (!a) continue;
     const was: string[] = [];
-    if (a.label !== f.label) was.push(`umbenannt von „${a.label}“`);
+    if (a.label !== f.label) was.push(t('gemeinsam.typvergleich.umbenannt-von', { label: a.label }));
     for (const k of new Set([...Object.keys(a.werte), ...Object.keys(f.werte)])) if (!gleich(a.werte[k], f.werte[k])) was.push(NAMEN[k] ?? k);
-    if (was.length) { anders++; liste.push(`Feld „${f.label}“: ${was.join(', ')}`); }
+    if (was.length) { anders++; liste.push(t('gemeinsam.typvergleich.feld', { label: f.label, was: was.join(', ') })); }
   }
   const altR = new Map(alt.register.map((r) => [r.key, r] as const));
   const neuR = new Map(neu.register.map((r) => [r.key, r] as const));
   for (const r of neu.register) {
     const a = altR.get(r.key);
-    if (!a) { register++; liste.push(`Register „${r.name}“ hinzugefügt`); continue; }
-    const was = [...(a.name !== r.name ? [`umbenannt von „${a.name}“`] : []), ...[...new Set([...Object.keys(a.werte), ...Object.keys(r.werte)])].filter((k) => !gleich(a.werte[k], r.werte[k])).map((k) => NAMEN[k] ?? k)];
-    if (was.length) { register++; liste.push(`Register „${r.name}“: ${was.join(', ')}`); }
+    if (!a) { register++; liste.push(t('gemeinsam.typvergleich.register-hinzugefuegt', { name: r.name })); continue; }
+    const was = [...(a.name !== r.name ? [t('gemeinsam.typvergleich.umbenannt-von-2', { name: a.name })] : []), ...[...new Set([...Object.keys(a.werte), ...Object.keys(r.werte)])].filter((k) => !gleich(a.werte[k], r.werte[k])).map((k) => NAMEN[k] ?? k)];
+    if (was.length) { register++; liste.push(t('gemeinsam.typvergleich.register', { name: r.name, was: was.join(', ') })); }
   }
-  for (const r of alt.register) if (!neuR.has(r.key)) { register++; liste.push(`Register „${r.name}“ entfernt`); }
-  if (alt.name !== neu.name) liste.push(`Name „${alt.name}“ → „${neu.name}“`);
-  if (alt.beschreibung !== neu.beschreibung) liste.push('Beschreibung geändert');
-  if (alt.titelVorlage !== neu.titelVorlage) liste.push('Titel geändert');
+  for (const r of alt.register) if (!neuR.has(r.key)) { register++; liste.push(t('gemeinsam.typvergleich.register-entfernt', { name: r.name })); }
+  if (alt.name !== neu.name) liste.push(t('gemeinsam.typvergleich.name', { name: alt.name, name2: neu.name }));
+  if (alt.beschreibung !== neu.beschreibung) liste.push(t('gemeinsam.typvergleich.beschreibung-geaendert'));
+  if (alt.titelVorlage !== neu.titelVorlage) liste.push(t('gemeinsam.typvergleich.titel-geaendert'));
   if (!liste.length) return null;
   const teile = [
-    plus ? `+${plus} ${plus === 1 ? 'Feld' : 'Felder'}` : '',
-    minus ? `−${minus} ${minus === 1 ? 'Feld' : 'Felder'}` : '',
-    anders ? `${anders} ${anders === 1 ? 'Feld' : 'Felder'} geändert` : '',
-    register ? `${register} ${register === 1 ? 'Register' : 'Register'} geändert` : '',
+    plus ? `+${plus} ${t('gemeinsam.typvergleich.felder', { anzahl: plus })}` : '',
+    minus ? `−${minus} ${t('gemeinsam.typvergleich.felder', { anzahl: minus })}` : '',
+    anders ? `${anders} ${t('gemeinsam.typvergleich.felder', { anzahl: anders })} geändert` : '',
+    register ? `${register} ${t('gemeinsam.typvergleich.register-2', { anzahl: register })} geändert` : '',
   ].filter(Boolean);
-  return { kurz: teile.length ? teile.join(' · ') : 'Angaben geändert', liste };
+  return { kurz: teile.length ? teile.join(' · ') : t('gemeinsam.typvergleich.angaben-geaendert'), liste };
 }

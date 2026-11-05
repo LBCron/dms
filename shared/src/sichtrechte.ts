@@ -11,6 +11,7 @@
  */
 import type { RegelBedingung, Wer, Wirkung } from './rechte';
 import type { Sicht } from './sichten';
+import { t } from './texte';
 
 /** Rechte an einer Sicht: sehen, anlegen und E für alles, was Daten hinausgibt (Export, PDF; #153). */
 export const SICHT_RECHTE = { R: 'Sehen', C: 'Anlegen', E: 'Exportieren' } as const;
@@ -158,13 +159,13 @@ export function bereinigeSichtRegelwerk(e: unknown): SichtRegelwerk | null {
 
 /** Warum eine Regel nicht passt; null = in Ordnung. */
 export function sichtRegelProblem(r: SichtRegel, untersicht: boolean): string | null {
-  if (!r.name) return 'Bitte der Regel einen Namen geben.';
-  if (!r.wenn.length) return `„${r.name}“: Mindestens eine Bedingung angeben.`;
+  if (!r.name) return t('gemeinsam.sichtrechte.bitte-der-regel-einen');
+  if (!r.wenn.length) return t('gemeinsam.sichtrechte.mindestens-eine-bedingung-angeben', { name: r.name });
   for (const b of r.wenn) {
-    if (b.art === 'benutzer' && !b.benutzer.length) return `„${r.name}“: Benutzer auswählen.`;
-    if (b.art === 'rolle' && !b.rollen.length) return `„${r.name}“: Rolle auswählen.`;
+    if (b.art === 'benutzer' && !b.benutzer.length) return t('gemeinsam.sichtrechte.benutzer-auswaehlen', { name: r.name });
+    if (b.art === 'rolle' && !b.rollen.length) return t('gemeinsam.sichtrechte.rolle-auswaehlen', { name: r.name });
   }
-  if (untersicht && SICHT_RECHTE_LISTE.some((k) => r.dann[k] === 'erteilen')) return `„${r.name}“: In einer Unteransicht können Regeln nur entziehen (✗) – ✓ wirkt hier nicht.`;
-  if (!SICHT_RECHTE_LISTE.some((k) => r.dann[k]) && !r.stopp) return `„${r.name}“ ändert nichts – mindestens ein Recht entziehen${untersicht ? '' : ' oder erteilen'} oder Stopp setzen.`;
+  if (untersicht && SICHT_RECHTE_LISTE.some((k) => r.dann[k] === 'erteilen')) return t('gemeinsam.sichtrechte.in-einer-unteransicht-koennen', { name: r.name });
+  if (!SICHT_RECHTE_LISTE.some((k) => r.dann[k]) && !r.stopp) return t('gemeinsam.sichtrechte.aendert-nichts-mindestens-ein', { name: r.name, wert: untersicht ? '' : t('gemeinsam.sichtrechte.oder-erteilen') });
   return null;
 }

@@ -6,13 +6,14 @@ import { useKonto } from '../konto';
 import { rueckfrage } from '../rueckfrage';
 import { Symbol } from '../Symbol';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Webhooks im eigenen Profil (#627): Das DMS meldet geänderte Zahlen (neue Post, Zu erledigen, Fristen) sofort an
  * eine Adresse, z. B. Homey oder Node-RED. Anlegen, Probe senden, an/aus, Geheimnis erneuern, löschen; das
  * Geheimnis ist nur beim Anlegen bzw. Erneuern ganz sichtbar.
  */
-export const zeitText = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' }) : '–');
+export const zeitText = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'medium' }) : '–');
 
 /** Letzte Zustellung oder Probe als kurze Zeile. */
 export function ErgebnisZeile({ e }: { e: WebhookErgebnis | null }) {

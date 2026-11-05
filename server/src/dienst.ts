@@ -91,6 +91,7 @@ import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
 import { ansichtSymbol } from '../../shared/src/ansichtsymbole';
 import { feiertageZwischen, type Bundesland } from '../../shared/src/feiertage';
 import { ALLES, hatKontoRegeln, kontoRegelwerk, RECHTE_LISTE, kurzStandard, systemSperre, bereinigeRegelwerk, FALSCH, istOffen, kopiereRegel, kurz, leseAusdruck, lesefilter, NICHTS, nicht, oder, rechteAn as rechteAnMappe, rechteUebersicht, regelProblem, regelwerkVon, wirksamVon, type Ausdruck, type Regelwerk, type Mappenquelle, type Recht, type Rechte, type Wer } from '../../shared/src/rechte';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /** Mappen in der Reihenfolge der Ids (#542: mit Index statt `indexOf` je Vergleich – bei 20.000 Mappen Sekunden). */
 function inReihenfolge<T extends { id: string }>(liste: T[], ids: string[]): T[] {
@@ -177,7 +178,7 @@ export interface SystemkontoEintrag {
    */
   fehler?: SystemkontoFehler; weitreichend?: boolean;
 }
-export const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
+export const NICHT_SICHTBAR = t('meldungen.dienst.nicht-sichtbare-mappe');
 
 /** Ein Anhang einer E-Mail (#723): Dokument (oder das PDF „Angaben“, dann ohne Dokument) und was hinausgeht. */
 interface Versandanhang {
@@ -217,11 +218,11 @@ const ereignisKontext = new AsyncLocalStorage<{ ausloeser?: EreignisAusloeser; s
 
 const KEINE_ZAEHLUNG = { dokumente: () => 0, verknuepfungen: () => 0 };
 const VERBOTEN: Record<Recht, string> = {
-  C: 'Mappen dieses Typs darfst du nicht anlegen.',
-  R: 'Diese Mappe darfst du nicht sehen.',
-  U: 'Diese Mappe darfst du nicht bearbeiten.',
-  D: 'Diese Mappe darfst du nicht löschen.',
-  P: 'Passwörter dieser Mappe darfst du nicht sehen.',
+  C: t('meldungen.dienst.mappen-dieses-typs-darfst'),
+  R: t('meldungen.dienst.diese-mappe-darfst-du'),
+  U: t('meldungen.dienst.diese-mappe-darfst-du-2'),
+  D: t('meldungen.dienst.diese-mappe-darfst-du-3'),
+  P: t('meldungen.dienst.passwoerter-dieser-mappe-darfst'),
 };
 function zahlOderNull(v: unknown): number | null {
   const n = leseZahl(v);
@@ -360,7 +361,7 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
 
 /** Wert eines Mehrfachverweises als Liste. */
 /** Post (#192): Beschreibung und Spalten der Standard-Trefferliste. */
-const POST_BESCHREIBUNG = 'Alles, was in Ablago kommt oder hinausgeht: Hochgeladenes, Scans, E-Mails. Von hier aus ordnest du es passenden Mappen zu.';
+const POST_BESCHREIBUNG = t('meldungen.dienst.alles-was-in-ablago');
 const POST_SPALTEN = ['datum', 'stand', 'kanal', 'absender'];
 
 const alsListe = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' && v ? [v] : []);
@@ -462,11 +463,11 @@ interface Volltextuebernahme { text: string; seiten: number | null; info: string
 
 /** Kurztext der Historie für „PDF bearbeitet“ (#335). */
 function pdfText(w: { seiten: number; vorher: number; gedreht?: number; teile?: number }): string {
-  const t: string[] = [];
-  if (w.teile) t.push(`in ${w.teile} Teile geteilt`);
-  if (w.seiten !== w.vorher && !w.teile) t.push(`${w.vorher} → ${w.seiten} Seiten`);
-  if (w.gedreht) t.push(`${w.gedreht} ${w.gedreht === 1 ? 'Seite' : 'Seiten'} gedreht`);
-  return t.join(', ') || 'Seiten umsortiert';
+  const eintrag: string[] = [];
+  if (w.teile) eintrag.push(t('meldungen.dienst.in-teile-geteilt', { teile: w.teile }));
+  if (w.seiten !== w.vorher && !w.teile) eintrag.push(`${w.vorher} → ${w.seiten} Seiten`);
+  if (w.gedreht) eintrag.push(`${w.gedreht} ${t('meldungen.dienst.seiten', { anzahl: w.gedreht })} gedreht`);
+  return eintrag.join(', ') || t('meldungen.dienst.seiten-umsortiert');
 }
 
 /** Kreis und Barcode-Präfix der Archivnummern (#345). */
@@ -507,7 +508,7 @@ function passwortWert(eingabe: unknown, hatEingabe: boolean, bisher: unknown, ve
   if (!hatEingabe || (eingabe === bisher && eingabe !== undefined)) return (bisher ?? null) as Werte[string];
   if (eingabe === null || eingabe === '') return null;
   if (typeof eingabe === 'string') {
-    if (eingabe.startsWith('dms1$')) throw new Fachfehler(422, 'Verschlüsselte Werte lassen sich nicht direkt setzen.');
+    if (eingabe.startsWith('dms1$')) throw new Fachfehler(422, t('meldungen.dienst.verschluesselte-werte-lassen-sich'));
     return verschluessele(eingabe.slice(0, 1000));
   }
   if (istPasswortWert(eingabe)) {
@@ -515,7 +516,7 @@ function passwortWert(eingabe: unknown, hatEingabe: boolean, bisher: unknown, ve
     if (typeof eingabe.neu === 'string' && eingabe.neu !== '') return verschluessele(eingabe.neu.slice(0, 1000));
     return (eingabe.gesetzt ? bisher ?? null : null) as Werte[string];
   }
-  throw new Fachfehler(422, 'Ungültiger Wert für ein Passwortfeld.');
+  throw new Fachfehler(422, t('meldungen.dienst.ungueltiger-wert-fuer-ein'));
 }
 
 /** Stand einer Änderung (#609): „zuletzt geändert“ als ISO-Zeitpunkt; fehlt = ohne Prüfung. */
@@ -542,7 +543,7 @@ function bereinigeWerte(typ: Mappentyp, eingabe: unknown, bisher: Werte = {}, ve
 }
 
 const keinSchluessel = (): never => {
-  throw new Fachfehler(409, 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt. Wer Ablago verwaltet, erzeugt ihn in der Werkbank unter „Verschlüsselung“.');
+  throw new Fachfehler(409, t('meldungen.dienst.passwoerter-lassen-sich-erst'));
 };
 
 /* ---------- Fachlogik ---------- */
@@ -755,9 +756,9 @@ export class Dienst {
     };
   }
   async setzeSuche(e: unknown, von: string) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const x = (e ?? {}) as { unscharf?: unknown };
-    if (typeof x.unscharf !== 'boolean') throw new Fachfehler(422, 'unscharf: true oder false.');
+    if (typeof x.unscharf !== 'boolean') throw new Fachfehler(422, t('meldungen.dienst.unscharf-true-oder-false'));
     await this.einstellungen.schreibe('suche', x.unscharf ? null : { unscharf: false });
     protokoll.modul('werkbank').info('Suche: Tippfehler', { von, an: x.unscharf });
     return this.sucheStand();
@@ -769,7 +770,7 @@ export class Dienst {
   }
   async legeSynonymAn(e: unknown, von: string) {
     const woerter = this.wortgruppe((e as { woerter?: unknown } | null)?.woerter);
-    if ((await this.repo.synonyme()).filter((g) => g.quelle === 'werkbank').length >= SYNONYM_GRUPPEN_MAX) throw new Fachfehler(422, `Höchstens ${SYNONYM_GRUPPEN_MAX} eigene Gruppen.`);
+    if ((await this.repo.synonyme()).filter((g) => g.quelle === 'werkbank').length >= SYNONYM_GRUPPEN_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-eigene-gruppen', { SYNONYM_GRUPPEN_MAX }));
     await this.repo.legeSynonymAn({ id: randomUUID(), woerter, quelle: 'werkbank' });
     this.synonymZwischen = null;
     protokoll.modul('werkbank').info('Suche: gleichbedeutende Wörter angelegt', { von, woerter: woerter.length });
@@ -777,13 +778,13 @@ export class Dienst {
   }
   async aendereSynonym(id: string, e: unknown, von: string) {
     const woerter = this.wortgruppe((e as { woerter?: unknown } | null)?.woerter);
-    if (!(await this.repo.aendereSynonym(id, woerter))) throw new Fachfehler(404, 'Diese Gruppe gibt es nicht (oder sie gehört zu einem Paket).');
+    if (!(await this.repo.aendereSynonym(id, woerter))) throw new Fachfehler(404, t('meldungen.dienst.diese-gruppe-gibt-es'));
     this.synonymZwischen = null;
     protokoll.modul('werkbank').info('Suche: gleichbedeutende Wörter geändert', { von, woerter: woerter.length });
     return this.sucheStand();
   }
   async loescheSynonym(id: string, von: string) {
-    if (!(await this.repo.loescheSynonym(id))) throw new Fachfehler(404, 'Diese Gruppe gibt es nicht (oder sie gehört zu einem Paket).');
+    if (!(await this.repo.loescheSynonym(id))) throw new Fachfehler(404, t('meldungen.dienst.diese-gruppe-gibt-es'));
     this.synonymZwischen = null;
     protokoll.modul('werkbank').info('Suche: gleichbedeutende Wörter entfernt', { von });
     return this.sucheStand();
@@ -809,9 +810,9 @@ export class Dienst {
     return { suche: v?.suche !== false };
   }
   async setzeVektorEinstellung(e: unknown): Promise<{ suche: boolean }> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const x = (e ?? {}) as { suche?: unknown };
-    if (typeof x.suche !== 'boolean') throw new Fachfehler(422, 'suche: true oder false.');
+    if (typeof x.suche !== 'boolean') throw new Fachfehler(422, t('meldungen.dienst.suche-true-oder-false'));
     await this.einstellungen.schreibe('vektoren', x.suche ? null : { suche: false });
     return this.vektorEinstellung();
   }
@@ -833,8 +834,8 @@ export class Dienst {
   }
 
   private pruefeVektorRecht(z: Zugriff | undefined): string {
-    if (!z?.paket) throw new Fachfehler(403, 'Vektoren schreiben nur Pakete mit dem Recht „dms:vektoren“.');
-    if (!z.paket.schnittstellen?.includes('dms:vektoren')) throw new Fachfehler(403, 'Dieses Paket hat das Recht „dms:vektoren“ nicht (Rechte aus dem Manifest).');
+    if (!z?.paket) throw new Fachfehler(403, t('meldungen.dienst.vektoren-schreiben-nur-pakete'));
+    if (!z.paket.schnittstellen?.includes('dms:vektoren')) throw new Fachfehler(403, t('meldungen.dienst.dieses-paket-hat-das'));
     return z.paket.id;
   }
 
@@ -847,7 +848,7 @@ export class Dienst {
     try { vektor = liesVektor((eingabe as { vektor?: unknown } | null)?.vektor, index?.dimension); } catch (e) { throw new Fachfehler(422, (e as Error).message); }
     await this.merkeVektorModell(paket, modell);
     const d = await this.repo.holeDokument(dokumentId);
-    if (!d || !(await this.repo.vektorSetze({ dokumentId, paket, modell, vektor }))) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d || !(await this.repo.vektorSetze({ dokumentId, paket, modell, vektor }))) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const i = await this.vektorIndex(modell);
     if (i) i.setze(dokumentId, d.mappeId, vektor);
     else this.vektorIndizes.set(modell, Promise.resolve(new Vektorindex(vektor.length, [{ dokumentId, mappeId: d.mappeId, vektor }])));
@@ -873,12 +874,12 @@ export class Dienst {
     if (!index) return { modell, treffer: [] };
     const anzahl = Math.min(100, Math.max(1, Math.floor(Number(q.anzahl) || 10)));
     const schwelle = q.schwelle === undefined || q.schwelle === '' ? -1 : Number(q.schwelle);
-    if (!Number.isFinite(schwelle) || schwelle < -1 || schwelle > 1) throw new Fachfehler(422, 'schwelle: eine Zahl von -1 bis 1.');
+    if (!Number.isFinite(schwelle) || schwelle < -1 || schwelle > 1) throw new Fachfehler(422, t('meldungen.dienst.schwelle-eine-zahl-von'));
     let v: Float32Array;
     const ohne = new Set<string>();
     if (q.dokument) {
       const x = index.vektor(q.dokument);
-      if (!x) throw new Fachfehler(404, 'Zu diesem Dokument gibt es (noch) keinen Vektor dieses Modells.');
+      if (!x) throw new Fachfehler(404, t('meldungen.dienst.zu-diesem-dokument-gibt'));
       v = x; ohne.add(q.dokument);
     } else {
       try { v = liesVektor(q.vektor, index.dimension); } catch (e) { throw new Fachfehler(422, (e as Error).message); }
@@ -1045,7 +1046,7 @@ export class Dienst {
 
   /** Schlüssel wechseln (#47): alle Passwortfelder, der Papierkorb und die Einstellungen in einer Transaktion. */
   async schluesselWechseln(von: string) {
-    if (!this.tresor) throw new Fachfehler(404, 'Die Verschlüsselung ist nicht eingerichtet.');
+    if (!this.tresor) throw new Fachfehler(404, t('meldungen.dienst.die-verschluesselung-ist-nicht'));
     return this.tresor.wechsle((um, einstellungen) => this.repo.umschluesseln(um, einstellungen), von);
   }
 
@@ -1063,10 +1064,10 @@ export class Dienst {
   async textAusDatei(inhalt: Buffer, name: string, mime: string): Promise<{ text: string; info: string }> {
     const art = erkenneAnzeigbar(inhalt) ?? mime;
     if (/\.(vcf|vcard|txt)$/i.test(name) || /^text\/(vcard|x-vcard|plain)$/.test(mime) || inhalt.subarray(0, 64).toString('utf8').includes('BEGIN:VCARD')) {
-      return { text: inhalt.toString('utf8').slice(0, VOLLTEXT_MAX), info: 'Text der Datei' };
+      return { text: inhalt.toString('utf8').slice(0, VOLLTEXT_MAX), info: t('meldungen.dienst.text-der-datei') };
     }
-    if (!this.ocr?.erkenneSofort) throw new Fachfehler(503, 'Die Texterkennung ist nicht eingerichtet.');
-    if (!/^(application\/pdf|image\/(jpeg|png|tiff|webp|gif|bmp))$/.test(art)) throw new Fachfehler(415, 'Diese Datei lässt sich nicht lesen. Möglich sind Fotos (JPEG, PNG …), PDFs und vCards (.vcf).');
+    if (!this.ocr?.erkenneSofort) throw new Fachfehler(503, t('meldungen.dienst.die-texterkennung-ist-nicht'));
+    if (!/^(application\/pdf|image\/(jpeg|png|tiff|webp|gif|bmp))$/.test(art)) throw new Fachfehler(415, t('meldungen.dienst.diese-datei-laesst-sich'));
     return this.ocr.erkenneSofort(inhalt, art);
   }
 
@@ -1142,7 +1143,7 @@ export class Dienst {
   async entsperreDokument(id: string, konto: string, e: { passwort?: unknown; merken?: unknown; name?: unknown }, merkenErlaubt: boolean) {
     if (!this.entsperren) throw new Fachfehler(404, t('mappen.entsperren.aus'));
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     if (e.merken === true && !merkenErlaubt) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.nur-browser'));
     const r = await this.entsperren.mitPasswort(d, konto, e.passwort, e.merken === true ? { name: e.name } : null);
     return { dokument: d.id, ...r };
@@ -1226,7 +1227,7 @@ export class Dienst {
   async setzeFassung(z: Zugriff | undefined, id: string, sha: unknown, inhalt: unknown) {
     if (!this.umwandlung) throw new Fachfehler(404, t('pakete.vorschaubild.aus'));
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const f = await this.umwandlung.setzeFassung(z?.paket, d, sha, inhalt);
     return { dokument: d.id, fassung: f };
   }
@@ -1235,14 +1236,14 @@ export class Dienst {
   async setzeVorschaubild(z: Zugriff | undefined, id: string, sha: unknown, inhalt: unknown) {
     if (!this.umwandlung) throw new Fachfehler(404, t('pakete.vorschaubild.aus'));
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return this.umwandlung.setzeVorschaubild(z?.paket, d, sha, inhalt);
   }
 
   /** Die umgewandelte Fassung eines Dokuments (#577) zum Ansehen; 404, wenn es keine gibt. */
   async fassungVon(id: string): Promise<{ d: Dokument; info: FassungInfo; inhalt: Buffer }> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     // Geschützte PDFs (#827): die entsperrte Fassung.
     const f = kernTyp(d.mime) ? (d.mime === 'application/pdf' ? await this.entsperren?.fassung(d.sha256) : null) : await this.umwandlung?.lies(d.sha256);
     if (!f) throw new Fachfehler(404, t('pakete.fassung.keine'));
@@ -1280,7 +1281,7 @@ export class Dienst {
     const grund = (r.ok ? r.text : r.fehler ?? '').trim().replace(/\s+/g, ' ').slice(0, 300);
     for (const d of await this.repo.dokumenteMitSha(sha)) {
       if (d.ocr?.stand !== 'paket' || !(d.ocr.info ?? '').startsWith(INFO_UMWANDLUNG)) continue;
-      const info = r.ok ? `Umwandlung durch Paket ${p?.name ?? paket}: ${grund || 'keine Fassung geliefert'}` : `Umwandlung durch Paket ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
+      const info = r.ok ? t('meldungen.dienst.umwandlung-durch-paket', { wert: p?.name ?? paket, wert2: grund || t('meldungen.dienst.keine-fassung-geliefert') }) : t('meldungen.dienst.umwandlung-durch-paket-2', { wert: p?.name ?? paket, wert2: grund ? `: ${grund}` : '' });
       await this.repo.ocrSetze(d.id, { stand: r.ok ? 'ausgelassen' : 'fehler', info: info.slice(0, 500), text: null });
     }
   }
@@ -1338,14 +1339,14 @@ export class Dienst {
   async setzeArchivfassung(z: Zugriff | undefined, id: string, sha: unknown, inhalt: unknown) {
     if (!this.archiv) throw new Fachfehler(404, t('pakete.archiv.aus'));
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return { dokument: d.id, archivfassung: await this.archiv.setze(z?.paket, d, sha, inhalt) };
   }
 
   /** Die Archivfassung eines Dokuments zum Ansehen (nur die aktuelle – zur Datei des Dokuments); 404 ohne. */
   async archivfassungVon(id: string) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const f = await this.archiv?.lies(d.sha256);
     if (!f) throw new Fachfehler(404, t('pakete.archiv.keine'));
     return { d, ...f };
@@ -1355,7 +1356,7 @@ export class Dienst {
   async wortpositionen(id: string) {
     if (!this.archiv) throw new Fachfehler(404, t('pakete.archiv.aus'));
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return this.archiv.wortpositionen(d);
   }
 
@@ -1425,9 +1426,9 @@ export class Dienst {
    */
   async pruefeVolltextRecht(z: Zugriff, id: string): Promise<void> {
     if (!z.paket || z.paket.dokumente === 'schreiben') return;
-    if (!z.paket.schnittstellen?.includes('dms:volltext')) throw new Fachfehler(403, 'Dieses Paket darf das mit Dokumenten nicht (Rechte aus dem Manifest).');
+    if (!z.paket.schnittstellen?.includes('dms:volltext')) throw new Fachfehler(403, t('meldungen.dienst.dieses-paket-darf-das'));
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     if (!(await this.paketVolltext.darfSchreiben(z.paket.id, d))) throw new Fachfehler(403, t('pakete.volltext.typ-fremd', { typ: d.mime }));
   }
 
@@ -1448,7 +1449,7 @@ export class Dienst {
     const grund = (r.ok ? r.text : r.fehler ?? '').trim().replace(/\s+/g, ' ').slice(0, 300);
     const text = await this.repo.volltext(d.id);
     const mitText = !!text && text.replace(/\s/g, '').length >= 20;
-    const info = r.ok ? `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket}: ${grund || 'kein Volltext geliefert'}` : `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
+    const info = r.ok ? `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket}: ${grund || t('meldungen.dienst.kein-volltext-geliefert')}` : `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
     await this.repo.ocrSetze(d.id, { stand: !r.ok ? 'fehler' : mitText ? 'fertig' : 'ausgelassen', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
     if (r.ok && mitText) void this.archivNachVolltext(d.id, e.daten.neu === true);
   }
@@ -1474,7 +1475,7 @@ export class Dienst {
   /** Texterkennung für ein Dokument erneut versuchen – ausdrücklich neu (#458): auch ein Paket erkennt dann neu. */
   async texterkennungErneut(id: string) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     if (this.ocr?.neuErkennen) await this.ocr.neuErkennen(id);
     else { await this.repo.ocrEinreihen([id]); this.ocr?.anstossen(); }
     return (await this.repo.holeDokument(id))!;
@@ -1528,8 +1529,8 @@ export class Dienst {
   volltextNeu(umfang: unknown, von: string) {
     const u = umfang === 'alle' ? 'alle' : 'ohne';
     const jetzt = this.ocr?.jetzt?.bind(this.ocr);
-    if (!jetzt) throw new Fachfehler(404, 'Die Texterkennung ist nicht eingerichtet.');
-    const titel = u === 'alle' ? 'Volltext neu erzeugen (alle Dokumente)' : 'Volltext neu erzeugen (Dokumente ohne Text)';
+    if (!jetzt) throw new Fachfehler(404, t('meldungen.dienst.die-texterkennung-ist-nicht'));
+    const titel = u === 'alle' ? t('meldungen.dienst.volltext-neu-erzeugen-alle') : t('meldungen.dienst.volltext-neu-erzeugen-dokumente');
     return this.auftraege.starte('volltext-neu', titel, async (fortschritt, signal) => {
       const ids = await this.volltextNeuIds(u);
       protokoll.modul('werkbank').info('Volltext neu erzeugen', { umfang: u, dokumente: ids.length, von });
@@ -1597,8 +1598,8 @@ export class Dienst {
     const text = await this.repo.volltext(d.id);
     const mitText = !!text && text.replace(/\s/g, '').length >= 20;
     const info = r.ok
-      ? `${mitText ? INFO_TEXTEBENE : 'ohne Text'} – Paket ${p.name}${grund ? `: ${grund}` : ': nichts zu tun'}`
-      : `Texterkennung durch Paket ${p.name} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
+      ? t('meldungen.dienst.paket', { wert: mitText ? INFO_TEXTEBENE : t('meldungen.dienst.ohne-text'), name: p.name, wert2: grund ? `: ${grund}` : ': nichts zu tun' })
+      : t('meldungen.dienst.texterkennung-durch-paket', { name: p.name, wert: grund ? `: ${grund}` : '' });
     await this.repo.ocrSetze(d.id, { stand: r.ok ? 'fertig' : 'fehler', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
     // Der Text aus dem PDF bleibt – jetzt steht der Volltext fest (#631).
     if (r.ok) void this.archivNachVolltext(d.id, e.daten.neu === true);
@@ -1606,7 +1607,7 @@ export class Dienst {
 
   async volltext(id: string) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const text = await this.repo.volltext(id);
     // Seiten mit ihrer Sprache (#579), wenn das DMS sie kennt (mehrsprachig oder gemischtes PDF).
     const s = text ? await this.repo.seitensprachen(id) : null;
@@ -1621,10 +1622,10 @@ export class Dienst {
    */
   async schreibeVolltext(id: string, eingabe: unknown, von: { id: string; herkunft: string; paket: boolean; ausgelesen?: boolean }) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const e = (eingabe ?? {}) as Record<string, unknown>;
-    if (typeof e.text !== 'string') throw new Fachfehler(422, 'text fehlt.');
-    if (e.text.length > VOLLTEXT_MAX) throw new Fachfehler(413, `Der Text ist zu lang (höchstens ${VOLLTEXT_MAX} Zeichen).`);
+    if (typeof e.text !== 'string') throw new Fachfehler(422, t('meldungen.dienst.text-fehlt'));
+    if (e.text.length > VOLLTEXT_MAX) throw new Fachfehler(413, t('meldungen.dienst.der-text-ist-zu', { VOLLTEXT_MAX }));
     const seiten = Number.isInteger(e.seiten) && (e.seiten as number) > 0 ? e.seiten as number : null;
     // Nur Text eines Pakets schützt vor der eingebauten Texterkennung (PAKET_TEXT); über die API gesetzter nicht.
     // Die Herkunft darf die Sprachmarke nicht vortäuschen (#395); die erkannte Sprache hängt am Ende an.
@@ -1634,7 +1635,7 @@ export class Dienst {
     const info = ((von.paket ? `${von.ausgelesen ? PAKET_VOLLTEXT : PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200) + (fassung ? ` – ${infoFassung(fassung.paket)}` : '')).slice(0, 300);
     let text = e.text.replace(/\u0000/g, '');
     // Sprache (#400): angegeben (z. B. vom Paket Texterkennung) oder erkannt; sie bestimmt die Wortstämme der Suche.
-    if (e.sprache !== undefined && e.sprache !== null && !istTextsprache(e.sprache)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
+    if (e.sprache !== undefined && e.sprache !== null && !istTextsprache(e.sprache)) throw new Fachfehler(422, t('meldungen.dienst.sprache-unbekannt-erlaubt-oder', { keys: Object.keys(TEXTSPRACHEN).join(', ') }));
     const angegeben = istTextsprache(e.sprache) ? e.sprache : null;
     // Sprache je Seite (#579): Seiten im Text durch Seitenvorschub (\f) getrennt, dazu je Seite ihre Sprache(n) –
     // oder ohne Angabe erkennt das DMS sie. Gespeichert wird der Text wie bisher (Seiten mit Leerzeile getrennt).
@@ -1645,8 +1646,8 @@ export class Dienst {
     let seitenzahl = seiten;
     if (seitenAngabe || text.includes(SEITENVORSCHUB)) {
       const teile = text.split(SEITENVORSCHUB);
-      if (seitenAngabe && seitenAngabe.length !== teile.length) throw new Fachfehler(422, `seitensprachen: ${seitenAngabe.length} Einträge, der Text hat ${teile.length} Seiten (getrennt durch Seitenvorschub \\f).`);
-      if (teile.length > MAX_SEITENSPRACHEN) throw new Fachfehler(422, `Höchstens ${MAX_SEITENSPRACHEN} Seiten.`);
+      if (seitenAngabe && seitenAngabe.length !== teile.length) throw new Fachfehler(422, t('meldungen.dienst.seitensprachen-eintraege-der-text', { seitenAngabe: seitenAngabe.length, teile: teile.length }));
+      if (teile.length > MAX_SEITENSPRACHEN) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-seiten', { MAX_SEITENSPRACHEN }));
       const z = seitenZusammensetzen(teile.map((t, i) => ({ text: t, sprachen: seitenAngabe?.[i] ?? null })));
       text = z.text;
       seitenzahl ??= teile.length;
@@ -1674,7 +1675,7 @@ export class Dienst {
       // Auch nach den Wiederholungen nicht gespeichert (#575): sichtbar am Dokument, und der Absender erfährt es (503).
       protokoll.modul('ablage').error('Volltext nicht gespeichert', { dokument: id, herkunft: von.herkunft, fehler: (f as Error).message });
       await this.repo.ocrSetze(id, { stand: 'fehler', info: `${NICHT_GESPEICHERT} (${(f as Error).message})`.slice(0, 500), seiten: d.ocr?.seiten ?? null }).catch(() => {});
-      throw new Fachfehler(503, 'Die Datenbank war ausgelastet, der Volltext ist nicht gespeichert. Bitte gleich noch einmal senden.');
+      throw new Fachfehler(503, t('meldungen.dienst.die-datenbank-war-ausgelastet'));
     }
     await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: info });
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
@@ -1692,22 +1693,22 @@ export class Dienst {
    */
   async setzeDokumentSprache(id: string, eingabe: unknown, von: { id: string; wer: string }) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const x = (eingabe ?? {}) as { sprache?: unknown; weitere?: unknown };
     const s = x.sprache;
-    if (s !== null && !istTextsprache(s)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
+    if (s !== null && !istTextsprache(s)) throw new Fachfehler(422, t('meldungen.dienst.sprache-unbekannt-erlaubt-oder', { keys: Object.keys(TEXTSPRACHEN).join(', ') }));
     // Weitere Sprachen (#579): ohne Angabe bleiben sie; mit Angabe gelten sie fürs ganze Dokument.
     const weitere = x.weitere === undefined ? undefined : x.weitere === null ? [] : sprachliste(x.weitere, 'weitere').filter((k) => k !== s);
     await this.repo.setzeDokumentSprache(id, s, weitere);
-    const auch = weitere?.length ? `, enthält auch ${weitere.map(sprachname).join(', ')}` : '';
-    await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: `Sprache ${s ? sprachname(s) : 'ohne Angabe'}${auch} (${von.wer})` });
+    const auch = weitere?.length ? t('meldungen.dienst.enthaelt-auch', { map: weitere.map(sprachname).join(', ') }) : '';
+    await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: t('meldungen.dienst.sprache', { wert: s ? sprachname(s) : t('meldungen.dienst.ohne-angabe'), auch, wer: von.wer }) });
     protokoll.modul('ablage').info('Sprache eines Dokuments gesetzt', { dokument: id, sprache: s, ...(weitere ? { weitere } : {}) });
     return (await this.repo.holeDokument(id))!;
   }
 
   /** Hinweis „Post teilen?“ wegklicken (#579): gilt für alle, bis das Dokument einen neuen Volltext bekommt. */
   async teilenHinweisAus(id: string) {
-    if (!(await this.repo.teilenHinweisAus(id))) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!(await this.repo.teilenHinweisAus(id))) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return (await this.repo.holeDokument(id))!;
   }
 
@@ -1721,13 +1722,13 @@ export class Dienst {
   /** Passwortfelder, die mit dem vorhandenen Schlüssel nicht lesbar sind (für die Werkbank). */
   async unlesbarePasswoerter(): Promise<Betroffen[]> {
     const out: Betroffen[] = [];
-    for (const t of await this.repo.listeTypen()) {
-      const felder = t.felder.filter((f) => f.typ === 'passwort');
+    for (const mappentyp of await this.repo.listeTypen()) {
+      const felder = mappentyp.felder.filter((f) => f.typ === 'passwort');
       if (!felder.length) continue;
-      for (const m of await this.repo.listeMappen(t.id)) {
+      for (const m of await this.repo.listeMappen(mappentyp.id)) {
         for (const f of felder) {
           const v = m.werte[f.key];
-          if (istVerschluesselt(v) && !this.tresor?.lesbar(v)) out.push({ bereich: t.name, was: `${m.titel || 'Mappe ohne Titel'}: ${f.label}`, wo: 'in der Ablage neu eingeben' });
+          if (istVerschluesselt(v) && !this.tresor?.lesbar(v)) out.push({ bereich: mappentyp.name, was: `${m.titel || t('meldungen.dienst.mappe-ohne-titel')}: ${f.label}`, wo: t('meldungen.dienst.in-der-ablage-neu') });
         }
       }
     }
@@ -1737,14 +1738,14 @@ export class Dienst {
   /** Klartext eines Passworts zum Anzeigen; jeder Aufruf steht im Protokoll (ohne den Wert). */
   async zeigePasswort(mappeId: string, feldKey: string, benutzerId: string | null = null): Promise<{ wert: string }> {
     const m = await this.repo.holeMappe(mappeId);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const typ = await this.repo.holeTyp(m.typId);
     const f = typ?.felder.find((x) => x.key === feldKey && x.typ === 'passwort');
-    if (!f) throw new Fachfehler(404, 'Dieses Passwortfeld gibt es nicht.');
+    if (!f) throw new Fachfehler(404, t('meldungen.dienst.dieses-passwortfeld-gibt-es'));
     const v = m.werte[f.key];
-    if (!istVerschluesselt(v)) throw new Fachfehler(404, 'In diesem Feld ist kein Passwort gespeichert.');
+    if (!istVerschluesselt(v)) throw new Fachfehler(404, t('meldungen.dienst.in-diesem-feld-ist'));
     const klar = this.tresor?.entschluessele(v) ?? null;
-    if (klar === null) throw new Fachfehler(409, 'Dieses Passwort ist nicht lesbar: Der Schlüssel, mit dem es gespeichert wurde, fehlt. Bitte neu eingeben.');
+    if (klar === null) throw new Fachfehler(409, t('meldungen.dienst.dieses-passwort-ist-nicht'));
     protokoll.modul('ablage').info('Passwort angezeigt', { mappe: m.titel || m.id, mappeId: m.id, feld: f.label });
     await this.notiere(m.id, benutzerId, 'passwort_angezeigt', { feld: f.label });
     return { wert: klar };
@@ -1774,7 +1775,7 @@ export class Dienst {
 
   /** Anzeigename eines Benutzers (auch für Platzhalter in Automatisierungen, #678). */
   async name(benutzerId: string | null): Promise<string> {
-    if (!benutzerId) return 'ohne Empfänger';
+    if (!benutzerId) return t('meldungen.dienst.ohne-empfaenger');
     return (await this.repo.titelVon([benutzerId])).get(benutzerId) || 'unbekannt';
   }
 
@@ -1782,8 +1783,8 @@ export class Dienst {
   private async pruefeEmpfaenger(id: unknown): Promise<string> {
     const { benutzer } = await this.sichereSystem();
     const m = istUuid(id) ? await this.repo.holeMappe(id) : undefined;
-    if (!m || m.typId !== benutzer.id) throw new Fachfehler(422, 'Bitte einen Benutzer als Empfänger wählen.');
-    if (m.werte.aktiv === false) throw new Fachfehler(422, 'Dieser Benutzer ist deaktiviert.');
+    if (!m || m.typId !== benutzer.id) throw new Fachfehler(422, t('meldungen.dienst.bitte-einen-benutzer-als'));
+    if (m.werte.aktiv === false) throw new Fachfehler(422, t('meldungen.dienst.dieser-benutzer-ist-deaktiviert'));
     return m.id;
   }
 
@@ -1817,14 +1818,14 @@ export class Dienst {
       if (m.werte.aktiv === false && (await this.empfaengerAufloesen(id)).ziel === id) continue;
       const a = await this.neueAufgabe({
         id: randomUUID(), mappeId, empfaengerId: id, art: 'erwaehnung', feldKey: quelle.key,
-        text: `Erwähnt von ${await this.name(von)} ${quelle.ort}${quelle.auszug ? `: ${quelle.auszug}` : ''}`.slice(0, AUFGABE_MAX),
+        text: t('meldungen.dienst.erwaehnt-von', { name: await this.name(von), ort: quelle.ort, wert: quelle.auszug ? `: ${quelle.auszug}` : '' }).slice(0, AUFGABE_MAX),
         erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null,
       });
-      await this.notiere(mappeId, von, 'aufgabe', { text: `${await this.name(id)} erwähnt ${quelle.ort}`, aufgabe: a.id, aufgabenart: 'erwaehnung', fuer: id, aufgabentext: a.text });
+      await this.notiere(mappeId, von, 'aufgabe', { text: t('meldungen.dienst.erwaehnt', { name: await this.name(id), ort: quelle.ort }), aufgabe: a.id, aufgabenart: 'erwaehnung', fuer: id, aufgabentext: a.text });
       await this.leiteUm(a);
     }
     for (const id of vorher) {
-      if (!jetzt.has(id)) await this.notiere(mappeId, von, 'aufgabe', { text: `Erwähnung von ${await this.name(id)} ${quelle.ort} entfernt` });
+      if (!jetzt.has(id)) await this.notiere(mappeId, von, 'aufgabe', { text: t('meldungen.dienst.erwaehnung-von-entfernt', { name: await this.name(id), ort: quelle.ort }) });
     }
   }
 
@@ -1862,7 +1863,7 @@ export class Dienst {
     await this.repo.delegiereAufgabe(a.id, ziel);
     const namen = (await Promise.all(abwesende.map((x) => this.name(x)))).join(', ');
     await this.notiere(a.mappeId, null, 'aufgabe', {
-      text: `weitergegeben wegen Abwesenheit von ${namen} an ${await this.name(ziel)}: ${a.text}`,
+      text: t('meldungen.dienst.weitergegeben-wegen-abwesenheit-von', { namen, name: await this.name(ziel), text: a.text }),
       aufgabe: a.id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text,
     });
     protokoll.modul('ablage').info('Aufgabe wegen Abwesenheit weitergegeben', { mappeId: a.mappeId, von: namen, an: await this.name(ziel) });
@@ -1880,12 +1881,12 @@ export class Dienst {
   /** Alle offenen Aufgaben eines Benutzers (ohne die der Administratoren) an einen anderen geben. */
   async aufgabenUebergeben(id: string, an: string, von: string | null): Promise<number> {
     const ziel = await this.pruefeEmpfaenger(an);
-    if (!ziel || ziel === id) throw new Fachfehler(422, 'Bitte einen anderen Benutzer wählen.');
+    if (!ziel || ziel === id) throw new Fachfehler(422, t('meldungen.dienst.bitte-einen-anderen-benutzer'));
     const offen = (await this.repo.offeneAufgaben({ benutzerId: id })).filter((a) => a.empfaengerId === id);
     for (const a of offen) {
       await this.repo.delegiereAufgabe(a.id, ziel);
       await this.notiere(a.mappeId, von, 'aufgabe', {
-        text: `weitergegeben von ${await this.name(id)} an ${await this.name(ziel)}: ${a.text}`,
+        text: t('meldungen.dienst.weitergegeben-von-an', { name: await this.name(id), name2: await this.name(ziel), text: a.text }),
         aufgabe: a.id, aufgabenart: a.art, vonId: id, anId: ziel, aufgabentext: a.text,
       });
     }
@@ -1906,13 +1907,13 @@ export class Dienst {
     if (!m || m.typId !== typ.id) return;
     const name = b.name || b.email;
     const datum = (t: string) => t.split('-').reverse().join('.');
-    const zeitraum = (a: Abwesenheit) => (a.von && a.bis ? `vom ${datum(a.von)} bis ${datum(a.bis)}` : a.von ? `ab ${datum(a.von)}, bis die Abwesenheit endet`
-      : a.bis ? `ab sofort bis ${datum(a.bis)}` : 'ab sofort, bis die Abwesenheit endet');
-    const durch = von && von !== b.id ? ` (eingetragen von ${await this.name(von)})` : '';
+    const zeitraum = (a: Abwesenheit) => (a.von && a.bis ? t('meldungen.dienst.vom-bis', { datum: datum(a.von), datum2: datum(a.bis) }) : a.von ? t('meldungen.dienst.ab-bis-die-abwesenheit', { datum: datum(a.von) })
+      : a.bis ? t('meldungen.dienst.ab-sofort-bis', { datum: datum(a.bis) }) : t('meldungen.dienst.ab-sofort-bis-die'));
+    const durch = von && von !== b.id ? t('meldungen.dienst.eingetragen-von', { name: await this.name(von) }) : '';
     const endet = alt.an && !neu.an;
-    const text = endet ? `Abwesenheit beendet${wegen ? ` (${wegen})` : ''}`
-      : neu.an ? `Abwesenheit ${alt.an ? 'geändert' : 'eingetragen'}: ${zeitraum(neu)}, Vertreter ${await this.name(neu.vertreterId)}${durch}`
-      : `Vertreter ${neu.vertreterId ? `hinterlegt: ${await this.name(neu.vertreterId)}` : 'entfernt'}${durch}`;
+    const text = endet ? t('meldungen.dienst.abwesenheit-beendet', { wert: wegen ? ` (${wegen})` : '' })
+      : neu.an ? t('meldungen.dienst.abwesenheit-vertreter', { wert: alt.an ? t('meldungen.dienst.geaendert') : t('meldungen.dienst.eingetragen'), zeitraum: zeitraum(neu), name: await this.name(neu.vertreterId), durch })
+      : t('meldungen.dienst.vertreter', { wert: neu.vertreterId ? t('meldungen.dienst.hinterlegt', { name: await this.name(neu.vertreterId) }) : t('meldungen.dienst.entfernt'), durch });
     await this.notiere(b.id, von, 'abwesenheit', { text });
     // Ereigniskatalog (#670): Abwesenheit gesetzt (auch geändert) bzw. beendet; Vertretung zurückgezogen (#678/#712)
     // für den bisherigen Vertreter, wenn die Abwesenheit endet oder ein anderer bzw. kein Vertreter eingetragen ist.
@@ -1921,11 +1922,11 @@ export class Dienst {
     if (endet) {
       await this.ereignis('benutzer.abwesenheit_beendet', { benutzer: b.id, vertreter: bisher }, von);
       // Aufgaben mit Anlass „Abwesenheit“ (#724, z. B. aus „Wenn Abwesenheit gesetzt“) erledigen sich.
-      await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, 'Abwesenheit beendet');
+      await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, t('meldungen.dienst.abwesenheit-beendet-2'));
     } else if (alt.an) {
       // Geändert (Zeitraum oder Vertreter): Was „Abwesenheit gesetzt“ angelegt hatte, erledigt sich; das Ereignis
       // unten legt es mit den neuen Angaben neu an – wie früher die Vertretungs-Aufgabe.
-      await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, 'Vertretung geändert');
+      await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, t('meldungen.dienst.vertretung-geaendert'));
     }
     if (zurueck) await this.ereignis('benutzer.vertretung_zurueckgezogen', { benutzer: b.id, vertreter: zurueck }, von);
     if (!endet && neu.an) await this.ereignis('benutzer.abwesenheit_gesetzt', { benutzer: b.id, von: neu.von, bis: neu.bis, vertreter: neu.vertreterId }, von);
@@ -1933,20 +1934,20 @@ export class Dienst {
     // (Paket Benachrichtigungen bzw. beim Update übernommen). Alte Vertretungs-Aufgaben erledigen sich wie bisher.
     for (const a of (await this.repo.offeneAufgaben({ mappeIds: [b.id] })).filter((x) => x.art === 'vertretung')) {
       await this.repo.erledigeAufgabe(a.id, null);
-      await this.notiere(b.id, null, 'aufgabe', { text: `erledigt (${endet ? 'Abwesenheit beendet' : 'Vertretung geändert'}): ${a.text}`, aufgabe: a.id, aufgabenart: 'vertretung', fuer: a.empfaengerId, aufgabentext: a.text });
+      await this.notiere(b.id, null, 'aufgabe', { text: t('meldungen.dienst.erledigt', { wert: endet ? t('meldungen.dienst.abwesenheit-beendet-2') : t('meldungen.dienst.vertretung-geaendert'), text: a.text }), aufgabe: a.id, aufgabenart: 'vertretung', fuer: a.empfaengerId, aufgabentext: a.text });
     }
   }
 
   /** Aufgabe von Hand vergeben, z. B. „Bitte Rechnung prüfen“. */
   async legeAufgabeAn(mappeId: string, e: unknown, von: string | null): Promise<Aufgabe> {
-    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const x = (e ?? {}) as Record<string, unknown>;
     const text = typeof x.text === 'string' ? x.text.trim() : '';
-    if (!text) throw new Fachfehler(422, 'Bitte beschreiben, was zu tun ist.');
-    if (text.length > AUFGABE_MAX) throw new Fachfehler(422, `Höchstens ${AUFGABE_MAX} Zeichen.`);
+    if (!text) throw new Fachfehler(422, t('meldungen.dienst.bitte-beschreiben-was-zu'));
+    if (text.length > AUFGABE_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-zeichen', { AUFGABE_MAX }));
     const an = await this.pruefeEmpfaenger(x.empfaengerId);
     const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
-    await this.notiere(mappeId, von, 'aufgabe', { text: `für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
+    await this.notiere(mappeId, von, 'aufgabe', { text: t('meldungen.dienst.fuer', { name: await this.name(an), text }), aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
     protokoll.modul('ablage').info('Aufgabe vergeben', { mappeId, an: await this.name(an) });
     const erg = await this.leiteUm(a);
     // #798: Darf der Empfänger die Mappe nicht lesen, entsteht ein Fall – der Admin erfährt davon.
@@ -1956,21 +1957,21 @@ export class Dienst {
 
   private async eigeneAufgabe(id: string, ich: { id: string; rolle: string }) {
     const a = await this.repo.holeAufgabe(id);
-    if (!a) throw new Fachfehler(404, 'Diese Aufgabe gibt es nicht.');
+    if (!a) throw new Fachfehler(404, t('meldungen.dienst.diese-aufgabe-gibt-es'));
     const meine = a.empfaengerId === ich.id || (!a.empfaengerId && await this.siehtOhneEmpfaenger(ich));
-    if (!meine && ich.rolle !== 'admin') throw new Fachfehler(403, 'Das ist nicht deine Aufgabe. Weitergeben oder erledigen kann sie nur ihr Empfänger oder wer im Verwaltungsmodus ist.');
-    if (a.erledigt) throw new Fachfehler(409, 'Diese Aufgabe ist schon erledigt.');
+    if (!meine && ich.rolle !== 'admin') throw new Fachfehler(403, t('meldungen.dienst.das-ist-nicht-deine'));
+    if (a.erledigt) throw new Fachfehler(409, t('meldungen.dienst.diese-aufgabe-ist-schon'));
     return a;
   }
 
   /** Bestätigen (Erwähnungen, manuelle Aufgaben). „Passt nicht“ erledigt sich, sobald die Mappe passt. */
   async erledigeAufgabe(id: string, ich: { id: string; rolle: string }) {
     const a = await this.eigeneAufgabe(id, ich);
-    if (a.art === 'passung') throw new Fachfehler(409, 'Diese Aufgabe erledigt sich selbst, sobald die Mappe wieder zur Definition passt.');
+    if (a.art === 'passung') throw new Fachfehler(409, t('meldungen.dienst.diese-aufgabe-erledigt-sich'));
     // „Geändert“ bestätigen (#422) = gesehen; ohne Eintrag in der Historie der Mappe.
     if (a.art === 'aenderung') { await this.gesehen(ich, [a.mappeId]); return (await this.repo.holeAufgabe(id))!; }
     await this.repo.erledigeAufgabe(id, ich.id);
-    await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: `erledigt: ${a.text}`, aufgabe: id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
+    await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: t('meldungen.dienst.erledigt-2', { text: a.text }), aufgabe: id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
     protokoll.modul('ablage').info('Aufgabe erledigt', { mappeId: a.mappeId, aufgabe: a.text });
     await this.faelleNach([a.mappeId]);
     const folgetermin = await this.folgeterminVon(a);
@@ -1984,7 +1985,7 @@ export class Dienst {
     if (ziel === a.empfaengerId) return a;
     await this.repo.delegiereAufgabe(id, ziel);
     const von = await this.name(a.empfaengerId), nach = await this.name(ziel);
-    await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: `weitergegeben von ${von} an ${nach}: ${a.text}`, aufgabe: id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text });
+    await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: t('meldungen.dienst.weitergegeben-von-an-2', { von, nach, text: a.text }), aufgabe: id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text });
     protokoll.modul('ablage').info('Aufgabe weitergegeben', { mappeId: a.mappeId, von, an: nach, aufgabe: a.text });
     await this.faelleNach([a.mappeId]);
     return (await this.repo.holeAufgabe(id))!;
@@ -1999,8 +2000,8 @@ export class Dienst {
   async aufgabenWeitergeben(ids: unknown, an: unknown, ich: { id: string; rolle: string }): Promise<{
     weitergegeben: string[]; nicht: Array<{ id: string; grund: string }>;
   }> {
-    if (!Array.isArray(ids) || !ids.length) throw new Fachfehler(422, 'Bitte mindestens eine Aufgabe wählen.');
-    if (ids.length > SAMMEL_MAX) throw new Fachfehler(422, `Höchstens ${SAMMEL_MAX} Aufgaben auf einmal.`);
+    if (!Array.isArray(ids) || !ids.length) throw new Fachfehler(422, t('meldungen.dienst.bitte-mindestens-eine-aufgabe'));
+    if (ids.length > SAMMEL_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-aufgaben-auf-einmal', { SAMMEL_MAX }));
     const ziel = await this.pruefeEmpfaenger(an);
     const nach = await this.name(ziel);
     const weitergegeben: string[] = [];
@@ -2009,13 +2010,13 @@ export class Dienst {
     for (const id of [...new Set(ids.map(String))]) {
       let a: Aufgabe;
       try { a = await this.eigeneAufgabe(id, ich); } catch (e) { if (!(e instanceof Fachfehler)) throw e; nicht.push({ id, grund: e.message }); continue; }
-      if (a.empfaengerId === ziel) { nicht.push({ id, grund: `liegt schon bei ${nach}` }); continue; }
+      if (a.empfaengerId === ziel) { nicht.push({ id, grund: t('meldungen.dienst.liegt-schon-bei', { nach }) }); continue; }
       // Lesen kann auch erst die Aufgabe selbst erlauben (Regel „hat eine Aufgabe“) – deshalb nach dem Umhängen
       // prüfen und bei Bedarf zurückhängen.
       await this.repo.delegiereAufgabe(id, ziel);
-      if (!(await this.kannLesen(ziel, a.mappeId))) { await this.repo.delegiereAufgabe(id, a.empfaengerId); nicht.push({ id, grund: `${nach} darf die Mappe nicht lesen` }); continue; }
+      if (!(await this.kannLesen(ziel, a.mappeId))) { await this.repo.delegiereAufgabe(id, a.empfaengerId); nicht.push({ id, grund: t('meldungen.dienst.darf-die-mappe-nicht', { nach }) }); continue; }
       const von = await this.name(a.empfaengerId);
-      await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: `weitergegeben von ${von} an ${nach}: ${a.text}`, aufgabe: id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text, sammel: true });
+      await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: t('meldungen.dienst.weitergegeben-von-an-2', { von, nach, text: a.text }), aufgabe: id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text, sammel: true });
       weitergegeben.push(id);
       mappenWeiter.push(a.mappeId);
     }
@@ -2029,8 +2030,8 @@ export class Dienst {
 
   /** Sammelaktion „erledigt“ (#415): wie erledigeAufgabe je Aufgabe; was nicht geht, mit Grund. */
   async aufgabenErledigen(ids: unknown, ich: { id: string; rolle: string }): Promise<{ erledigt: string[]; nicht: Array<{ id: string; grund: string }> }> {
-    if (!Array.isArray(ids) || !ids.length) throw new Fachfehler(422, 'Bitte mindestens eine Aufgabe wählen.');
-    if (ids.length > SAMMEL_MAX) throw new Fachfehler(422, `Höchstens ${SAMMEL_MAX} Aufgaben auf einmal.`);
+    if (!Array.isArray(ids) || !ids.length) throw new Fachfehler(422, t('meldungen.dienst.bitte-mindestens-eine-aufgabe'));
+    if (ids.length > SAMMEL_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-aufgaben-auf-einmal', { SAMMEL_MAX }));
     const erledigt: string[] = [];
     const nicht: Array<{ id: string; grund: string }> = [];
     for (const id of [...new Set(ids.map(String))]) {
@@ -2060,7 +2061,7 @@ export class Dienst {
       empfaengerId: ziel, mappeId: von, art: 'manuell', schluessel: SAMMEL_WEITERGABE, von,
       text: (bisher) => {
         const gesamt = n + Number(/(\d+) Aufgaben/.exec(bisher?.text ?? '')?.[1] ?? (bisher ? 1 : 0));
-        return `${name} hat dir ${gesamt === 1 ? 'eine Aufgabe' : `${gesamt} Aufgaben`} weitergegeben – sie stehen unter „Zu erledigen“.`;
+        return t('meldungen.dienst.hat-dir-aufgaben-weitergegeben', { anzahl: gesamt, name });
       },
     });
   }
@@ -2234,9 +2235,9 @@ export class Dienst {
         // Aus einer Automatisierung (Anlass Datum): erledigt sich nur, wenn das Datum nicht mehr stimmt.
         const giltNoch = a.anlass?.art === 'datum' ? !!feld : !!feld?.frist;
         if (giltNoch && wert === a.datum) continue;
-        const grund = !feld ? 'Feld entfernt' : !giltNoch ? 'keine Erinnerung mehr' : !istDatum(wert) ? 'Datum leer' : wert > (a.datum ?? '') ? `verschoben auf ${datumDe(wert)}` : `geändert auf ${datumDe(wert)}`;
+        const grund = !feld ? t('meldungen.dienst.feld-entfernt') : !giltNoch ? t('meldungen.dienst.keine-erinnerung-mehr') : !istDatum(wert) ? t('meldungen.dienst.datum-leer') : wert > (a.datum ?? '') ? t('meldungen.dienst.verschoben-auf', { datumDe: datumDe(wert) }) : t('meldungen.dienst.geaendert-auf', { datumDe: datumDe(wert) });
         await this.repo.erledigeAufgabe(a.id, null);
-        await this.notiere(m.id, null, 'aufgabe', { text: `erledigt (${grund}): ${a.text}`, aufgabe: a.id, aufgabenart: 'frist', fuer: a.empfaengerId, aufgabentext: a.text });
+        await this.notiere(m.id, null, 'aufgabe', { text: t('meldungen.dienst.erledigt-3', { grund, text: a.text }), aufgabe: a.id, aufgabenart: 'frist', fuer: a.empfaengerId, aufgabentext: a.text });
         erledigt++;
       }
       for (const feld of fristFelder(typ)) {
@@ -2275,7 +2276,7 @@ export class Dienst {
     for (const e of await this.repo.erinnerungen({ bis: heute })) {
       const a = await this.neueAufgabe({ id: randomUUID(), mappeId: e.mappeId, empfaengerId: e.empfaengerId, art: 'erinnerung', text: e.text, datum: e.datum, erstellt: '', erstelltVon: e.erstelltVon, erledigt: null, erledigtVon: null });
       await this.repo.loescheErinnerung(e.id);
-      await this.notiere(e.mappeId, null, 'aufgabe', { text: `Erinnerung fällig für ${await this.name(e.empfaengerId)}: ${e.text}`, aufgabe: a.id, aufgabenart: 'erinnerung', fuer: e.empfaengerId, aufgabentext: e.text });
+      await this.notiere(e.mappeId, null, 'aufgabe', { text: t('meldungen.dienst.erinnerung-faellig-fuer', { name: await this.name(e.empfaengerId), text: e.text }), aufgabe: a.id, aufgabenart: 'erinnerung', fuer: e.empfaengerId, aufgabentext: e.text });
       await this.leiteUm(a);
       n++;
     }
@@ -2290,10 +2291,10 @@ export class Dienst {
 
   private static erinnerungEingabe(e: unknown): { datum: string; text: string; empfaengerId?: unknown } {
     const x = (e ?? {}) as Record<string, unknown>;
-    if (!istDatum(x.datum)) throw new Fachfehler(422, 'Bitte ein Datum angeben.');
+    if (!istDatum(x.datum)) throw new Fachfehler(422, t('meldungen.dienst.bitte-ein-datum-angeben'));
     const text = typeof x.text === 'string' ? x.text.replace(/\s+/g, ' ').trim() : '';
-    if (!text) throw new Fachfehler(422, 'Woran soll erinnert werden?');
-    if (text.length > ERINNERUNG_TEXT_MAX) throw new Fachfehler(422, `Höchstens ${ERINNERUNG_TEXT_MAX} Zeichen.`);
+    if (!text) throw new Fachfehler(422, t('meldungen.dienst.woran-soll-erinnert-werden'));
+    if (text.length > ERINNERUNG_TEXT_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-zeichen-2', { ERINNERUNG_TEXT_MAX }));
     return { datum: x.datum, text, empfaengerId: x.empfaengerId };
   }
 
@@ -2302,7 +2303,7 @@ export class Dienst {
     const x = Dienst.erinnerungEingabe(e);
     const an = x.empfaengerId ? await this.pruefeEmpfaenger(x.empfaengerId) : von;
     const r = await this.repo.legeErinnerungAn({ id: randomUUID(), mappeId, empfaengerId: an, datum: x.datum, text: x.text, erstellt: '', erstelltVon: von });
-    await this.notiere(mappeId, von, 'aufgabe', { text: `Erinnerung für ${await this.name(an)} am ${datumDe(x.datum)}: ${x.text}`, aufgabenart: 'erinnerung', fuer: an, aufgabentext: x.text });
+    await this.notiere(mappeId, von, 'aufgabe', { text: t('meldungen.dienst.erinnerung-fuer-am', { name: await this.name(an), datumDe: datumDe(x.datum), text: x.text }), aufgabenart: 'erinnerung', fuer: an, aufgabentext: x.text });
     if (x.datum <= heuteIn()) await this.erinnerungenFaellig();
     return r;
   }
@@ -2310,18 +2311,18 @@ export class Dienst {
   /** Ändern und Löschen: Ersteller, Empfänger oder ein Administrator. */
   private async eigeneErinnerung(id: string, ich: { id: string; rolle: string }): Promise<Erinnerung> {
     const e = await this.repo.holeErinnerung(id);
-    if (!e) throw new Fachfehler(404, 'Diese Erinnerung gibt es nicht (mehr) – vielleicht ist sie schon fällig und steht unter „Zu erledigen“.');
-    if (e.erstelltVon !== ich.id && e.empfaengerId !== ich.id && ich.rolle !== 'admin') throw new Fachfehler(403, 'Ändern kann eine Erinnerung nur, wer sie angelegt hat oder sie bekommt.');
+    if (!e) throw new Fachfehler(404, t('meldungen.dienst.diese-erinnerung-gibt-es'));
+    if (e.erstelltVon !== ich.id && e.empfaengerId !== ich.id && ich.rolle !== 'admin') throw new Fachfehler(403, t('meldungen.dienst.aendern-kann-eine-erinnerung'));
     return e;
   }
-  async erinnerungMappe(id: string) { const e = await this.repo.holeErinnerung(id); if (!e) throw new Fachfehler(404, 'Diese Erinnerung gibt es nicht (mehr).'); return e.mappeId; }
+  async erinnerungMappe(id: string) { const e = await this.repo.holeErinnerung(id); if (!e) throw new Fachfehler(404, t('meldungen.dienst.diese-erinnerung-gibt-es-2')); return e.mappeId; }
 
   async aendereErinnerung(id: string, e: unknown, ich: { id: string; rolle: string }): Promise<Erinnerung> {
     const alt = await this.eigeneErinnerung(id, ich);
     const x = Dienst.erinnerungEingabe(e);
     const an = x.empfaengerId ? await this.pruefeEmpfaenger(x.empfaengerId) : alt.empfaengerId;
     const neu = (await this.repo.aendereErinnerung(id, { datum: x.datum, text: x.text, empfaengerId: an }))!;
-    await this.notiere(alt.mappeId, ich.id, 'aufgabe', { text: `Erinnerung geändert: für ${await this.name(an)} am ${datumDe(x.datum)}: ${x.text}`, aufgabenart: 'erinnerung', fuer: an, aufgabentext: x.text });
+    await this.notiere(alt.mappeId, ich.id, 'aufgabe', { text: t('meldungen.dienst.erinnerung-geaendert-fuer-am', { name: await this.name(an), datumDe: datumDe(x.datum), text: x.text }), aufgabenart: 'erinnerung', fuer: an, aufgabentext: x.text });
     if (x.datum <= heuteIn()) await this.erinnerungenFaellig();
     return neu;
   }
@@ -2329,7 +2330,7 @@ export class Dienst {
   async loescheErinnerung(id: string, ich: { id: string; rolle: string }) {
     const e = await this.eigeneErinnerung(id, ich);
     await this.repo.loescheErinnerung(id);
-    await this.notiere(e.mappeId, ich.id, 'aufgabe', { text: `Erinnerung gelöscht: ${e.text}`, aufgabenart: 'erinnerung', fuer: e.empfaengerId, aufgabentext: e.text });
+    await this.notiere(e.mappeId, ich.id, 'aufgabe', { text: t('meldungen.dienst.erinnerung-geloescht', { text: e.text }), aufgabenart: 'erinnerung', fuer: e.empfaengerId, aufgabentext: e.text });
   }
 
   /**
@@ -2440,24 +2441,24 @@ export class Dienst {
   /** „Datum auf … setzen“ (#130): nie automatisch, nur auf Klick – mit Eintrag im Protokoll wie jede Änderung. */
   async setzeFolgetermin(aufgabeId: string, ich: { id: string; rolle: string }, z?: Zugriff) {
     const a = await this.repo.holeAufgabe(aufgabeId);
-    if (!a) throw new Fachfehler(404, 'Diese Aufgabe gibt es nicht.');
+    if (!a) throw new Fachfehler(404, t('meldungen.dienst.diese-aufgabe-gibt-es'));
     const naechster = await this.folgeterminVon(a);
-    if (!naechster) throw new Fachfehler(409, 'Das Datum hat sich schon geändert – es gibt keinen Vorschlag mehr.');
+    if (!naechster) throw new Fachfehler(409, t('meldungen.dienst.das-datum-hat-sich'));
     return this.aendereMappe(a.mappeId, { werte: { [a.feldKey!]: naechster } }, ich.id, z);
   }
 
   /* ---------- Notizen (#55) ---------- */
 
   private static notiztext(e: unknown): string {
-    const t = typeof e === 'string' ? e.replace(/\r\n?/g, '\n').trim() : '';
-    if (!t) throw new Fachfehler(422, 'Die Notiz ist leer.');
-    if (t.length > NOTIZ_MAX) throw new Fachfehler(422, `Eine Notiz darf höchstens ${NOTIZ_MAX.toLocaleString('de-DE')} Zeichen haben.`);
-    return t;
+    const text2 = typeof e === 'string' ? e.replace(/\r\n?/g, '\n').trim() : '';
+    if (!text2) throw new Fachfehler(422, t('meldungen.dienst.die-notiz-ist-leer'));
+    if (text2.length > NOTIZ_MAX) throw new Fachfehler(422, t('meldungen.dienst.eine-notiz-darf-hoechstens', { NOTIZ_MAX: NOTIZ_MAX.toLocaleString(gebietsschema()) }));
+    return text2;
   }
   private static vorschau(t: string) { const x = alsText(t); return x.length > 80 ? `${x.slice(0, 77)} …` : x; }
 
   async notizen(mappeId: string): Promise<Notiz[]> {
-    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     return this.repo.notizen(mappeId);
   }
 
@@ -2475,12 +2476,12 @@ export class Dienst {
     const betreff = String(e.betreff ?? '').replace(/[\r\n]+/g, ' ').trim();
     const nachricht = String(e.nachricht ?? '');
     const fehler: Record<string, string> = {};
-    if (!an.length) fehler.an = 'Mindestens einen Empfänger angeben.';
-    else if (an.length > EMAIL_MAX_EMPFAENGER) fehler.an = `Höchstens ${EMAIL_MAX_EMPFAENGER} Empfänger.`;
-    else if (an.some((x) => !istEmail(x))) fehler.an = `Keine gültige Adresse: ${an.filter((x) => !istEmail(x)).join(', ')}`;
-    if (!betreff) fehler.betreff = 'Der Betreff fehlt.';
-    else if (betreff.length > 250) fehler.betreff = 'Der Betreff ist zu lang.';
-    if (nachricht.length > NOTIZ_MAX) fehler.nachricht = 'Die Nachricht ist zu lang.';
+    if (!an.length) fehler.an = t('meldungen.dienst.mindestens-einen-empfaenger-angeben');
+    else if (an.length > EMAIL_MAX_EMPFAENGER) fehler.an = t('meldungen.dienst.hoechstens-empfaenger', { EMAIL_MAX_EMPFAENGER });
+    else if (an.some((x) => !istEmail(x))) fehler.an = t('meldungen.dienst.keine-gueltige-adresse', { filter: an.filter((x) => !istEmail(x)).join(', ') });
+    if (!betreff) fehler.betreff = t('meldungen.dienst.der-betreff-fehlt');
+    else if (betreff.length > 250) fehler.betreff = t('meldungen.dienst.der-betreff-ist-zu');
+    if (nachricht.length > NOTIZ_MAX) fehler.nachricht = t('meldungen.dienst.die-nachricht-ist-zu');
     if (Object.keys(fehler).length) throw new Fachfehler(422, Object.values(fehler).join(' '), { felder: fehler });
     return { an, betreff, nachricht };
   }
@@ -2495,21 +2496,21 @@ export class Dienst {
   async versendeMappen(eingabe: unknown, ich: { id: string; name: string; email: string; rolle: string }, z: Zugriff, mailer: Mailer | null) {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const ids = [...new Set((Array.isArray(e.ids) ? e.ids : []).map(String).filter(istUuid))];
-    if (!ids.length) throw new Fachfehler(422, 'Keine Mappen ausgewählt.');
-    if (ids.length > EMAIL_MAX_MAPPEN) throw new Fachfehler(422, `Höchstens ${EMAIL_MAX_MAPPEN} Mappen in einer E-Mail.`);
+    if (!ids.length) throw new Fachfehler(422, t('meldungen.dienst.keine-mappen-ausgewaehlt'));
+    if (ids.length > EMAIL_MAX_MAPPEN) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-mappen-in-einer', { EMAIL_MAX_MAPPEN }));
     const { an, betreff, nachricht } = Dienst.emailKopf(e);
     Dienst.pruefeFassungswahl(e);
     // Rechte (#723, gemeinsame Prüfstelle): jede Mappe lesbar und versendbar – sonst nichts verschicken (keine stillen Lücken).
     await this.pruefeAusgang(ich, z, 'email', ids);
-    if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse).');
+    if (!mailer) throw new Fachfehler(409, t('meldungen.dienst.der-e-mail-versand'));
     const mappen = inReihenfolge(await this.repo.holeMappen(ids), ids);
-    if (mappen.length !== ids.length) throw new Fachfehler(404, 'Eine ausgewählte Mappe gibt es nicht (mehr).');
+    if (mappen.length !== ids.length) throw new Fachfehler(404, t('meldungen.dienst.eine-ausgewaehlte-mappe-gibt'));
     const angaben = e.angaben !== false;
     const gewaehlt = e.dokumente === 'alle' ? null : new Set((Array.isArray(e.dokumente) ? e.dokumente : []).map(String));
     const dokJe = await this.dokumenteJeMappe(mappen.map((m) => m.id));
     if (gewaehlt) {
       const bekannt = new Set(mappen.flatMap((m) => (dokJe.get(m.id) ?? []).map((d) => d.id)));
-      if ([...gewaehlt].some((id) => !bekannt.has(id))) throw new Fachfehler(422, 'Ein ausgewähltes Dokument gehört nicht (mehr) zu diesen Mappen.');
+      if ([...gewaehlt].some((id) => !bekannt.has(id))) throw new Fachfehler(422, t('meldungen.dienst.ein-ausgewaehltes-dokument-gehoert'));
     }
     const quelle = angaben ? await this.angabenQuelle(z, mappen) : null;
     const stempelDaten = await this.stempelDaten();
@@ -2519,13 +2520,13 @@ export class Dienst {
       je.push(await this.versandTeil(m, docs, { e, an, ich, quelle, stempelDaten }));
     }
     const groesse = je.reduce((a, x) => a + x.groesse, 0);
-    if (groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB. Bitte weniger Mappen oder Dokumente wählen.`);
+    if (groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, t('meldungen.dienst.die-anhaenge-sind-zusammen', { round: Math.round(EMAIL_MAX_ANHAENGE / 1e6) }));
     const { namen, anhaenge } = await this.versandAnhaenge(je);
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
     try {
       await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge });
     } catch (x) {
-      throw new Fachfehler(502, `Die E-Mail wurde nicht verschickt: ${(x as Error).message}`);
+      throw new Fachfehler(502, t('meldungen.dienst.die-e-mail-wurde', { message: (x as Error).message }));
     }
     const { post: typ } = await this.sichereSystem();
     const id = randomUUID();
@@ -2542,7 +2543,7 @@ export class Dienst {
       const mitStempel = x.ausgaben.some((y) => y.gestempelt);
       const was = weitergabeWas(x.ausgaben);
       await this.notiere(x.m.id, ich.id, 'email', {
-        text: `„${betreff}“ an ${an.join(', ')} mit ${mappen.length} Mappen${n ? ` (von dieser ${n} ${n === 1 ? 'Anhang' : 'Anhänge'})` : ''}${was ? `, ${was}` : ''}`, email: id,
+        text: t('meldungen.dienst.an-mit-mappen', { betreff, an: an.join(', '), mappen: mappen.length, wert: n ? t('meldungen.dienst.von-dieser-anhaenge', { anzahl: n }) : '', wert2: was ? `, ${was}` : '' }), email: id,
         an, betreff, nachricht: nachricht.slice(0, NOTIZ_MAX), mappen: mappen.length,
         anhaenge: teile.map((y) => ({ name: namen[i++], groesse: y.groesse })),
         ...(mitStempel ? { stempel: stempeltext ?? null, stempelAn: x.plan?.empfaenger ?? null } : {}),
@@ -2555,7 +2556,7 @@ export class Dienst {
   /** `fassung` und `fassungen` (je Dokument) kennen nur „original“ und „archiv“ – geprüft, bevor etwas geschieht. */
   private static pruefeFassungswahl(e: Record<string, unknown>) {
     const werte = [e.fassung, ...(e.fassungen && typeof e.fassungen === 'object' ? Object.values(e.fassungen) : [])];
-    if (werte.some((v) => v !== undefined && v !== null && v !== 'original' && v !== 'archiv')) throw new Fachfehler(422, '„fassung“ kennt nur „original“ und „archiv“.');
+    if (werte.some((v) => v !== undefined && v !== null && v !== 'original' && v !== 'archiv')) throw new Fachfehler(422, t('meldungen.dienst.fassung-kennt-nur-original'));
   }
 
   /** Typen und Titel der Verweise für das PDF „Angaben“ – mit `z` nur, was der Benutzer sehen darf. */
@@ -2580,12 +2581,12 @@ export class Dienst {
   }): Promise<Versandteil> {
     const wahl = (o.e.fassungen && typeof o.e.fassungen === 'object' ? o.e.fassungen : {}) as Record<string, unknown>;
     const quellen = await Promise.all(docs.map((d) => this.ausgabeQuelle(d, wahl[d.id] ?? o.e.fassung, wahl[d.id] === undefined)));
-    const pdf = o.quelle ? await mappenPdf(m.titel || 'Ohne Titel', [{ mappe: m, typ: o.quelle.typen.get(m.typId), dokumente: [], inhalt: (d: Dokument) => this.liesGanz(d.sha256) }], o.quelle, null) : null;
+    const pdf = o.quelle ? await mappenPdf(m.titel || t('meldungen.dienst.ohne-titel'), [{ mappe: m, typ: o.quelle.typen.get(m.typId), dokumente: [], inhalt: (d: Dokument) => this.liesGanz(d.sha256) }], o.quelle, null) : null;
     // Stempel (#394): gewünscht oder vom Mappentyp verlangt; {empfänger} sind ohne Angabe die Adressen.
     const plan = docs.length || pdf ? await this.stempelPlan(m.typId, wunschAus(o.e.stempel), o.an.join(', '), o.stempelDaten) : null;
     // Verkleinert senden (#393): PDFs als verkleinerte Kopie, vor dem Stempeln.
     const klein = stufeAus(o.e.verkleinern);
-    const kontext = (d?: Dokument) => ({ benutzer: o.ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d?.archivnummer ?? null, entsperrt: this.entsperrtZu });
+    const kontext = (d?: Dokument) => ({ benutzer: o.ich.name, mappe: m.titel || t('meldungen.dienst.ohne-titel'), archivnummer: d?.archivnummer ?? null, entsperrt: this.entsperrtZu });
     const bearbeiten = !!plan || (!!klein && docs.length > 0);
     const dokumente: Versandanhang[] = await Promise.all(quellen.map(async (q, i): Promise<Versandanhang> => {
       const d = docs[i];
@@ -2603,7 +2604,7 @@ export class Dienst {
     }));
     let angaben: Versandanhang | null = null;
     if (pdf) {
-      const name = `${m.titel || 'Ohne Titel'}.pdf`;
+      const name = `${m.titel || t('meldungen.dienst.ohne-titel')}.pdf`;
       // Das PDF „Angaben“ geht ebenso hinaus: der Stempel (Pflicht oder gewünscht) gilt auch für es (#723).
       const a = plan ? await fuerAusgabe({ name, mime: 'application/pdf', inhalt: pdf }, { stempel: plan }, kontext()) : null;
       const b = a?.inhalt ?? pdf;
@@ -2657,25 +2658,25 @@ export class Dienst {
    */
   async versendeMappe(mappeId: string, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null, z?: Zugriff) {
     if (z) await this.pruefeAusgang(z.ich, z, 'email', [mappeId]);
-    if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse).');
+    if (!mailer) throw new Fachfehler(409, t('meldungen.dienst.der-e-mail-versand'));
     const m = await this.repo.holeMappe(mappeId);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const { an, betreff, nachricht } = Dienst.emailKopf(e);
     Dienst.pruefeFassungswahl(e);
     const ids = Array.isArray(e.dokumente) ? [...new Set(e.dokumente.map(String))] : [];
     const alle = await this.repo.listeDokumente(mappeId);
     const dokumente = ids.map((id) => alle.find((d) => d.id === id));
-    if (dokumente.some((d) => !d)) throw new Fachfehler(422, 'Ein ausgewähltes Dokument gehört nicht (mehr) zu dieser Mappe.');
+    if (dokumente.some((d) => !d)) throw new Fachfehler(422, t('meldungen.dienst.ein-ausgewaehltes-dokument-gehoert-2'));
     const quelle = e.angaben === true ? await this.angabenQuelle(z, [m]) : null;
     const teil = await this.versandTeil(m, dokumente as Dokument[], { e, an, ich, quelle, stempelDaten: await this.stempelDaten() });
-    if (teil.groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB.`);
+    if (teil.groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, t('meldungen.dienst.die-anhaenge-sind-zusammen-2', { round: Math.round(EMAIL_MAX_ANHAENGE / 1e6) }));
     const { namen, anhaenge } = await this.versandAnhaenge([teil]);
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
     try {
       await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge });
     } catch (x) {
-      throw new Fachfehler(502, `Die E-Mail wurde nicht verschickt: ${(x as Error).message}`);
+      throw new Fachfehler(502, t('meldungen.dienst.die-e-mail-wurde', { message: (x as Error).message }));
     }
     const { post: typ } = await this.sichereSystem();
     const id = randomUUID();
@@ -2689,7 +2690,7 @@ export class Dienst {
     const mitStempel = teil.ausgaben.some((x) => x.gestempelt);
     const was = weitergabeWas(teil.ausgaben);
     const n = anhaenge.length;
-    await this.notiere(mappeId, ich.id, 'email', { text: `„${betreff}“ an ${an.join(', ')}${n ? ` mit ${n} ${n === 1 ? 'Anhang' : 'Anhängen'}` : ''}${was ? `, ${was}` : ''}`, email: id,
+    await this.notiere(mappeId, ich.id, 'email', { text: t('meldungen.dienst.an', { betreff, an: an.join(', '), wert: n ? t('meldungen.dienst.mit-anhaengen', { anzahl: n }) : '', wert2: was ? `, ${was}` : '' }), email: id,
       an, betreff, nachricht: nachricht.slice(0, NOTIZ_MAX), anhaenge: anhaenge.map((x, i) => ({ name: x.name, groesse: [...(teil.angaben ? [teil.angaben] : []), ...teil.dokumente][i].groesse })),
       ...(mitStempel ? { stempel: stempeltext ?? null, stempelAn: teil.plan?.empfaenger ?? null } : {}) });
     protokoll.modul('ablage').info('E-Mail aus Mappe verschickt', { mappe: mappeId, empfaenger: an.length, anhaenge: n, bytes: teil.groesse });
@@ -2697,32 +2698,32 @@ export class Dienst {
   }
 
   async legeNotizAn(mappeId: string, text: unknown, von: string | null): Promise<Notiz> {
-    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
-    const t = Dienst.notiztext(text);
-    const n = await this.repo.legeNotizAn({ id: randomUUID(), mappeId, text: t, erstellt: '', erstelltVon: von, geaendert: '', geaendertVon: von });
-    await this.notiere(mappeId, von, 'notiz', { text: `angelegt: ${Dienst.vorschau(t)}`, voll: t });
+    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
+    const text2 = Dienst.notiztext(text);
+    const n = await this.repo.legeNotizAn({ id: randomUUID(), mappeId, text: text2, erstellt: '', erstelltVon: von, geaendert: '', geaendertVon: von });
+    await this.notiere(mappeId, von, 'notiz', { text: t('meldungen.dienst.angelegt', { vorschau: Dienst.vorschau(text2) }), voll: text2 });
     await this.ereignis('mappe.notiz', { mappe: mappeId, typ: await this.typVon(mappeId), notiz: n.id }, von);
-    await this.erwaehnungenAbgleichen(mappeId, { key: `notiz:${n.id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(t) }, '', t, von);
+    await this.erwaehnungenAbgleichen(mappeId, { key: `notiz:${n.id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(text2) }, '', text2, von);
     return n;
   }
 
   /** Bearbeiten und Löschen darf jeder (Abstimmung zu #55); die Historie hält fest, wer es war. */
   async aendereNotiz(id: string, text: unknown, von: string | null): Promise<Notiz> {
     const alt = await this.repo.holeNotiz(id);
-    if (!alt) throw new Fachfehler(404, 'Diese Notiz gibt es nicht.');
-    const t = Dienst.notiztext(text);
-    if (t === alt.text) return alt;
-    const n = await this.repo.aendereNotiz(id, t, von);
-    await this.notiere(alt.mappeId, von, 'notiz', { text: `geändert: ${Dienst.vorschau(t)}`, vorher: Dienst.vorschau(alt.text), alt: alt.text, neu: t });
-    await this.erwaehnungenAbgleichen(alt.mappeId, { key: `notiz:${id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(t) }, alt.text, t, von);
+    if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diese-notiz-gibt-es'));
+    const text2 = Dienst.notiztext(text);
+    if (text2 === alt.text) return alt;
+    const n = await this.repo.aendereNotiz(id, text2, von);
+    await this.notiere(alt.mappeId, von, 'notiz', { text: t('meldungen.dienst.geaendert-2', { vorschau: Dienst.vorschau(text2) }), vorher: Dienst.vorschau(alt.text), alt: alt.text, neu: text2 });
+    await this.erwaehnungenAbgleichen(alt.mappeId, { key: `notiz:${id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(text2) }, alt.text, text2, von);
     return n;
   }
 
   async loescheNotiz(id: string, von: string | null) {
     const alt = await this.repo.holeNotiz(id);
-    if (!alt) throw new Fachfehler(404, 'Diese Notiz gibt es nicht.');
+    if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diese-notiz-gibt-es'));
     await this.repo.loescheNotiz(id);
-    await this.notiere(alt.mappeId, von, 'notiz', { text: `gelöscht: ${Dienst.vorschau(alt.text)}`, voll: alt.text });
+    await this.notiere(alt.mappeId, von, 'notiz', { text: t('meldungen.dienst.geloescht', { vorschau: Dienst.vorschau(alt.text) }), voll: alt.text });
   }
 
   /* ---------- Änderungshistorie (#57) ---------- */
@@ -2767,7 +2768,7 @@ export class Dienst {
 
   /** Für alle, je Rolle (Systemrollen und fachliche Rollen) oder gar nicht; dazu die Vorgabe für neue Benutzer. */
   async setzeFavoritenFreigabe(eingabe: unknown, von: string) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const f = liesFavoritenFreigabe(eingabe);
     if (f.erlaubt === 'rollen') {
       const bekannt = new Set((await this.listeRollen()).map((r) => r.id));
@@ -2807,7 +2808,7 @@ export class Dienst {
 
   /** Werkbank → Benutzer und Sicherheit (#719): Alltags-Benutzer wählen oder `null` (nur im Verwaltungsmodus). */
   async setzeAufgabenEmpfaenger(eingabe: unknown, von: string | null) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const id = (eingabe as { benutzerId?: unknown } | null)?.benutzerId ?? null;
     if (id !== null) {
       const b = typeof id === 'string' ? (await this.konten?.benutzer?.())?.find((x) => x.id === id) : undefined;
@@ -2845,7 +2846,7 @@ export class Dienst {
 
   /** „Auf alle anwenden“: die Vorgabe für neue Benutzer bei allen bestehenden setzen; Anzahl. */
   async favoritenVorgabeAnwenden(von: string): Promise<number> {
-    if (!this.konten?.benutzer || !this.konten.setzeEinstellung) throw new Fachfehler(404, 'Benutzerkonten sind nicht eingerichtet.');
+    if (!this.konten?.benutzer || !this.konten.setzeEinstellung) throw new Fachfehler(404, t('meldungen.dienst.benutzerkonten-sind-nicht'));
     const { vorgabe } = await this.favoritenFreigabe();
     let n = 0;
     for (const b of await this.konten.benutzer()) {
@@ -2883,9 +2884,9 @@ export class Dienst {
           const n = bisher ? 1 + h.length : 1;
           const namen = [...new Set(bisher ? [bisher.erstelltVon ?? von, ...h.map((x) => x.benutzerId!)] : [von])];
           const liste = await Promise.all(namen.slice(0, 3).map((id) => this.name(id)));
-          const wer = namen.length > 3 ? `${liste.join(', ')} und weiteren` : liste.length > 1 ? `${liste.slice(0, -1).join(', ')} und ${liste.at(-1)}` : liste[0];
-          const tag = new Date(bisher?.erstellt || Date.now()).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', timeZone: zeitzone() });
-          return `${n === 1 ? 'Eine Änderung' : `${n} Änderungen`} von ${wer} seit ${tag}`;
+          const wer = namen.length > 3 ? t('meldungen.dienst.und-weiteren', { liste: liste.join(', ') }) : liste.length > 1 ? `${liste.slice(0, -1).join(', ')} und ${liste.at(-1)}` : liste[0];
+          const tag = new Date(bisher?.erstellt || Date.now()).toLocaleDateString(gebietsschema(), { day: '2-digit', month: '2-digit', timeZone: zeitzone() });
+          return t('meldungen.dienst.aenderungen-von-seit', { anzahl: n, wer, tag });
         },
       });
     }
@@ -2909,7 +2910,7 @@ export class Dienst {
 
   /** Je Favorit „bei Änderungen benachrichtigen“ (#422, Schalter in der Favoritenliste). */
   async setzeFavoritBenachrichtigen(ich: { id: string }, mappeId: string, an: unknown) {
-    if (!(await this.repo.favoritenVon(ich.id, [mappeId])).has(mappeId)) throw new Fachfehler(404, 'Diese Mappe ist kein Favorit von dir.');
+    if (!(await this.repo.favoritenVon(ich.id, [mappeId])).has(mappeId)) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-ist-kein'));
     await this.repo.setzeFavoritBenachrichtigen(ich.id, mappeId, an !== false);
     return { benachrichtigen: an !== false };
   }
@@ -2922,8 +2923,8 @@ export class Dienst {
     const ids = felder.filter((f) => f.typ === 'referenz').flatMap((f) => [alt[f.key], neu[f.key]].flatMap((v) => (Array.isArray(v) ? v : v ? [v] : []))).map(String).filter(istUuid);
     const titel = await this.repo.titelVon(ids);
     const lesbar = (f: Feld, v: Werte[string] | undefined) => {
-      const t = formatiere(f, v, (id) => titel.get(id) || 'Ohne Titel');
-      return t.length > 500 ? `${t.slice(0, 497)} …` : t;
+      const text2 = formatiere(f, v, (id) => titel.get(id) || t('meldungen.dienst.ohne-titel'));
+      return text2.length > 500 ? `${text2.slice(0, 497)} …` : text2;
     };
     // Altes Textfeld neben seinem Verweis (#534): „Halter (Text)“ statt zweimal „Halter“.
     const label = (f: Feld) => (verweisAusText(typ, f) ? t('pakete.historie.alttext', { label: f.label }) : f.label);
@@ -2934,7 +2935,7 @@ export class Dienst {
 
   /** Historie einer Mappe (auch im Papierkorb). */
   async historie(mappeId: string): Promise<Historieneintrag[]> {
-    if (!(await this.repo.holeMappe(mappeId)) && !(await this.repo.holeAusPapierkorb(mappeId))) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!(await this.repo.holeMappe(mappeId)) && !(await this.repo.holeAusPapierkorb(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     return this.repo.historie(mappeId);
   }
 
@@ -2945,9 +2946,9 @@ export class Dienst {
   }
 
   async setzeHistorieTage(eingabe: unknown): Promise<number> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const tage = Number(eingabe);
-    if (!Number.isInteger(tage) || tage < 0 || tage > 36500) throw new Fachfehler(422, 'Bitte eine ganze Zahl von 0 bis 36500 Tagen angeben.');
+    if (!Number.isInteger(tage) || tage < 0 || tage > 36500) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-ganze-zahl'));
     await this.einstellungen.schreibe('historie', { tage });
     protokoll.modul('werkbank').info('Aufbewahrung der Historie gelöschter Mappen geändert', { tage });
     return tage;
@@ -2972,7 +2973,7 @@ export class Dienst {
 
   private async pruefeTyp(d: MappentypDaten, eigeneId: string) {
     if (d.archiv?.stichtag && d.felder.find((f) => f.key === d.archiv!.stichtag)?.typ !== 'datum') {
-      throw new Fachfehler(422, 'Archivmodus: Der Stichtag muss ein Datumsfeld dieses Mappentyps sein.', { allgemein: ['Archivmodus: Der Stichtag muss ein Datumsfeld dieses Mappentyps sein.'], felder: {} });
+      throw new Fachfehler(422, t('meldungen.dienst.archivmodus-der-stichtag-muss'), { allgemein: [t('meldungen.dienst.archivmodus-der-stichtag-muss')], felder: {} });
     }
     const alle = await this.repo.listeTypen();
     // Quellen von Verknüpfungsregistern, deren Feld es nicht mehr gibt, still entfernen.
@@ -2997,7 +2998,7 @@ export class Dienst {
       nummernkreise: (await this.repo.listeNummernkreise()).map((k) => k.schluessel),
       auswahlProbleme: (bed, felder, eigene) => auswahlProbleme(bed, { felder }, eigene),
     });
-    if (!istOk(p)) throw new Fachfehler(422, 'Der Mappentyp ist so nicht gültig.', p);
+    if (!istOk(p)) throw new Fachfehler(422, t('meldungen.dienst.der-mappentyp-ist-so'), p);
   }
 
   /** Mappentyp anlegen bzw. ändern; die Stempel-Einstellung (#394) liegt daneben in den Einstellungen. */
@@ -3056,7 +3057,7 @@ export class Dienst {
 
   private async aendereTypIntern(id: string, eingabe: unknown): Promise<Mappentyp> {
     const alt = await this.repo.holeTyp(id);
-    if (!alt) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
+    if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     let d = bereinigeTyp(eingabe);
     if (alt.system) d = await this.mitSystemfeldern(d, alt.system);
     // Der Schlüssel ist fest (#145); fehlt er noch, gilt der eingegebene bzw. einer aus dem Namen.
@@ -3068,7 +3069,7 @@ export class Dienst {
     for (const [key, n] of await this.repo.dokumenteJeRegister(id)) {
       if (bleiben.has(key)) continue;
       const name = alt.register.find((r) => r.key === key)?.name ?? key;
-      throw new Fachfehler(409, `Im Register „${name}“ liegen noch ${n} Dokument${n === 1 ? '' : 'e'}. Entferne oder verschiebe sie zuerst.`);
+      throw new Fachfehler(409, t('meldungen.dienst.im-register-liegen-noch', { anzahl: n, name }));
     }
     const typ = await this.repo.aendereTyp(id, d);
     // Die Sicht, die für diesen Typ entstanden ist, heißt weiter wie er – solange sie niemand umbenannt hat.
@@ -3096,7 +3097,7 @@ export class Dienst {
     const typen = await this.repo.listeTypen();
     const soll = systemfelder(system, typen.find((t) => t.system === 'rolle')?.id ?? '', typen.find((t) => t.system === 'benutzer')?.id ?? '');
     const fehlen = soll.filter((s) => !d.felder.some((f) => f.key === s.key));
-    if (fehlen.length) throw new Fachfehler(422, `Systemfelder lassen sich nicht entfernen: ${fehlen.map((f) => f.label).join(', ')}.`);
+    if (fehlen.length) throw new Fachfehler(422, t('meldungen.dienst.systemfelder-lassen-sich-nicht', { map: fehlen.map((f) => f.label).join(', ') }));
     const felder = d.felder.map((f) => {
       const s = soll.find((x) => x.key === f.key);
       return s ? { ...s, label: f.label || s.label, hilfe: f.hilfe || s.hilfe } : f;
@@ -3105,20 +3106,20 @@ export class Dienst {
   }
 
   async loescheTyp(id: string): Promise<void> {
-    const t = await this.repo.holeTyp(id);
-    if (!t) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
-    if (t.system) throw new Fachfehler(409, `„${t.name}“ ist ein Systemmappentyp. Er lässt sich erweitern, aber nicht löschen.`);
-    if (id === (await this.ablageortId())) throw new Fachfehler(409, `„${t.name}“ gehört zum Standard von Ablago (Ablageorte für Originale). Er lässt sich erweitern und umbenennen, aber nicht löschen.`);
+    const eintrag = await this.repo.holeTyp(id);
+    if (!eintrag) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
+    if (eintrag.system) throw new Fachfehler(409, t('meldungen.dienst.ist-ein-systemmappentyp-er', { name: eintrag.name }));
+    if (id === (await this.ablageortId())) throw new Fachfehler(409, t('meldungen.dienst.gehoert-zum-standard-von', { name: eintrag.name }));
     const gruende: string[] = [];
     const n = await this.repo.zaehleMappen(id);
-    if (n) gruende.push(`${n} ${n === 1 ? 'Mappe gehört' : 'Mappen gehören'} zu diesem Typ.`);
+    if (n) gruende.push(t('meldungen.dienst.mappen-gehoeren-zu-diesem', { anzahl: n }));
     const imKorb = (await this.repo.papierkorb({ typId: id })).length;
-    if (imKorb) gruende.push(`${imKorb} ${imKorb === 1 ? 'Mappe' : 'Mappen'} dieses Typs ${imKorb === 1 ? 'liegt' : 'liegen'} im Papierkorb. Leere ihn oder stelle sie wieder her.`);
-    for (const t of await this.repo.listeTypen()) {
-      if (t.id === id) continue;
-      for (const f of t.felder) if (f.typ === 'referenz' && f.zielTyp === id) gruende.push(`Das Feld ${t.name} › ${f.label} verweist auf diesen Typ.`);
+    if (imKorb) gruende.push(t('meldungen.dienst.mappen-dieses-typs-liegen', { anzahl: imKorb }));
+    for (const mappentyp of await this.repo.listeTypen()) {
+      if (mappentyp.id === id) continue;
+      for (const f of mappentyp.felder) if (f.typ === 'referenz' && f.zielTyp === id) gruende.push(t('meldungen.dienst.das-feld-verweist-auf', { name: mappentyp.name, label: f.label }));
     }
-    if (gruende.length) throw new Fachfehler(409, 'Dieser Mappentyp kann noch nicht gelöscht werden.', { gruende });
+    if (gruende.length) throw new Fachfehler(409, t('meldungen.dienst.dieser-mappentyp-kann-noch'), { gruende });
     await this.repo.loescheTyp(id);
     // Aus den Sichten entfernen; Sichten, die nur diesen Typ hatten und keine Kinder, verschwinden mit.
     const alle = await this.repo.listeSichten();
@@ -3153,13 +3154,13 @@ export class Dienst {
     // Aufgaben der Mappe nur einmal lesen (#615): für die Regel „mit Aufgabe“, für die Antwort und fürs Gesehen.
     // Mappe und Aufgaben gleichzeitig (#741).
     const [mappe, aufgaben] = await Promise.all([this.repo.holeMappe(id), this.repo.aufgabenVon(id)]);
-    if (!mappe) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!mappe) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     // Berechtigungen (#124): ohne Lesen nur die eigenen offenen Aufgaben – zum Erledigen oder Weitergeben.
     const rechte = z ? await this.rechteAn(z, mappe, false, aufgaben) : null;
     if (z && rechte && !rechte.R) {
       // #798: automatische Aufgaben nur mit Hinweis und Fälligkeit; von Hand geschriebene mit Text.
       const meine = await this.ohneLeserechtText(aufgaben.filter((x) => !x.erledigt && x.empfaengerId === z.ich.id), new Set(), z.ich.id);
-      throw new Fachfehler(404, 'Diese Mappe gibt es nicht oder du darfst sie nicht sehen.', { verborgen: true, aufgaben: meine });
+      throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es-2'), { verborgen: true, aufgaben: meine });
     }
     // Mappentypen hat der Zugriff schon gelesen (#615); ein Dienstkonto kennt nur seine – dann wie bisher.
     const alleTypen = z?.typen && !z.paket ? [...z.typen.values()] : undefined;
@@ -3230,7 +3231,7 @@ export class Dienst {
       const [, typId, key] = String(q.sicht).split(':');
       const f = typen.get(typId)?.felder.find((x) => x.key === key && x.typ === 'referenz');
       const ziel = f ? typen.get(f.zielTyp ?? '') : undefined;
-      if (!f || !ziel) throw new Fachfehler(404, 'Dieses Verweisfeld gibt es nicht.');
+      if (!f || !ziel) throw new Fachfehler(404, t('meldungen.dienst.dieses-verweisfeld-gibt-es'));
       // Werte der Mappe, die gerade ausgefüllt wird (#173).
       let eigene: Werte = {};
       try { const w = JSON.parse(text(q.eigene).slice(0, 8000) || '{}'); if (w && typeof w === 'object' && !Array.isArray(w)) eigene = w; } catch { /* ohne */ }
@@ -3439,7 +3440,7 @@ export class Dienst {
   /** Persönlich: ändert weder „zuletzt geändert“ noch das Protokoll der Mappe. */
   async setzeFavorit(ich: { id: string }, mappeId: string, an: boolean) {
     const m = await this.repo.holeMappe(mappeId);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const schon = an && (await this.repo.favoritenVon(ich.id, [mappeId])).has(mappeId);
     await this.repo.setzeFavorit(ich.id, mappeId, an);
     if (an && !schon) await this.ereignis('favorit.neu', { benutzer: ich.id, mappe: mappeId, typ: m.typId }, ich.id);
@@ -3535,9 +3536,9 @@ export class Dienst {
   private async paketSiehtNicht(p: InstalliertesPaket, typId: string, mappeId: string | null): Promise<string | null> {
     const konto = (await this.konten?.dienstkonten?.())?.find((b) => b.paketId === p.id);
     const z = await this.zugriff({ id: konto?.id ?? `paket:${p.id}`, rolle: 'mitglied', art: 'dienst', paketId: p.id });
-    if (!z.typen.has(typId)) return (await this.paketVerwehrt())[typId]?.includes(p.id) ? 'Mappentyp für dieses Paket verwehrt' : 'kein Leserecht am Mappentyp';
+    if (!z.typen.has(typId)) return (await this.paketVerwehrt())[typId]?.includes(p.id) ? t('meldungen.dienst.mappentyp-fuer-dieses-paket') : t('meldungen.dienst.kein-leserecht-am-mappentyp');
     const m = mappeId ? await this.repo.holeMappe(mappeId) : null;
-    if (m && !(await this.rechteAn(z, m)).R) return 'kein Leserecht an dieser Mappe (Regeln für die Rolle „Paket“)';
+    if (m && !(await this.rechteAn(z, m)).R) return t('meldungen.dienst.kein-leserecht-an-dieser');
     return null;
   }
 
@@ -3554,7 +3555,7 @@ export class Dienst {
    */
   async paketeAmTyp(typId: string): Promise<Array<{ id: string; name: string; ereignisse: boolean; schreiben: boolean; verwehrt: boolean }>> {
     const typ = await this.repo.holeTyp(typId);
-    if (!typ) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
+    if (!typ) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     if (typ.system === 'benutzer') return [];
     const [pakete, typen, verwehrt] = [await this.repo.listePakete(), await this.repo.listeTypen(), await this.paketVerwehrt()];
     const erg: Array<{ id: string; name: string; ereignisse: boolean; schreiben: boolean; verwehrt: boolean }> = [];
@@ -3573,10 +3574,10 @@ export class Dienst {
 
   /** Einem Paket einen Mappentyp verwehren bzw. wieder erlauben; wirkt sofort (Lesen, Schreiben, Ereignisse). */
   async setzePaketVerwehrt(typId: string, paketId: string, verwehrt: boolean, von: string | null): Promise<void> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const am = await this.paketeAmTyp(typId);
     const p = am.find((x) => x.id === paketId);
-    if (!p) throw new Fachfehler(404, 'Dieses Paket darf Mappen dieses Typs ohnehin nicht lesen.');
+    if (!p) throw new Fachfehler(404, t('meldungen.dienst.dieses-paket-darf-mappen'));
     const alle = await this.paketVerwehrt();
     const liste = new Set(alle[typId] ?? []);
     if (verwehrt) liste.add(paketId); else liste.delete(paketId);
@@ -3647,10 +3648,10 @@ export class Dienst {
   /** Mappe holen und ein Recht verlangen. Ohne Lesen: 404 (wer nichts sehen darf, erfährt nicht, dass es sie gibt). */
   async pruefeRecht(z: Zugriff | undefined, id: string, recht: Recht): Promise<Mappe> {
     const m = await this.repo.holeMappe(id);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     if (!z) return m;
     const r = await this.rechteAn(z, m);
-    if (!r.R) throw new Fachfehler(404, 'Diese Mappe gibt es nicht oder du darfst sie nicht sehen.', { verborgen: true });
+    if (!r.R) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es-2'), { verborgen: true });
     if (!r[recht]) throw new Fachfehler(403, VERBOTEN[recht]);
     return m;
   }
@@ -3703,7 +3704,7 @@ export class Dienst {
   /** Regelwerk speichern; mit Warnung, wenn danach Mappen niemand mehr lesen kann (#125). */
   async setzeBerechtigungen(typId: string, eingabe: unknown, bestaetigt: boolean): Promise<{ typ: Mappentyp; niemand: number }> {
     const typ = await this.repo.holeTyp(typId);
-    if (!typ) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
+    if (!typ) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     const { rw, niemand } = await this.pruefeBerechtigungen(typ, eingabe, bestaetigt);
     const neu = await this.repo.setzeBerechtigungen(typId, istOffen(rw) ? null : rw);
     Dienst.protokolliereBerechtigungen(neu, niemand);
@@ -3714,10 +3715,10 @@ export class Dienst {
   private async pruefeBerechtigungen(typ: Mappentyp, eingabe: unknown, bestaetigt: boolean): Promise<{ rw: Regelwerk; niemand: number }> {
     const rw = bereinigeRegelwerk(eingabe);
     const probleme = rw.regeln.map((r) => regelProblem(r, typ)).filter((x): x is string => !!x);
-    if (probleme.length) throw new Fachfehler(422, `Berechtigungen: ${probleme.join(' ')}`, { gruende: probleme, berechtigungen: true });
+    if (probleme.length) throw new Fachfehler(422, t('meldungen.dienst.berechtigungen', { probleme: probleme.join(' ') }), { gruende: probleme, berechtigungen: true });
     const niemand = await this.niemandLesbar(typ, rw);
     if (niemand && !bestaetigt) {
-      throw new Fachfehler(409, `${niemand === 1 ? 'Eine Mappe' : `${niemand} Mappen`} vom Typ „${typ.name}“ könnte danach niemand mehr lesen (außer im Verwaltungsmodus). Trotzdem speichern?`, { niemand });
+      throw new Fachfehler(409, t('meldungen.dienst.mappen-vom-typ-koennte', { anzahl: niemand, name: typ.name }), { niemand });
     }
     return { rw, niemand };
   }
@@ -3746,7 +3747,7 @@ export class Dienst {
   async kopiereRegel(typId: string, regelId: string, ziele: unknown): Promise<{ kopiert: number; ausgelassen: number }> {
     const typ = await this.repo.holeTyp(typId);
     const regel = typ ? regelwerkVon(typ).regeln.find((r) => r.id === regelId) : undefined;
-    if (!typ || !regel) throw new Fachfehler(404, 'Diese Regel gibt es nicht (mehr) – erst speichern, dann kopieren.');
+    if (!typ || !regel) throw new Fachfehler(404, t('meldungen.dienst.diese-regel-gibt-es'));
     let kopiert = 0; let ausgelassen = 0;
     for (const id of (Array.isArray(ziele) ? ziele : []).map(String)) {
       const ziel = id === typId ? undefined : await this.repo.holeTyp(id);
@@ -3763,13 +3764,13 @@ export class Dienst {
   /** Testlauf (#125): Mappe und Benutzer → CRUDP mit der Spur durch die Regeln (auch für einen ungespeicherten Entwurf). */
   async testlauf(e: { mappeId?: unknown; benutzerId?: unknown; berechtigungen?: unknown }) {
     const m = istUuid(e.mappeId) ? await this.repo.holeMappe(e.mappeId) : undefined;
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const person = this.konten?.benutzer ? (await this.konten.benutzer()).find((x) => x.id === e.benutzerId) : undefined;
     // Systemkonten und Paket-Benutzer (#710): auswählbar nur hier, damit man ihre Rechte nachprüfen kann.
     const b = person ?? (this.konten?.ohneMensch ? (await this.konten.ohneMensch()).find((x) => x.id === e.benutzerId && x.art) : undefined);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.dienst.diesen-benutzer-gibt-es'));
     const gespeichert = await this.repo.holeTyp(m.typId);
-    if (!gespeichert) throw new Fachfehler(500, 'Der Mappentyp dieser Mappe fehlt.');
+    if (!gespeichert) throw new Fachfehler(500, t('meldungen.dienst.der-mappentyp-dieser-mappe'));
     const typ = e.berechtigungen === undefined ? gespeichert : { ...gespeichert, berechtigungen: bereinigeRegelwerk(e.berechtigungen) };
     const mappe = { id: m.id, titel: m.titel ?? '', typId: m.typId };
     if (b.art) {
@@ -3802,7 +3803,7 @@ export class Dienst {
   /** „Was sieht Benutzer X?“ (#125): je Mappentyp gesamt und lesbar, dazu einige Titel. */
   async wasSieht(benutzerId: unknown) {
     const b = this.konten?.benutzer ? (await this.konten.benutzer()).find((x) => x.id === benutzerId) : undefined;
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.dienst.diesen-benutzer-gibt-es'));
     const z = await this.zugriff(b);
     const erg: Array<{ typId: string; name: string; gesamt: number; lesbar: number; beispiele: Array<{ id: string; titel: string }> }> = [];
     for (const t of [...z.typen.values()].sort((x, y) => x.name.localeCompare(y.name, 'de'))) {
@@ -3817,7 +3818,7 @@ export class Dienst {
   /** Zu welcher Mappe gehört ein Dokument, eine Notiz, eine Aufgabe? (für die Prüfung der Rechte) */
   async mappeVon(art: 'dokument' | 'notiz' | 'aufgabe', id: string): Promise<string> {
     const x = !istUuid(id) ? undefined : art === 'dokument' ? await this.repo.holeDokument(id) : art === 'notiz' ? await this.repo.holeNotiz(id) : await this.repo.holeAufgabe(id);
-    if (!x) throw new Fachfehler(404, art === 'dokument' ? 'Dieses Dokument gibt es nicht.' : art === 'notiz' ? 'Diese Notiz gibt es nicht.' : 'Diese Aufgabe gibt es nicht.');
+    if (!x) throw new Fachfehler(404, art === 'dokument' ? t('meldungen.dienst.dieses-dokument-gibt-es') : art === 'notiz' ? t('meldungen.dienst.diese-notiz-gibt-es') : t('meldungen.dienst.diese-aufgabe-gibt-es'));
     return x.mappeId;
   }
 
@@ -3888,11 +3889,11 @@ export class Dienst {
     const alle = await this.repo.listeSichten();
     const id = istUuid(x.sichtId) && alle.some((s) => s.id === x.sichtId) ? x.sichtId : randomUUID();
     const b = this.konten?.benutzer ? (await this.konten.benutzer()).find((y) => y.id === x.benutzerId) : undefined;
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.dienst.diesen-benutzer-gibt-es'));
     const elternId = istUuid(x.elternId) && alle.some((s) => s.id === x.elternId) && !waereKreis(alle, id, x.elternId) ? x.elternId : null;
     const alt = alle.find((s) => s.id === id);
     const probe: Sicht[] = [...alle.filter((s) => s.id !== id), {
-      ...(alt ?? { name: 'Neue Ansicht', beschreibung: '', position: 0, typen: [], bedingungen: [], erstellt: '', geaendert: '' }),
+      ...(alt ?? { name: t('meldungen.dienst.neue-ansicht'), beschreibung: '', position: 0, typen: [], bedingungen: [], erstellt: '', geaendert: '' }),
       id, elternId, berechtigungen: bereinigeSichtRegelwerk(x.berechtigungen),
     }];
     const a = await this.aufloesung(b.id);
@@ -3904,10 +3905,10 @@ export class Dienst {
   private async bereinigeSicht(e: unknown, id: string, alle: Sicht[]): Promise<SichtDaten> {
     const x = (e ?? {}) as Record<string, unknown>;
     const name = text(x.name).slice(0, 80);
-    if (!name) throw new Fachfehler(422, 'Bitte einen Namen für die Ansicht angeben.');
+    if (!name) throw new Fachfehler(422, t('meldungen.dienst.bitte-einen-namen-fuer'));
     const elternId = istUuid(x.elternId) ? x.elternId : null;
-    if (elternId && !alle.some((s) => s.id === elternId)) throw new Fachfehler(422, 'Die gewählte Elternsicht gibt es nicht.');
-    if (waereKreis(alle, id, elternId)) throw new Fachfehler(422, 'Eine Ansicht kann nicht unter sich selbst oder einer ihrer Unteransichten liegen.');
+    if (elternId && !alle.some((s) => s.id === elternId)) throw new Fachfehler(422, t('meldungen.dienst.die-gewaehlte-elternsicht-gibt'));
+    if (waereKreis(alle, id, elternId)) throw new Fachfehler(422, t('meldungen.dienst.eine-ansicht-kann-nicht'));
     const vorhanden = new Set((await this.repo.listeTypen()).map((t) => t.id));
     const gewaehlt = [...new Set((Array.isArray(x.typen) ? x.typen : []).map(String))];
     // „Alle Mappentypen“ (#725) steht allein; sonst nur vorhandene Typen.
@@ -3921,7 +3922,7 @@ export class Dienst {
     // Berechtigungen (#148): fehlt die Angabe, bleiben sie, wie sie sind.
     const berechtigungen: SichtRegelwerk | null = 'berechtigungen' in x ? bereinigeSichtRegelwerk(x.berechtigungen) : alle.find((s) => s.id === id)?.berechtigungen ?? null;
     const probleme = (berechtigungen?.regeln ?? []).map((r) => sichtRegelProblem(r, !!elternId)).filter((p): p is string => !!p);
-    if (probleme.length) throw new Fachfehler(422, `Berechtigungen: ${probleme.join(' ')}`, { gruende: probleme, berechtigungen: true });
+    if (probleme.length) throw new Fachfehler(422, t('meldungen.dienst.berechtigungen', { probleme: probleme.join(' ') }), { gruende: probleme, berechtigungen: true });
     // Symbol (#428): nur Namen aus der festen Auswahl; fehlt die Angabe, bleibt es, wie es ist.
     const symbol = 'symbol' in x ? ansichtSymbol(x.symbol) : alle.find((s) => s.id === id)?.symbol ?? null;
     return { name, beschreibung: text(x.beschreibung).slice(0, 500), elternId, position, typen, bedingungen: bereinigeBedingungen(x.bedingungen), trefferliste, berechtigungen, symbol };
@@ -3935,7 +3936,7 @@ export class Dienst {
 
   async aendereSicht(id: string, e: unknown): Promise<Sicht> {
     const alle = await this.repo.listeSichten();
-    if (!alle.some((s) => s.id === id)) throw new Fachfehler(404, 'Diese Ansicht gibt es nicht.');
+    if (!alle.some((s) => s.id === id)) throw new Fachfehler(404, t('meldungen.dienst.diese-ansicht-gibt-es'));
     return this.repo.aendereSicht(id, await this.bereinigeSicht(e, id, alle));
   }
 
@@ -3943,7 +3944,7 @@ export class Dienst {
   async loescheSicht(id: string): Promise<void> {
     const alle = await this.repo.listeSichten();
     const s = alle.find((x) => x.id === id);
-    if (!s) throw new Fachfehler(404, 'Diese Ansicht gibt es nicht.');
+    if (!s) throw new Fachfehler(404, t('meldungen.dienst.diese-ansicht-gibt-es'));
     // Neue Reihenfolge der Ebene: Geschwister davor, die Kinder, Geschwister danach.
     const ebene = kinderVon(alle, s.elternId).flatMap((g) => (g.id === id ? kinderVon(alle, id) : [g]));
     for (const [i, g] of ebene.entries()) {
@@ -3958,7 +3959,7 @@ export class Dienst {
     const eltern = istUuid(elternId) ? elternId : null;
     const geschwister = kinderVon(alle, eltern);
     const liste = Array.isArray(ids) ? ids.map(String) : [];
-    if (liste.length !== geschwister.length || !geschwister.every((g) => liste.includes(g.id))) throw new Fachfehler(422, 'Die Reihenfolge muss genau die Ansichten dieser Ebene enthalten.');
+    if (liste.length !== geschwister.length || !geschwister.every((g) => liste.includes(g.id))) throw new Fachfehler(422, t('meldungen.dienst.die-reihenfolge-muss-genau'));
     for (const [i, sid] of liste.entries()) {
       const g = geschwister.find((x) => x.id === sid)!;
       if (g.position !== (i + 1) * 10) await this.repo.aendereSicht(sid, { ...g, position: (i + 1) * 10 });
@@ -3973,10 +3974,10 @@ export class Dienst {
   async verschiebeSicht(id: string, elternId: unknown, stelle: unknown): Promise<Sicht[]> {
     const alle = await this.repo.listeSichten();
     const s = alle.find((x) => x.id === id);
-    if (!s) throw new Fachfehler(404, 'Diese Ansicht gibt es nicht.');
+    if (!s) throw new Fachfehler(404, t('meldungen.dienst.diese-ansicht-gibt-es'));
     const eltern = istUuid(elternId) ? elternId : null;
-    if (eltern && !alle.some((x) => x.id === eltern)) throw new Fachfehler(422, 'Die gewählte Elternsicht gibt es nicht.');
-    if (waereKreis(alle, id, eltern)) throw new Fachfehler(422, 'Eine Ansicht kann nicht unter sich selbst oder einer ihrer Unteransichten liegen.');
+    if (eltern && !alle.some((x) => x.id === eltern)) throw new Fachfehler(422, t('meldungen.dienst.die-gewaehlte-elternsicht-gibt'));
+    if (waereKreis(alle, id, eltern)) throw new Fachfehler(422, t('meldungen.dienst.eine-ansicht-kann-nicht'));
     const geschwister = kinderVon(alle.filter((x) => x.id !== id), eltern);
     const n = Number(stelle);
     const i = Number.isFinite(n) ? Math.max(0, Math.min(geschwister.length, Math.trunc(n))) : geschwister.length;
@@ -4017,7 +4018,7 @@ export class Dienst {
   }
 
   async belegung(typId: string) {
-    if (!(await this.repo.holeTyp(typId))) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
+    if (!(await this.repo.holeTyp(typId))) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     return this.repo.belegung(typId);
   }
 
@@ -4046,7 +4047,7 @@ export class Dienst {
         typVon: (id) => typVon.get(id),
         doppelt: (k, v) => {
           const andere = gleiche.get(k)?.get(String(v).trim().toLowerCase())?.find((x) => x.id !== m.id);
-          return andere ? andere.titel || 'Ohne Titel' : undefined;
+          return andere ? andere.titel || t('meldungen.dienst.ohne-titel') : undefined;
         },
       });
       return { id: m.id, problem: ersterGrund(typ, p), alt: m.problem ?? null, passtAlt: m.passt };
@@ -4076,7 +4077,7 @@ export class Dienst {
     const eindeutig = typ.felder.filter((f) => f.eindeutig && (f.typ === 'text' || f.typ === 'zahl'));
     const funde = await this.repo.findeDoppelte(typ.id, mappen.flatMap((m) => eindeutig.filter((f) => !istLeer(m.werte[f.key])).map((f) => ({ mappeId: m.id, feldKey: f.key, wert: String(m.werte[f.key]) }))));
     for (const m of mappen) {
-      const doppelt = (k: string) => { const d = funde.get(`${m.id}|${k}`); return d ? d.titel || 'Ohne Titel' : undefined; };
+      const doppelt = (k: string) => { const d = funde.get(`${m.id}|${k}`); return d ? d.titel || t('meldungen.dienst.ohne-titel') : undefined; };
       const problem = ersterGrund(typ, pruefeMappe(typ, m.werte, { typVon: (id) => typen.get(id), doppelt }));
       if (problem !== m.problem) liste.push({ id: m.id, problem });
     }
@@ -4093,7 +4094,7 @@ export class Dienst {
   }
 
   private async titel(m: Mappe): Promise<string> {
-    return m.titel || titelAus(await this.repo.holeTyp(m.typId), m.werte, undefined, m) || 'Ohne Titel';
+    return m.titel || titelAus(await this.repo.holeTyp(m.typId), m.werte, undefined, m) || t('meldungen.dienst.ohne-titel');
   }
 
   /* ---------- Titel ---------- */
@@ -4114,7 +4115,7 @@ export class Dienst {
         const mappen = await this.repo.holeMappen(offen.slice(i, i + 2000));
         const ziele = mappen.flatMap((m) => { const t = typen.get(m.typId); return t ? verweiseVon(t, m.werte).map((v) => v.zielId) : []; });
         const gespeichert = await this.repo.titelVon(ziele.filter((z) => !neu.has(z)));
-        const titelVon = (z: string) => neu.get(z) || gespeichert.get(z) || 'Ohne Titel';
+        const titelVon = (z: string) => neu.get(z) || gespeichert.get(z) || t('meldungen.dienst.ohne-titel');
         for (const m of mappen) {
           const t = titelAus(typen.get(m.typId), m.werte, titelVon, m);
           neu.set(m.id, t);
@@ -4184,10 +4185,10 @@ export class Dienst {
     };
   }
   async setzeWerkbankAnsicht(wer: { id: string | null; email: string }, body: Record<string, unknown>) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     if ('installation' in body) {
       const a = liesAnsicht(body.installation);
-      if (!a) throw new Fachfehler(422, 'Bitte eine Vorlage wählen: Haushalt, Betrieb oder Alles.');
+      if (!a) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-vorlage-waehlen'));
       await this.einstellungen.schreibe('werkbank_ansicht', a);
       protokoll.modul('werkbank').info('Werkbank angepasst', { vorlage: a.vorlage, ein: a.ein, aus: a.aus, von: wer.email });
     }
@@ -4360,7 +4361,7 @@ export class Dienst {
     })) : [];
   }
   async setzePaketQuellen(liste: PaketQuelleEintrag[]) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     await this.einstellungen.schreibe('paket_kataloge', liste.length ? liste : null);
   }
   /** Neuester gesehener Stand (`erstellt`) je signiertem Katalog (#594) – gegen das Zurückdrehen auf ältere Kataloge. */
@@ -4379,7 +4380,7 @@ export class Dienst {
     return Array.isArray(v) ? v : [];
   }
   async setzePaketUmwandlungen(liste: unknown[]) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     await this.einstellungen.schreibe('paket_umwandlungen', liste.length ? liste : null);
   }
 
@@ -4389,14 +4390,14 @@ export class Dienst {
     return Array.isArray(v) ? v.filter((e) => e && typeof e.id === 'string' && typeof e.version === 'string').map((e) => ({ typen: [], sichten: [], beispiele: [], schluessel: {}, verlauf: [], aenderungen: '', ...e })) : [];
   }
   async setzePaketEntwuerfe(liste: PaketEntwurf[]) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     await this.einstellungen.schreibe('paket_entwuerfe', liste.length ? liste : null);
   }
 
   /** Gemerkte Archive selbst erstellter Pakete (#652): je Paket-Id eine Einstellung (Teil der Sicherung). */
   async paketArchive(id: string): Promise<unknown> { return (await this.einstellungen?.lies(`paket_erstellt_${id}`)) ?? null; }
   async setzePaketArchive(id: string, liste: unknown[] | null) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     await this.einstellungen.schreibe(`paket_erstellt_${id}`, liste?.length ? liste : null);
   }
 
@@ -4406,7 +4407,7 @@ export class Dienst {
     return v && typeof v === 'object' ? v as { werte: Record<string, unknown> } : null;
   }
   async setzePaketEinstellungen(id: string, v: { werte: Record<string, unknown>; status?: { letzterLauf: string | null; meldungen: string[] } } | null) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     await this.einstellungen.schreibe(`paket:${id}`, v);
   }
   /** Kleiner eigener Speicher eines Pakets mit Code (#338), getrennt von den Einstellungen. */
@@ -4415,12 +4416,12 @@ export class Dienst {
     return v && typeof v === 'object' ? v as Record<string, string> : {};
   }
   async setzePaketSpeicher(id: string, werte: Record<string, string> | null) {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     await this.einstellungen.schreibe(`paketspeicher:${id}`, werte);
   }
   /** Geheimnisse von Paketen mit dem Tresor des DMS. */
   verschluesselePaketGeheimnis(text: string): string {
-    if (!this.tresor?.bereit) throw new Fachfehler(409, 'Für Geheimnisse fehlt der Schlüssel. Erzeuge ihn unter Werkbank → Verschlüsselung.');
+    if (!this.tresor?.bereit) throw new Fachfehler(409, t('meldungen.dienst.fuer-geheimnisse-fehlt-der'));
     return this.tresor.verschluessele(text);
   }
   entschluessele(wert: string): string | null { return this.tresor?.entschluessele(wert) ?? null; }
@@ -4430,12 +4431,12 @@ export class Dienst {
     const gruende: string[] = [];
     const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
     for (const id of ids) {
-      const t = typen.get(id);
-      if (!t) continue;
+      const eintrag = typen.get(id);
+      if (!eintrag) continue;
       const n = await this.repo.zaehleMappen(id);
-      if (n) gruende.push(`${t.name}: ${n} ${n === 1 ? 'Mappe' : 'Mappen'}.`);
+      if (n) gruende.push(`${eintrag.name}: ${n} ${t('meldungen.dienst.mappen', { anzahl: n })}.`);
       const korb = (await this.repo.papierkorb({ typId: id })).length;
-      if (korb) gruende.push(`${t.name}: ${korb} im Papierkorb.`);
+      if (korb) gruende.push(`${eintrag.name}: ${korb} im Papierkorb.`);
     }
     return gruende;
   }
@@ -4476,22 +4477,22 @@ export class Dienst {
     const muster = String(x.muster ?? '').trim();
     const start = Number(x.start ?? 1);
     const vorhanden = (await this.repo.listeNummernkreise()).find((k) => k.schluessel === schluessel);
-    if (x.neu === true && vorhanden) throw new Fachfehler(409, `Die Kennung „${schluessel}“ hat schon der Nummernkreis „${vorhanden.name}“.`);
-    if (x.neu !== true && !vorhanden) throw new Fachfehler(404, 'Diesen Nummernkreis gibt es nicht.');
-    if (!KREIS_SCHLUESSEL.test(schluessel)) throw new Fachfehler(422, 'Kennung: Kleinbuchstaben, Ziffern und _, beginnt mit einem Buchstaben (höchstens 40 Zeichen).');
-    if (!name) throw new Fachfehler(422, 'Der Nummernkreis braucht einen Namen.');
+    if (x.neu === true && vorhanden) throw new Fachfehler(409, t('meldungen.dienst.die-kennung-hat-schon', { schluessel, name: vorhanden.name }));
+    if (x.neu !== true && !vorhanden) throw new Fachfehler(404, t('meldungen.dienst.diesen-nummernkreis-gibt-es'));
+    if (!KREIS_SCHLUESSEL.test(schluessel)) throw new Fachfehler(422, t('meldungen.dienst.kennung-kleinbuchstaben-ziffern-und'));
+    if (!name) throw new Fachfehler(422, t('meldungen.dienst.der-nummernkreis-braucht-einen'));
     const fm = pruefeMuster(muster);
     if (fm) throw new Fachfehler(422, fm);
-    if (!Number.isSafeInteger(start) || start < 0) throw new Fachfehler(422, 'Der Startwert muss eine ganze Zahl ab 0 sein.');
+    if (!Number.isSafeInteger(start) || start < 0) throw new Fachfehler(422, t('meldungen.dienst.der-startwert-muss-eine'));
     const k = await this.repo.speichereNummernkreis({ schluessel, name, muster, start });
     protokoll.modul('werkbank').info(vorhanden ? 'Nummernkreis geändert' : 'Nummernkreis angelegt', { von, schluessel, muster, start, ...(vorhanden && vorhanden.muster !== muster ? { musterVorher: vorhanden.muster } : {}) });
     return k;
   }
 
   async loescheNummernkreis(schluessel: string, von: string) {
-    if (schluessel === ARCHIV_KREIS) throw new Fachfehler(409, 'Den Nummernkreis der Archivnummern brauchen die Aufkleber (#345); er lässt sich nicht löschen. Das Muster darfst du ändern.');
+    if (schluessel === ARCHIV_KREIS) throw new Fachfehler(409, t('meldungen.dienst.den-nummernkreis-der-archivnummern'));
     const v = (await this.kreisVerwendung()).get(schluessel);
-    if (v?.length) throw new Fachfehler(409, `Der Nummernkreis wird noch verwendet: ${v.map((x) => `${x.typ} · ${x.feld}`).join(', ')}.`);
+    if (v?.length) throw new Fachfehler(409, t('meldungen.dienst.der-nummernkreis-wird-noch', { map: v.map((x) => `${x.typ} · ${x.feld}`).join(', ') }));
     await this.repo.loescheNummernkreis(schluessel);
     protokoll.modul('werkbank').info('Nummernkreis gelöscht', { von, schluessel });
   }
@@ -4499,9 +4500,9 @@ export class Dienst {
   /** Zählerstand setzen (#171): `naechster` ist der Zähler der nächsten Nummer im aktuellen Zeitraum. */
   async setzeZaehler(schluessel: string, e: unknown, von: string, jetzt = new Date()) {
     const naechster = Number((e as { naechster?: unknown })?.naechster);
-    if (!Number.isSafeInteger(naechster) || naechster < 0) throw new Fachfehler(422, 'Der Zählerstand muss eine ganze Zahl ab 0 sein.');
+    if (!Number.isSafeInteger(naechster) || naechster < 0) throw new Fachfehler(422, t('meldungen.dienst.der-zaehlerstand-muss-eine'));
     const k = (await this.repo.listeNummernkreise()).find((x) => x.schluessel === schluessel);
-    if (!k) throw new Fachfehler(404, 'Diesen Nummernkreis gibt es nicht.');
+    if (!k) throw new Fachfehler(404, t('meldungen.dienst.diesen-nummernkreis-gibt-es'));
     const vorher = naechste(k, datumIn(jetzt));
     const neu = await this.repo.setzeZaehler(schluessel, vorher.zeitraum, naechster - 1);
     protokoll.modul('werkbank').warn('Zählerstand eines Nummernkreises gesetzt', { von, schluessel, zeitraum: vorher.zeitraum, vorher: vorher.zaehler, naechster });
@@ -4522,9 +4523,9 @@ export class Dienst {
     const typ = await this.repo.holeTyp(typId);
     const f = typ?.felder.find((x) => x.key === feldKey);
     const k = f ? kreisVon(f) : null;
-    if (!typ || !f || !k) throw new Fachfehler(422, 'Dieses Feld nutzt keinen Nummernkreis.');
+    if (!typ || !f || !k) throw new Fachfehler(422, t('meldungen.dienst.dieses-feld-nutzt-keinen'));
     const kreis = (await this.repo.listeNummernkreise()).find((x) => x.schluessel === k);
-    if (!kreis) throw new Fachfehler(409, `Den Nummernkreis „${k}“ gibt es nicht.`);
+    if (!kreis) throw new Fachfehler(409, t('meldungen.dienst.den-nummernkreis-gibt-es', { k }));
     const ohne = (await this.repo.listeMappen(typId)).filter((m) => istLeer(m.werte[feldKey]))
       .sort((a, b) => a.erstellt.localeCompare(b.erstellt) || a.id.localeCompare(b.id));
     return { typ, kreis, ohne };
@@ -4579,7 +4580,7 @@ export class Dienst {
   /** Absender der gewählten Posts leeren (#494) – nur, wenn sie noch zur Vorschau passen; mit Eintrag in der Historie. */
   async absenderBereinigen(ids: unknown, von: { id: string | null; email: string }): Promise<{ bereinigt: number }> {
     const gewaehlt = new Set(Array.isArray(ids) ? ids.map(String) : []);
-    if (!gewaehlt.size) throw new Fachfehler(422, 'Bitte mindestens eine Post wählen.');
+    if (!gewaehlt.size) throw new Fachfehler(422, t('meldungen.dienst.bitte-mindestens-eine-post'));
     const typ = await this.postTyp();
     const passend = (await this.absenderVorschau()).posten.filter((p) => gewaehlt.has(p.id));
     for (const p of passend) {
@@ -4591,7 +4592,7 @@ export class Dienst {
         await this.notiere(m.id, von.id, 'geaendert', {
           stand: neu.geaendert,
           aenderungen: await this.aenderungen(typ, m.werte, werte),
-          text: 'Absender bereinigt (Wartung): Er war der Name dessen, der die Post angelegt hat.',
+          text: t('meldungen.dienst.absender-bereinigt-wartung-er'),
         });
       });
       await this.aktualisiereTitel([m.id]);
@@ -4640,7 +4641,7 @@ export class Dienst {
     for (const [k, m] of Object.entries(pruefeFormate(typ, werte, alt))) p.felder[k] ??= m;
     if (!istOk(p)) {
       const namen = Object.keys(p.felder).map((k) => typ.felder.find((f) => f.key === k)?.label ?? k);
-      throw new Fachfehler(422, namen.length ? `Bitte die markierten Felder prüfen: ${namen.join(', ')}.` : 'Bitte die markierten Felder prüfen.', p);
+      throw new Fachfehler(422, namen.length ? t('meldungen.dienst.bitte-die-markierten-felder', { namen: namen.join(', ') }) : t('meldungen.dienst.bitte-die-markierten-felder-2'), p);
     }
   }
 
@@ -4655,10 +4656,10 @@ export class Dienst {
       if (!typ.felder.some(hatVorgaben)) continue;
       const funde = unpassendeAngaben(typ, await this.repo.listeMappen(typ.id), heute);
       if (!funde.length) continue;
-      const titel = new Map((await this.repo.holeMappen([...new Set(funde.map((f) => f.mappeId))])).map((m) => [m.id, m.titel || 'Ohne Titel'] as const));
+      const titel = new Map((await this.repo.holeMappen([...new Set(funde.map((f) => f.mappeId))])).map((m) => [m.id, m.titel || t('meldungen.dienst.ohne-titel')] as const));
       const felder = typ.felder.flatMap((f) => {
         const je = funde.filter((x) => x.feldKey === f.key);
-        return je.length ? [{ key: f.key, label: f.label, anzahl: je.length, mappen: je.slice(0, 200).map((x) => ({ id: x.mappeId, titel: titel.get(x.mappeId) ?? 'Ohne Titel', wert: x.wert.slice(0, 120), grund: x.grund })) }] : [];
+        return je.length ? [{ key: f.key, label: f.label, anzahl: je.length, mappen: je.slice(0, 200).map((x) => ({ id: x.mappeId, titel: titel.get(x.mappeId) ?? t('meldungen.dienst.ohne-titel'), wert: x.wert.slice(0, 120), grund: x.grund })) }] : [];
       });
       aus.push({ typId: typ.id, typ: typ.name, felder });
     }
@@ -4668,13 +4669,13 @@ export class Dienst {
   async legeMappeAn(eingabe: unknown, benutzerId: string | null = null, demo = false, z?: Zugriff): Promise<Mappe & { hinweis?: string }> {
     const e = (eingabe ?? {}) as { id?: unknown; typId?: unknown; werte?: unknown };
     const typ = istUuid(e.typId) ? await this.repo.holeTyp(e.typId) : undefined;
-    if (!typ) throw new Fachfehler(422, 'Unbekannter Mappentyp.');
-    if (!darfErstellen(typ)) throw new Fachfehler(403, `Mappen vom Typ „${typ.name}“ lassen sich in der Ablage nicht anlegen.${typ.system === 'benutzer' ? ' Benutzer legt ein Administrator in der Benutzerverwaltung an.' : ''}`);
+    if (!typ) throw new Fachfehler(422, t('meldungen.dienst.unbekannter-mappentyp'));
+    if (!darfErstellen(typ)) throw new Fachfehler(403, t('meldungen.dienst.mappen-vom-typ-lassen', { name: typ.name, wert: typ.system === 'benutzer' ? t('meldungen.dienst.benutzer-legt-ein-administrator') : '' }));
     const werte = bereinigeWerte(typ, e.werte, {}, this.verschluessele);
     // Berechtigungen (#123): Anlegen wird mit den eingegebenen Werten geprüft.
     if (z && !z.admin) {
       const entwurf: Mappe = { id: '00000000-0000-4000-8000-000000000000', typId: typ.id, werte, erstellt: new Date().toISOString(), erstelltVon: z.ich.id, geaendert: new Date().toISOString(), geaendertVon: z.ich.id };
-      if (!(await this.rechteAn(z, entwurf, true)).C) throw new Fachfehler(403, `Mappen vom Typ „${typ.name}“ mit diesen Angaben darfst du nicht anlegen.`);
+      if (!(await this.rechteAn(z, entwurf, true)).C) throw new Fachfehler(403, t('meldungen.dienst.mappen-vom-typ-mit', { name: typ.name }));
     }
     // Nummernkreise (#171): Eingaben zählen nicht; die Nummer zieht das Repo beim Anlegen.
     const nummern = typ.felder.flatMap((f) => { const k = kreisVon(f); return k ? [{ feldKey: f.key, kreis: k }] : []; });
@@ -4682,7 +4683,7 @@ export class Dienst {
     if (nummern.length) {
       const da = new Set((await this.repo.listeNummernkreise()).map((k) => k.schluessel));
       const fehlt = nummern.find((n) => !da.has(n.kreis));
-      if (fehlt) throw new Fachfehler(409, `Den Nummernkreis „${fehlt.kreis}“ für „${typ.felder.find((f) => f.key === fehlt.feldKey)?.label}“ gibt es nicht mehr. Bitte einen Administrator.`);
+      if (fehlt) throw new Fachfehler(409, t('meldungen.dienst.den-nummernkreis-fuer-gibt', { kreis: fehlt.kreis, label: String(typ.felder.find((f) => f.key === fehlt.feldKey)?.label) }));
     }
     await this.pruefeVerweisziele(z, typ, werte, {});
     await this.pruefeAuswahlfilter(typ, werte, {}, benutzerId);
@@ -4724,9 +4725,9 @@ export class Dienst {
       // Werte aus der eigenen Mappe (#173): die, die gespeichert werden sollen.
       const k = auswahlKlausel(setzeEigeneWerte(f.auswahlFilter!, werte), ziel, a);
       const falsch = (await this.repo.holeMappen(neu)).filter((m) => m.typId !== ziel.id || !erfuellt(m, k.filter, KEINE_ZAEHLUNG));
-      if (falsch.length) fehler[f.key] = [`${falsch.map((m) => `„${m.titel || 'Ohne Titel'}“`).join(', ')} passt nicht zur Auswahl dieses Felds.`];
+      if (falsch.length) fehler[f.key] = [t('meldungen.dienst.passt-nicht-zur-auswahl', { map: falsch.map((m) => `„${m.titel || t('meldungen.dienst.ohne-titel')}“`).join(', ') })];
     }
-    if (Object.keys(fehler).length) throw new Fachfehler(422, 'Bitte die markierten Felder prüfen.', { allgemein: [], felder: fehler });
+    if (Object.keys(fehler).length) throw new Fachfehler(422, t('meldungen.dienst.bitte-die-markierten-felder-2'), { allgemein: [], felder: fehler });
   }
 
   /** Auswahlfilter (#172): bestehende Verweise, die nicht (mehr) zum Filter passen – für einen Hinweis am Feld. */
@@ -4767,7 +4768,7 @@ export class Dienst {
   async zaehleAuswahl(e: unknown, benutzerId: string) {
     const x = (e ?? {}) as { zielTyp?: unknown; bedingungen?: unknown };
     const ziel = istUuid(x.zielTyp) ? await this.repo.holeTyp(x.zielTyp) : undefined;
-    if (!ziel) throw new Fachfehler(422, 'Unbekannter Ziel-Mappentyp.');
+    if (!ziel) throw new Fachfehler(422, t('meldungen.dienst.unbekannter-ziel-mappentyp'));
     // Bedingungen mit Werten der eigenen Mappe (#173) zählen hier nicht – die Mappe gibt es noch nicht.
     const bed = setzeEigeneWerte(bereinigeAuswahlfilter(x.bedingungen), {});
     const [passen] = await this.repo.zaehleKlauseln([[auswahlKlausel(bed, ziel, await this.aufloesung(benutzerId))]], null);
@@ -4781,7 +4782,7 @@ export class Dienst {
     const neu = [...new Set(verweiseVon(typ, werte).map((v) => v.zielId))].filter((x) => istUuid(x) && !vorher.has(x));
     if (!neu.length) return;
     const ok = await this.repo.lesbare(neu, z.lesen);
-    if (neu.some((x) => !ok.has(x))) throw new Fachfehler(422, 'Ein Verweis zeigt auf eine Mappe, die du nicht sehen darfst.');
+    if (neu.some((x) => !ok.has(x))) throw new Fachfehler(422, t('meldungen.dienst.ein-verweis-zeigt-auf'));
   }
 
   /** Nach dem Speichern: Hat man sich selbst das Bearbeiten oder Lesen entzogen? (#126) */
@@ -4790,8 +4791,8 @@ export class Dienst {
     const m = await this.repo.holeMappe(id);
     if (!m) return undefined;
     const r = await this.rechteAn(z, m);
-    if (!r.R) return 'Gespeichert. Diese Mappe kannst du jetzt nicht mehr sehen.';
-    if (!r.U) return 'Gespeichert. Diese Mappe kannst du jetzt nicht mehr bearbeiten.';
+    if (!r.R) return t('meldungen.dienst.gespeichert-diese-mappe-kannst');
+    if (!r.U) return t('meldungen.dienst.gespeichert-diese-mappe-kannst-2');
     return undefined;
   }
 
@@ -4799,7 +4800,7 @@ export class Dienst {
   async rechteVorschau(id: string, eingabe: unknown, z: Zugriff): Promise<Rechte> {
     const m = await this.pruefeRecht(z, id, 'U');
     const typ = z.typen.get(m.typId);
-    if (!typ) throw new Fachfehler(500, 'Der Mappentyp dieser Mappe fehlt.');
+    if (!typ) throw new Fachfehler(500, t('meldungen.dienst.der-mappentyp-dieser-mappe'));
     const werte = bereinigeWerte(typ, (eingabe as { werte?: unknown })?.werte, m.werte, this.verschluessele);
     return this.rechteAn(z, { ...m, werte });
   }
@@ -4820,7 +4821,7 @@ export class Dienst {
     if (!felder.length) return [];
     const ids = felder.filter((f) => f.typ === 'referenz').flatMap((f) => [werte[f.key], m.werte[f.key]].flatMap((v) => (Array.isArray(v) ? v : v ? [v] : []))).map(String).filter(istUuid);
     const titel = await this.repo.titelVon(ids);
-    const lesbar = (f: Feld, v: Werte[string] | undefined) => (f.typ === 'passwort' ? '' : formatiere(f, v, (x) => titel.get(x) || 'Ohne Titel').slice(0, 500));
+    const lesbar = (f: Feld, v: Werte[string] | undefined) => (f.typ === 'passwort' ? '' : formatiere(f, v, (x) => titel.get(x) || t('meldungen.dienst.ohne-titel')).slice(0, 500));
     const liste: Feldkonflikt[] = [];
     for (const f of felder) {
       const h = seit.get(f.key)!;
@@ -4864,15 +4865,15 @@ export class Dienst {
     // „Zuletzt geändert“ im Titel ({geaendert}) zeigt den Tag des Speicherns.
     const index = { ...m, geaendert: new Date().toISOString() };
     return (w) => (verweiseVon(typ, w).every((v) => titel.has(v.zielId) || !istUuid(v.zielId))
-      ? titelAus(typ, w, (x) => titel.get(x) || 'Ohne Titel', index) : undefined);
+      ? titelAus(typ, w, (x) => titel.get(x) || t('meldungen.dienst.ohne-titel'), index) : undefined);
   }
 
   /** Ein Versuch, in einer Transaktion (#743): Werte, Titel, Historie, Ereignisse, Passung, Fristen ganz oder gar nicht. */
   private async aendereMappeEinmal(id: string, eingabe: unknown, benutzerId: string | null, z: Zugriff | undefined, anlass: Record<string, unknown> | undefined): Promise<Mappe> {
     const m = z ? await this.pruefeRecht(z, id, 'U') : await this.repo.holeMappe(id);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const typ = await this.repo.holeTyp(m.typId);
-    if (!typ) throw new Fachfehler(500, 'Der Mappentyp dieser Mappe fehlt.');
+    if (!typ) throw new Fachfehler(500, t('meldungen.dienst.der-mappentyp-dieser-mappe'));
     const e = (eingabe && typeof eingabe === 'object' ? eingabe : {}) as { werte?: unknown; stand?: unknown };
     const stand = liesStand(e.stand);
     const werte = bereinigeWerte(typ, e.werte, m.werte, this.verschluessele);
@@ -4888,7 +4889,7 @@ export class Dienst {
     // Geschützte Felder (Benutzer, Name einer Systemrolle) ändert nur das System.
     for (const [k, grund] of Object.entries(geschuetzteFelder(typ, m))) {
       if (JSON.stringify(werte[k] ?? null) !== JSON.stringify(m.werte[k] ?? null)) {
-        throw new Fachfehler(403, `„${typ.felder.find((f) => f.key === k)?.label ?? k}“ lässt sich hier nicht ändern. ${grund}`);
+        throw new Fachfehler(403, t('meldungen.dienst.laesst-sich-hier-nicht', { wert: typ.felder.find((f) => f.key === k)?.label ?? k, grund }));
       }
     }
     await this.pruefeVerweisziele(z, typ, werte, m.werte);
@@ -4897,7 +4898,7 @@ export class Dienst {
     const aenderungen = await this.aenderungen(typ, m.werte, werte);
     // Archivmodus (#212): eine neue Frist steht in der Historie.
     const bisAlt = aufbewahrenBis(typ.archiv, m), bisNeu = aufbewahrenBis(typ.archiv, { ...m, werte });
-    if (bisAlt !== bisNeu) aenderungen.push({ feld: '_aufbewahrenBis', label: 'Aufbewahren bis', alt: bisAlt ? datumText(bisAlt) : '', neu: bisNeu ? datumText(bisNeu) : '' });
+    if (bisAlt !== bisNeu) aenderungen.push({ feld: '_aufbewahrenBis', label: t('meldungen.dienst.aufbewahren-bis'), alt: bisAlt ? datumText(bisAlt) : '', neu: bisNeu ? datumText(bisNeu) : '' });
     // Feldweise (#609); mit Stand nur, wenn sich die Mappe seit dem Lesen oben nicht geändert hat.
     const titelFuer = await this.titelVorab(typ, werte, m);
     const neu = await this.repo.aendereMappe(id, werte, [], benutzerId, { basis: m.werte, verweise: (w) => verweiseVon(typ, w), titel: titelFuer, ...(stand ? { stand: m.geaendert } : {}) });
@@ -4934,11 +4935,11 @@ export class Dienst {
    * damit Anzeige und Löschen nie auseinanderlaufen.
    */
   private async loeschPruefung(m: Mappe, typ: Mappentyp | undefined, rueck: Rueckverweis[], alleTypen?: Mappentyp[]) {
-    if (m.systemKennung) return { ok: false as const, status: 409, grund: 'Systemrollen lassen sich nicht löschen.', fremd: [], zuordnungen: [], emails: [] };
-    if (typ && !darfLoeschen(typ)) return { ok: false as const, status: 403, grund: `Mappen vom Typ „${typ.name}“ lassen sich in der Ablage nicht löschen.${typ.system === 'benutzer' ? ' Benutzer werden in der Benutzerverwaltung deaktiviert.' : ''}`, fremd: [], zuordnungen: [], emails: [] };
+    if (m.systemKennung) return { ok: false as const, status: 409, grund: t('meldungen.dienst.systemrollen-lassen-sich-nicht'), fremd: [], zuordnungen: [], emails: [] };
+    if (typ && !darfLoeschen(typ)) return { ok: false as const, status: 403, grund: t('meldungen.dienst.mappen-vom-typ-lassen-2', { name: typ.name, wert: typ.system === 'benutzer' ? t('meldungen.dienst.benutzer-werden-in-der') : '' }), fremd: [], zuordnungen: [], emails: [] };
     // Archivmodus (#212): vor Fristende nicht löschen – auch nicht als Administrator.
     const bis = aufbewahrenBis(typ?.archiv, m);
-    if (inFrist(bis)) return { ok: false as const, status: 409, grund: `Aufbewahrungspflicht bis ${datumText(bis!)} – vorher lässt sich die Mappe nicht löschen.`, fremd: [], zuordnungen: [], emails: [], aufbewahrenBis: bis };
+    if (inFrist(bis)) return { ok: false as const, status: 409, grund: t('meldungen.dienst.aufbewahrungspflicht-bis-vorher', { datumText: datumText(bis!) }), fremd: [], zuordnungen: [], emails: [], aufbewahrenBis: bis };
     const typen = rueck.length ? alleTypen ?? await this.repo.listeTypen() : [];
     // Eine Rolle darf weg, auch wenn Benutzer sie haben: deren Zuordnung fällt weg.
     const benutzerTyp = typ?.system === 'rolle' ? typen.find((t) => t.system === 'benutzer') : undefined;
@@ -4949,7 +4950,7 @@ export class Dienst {
     const fremd = rueck.filter((r) => r.quelleId !== m.id && !zuordnungen.includes(r) && !emails.includes(r));
     if (fremd.length) {
       const ids = new Set(fremd.map((r) => r.quelleId));
-      return { ok: false as const, status: 409, grund: `Auf diese Mappe ${ids.size === 1 ? 'verweist noch eine andere Mappe' : `verweisen noch ${ids.size} andere Mappen`}. Entferne erst diese Verweise.`, fremd, zuordnungen, emails, benutzerTyp, emailTyp };
+      return { ok: false as const, status: 409, grund: t('meldungen.dienst.auf-diese-mappe-verweisen', { anzahl: ids.size }), fremd, zuordnungen, emails, benutzerTyp, emailTyp };
     }
     return { ok: true as const, status: 200, grund: undefined, fremd, zuordnungen, emails, benutzerTyp, emailTyp };
   }
@@ -4961,19 +4962,19 @@ export class Dienst {
   async exportiere(ich: { id: string; rolle: string; name?: string }, e: unknown, z: Zugriff, spur?: (ids: string[]) => Promise<unknown>): Promise<{ name: string; mime: string; inhalt: Buffer | Readable; groesse: number; mappen: number; ausgelassen: number }> {
     const x = (e ?? {}) as Record<string, unknown>;
     const format = String(x.format ?? '');
-    if (!['csv', 'xlsx', 'zip', 'pdf'].includes(format)) throw new Fachfehler(422, 'Unbekanntes Format.');
+    if (!['csv', 'xlsx', 'zip', 'pdf'].includes(format)) throw new Fachfehler(422, t('meldungen.dienst.unbekanntes-format'));
     const q = { sicht: text(x.sicht), link: x.link, suche: x.suche, volltext: x.volltext, notizen: x.notizen, sortierung: x.sortierung, absteigend: x.absteigend };
     const alle = await this.repo.listeSichten();
     const sicht = alle.find((s) => s.id === q.sicht);
     if (sicht && !z.admin) {
       const r = alleSichtRechte(alle, z.wer, false).get(sicht.id);
-      if (!r?.R) throw new Fachfehler(404, 'Diese Ansicht gibt es nicht.');
+      if (!r?.R) throw new Fachfehler(404, t('meldungen.dienst.diese-ansicht-gibt-es'));
       if (!r.E) throw sichtVerboten();
     }
     const treffer = (await this.trefferIds(ich, q, z)).ids;
     const gewaehlt = Array.isArray(x.ids) ? new Set(x.ids.map(String)) : null;
     let ids = gewaehlt ? treffer.filter((id) => gewaehlt.has(id)) : treffer;
-    if (!ids.length) throw new Fachfehler(422, 'Keine Mappen zum Exportieren.');
+    if (!ids.length) throw new Fachfehler(422, t('meldungen.dienst.keine-mappen-zum-exportieren'));
     // Ohne Sicht (erweiterte Suche, Typ-Liste, Link …) gilt Regel A (#294): nur Mappen, die der Benutzer
     // in mindestens einer Sicht mit Recht E sehen würde; die übrigen werden ausgelassen und gezählt.
     let ausgelassen = 0;
@@ -4991,7 +4992,7 @@ export class Dienst {
     const verweise = mappen.flatMap((m) => { const t = z.typen.get(m.typId); return [...(t ? verweiseVon(t, m.werte).map((v) => v.zielId) : []), m.erstelltVon, m.geaendertVon].filter((v): v is string => !!v); });
     const bezuege = await this.maskiereBezuege(z, await this.repo.bezuege([...new Set(verweise)]));
     const quelle = { typen: z.typen, titel: (id: string | null | undefined) => (id ? bezuege[id]?.titel || NICHT_SICHTBAR : '') };
-    const titel = sicht?.name ?? (q.sicht === 'suche' ? 'Suche' : typen[0]?.name) ?? 'Export';
+    const titel = sicht?.name ?? (q.sicht === 'suche' ? 'Suche' : typen[0]?.name) ?? t('meldungen.dienst.export');
     const datei = `${sichererName(titel, 60)} ${new Date().toISOString().slice(0, 10)}`;
     // Große Exporte (#542): Zeilen mit Pausen aufbereiten, Excel und CSV im Arbeiter schreiben.
     const tabelle = async (art: { xlsx?: boolean; csv?: boolean }) => {
@@ -5023,11 +5024,11 @@ export class Dienst {
     }
     // Verkleinert exportieren (#393): PDFs als verkleinerte Kopie, vor dem Stempeln.
     const klein = stufeAus(x.verkleinern);
-    const wie = format === 'pdf' ? 'als PDF exportiert' : 'als ZIP exportiert';
+    const wie = format === 'pdf' ? t('meldungen.dienst.als-pdf-exportiert') : t('meldungen.dienst.als-zip-exportiert');
     const gestempelt = new Map<string, Ausgabe[]>();
     const ausgabe = async (m: Mappe, d: Dokument, streng: boolean): Promise<Ausgabe> => {
       const a = await fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await fw.lies(d) }, { stempel: plaene.get(m.id), verkleinern: klein },
-        { benutzer: ich.name ?? '', mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer, entsperrt: this.entsperrtZu }, streng);
+        { benutzer: ich.name ?? '', mappe: m.titel || t('meldungen.dienst.ohne-titel'), archivnummer: d.archivnummer, entsperrt: this.entsperrtZu }, streng);
       gestempelt.set(m.id, [...(gestempelt.get(m.id) ?? []), a]);
       return a;
     };
@@ -5053,11 +5054,11 @@ export class Dienst {
       return { name: `${datei}.pdf`, mime: 'application/pdf', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen };
     }
     // ZIP: Tabelle als Excel und CSV, je Mappe ein Ordner mit ihren Dokumenten.
-    const t = await tabelle({ xlsx: true, csv: true });
+    const eintrag = await tabelle({ xlsx: true, csv: true });
     const eintraege: ZipEintrag[] = [
-      { name: 'Mappen.xlsx', daten: t.xlsx }, { name: 'Mappen.csv', daten: t.csv },
+      { name: 'Mappen.xlsx', daten: eintrag.xlsx }, { name: 'Mappen.csv', daten: eintrag.csv },
     ].map((d) => ({ name: d.name, groesse: d.daten.length, inhalt: async () => d.daten }));
-    const ordner = eindeutig(mappen.map((m) => sichererName(m.titel || 'Ohne Titel')));
+    const ordner = eindeutig(mappen.map((m) => sichererName(m.titel || t('meldungen.dienst.ohne-titel'))));
     for (const [i, m] of mappen.entries()) {
       const docs = dokJe.get(m.id) ?? [];
       // Gestempelte Kopien entstehen vorab: das ZIP braucht die Größen im Voraus.
@@ -5069,7 +5070,7 @@ export class Dienst {
       });
     }
     const groesse = zipGroesse(eintraege);
-    if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Der Export wäre größer als 4 GB. Bitte weniger Mappen auswählen.');
+    if (groesse > ZIP_MAX) throw new Fachfehler(422, t('meldungen.dienst.der-export-waere-groesser'));
     await historie();
     return { name: `${datei}.zip`, mime: 'application/zip', inhalt: zipStrom(eintraege), groesse, mappen: mappen.length, ausgelassen };
   }
@@ -5125,20 +5126,20 @@ export class Dienst {
   async loescheMappen(e: unknown, benutzerId: string, z: Zugriff, quelle?: Ausloeser): Promise<{ mappen: number; dokumente: number; geloescht: number; ausgelassen: Array<{ id: string; titel: string; grund: string }> }> {
     const x = (e ?? {}) as { ids?: unknown; probe?: unknown };
     const ids = [...new Set((Array.isArray(x.ids) ? x.ids : []).map(String).filter(istUuid))];
-    if (!ids.length) throw new Fachfehler(422, 'Keine Mappen ausgewählt.');
-    if (ids.length > MAX_AUSWAHL) throw new Fachfehler(422, `Höchstens ${MAX_AUSWAHL.toLocaleString('de-DE')} Mappen auf einmal.`);
+    if (!ids.length) throw new Fachfehler(422, t('meldungen.dienst.keine-mappen-ausgewaehlt'));
+    if (ids.length > MAX_AUSWAHL) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-mappen-auf-einmal', { MAX_AUSWAHL: MAX_AUSWAHL.toLocaleString(gebietsschema()) }));
     const auswahl = new Set(ids);
     const ausgelassen: Array<{ id: string; titel: string; grund: string }> = [];
     const kandidaten: Mappe[] = [];
     let dokumente = 0;
     for (const id of ids) {
       const m = await this.repo.holeMappe(id);
-      if (!m) { ausgelassen.push({ id, titel: '', grund: 'gibt es nicht mehr' }); continue; }
+      if (!m) { ausgelassen.push({ id, titel: '', grund: t('meldungen.dienst.gibt-es-nicht-mehr') }); continue; }
       const r = await this.rechteAn(z, m);
-      if (!r.R) { ausgelassen.push({ id, titel: NICHT_SICHTBAR, grund: 'nicht sichtbar' }); continue; }
-      if (!r.D) { ausgelassen.push({ id, titel: m.titel ?? '', grund: 'kein Recht zum Löschen' }); continue; }
+      if (!r.R) { ausgelassen.push({ id, titel: NICHT_SICHTBAR, grund: t('meldungen.dienst.nicht-sichtbar') }); continue; }
+      if (!r.D) { ausgelassen.push({ id, titel: m.titel ?? '', grund: t('meldungen.dienst.kein-recht-zum-loeschen') }); continue; }
       const p = await this.loeschPruefung(m, z.typen.get(m.typId), (await this.repo.rueckverweise(id)).filter((v) => !auswahl.has(v.quelleId)));
-      if (!p.ok) { ausgelassen.push({ id, titel: m.titel ?? '', grund: p.fremd.length ? 'es wird noch auf sie verwiesen' : p.grund }); continue; }
+      if (!p.ok) { ausgelassen.push({ id, titel: m.titel ?? '', grund: p.fremd.length ? t('meldungen.dienst.es-wird-noch-auf') : p.grund }); continue; }
       kandidaten.push(m);
       dokumente += (await this.repo.listeDokumente(id)).length;
     }
@@ -5155,7 +5156,7 @@ export class Dienst {
           else ausgelassen.push({ id: m.id, titel: m.titel ?? '', grund: (err as Error).message });
         }
       }
-      if (rest.length === offen.length) { for (const m of rest) ausgelassen.push({ id: m.id, titel: m.titel ?? '', grund: 'es wird noch auf sie verwiesen' }); break; }
+      if (rest.length === offen.length) { for (const m of rest) ausgelassen.push({ id: m.id, titel: m.titel ?? '', grund: t('meldungen.dienst.es-wird-noch-auf') }); break; }
       offen = rest;
     }
     return { mappen: kandidaten.length, dokumente, geloescht, ausgelassen };
@@ -5164,7 +5165,7 @@ export class Dienst {
   async loescheMappe(id: string, benutzerId: string | null = null, z?: Zugriff, anlass?: Anlass): Promise<void> {
     if (z) await this.pruefeRecht(z, id, 'D');
     const m = await this.repo.holeMappe(id);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const typ = await this.repo.holeTyp(m.typId);
     const p = await this.loeschPruefung(m, typ, await this.repo.rueckverweise(id));
     if (!p.ok) throw new Fachfehler(p.status, p.grund, p.fremd.length ? { rueckverweise: p.fremd } : undefined);
@@ -5250,27 +5251,27 @@ export class Dienst {
     }
     const typen = await this.repo.listeTypen();
     const id = randomUUID();
-    const name = typen.some((t) => t.name.trim().toLowerCase() === 'ablageort') ? 'Ablageort (Standard)' : 'Ablageort';
-    const t = await this.repo.legeTypAn(id, {
+    const name = typen.some((t) => t.name.trim().toLowerCase() === 'ablageort') ? t('meldungen.dienst.ablageort-standard') : 'Ablageort';
+    const mappentyp = await this.repo.legeTypAn(id, {
       name, schluessel: freierSchluessel('ablageort', typen.map((x) => x.schluessel ?? '')),
-      beschreibung: 'Wo Originale liegen – verschachtelt, z. B. zu Hause › Arbeitszimmer Schrank › roter Ordner',
+      beschreibung: t('meldungen.dienst.wo-originale-liegen-verschachtelt'),
       titelVorlage: '{liegt_in} › {name}',
       felder: [
-        { key: 'name', label: 'Name', typ: 'text', pflicht: true, maxLen: 120, hilfe: 'z. B. roter Ordner, Safe im Flur, beim Notar, vernichtet' },
-        { key: 'liegt_in', label: 'Liegt in', typ: 'referenz', zielTyp: id, verweisart: 'zugehoerigkeit', hilfe: 'Der Ort, in dem dieser Ort liegt – z. B. der Schrank, in dem der Ordner steht. Leer lassen für ganz oben.' },
-        { key: 'beschreibung', label: 'Beschreibung', typ: 'langtext', maxLen: 2000 },
+        { key: 'name', label: t('meldungen.dienst.name'), typ: 'text', pflicht: true, maxLen: 120, hilfe: t('meldungen.dienst.z-b-roter-ordner') },
+        { key: 'liegt_in', label: t('meldungen.dienst.liegt-in'), typ: 'referenz', zielTyp: id, verweisart: 'zugehoerigkeit', hilfe: t('meldungen.dienst.der-ort-in-dem') },
+        { key: 'beschreibung', label: t('meldungen.dienst.beschreibung'), typ: 'langtext', maxLen: 2000 },
       ],
       register: [
         { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name', 'liegt_in', 'beschreibung'] },
         { key: 'enthaelt', name: 'Enthält', art: 'verknuepfungen', quellen: [{ typId: id, feldKey: 'liegt_in' }] },
-        { key: 'liegt_hier', name: 'Liegt hier', art: 'verknuepfungen', quellen: [] },
+        { key: 'liegt_hier', name: t('meldungen.dienst.liegt-hier'), art: 'verknuepfungen', quellen: [] },
         { key: 'fotos', name: 'Fotos', art: 'dokumente' },
       ],
       trefferliste: ['_titel', 'beschreibung'], erstellenErlaubt: true, loeschenErlaubt: true,
     });
-    await this.sichtFuerTyp(t);
-    await this.einstellungen?.schreibe('ablageort', { id: t.id });
-    protokoll.modul('werkbank').info('Mappentyp Ablageort angelegt', { typ: t.name });
+    await this.sichtFuerTyp(mappentyp);
+    await this.einstellungen?.schreibe('ablageort', { id: mappentyp.id });
+    protokoll.modul('werkbank').info('Mappentyp Ablageort angelegt', { typ: mappentyp.name });
   }
 
   private async sichereSystemJetzt() {
@@ -5284,7 +5285,7 @@ export class Dienst {
     const ids = { rolle: rolle?.id ?? randomUUID(), benutzer: benutzer?.id ?? randomUUID() };
     if (!rolle) {
       rolle = await this.repo.legeTypAn(ids.rolle, {
-        name: frei('Rolle'), schluessel: sk('rolle'), beschreibung: 'Rollen, die Benutzer haben, z. B. als Verantwortliche', titelVorlage: '{name}',
+        name: frei('Rolle'), schluessel: sk('rolle'), beschreibung: t('meldungen.dienst.rollen-die-benutzer-haben'), titelVorlage: '{name}',
         felder: systemfelder('rolle', ids.rolle),
         register: [
           { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name'] },
@@ -5297,7 +5298,7 @@ export class Dienst {
     }
     if (!benutzer) {
       benutzer = await this.repo.legeTypAn(ids.benutzer, {
-        name: frei('Benutzer'), schluessel: sk('benutzer'), beschreibung: 'Die Benutzer dieser Installation; gepflegt in der Benutzerverwaltung', titelVorlage: '{name}',
+        name: frei('Benutzer'), schluessel: sk('benutzer'), beschreibung: t('meldungen.dienst.die-benutzer-dieser-installation'), titelVorlage: '{name}',
         felder: systemfelder('benutzer', rolle.id, ids.benutzer),
         register: [
           { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name', 'email', 'rollen', 'aktiv', 'abwesend', 'abwesend_von', 'abwesend_bis', 'vertreter'] },
@@ -5408,13 +5409,13 @@ export class Dienst {
    * mehrfach), neue Felder, Name und Register, solange der Administrator sie nicht geändert hat.
    * Läuft bei jedem Start und ändert nur, was noch nicht passt.
    */
-  private async wandleZuPost(t: Mappentyp, rolleId: string, benutzerId: string): Promise<Mappentyp> {
+  private async wandleZuPost(mappentyp: Mappentyp, rolleId: string, benutzerId: string): Promise<Mappentyp> {
     const soll = systemfelder('post', rolleId, benutzerId);
     // Alte Standardbezeichnungen weichen den neuen; eigene des Administrators bleiben.
     const alteNamen: Record<string, string[]> = { an: ['An'], bezug: ['Bezug'] };
-    const alteHilfen = ['Wer die E-Mail verschickt hat; Antworten gehen an diese Adresse', 'Die Mappe, aus der die E-Mail verschickt wurde'];
+    const alteHilfen = [t('meldungen.dienst.wer-die-e-mail'), t('meldungen.dienst.die-mappe-aus-der')];
     let geaendert = false;
-    const felder = t.felder.map((f) => {
+    const felder = mappentyp.felder.map((f) => {
       const s = soll.find((x) => x.key === f.key);
       if (!s || !f.system) return f;
       const label = alteNamen[f.key]?.includes(f.label) ? s.label : f.label || s.label;
@@ -5424,19 +5425,19 @@ export class Dienst {
       if (JSON.stringify(neu) !== JSON.stringify(f)) geaendert = true;
       return neu;
     });
-    const altName = t.name === 'E-Mail' || t.name === 'E-Mail (System)';
-    const register = t.register.map((r) => (r.art === 'dokumente' && r.name === 'Anhänge' ? { ...r, name: 'Dokumente' } : r));
-    const altListe = JSON.stringify(standardliste(t).spalten) === JSON.stringify(['datum', 'an', 'bezug']);
-    if (geaendert || altName || JSON.stringify(register) !== JSON.stringify(t.register) || altListe || t.beschreibung === 'Aus Ablago verschickte E-Mails mit Anhängen') {
+    const altName = mappentyp.name === 'E-Mail' || mappentyp.name === 'E-Mail (System)';
+    const register = mappentyp.register.map((r) => (r.art === 'dokumente' && r.name === 'Anhänge' ? { ...r, name: 'Dokumente' } : r));
+    const altListe = JSON.stringify(standardliste(mappentyp).spalten) === JSON.stringify(['datum', 'an', 'bezug']);
+    if (geaendert || altName || JSON.stringify(register) !== JSON.stringify(mappentyp.register) || altListe || mappentyp.beschreibung === 'Aus Ablago verschickte E-Mails mit Anhängen') {
       const typen = await this.repo.listeTypen();
-      const name = altName ? (typen.some((x) => x.id !== t.id && x.name.trim().toLowerCase() === 'post') ? 'Post (System)' : 'Post') : t.name;
-      const beschreibung = t.beschreibung === 'Aus Ablago verschickte E-Mails mit Anhängen' ? POST_BESCHREIBUNG : t.beschreibung;
-      const trefferlisten = altListe ? trefferlistenVon(t).map((l) => (l.standard ? { ...l, spalten: POST_SPALTEN } : l)) : trefferlistenVon(t);
-      t = await this.repo.aendereTyp(t.id, { ...t, name, beschreibung, felder, register, trefferlisten, trefferliste: undefined });
-      protokoll.modul('werkbank').info('Systemmappentyp Post nachgezogen', { typ: t.name });
+      const name = altName ? (typen.some((x) => x.id !== mappentyp.id && x.name.trim().toLowerCase() === 'post') ? t('meldungen.dienst.post-system') : 'Post') : mappentyp.name;
+      const beschreibung = mappentyp.beschreibung === 'Aus Ablago verschickte E-Mails mit Anhängen' ? POST_BESCHREIBUNG : mappentyp.beschreibung;
+      const trefferlisten = altListe ? trefferlistenVon(mappentyp).map((l) => (l.standard ? { ...l, spalten: POST_SPALTEN } : l)) : trefferlistenVon(mappentyp);
+      mappentyp = await this.repo.aendereTyp(mappentyp.id, { ...mappentyp, name, beschreibung, felder, register, trefferlisten, trefferliste: undefined });
+      protokoll.modul('werkbank').info('Systemmappentyp Post nachgezogen', { typ: mappentyp.name });
     }
     // Neue Systemfelder (Stand, Kanal, Richtung, Für) ergänzen – wie bei jedem Systemtyp.
-    return this.ergaenzeSystemfelder(t, rolleId, benutzerId);
+    return this.ergaenzeSystemfelder(mappentyp, rolleId, benutzerId);
   }
 
   /**
@@ -5456,13 +5457,13 @@ export class Dienst {
     if (!neu) {
       const oben = kinderVon(alle, null).map((s) => s.position);
       neu = await this.repo.legeSichtAn(randomUUID(), {
-        name: 'Neue Post', beschreibung: 'Post, die noch niemand zugeordnet oder erledigt hat', elternId: null,
+        name: t('meldungen.dienst.neue-post'), beschreibung: t('meldungen.dienst.post-die-noch-niemand'), elternId: null,
         position: Math.min(10, ...oben) - 10, typen: [post.id], bedingungen: bed('stand', POST_STAND.neu), symbol: 'inbox',
       });
     }
     if (typSicht && !kinderVon(alle, typSicht.id).length) {
-      await this.repo.legeSichtAn(randomUUID(), { name: 'Eingegangen', beschreibung: 'Post, die in Ablago gekommen ist', elternId: typSicht.id, position: 10, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.eingehend) });
-      await this.repo.legeSichtAn(randomUUID(), { name: 'Versendet', beschreibung: 'Aus Ablago verschickte E-Mails', elternId: typSicht.id, position: 20, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.ausgehend) });
+      await this.repo.legeSichtAn(randomUUID(), { name: 'Eingegangen', beschreibung: t('meldungen.dienst.post-die-in-ablago'), elternId: typSicht.id, position: 10, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.eingehend) });
+      await this.repo.legeSichtAn(randomUUID(), { name: 'Versendet', beschreibung: t('meldungen.dienst.aus-ablago-verschickte-e'), elternId: typSicht.id, position: 20, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.ausgehend) });
     }
     await this.einstellungen?.schreibe('post', { sichten: true, neu: neu.id });
     protokoll.modul('werkbank').info('Ansichten für Post angelegt', { neu: neu.id });
@@ -5485,7 +5486,7 @@ export class Dienst {
       const post = alle.find((x) => x.id === postId);
       const oben = kinderVon(alle, null).map((x) => x.position);
       s = await this.repo.legeSichtAn(randomUUID(), {
-        name: 'Favoriten', beschreibung: 'Deine Mappen mit Stern – aus allen Mappentypen', elternId: null,
+        name: 'Favoriten', beschreibung: t('meldungen.dienst.deine-mappen-mit-stern'), elternId: null,
         position: post ? post.position + 1 : Math.min(10, ...oben) - 10, typen: [ALLE_TYPEN], bedingungen: [{ art: 'favorit' }], symbol: 'star',
       });
       protokoll.modul('werkbank').info('Ansicht „Favoriten“ angelegt', { sicht: s.id });
@@ -5520,9 +5521,9 @@ export class Dienst {
    */
   async legePostAn(eingabe: unknown, ich: { id: string | null; name: string }, z?: Zugriff, kanal: string = POST_KANAL.hochgeladen, herkunft?: Historieneintrag['daten'], id: string = randomUUID(), alt: Werte = {}): Promise<Mappe> {
     const { post: typ } = await this.sichereSystem();
-    if (!darfPostAnlegen(typ)) throw new Fachfehler(403, 'Post lässt sich nicht anlegen.');
+    if (!darfPostAnlegen(typ)) throw new Fachfehler(403, t('meldungen.dienst.post-laesst-sich-nicht'));
     const e = (eingabe ?? {}) as Record<string, unknown>;
-    const betreff = text(e.betreff).replace(/[\r\n]+/g, ' ').trim().slice(0, 250) || 'Neue Post';
+    const betreff = text(e.betreff).replace(/[\r\n]+/g, ' ').trim().slice(0, 250) || t('meldungen.dienst.neue-post');
     const datum = istDatum(text(e.datum)) ? text(e.datum) : heuteIn();
     const werte = bereinigeWerte(typ, {
       ...(e.werte && typeof e.werte === 'object' ? e.werte as Record<string, unknown> : {}),
@@ -5534,7 +5535,7 @@ export class Dienst {
     }, {}, this.verschluessele);
     if (z && !z.admin) {
       const entwurf: Mappe = { id: '00000000-0000-4000-8000-000000000000', typId: typ.id, werte, erstellt: new Date().toISOString(), erstelltVon: ich.id, geaendert: new Date().toISOString(), geaendertVon: ich.id };
-      if (!(await this.rechteAn(z, entwurf, true)).C) throw new Fachfehler(403, 'Post anlegen darfst du nicht.');
+      if (!(await this.rechteAn(z, entwurf, true)).C) throw new Fachfehler(403, t('meldungen.dienst.post-anlegen-darfst-du'));
     }
     await this.pruefeVerweisziele(z, typ, werte, alt);
     await this.pruefeWerte(typ, werte);
@@ -5561,24 +5562,24 @@ export class Dienst {
    */
   async ordneZu(postId: string, eingabe: unknown, von: string | null, z?: Zugriff, auto?: { grund: string }) {
     const post = z ? await this.pruefeRecht(z, postId, 'U') : await this.repo.holeMappe(postId);
-    if (!post) throw new Fachfehler(404, 'Diese Post gibt es nicht.');
+    if (!post) throw new Fachfehler(404, t('meldungen.dienst.diese-post-gibt-es'));
     const typ = await this.repo.holeTyp(post.typId);
-    if (typ?.system !== 'post') throw new Fachfehler(422, 'Zuordnen geht nur mit Post.');
+    if (typ?.system !== 'post') throw new Fachfehler(422, t('meldungen.dienst.zuordnen-geht-nur-mit'));
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const zielId = text(e.ziel);
-    if (!istUuid(zielId) || zielId === postId) throw new Fachfehler(422, 'Bitte eine Mappe wählen, zu der die Post gehört.');
+    if (!istUuid(zielId) || zielId === postId) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-mappe-waehlen'));
     const ziel = z ? await this.pruefeRecht(z, zielId, 'U') : await this.repo.holeMappe(zielId);
-    if (!ziel) throw new Fachfehler(404, 'Die gewählte Mappe gibt es nicht.');
+    if (!ziel) throw new Fachfehler(404, t('meldungen.dienst.die-gewaehlte-mappe-gibt'));
     const zielTyp = await this.repo.holeTyp(ziel.typId);
-    if (!zielTyp) throw new Fachfehler(500, 'Der Mappentyp der Zielmappe fehlt.');
-    if (zielTyp.system === 'post') throw new Fachfehler(422, 'Post lässt sich nicht anderer Post zuordnen.');
+    if (!zielTyp) throw new Fachfehler(500, t('meldungen.dienst.der-mappentyp-der-zielmappe'));
+    if (zielTyp.system === 'post') throw new Fachfehler(422, t('meldungen.dienst.post-laesst-sich-nicht-2'));
     const alle = await this.repo.listeDokumente(postId);
     const ids = Array.isArray(e.dokumente) ? [...new Set(e.dokumente.map(String))] : alle.map((d) => d.id);
     const dokumente = ids.map((id) => alle.find((d) => d.id === id));
-    if (dokumente.some((d) => !d)) throw new Fachfehler(422, 'Ein ausgewähltes Dokument gehört nicht (mehr) zu dieser Post.');
+    if (dokumente.some((d) => !d)) throw new Fachfehler(422, t('meldungen.dienst.ein-ausgewaehltes-dokument-gehoert-3'));
     const regs = zielTyp.register.filter((r) => r.art === 'dokumente');
     const reg = regs.find((r) => r.key === text(e.register)) ?? (e.register ? undefined : regs[0]);
-    if (dokumente.length && !reg) throw new Fachfehler(422, regs.length ? 'Dieses Dokumentenregister gibt es an der Zielmappe nicht.' : `„${zielTyp.name}“ hat kein Dokumentenregister. Ordne ohne Dokumente zu oder wähle eine andere Mappe.`);
+    if (dokumente.length && !reg) throw new Fachfehler(422, regs.length ? t('meldungen.dienst.dieses-dokumentenregister-gibt-es') : t('meldungen.dienst.hat-kein-dokumentenregister-ordne', { name: zielTyp.name }));
     const kopieren = e.kopieren === true;
     for (const d of dokumente as Dokument[]) {
       if (kopieren) {
@@ -5592,17 +5593,17 @@ export class Dienst {
         if (Dienst.volltextAn(zielTyp, reg!.key) && (d.ocr?.stand === 'keiner' || d.ocr?.stand === 'ausgelassen')) { await this.repo.ocrEinreihen([d.id]); this.ocr?.anstossen(); }
       }
     }
-    const betreff = auswahlText(post.werte.betreff) || 'Post';
+    const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
     const zielTitel = await this.titel(ziel);
     const n = dokumente.length;
-    const doks = n ? ` mit ${n} ${n === 1 ? 'Dokument' : 'Dokumenten'}${kopieren ? ' (kopiert)' : ''} ins Register „${reg!.name}“` : '';
+    const doks = n ? t('meldungen.dienst.mit-dokumenten-ins-register', { anzahl: n, wert: kopieren ? ' (kopiert)' : '', name: reg!.name }) : '';
     const bezug = [...new Set([...alsListe(post.werte.bezug), ziel.id])];
     await this.schreibeSystemMappe(typ, post.id, { bezug, stand: POST_STAND.zugeordnet }, von);
     // Automatisch (#337): Begründung in der Historie beider Mappen.
     const wie = auto ? { automatisch: true, grund: auto.grund, system: 'Erkennung' } : {};
     const warum = auto ? ` – automatisch: ${auto.grund}` : '';
-    await this.notiere(post.id, von, 'zugeordnet', { text: `${auto ? 'automatisch ' : ''}zugeordnet zu „${zielTitel}“${doks}${warum}`, ziel: ziel.id, zielTyp: ziel.typId, dokumente: n, kopiert: kopieren, ...wie });
-    await this.notiere(ziel.id, von, 'zugeordnet', { text: `Post „${betreff}“ ${auto ? 'automatisch ' : ''}zugeordnet${doks}${warum}`, post: post.id, postTyp: typ.id, dokumente: n, kopiert: kopieren, ...wie });
+    await this.notiere(post.id, von, 'zugeordnet', { text: t('meldungen.dienst.zugeordnet-zu', { wert: auto ? t('meldungen.dienst.automatisch') : '', zielTitel, doks, warum }), ziel: ziel.id, zielTyp: ziel.typId, dokumente: n, kopiert: kopieren, ...wie });
+    await this.notiere(ziel.id, von, 'zugeordnet', { text: t('meldungen.dienst.post-zugeordnet', { betreff, wert: auto ? t('meldungen.dienst.automatisch') : '', doks, warum }), post: post.id, postTyp: typ.id, dokumente: n, kopiert: kopieren, ...wie });
     if (n) {
       await this.beruehre(ziel.id, zielTyp, von);
       await this.beruehre(post.id, typ, von);
@@ -5626,24 +5627,24 @@ export class Dienst {
    */
   async automatischZuordnen(postId: string, e: PostErkennung): Promise<{ ziel: string } | { nicht: string }> {
     const log = protokoll.modul('ablage');
-    if (e.auto) return { nicht: 'schon einmal automatisch zugeordnet' };
+    if (e.auto) return { nicht: t('meldungen.dienst.schon-einmal-automatisch-zugeordnet') };
     const autoTypen = await this.autoTypen();
-    if (!autoTypen.size) return { nicht: 'bei keinem Mappentyp eingeschaltet' };
+    if (!autoTypen.size) return { nicht: t('meldungen.dienst.bei-keinem-mappentyp-eingeschaltet') };
     const post = await this.repo.holeMappe(postId);
     const typ = post && await this.repo.holeTyp(post.typId);
-    if (!post || typ?.system !== 'post') return { nicht: 'keine Post' };
-    if (auswahlText(post.werte.stand) !== POST_STAND.neu || auswahlText(post.werte.richtung) === POST_RICHTUNG.ausgehend) return { nicht: 'nicht neu oder ausgehend' };
+    if (!post || typ?.system !== 'post') return { nicht: t('meldungen.dienst.keine-post') };
+    if (auswahlText(post.werte.stand) !== POST_STAND.neu || auswahlText(post.werte.richtung) === POST_RICHTUNG.ausgehend) return { nicht: t('meldungen.dienst.nicht-neu-oder-ausgehend') };
     const s = sichereZuordnung(e, autoTypen);
     const nicht = (grund: string) => { log.info('Post nicht automatisch zugeordnet', { post: postId, grund }); return { nicht: grund }; };
     if (!s.ziel) return nicht(s.grund);
     const empfaenger = alsListe(post.werte.fuer)[0] ?? post.erstelltVon;
-    if (!empfaenger) return nicht('niemand, der es prüfen könnte (kein „Für“, kein Ersteller)');
-    if (!(await this.sichtbarFuer(empfaenger, [s.ziel.mappeId])).has(s.ziel.mappeId)) return nicht('der Empfänger darf die Zielmappe nicht lesen');
+    if (!empfaenger) return nicht(t('meldungen.dienst.niemand-der-es-pruefen'));
+    if (!(await this.sichtbarFuer(empfaenger, [s.ziel.mappeId])).has(s.ziel.mappeId)) return nicht(t('meldungen.dienst.der-empfaenger-darf-die'));
     const ziel = await this.repo.holeMappe(s.ziel.mappeId);
     const zielTyp = ziel && await this.repo.holeTyp(ziel.typId);
-    if (!ziel || !zielTyp || zielTyp.archiv) return nicht('Zielmappe fehlt oder ist im Archivmodus');
+    if (!ziel || !zielTyp || zielTyp.archiv) return nicht(t('meldungen.dienst.zielmappe-fehlt-oder-ist'));
     const dokumente = await this.repo.listeDokumente(post.id);
-    if (dokumente.length && !zielTyp.register.some((r) => r.art === 'dokumente')) return nicht('Zielmappe hat kein Dokumentenregister');
+    if (dokumente.length && !zielTyp.register.some((r) => r.art === 'dokumente')) return nicht(t('meldungen.dienst.zielmappe-hat-kein'));
     const absender = (await this.repo.bezuege([e.eindeutig!])).get(e.eindeutig!)?.titel ?? '';
     const grund = s.grund.replace('Absender eindeutig', `Absender „${absender}“ eindeutig`);
     const zielTitel = await this.titel(ziel);
@@ -5651,7 +5652,7 @@ export class Dienst {
     await this.inTransaktion(async () => {
       await this.ordneZu(post.id, { ziel: ziel.id }, null, undefined, { grund });
       aufgabe = await this.neueAufgabe({
-        id: randomUUID(), mappeId: post.id, empfaengerId: empfaenger, art: 'zugeordnet', text: `Automatisch zugeordnet zu „${zielTitel}“ – bitte prüfen`, feldKey: `auto:${ziel.id}`,
+        id: randomUUID(), mappeId: post.id, empfaengerId: empfaenger, art: 'zugeordnet', text: t('meldungen.dienst.automatisch-zugeordnet-zu-bitte', { zielTitel }), feldKey: `auto:${ziel.id}`,
         erstellt: new Date().toISOString(), erstelltVon: null, erledigt: null, erledigtVon: null,
       });
       aufgabe = await this.leiteUm(aufgabe);
@@ -5668,12 +5669,12 @@ export class Dienst {
    */
   async automatikRueckgaengig(aufgabeId: string, ich: { id: string; rolle: string }, z?: Zugriff) {
     const a = await this.eigeneAufgabe(aufgabeId, ich);
-    if (a.art !== 'zugeordnet' || a.erledigt) throw new Fachfehler(409, 'Diese Aufgabe gehört zu keiner offenen automatischen Zuordnung.');
+    if (a.art !== 'zugeordnet' || a.erledigt) throw new Fachfehler(409, t('meldungen.dienst.diese-aufgabe-gehoert-zu'));
     const post = await this.pruefeRecht(z, a.mappeId, 'U');
     const typ = (await this.repo.holeTyp(post.typId))!;
     const gespeichert = (await this.repo.erkennungLies(post.id))?.ergebnis as PostErkennung | undefined;
     const auto = gespeichert?.auto;
-    if (!gespeichert || !auto || auto.rueckgaengig) throw new Fachfehler(409, 'Diese automatische Zuordnung ist schon zurückgenommen.');
+    if (!gespeichert || !auto || auto.rueckgaengig) throw new Fachfehler(409, t('meldungen.dienst.diese-automatische-zuordnung-ist'));
     const ziel = await this.repo.holeMappe(auto.ziel);
     let zurueck = 0;
     await this.inTransaktion(async () => {
@@ -5687,10 +5688,10 @@ export class Dienst {
       }
       const bezug = alsListe(post.werte.bezug).filter((id) => id !== auto.ziel);
       await this.schreibeSystemMappe(typ, post.id, { bezug, stand: bezug.length ? post.werte.stand : POST_STAND.neu }, ich.id);
-      const zielTitel = ziel ? await this.titel(ziel) : 'eine gelöschte Mappe';
-      const doks = zurueck ? ` – ${zurueck} ${zurueck === 1 ? 'Dokument' : 'Dokumente'} zurück in der Post` : '';
-      await this.notiere(post.id, ich.id, 'zugeordnet', { text: `automatische Zuordnung zu „${zielTitel}“ rückgängig gemacht${doks}`, ziel: auto.ziel, rueckgaengig: true, dokumente: zurueck });
-      if (ziel) await this.notiere(ziel.id, ich.id, 'zugeordnet', { text: `automatische Zuordnung der Post „${auswahlText(post.werte.betreff) || 'Post'}“ rückgängig gemacht${doks}`, post: post.id, rueckgaengig: true, dokumente: zurueck });
+      const zielTitel = ziel ? await this.titel(ziel) : t('meldungen.dienst.eine-geloeschte-mappe');
+      const doks = zurueck ? t('meldungen.dienst.dokumente-zurueck-in-der', { anzahl: zurueck }) : '';
+      await this.notiere(post.id, ich.id, 'zugeordnet', { text: t('meldungen.dienst.automatische-zuordnung-zu', { zielTitel, doks }), ziel: auto.ziel, rueckgaengig: true, dokumente: zurueck });
+      if (ziel) await this.notiere(ziel.id, ich.id, 'zugeordnet', { text: t('meldungen.dienst.automatische-zuordnung-der-post', { wert: auswahlText(post.werte.betreff) || t('meldungen.dienst.post'), doks }), post: post.id, rueckgaengig: true, dokumente: zurueck });
       await this.repo.erledigeAufgabe(a.id, ich.id);
       await this.repo.erkennungSchreibe(post.id, { ...gespeichert, auto: { ...auto, rueckgaengig: { zeit: new Date().toISOString(), von: ich.id } } }, gespeichert.eindeutig);
       await this.postAufgaben(post.id, ich.id);
@@ -5710,12 +5711,12 @@ export class Dienst {
     const schluessel = fuer ? `fuer:${fuer}` : null;
     for (const a of offen) if (a.feldKey !== schluessel) await this.repo.erledigeAufgabe(a.id, von);
     // Aufgaben mit Anlass „Post“ (#724, z. B. aus „Wenn neue Post“): erledigt, sobald die Post nicht mehr neu ist.
-    if (m && auswahlText(m.werte.stand) !== POST_STAND.neu) await this.erledigeNachAnlass(mappeId, (x) => x.art === 'post', 'Post zugeordnet');
+    if (m && auswahlText(m.werte.stand) !== POST_STAND.neu) await this.erledigeNachAnlass(mappeId, (x) => x.art === 'post', t('meldungen.dienst.post-zugeordnet-2'));
     if (!fuer || offen.some((a) => a.feldKey === schluessel)) return;
     // Aufgaben gehen an Konten; ohne Kontenverwaltung (Tests) genügt der Verweis.
     if (this.konten?.benutzer && !(await this.konten.benutzer()).some((b) => b.id === fuer)) return;
     const a = await this.neueAufgabe({
-      id: randomUUID(), mappeId, empfaengerId: fuer, art: 'post', text: 'Post für dich', feldKey: schluessel,
+      id: randomUUID(), mappeId, empfaengerId: fuer, art: 'post', text: t('meldungen.dienst.post-fuer-dich'), feldKey: schluessel,
       erstellt: new Date().toISOString(), erstelltVon: von, erledigt: null, erledigtVon: null,
     });
     await this.leiteUm(a);
@@ -5817,13 +5818,13 @@ export class Dienst {
 
   /** Prüft eine Auswahl weiterer Rollen, bevor etwas geändert wird; liefert die bereinigten Ids. */
   async pruefeRollen(eingabe: unknown): Promise<string[]> {
-    if (!Array.isArray(eingabe)) throw new Fachfehler(422, 'Rollen als Liste angeben.');
+    if (!Array.isArray(eingabe)) throw new Fachfehler(422, t('meldungen.dienst.rollen-als-liste-angeben'));
     const ids = [...new Set(eingabe.map(String))];
     const { rolle, systemrollen, kontorollen } = await this.sichereSystem();
     const typVon = await this.repo.typenVon(ids.filter(istUuid));
-    if (ids.some((id) => typVon.get(id) !== rolle.id)) throw new Fachfehler(422, 'Mindestens eine dieser Rollen gibt es nicht.');
+    if (ids.some((id) => typVon.get(id) !== rolle.id)) throw new Fachfehler(422, t('meldungen.dienst.mindestens-eine-dieser-rollen'));
     const system = new Set(systemrollen.values());
-    if (ids.some((id) => system.has(id))) throw new Fachfehler(422, 'Die Systemrolle „Mitglied“ hat jeder Benutzer; sie wird nicht eigens vergeben.');
+    if (ids.some((id) => system.has(id))) throw new Fachfehler(422, t('meldungen.dienst.die-systemrolle-mitglied-hat'));
     if (ids.some((id) => [...kontorollen.values()].includes(id))) throw new Fachfehler(422, t('konten.fehler.kontorolle'));
     return ids;
   }
@@ -5833,7 +5834,7 @@ export class Dienst {
     const ids = await this.pruefeRollen(eingabe);
     const { benutzer: typ, systemrollen } = await this.sichereSystem();
     const m = await this.repo.holeMappe(benutzerId);
-    if (!m || m.typId !== typ.id) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!m || m.typId !== typ.id) throw new Fachfehler(404, t('meldungen.dienst.diesen-benutzer-gibt-es'));
     const system = new Set(systemrollen.values());
     const behalten = alsListe(m.werte.rollen).filter((r) => system.has(r));
     await this.schreibeSystemMappe(typ, benutzerId, { rollen: [...behalten, ...ids] }, von);
@@ -5874,7 +5875,7 @@ export class Dienst {
   systemkonten?: (kennung: Systemkonto) => Promise<Benutzer>;
   /** Zugriff eines Systemkontos (#673), z. B. für Automatisierungen: Rechte aus den Regeln für die Rolle „Systemkonto“. */
   async systemZugriff(kennung: Systemkonto = 'automatisierung'): Promise<Zugriff> {
-    if (!this.systemkonten) throw new Fachfehler(500, 'Systemkonten sind nicht eingerichtet.');
+    if (!this.systemkonten) throw new Fachfehler(500, t('meldungen.dienst.systemkonten-sind-nicht-eingerichtet'));
     return this.zugriff(await this.systemkonten(kennung));
   }
   /** Automatisierungen, die ein Konto ausführt (#674 setzt das); bis dahin keine. */
@@ -5946,7 +5947,7 @@ export class Dienst {
   async aufgabenEmpfaenger(id: string): Promise<{ an: string | null; ueber: string[] }> {
     const { benutzer } = await this.sichereSystem();
     const m = istUuid(id) ? await this.repo.holeMappe(id) : undefined;
-    if (!m || m.typId !== benutzer.id) throw new Fachfehler(422, 'Bitte einen Benutzer als Empfänger wählen.');
+    if (!m || m.typId !== benutzer.id) throw new Fachfehler(422, t('meldungen.dienst.bitte-einen-benutzer-als'));
     const { ziel, abwesende } = await this.empfaengerAufloesen(id);
     const aktiv = async (x: string | null) => !!x && (!this.konten?.benutzer ? (await this.repo.holeMappe(x))?.werte.aktiv !== false : (await this.konten.benutzer()).some((b) => b.id === x && b.aktiv));
     if (await aktiv(ziel)) return { an: ziel, ueber: abwesende };
@@ -5996,8 +5997,8 @@ export class Dienst {
       if (schon) return { id: schon.id, ohneLeserecht, vorhanden: true, an };
       throw x;
     }
-    const weiter = ueber.length ? ` (weitergegeben wegen Abwesenheit von ${(await Promise.all(ueber.map((x) => this.name(x)))).join(', ')})` : '';
-    await this.notiere(e.mappeId, e.von, 'aufgabe', { ...e.anlass, text: `für ${await this.name(an)}${weiter}: ${text}`, aufgabe: a.id, aufgabenart: a.art, fuer: an, aufgabentext: text });
+    const weiter = ueber.length ? t('meldungen.dienst.weitergegeben-wegen-abwesenheit-von-2', { all: (await Promise.all(ueber.map((x) => this.name(x)))).join(', ') }) : '';
+    await this.notiere(e.mappeId, e.von, 'aufgabe', { ...e.anlass, text: t('meldungen.dienst.fuer-2', { name: await this.name(an), weiter, text }), aufgabe: a.id, aufgabenart: a.art, fuer: an, aufgabentext: text });
     if (ohneLeserecht) await this.faelleNach([e.mappeId]);
     return { id: a.id, ohneLeserecht, an };
   }
@@ -6008,7 +6009,7 @@ export class Dienst {
     for (const a of await this.repo.offeneAufgaben({ mappeIds: [mappeId] })) {
       if (!a.anlass || !passt(a.anlass, a)) continue;
       await this.repo.erledigeAufgabe(a.id, null);
-      await this.notiere(mappeId, null, 'aufgabe', { text: `erledigt (${grund}): ${a.text}`, aufgabe: a.id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
+      await this.notiere(mappeId, null, 'aufgabe', { text: t('meldungen.dienst.erledigt-3', { grund, text: a.text }), aufgabe: a.id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
       n++;
     }
     if (n) await this.faelleNach([mappeId]);
@@ -6040,7 +6041,7 @@ export class Dienst {
     if (!m) return;
     const fremd: Rueckverweis[] = (await this.repo.rueckverweise(id)).filter((r) => r.quelleId !== id);
     if (fremd.length) {
-      throw new Fachfehler(409, `Auf diesen Benutzer ${fremd.length === 1 ? 'verweist noch eine Mappe' : `verweisen noch ${fremd.length} Mappen`}. Deaktiviere ihn statt ihn zu löschen.`, { rueckverweise: fremd });
+      throw new Fachfehler(409, t('meldungen.dienst.auf-diesen-benutzer-verweisen', { anzahl: fremd.length }), { rueckverweise: fremd });
     }
     await this.loescheMappeIntern(id, await this.repo.holeTyp(m.typId));
   }
@@ -6057,7 +6058,7 @@ export class Dienst {
         const m = await this.repo.holeMappe(id);
         if (!m) return;
         const fremd = (await this.repo.rueckverweise(id)).filter((r) => r.quelleId !== id);
-        if (fremd.length) throw new Fachfehler(409, `Auf diesen Benutzer ${fremd.length === 1 ? 'verweist noch eine Mappe' : `verweisen noch ${fremd.length} Mappen`}. Deaktiviere ihn statt ihn zu löschen.`, { rueckverweise: fremd });
+        if (fremd.length) throw new Fachfehler(409, t('meldungen.dienst.auf-diesen-benutzer-verweisen', { anzahl: fremd.length }), { rueckverweise: fremd });
         await this.repo.legeInPapierkorb(id, von);
         await this.notiere(id, von, 'papierkorb');
       },
@@ -6075,9 +6076,9 @@ export class Dienst {
 
   /** Aufbewahrung ändern. 0 schaltet den Papierkorb aus und leert ihn sofort. */
   async setzePapierkorbTage(eingabe: unknown, von?: string | null): Promise<{ tage: number; geleert: number }> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Der Papierkorb ist nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.der-papierkorb-ist-nicht'));
     const tage = Number(eingabe);
-    if (!Number.isInteger(tage) || tage < 0 || tage > 3650) throw new Fachfehler(422, 'Bitte eine ganze Zahl von 0 bis 3650 Tagen angeben (0 = kein Papierkorb).');
+    if (!Number.isInteger(tage) || tage < 0 || tage > 3650) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-ganze-zahl-2'));
     await this.einstellungen.schreibe('papierkorb', { tage });
     protokoll.modul('werkbank').info(tage ? 'Aufbewahrung im Papierkorb geändert' : 'Papierkorb ausgeschaltet', { tage });
     const aus = { weg: 'ausgeschaltet' as const, kontext: await this.loeschKontext(von ?? null) };
@@ -6120,7 +6121,7 @@ export class Dienst {
 
   private async dokEintrag(id: string, ich: { id: string; rolle: string }, alle: boolean) {
     const e = await this.repo.holeDokumentAusPapierkorb(id);
-    if (!e || !(e.geloeschtVon === ich.id || (alle && ich.rolle === 'admin'))) throw new Fachfehler(404, 'Dieses Dokument liegt nicht (mehr) im Papierkorb.');
+    if (!e || !(e.geloeschtVon === ich.id || (alle && ich.rolle === 'admin'))) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-liegt-nicht'));
     return e;
   }
 
@@ -6128,11 +6129,11 @@ export class Dienst {
   async stelleDokumentWiederHer(id: string, ich: { id: string; rolle: string }, z: Zugriff | undefined, alle = false, quelle?: Ausloeser) {
     const e = await this.dokEintrag(id, ich, alle);
     const [x] = await this.mitMappe([e]);
-    if (x.mappe === 'papierkorb') throw new Fachfehler(409, `Die Mappe „${x.mappeTitel || 'ohne Titel'}“ liegt selbst im Papierkorb. Stelle zuerst die Mappe wieder her – ihre Dokumente kommen mit; danach dieses Dokument.`);
-    if (x.mappe === 'weg') throw new Fachfehler(409, 'Die Mappe dieses Dokuments gibt es nicht mehr. Wiederherstellen geht nicht; du kannst es nur endgültig löschen.');
+    if (x.mappe === 'papierkorb') throw new Fachfehler(409, t('meldungen.dienst.die-mappe-liegt-selbst', { wert: x.mappeTitel || t('meldungen.dienst.ohne-titel-2') }));
+    if (x.mappe === 'weg') throw new Fachfehler(409, t('meldungen.dienst.die-mappe-dieses-dokuments'));
     if (!(alle && ich.rolle === 'admin')) await this.pruefeRecht(z, e.mappeId, 'U');
     const typ = (await this.repo.holeTyp(x.typId))!;
-    if (!typ.register.some((r) => r.key === e.registerKey && r.art === 'dokumente')) throw new Fachfehler(409, `Das Register „${x.register}“ gibt es an der Mappe nicht mehr. Lege es im Mappentyp wieder an, dann klappt das Wiederherstellen.`);
+    if (!typ.register.some((r) => r.key === e.registerKey && r.art === 'dokumente')) throw new Fachfehler(409, t('meldungen.dienst.das-register-gibt-es', { register: x.register }));
     const inhalt = (await this.repo.papierkorbDokumentInhalt([id]))[0];
     await this.repo.stelleDokumentWiederHer(id);
     await this.notiere(e.mappeId, ich.id, 'dokument_wiederhergestellt', { dokument: e.name, register: x.register });
@@ -6168,7 +6169,7 @@ export class Dienst {
   /** Eintrag, den dieser Benutzer sehen darf (eigener oder als Administrator in der Werkbank); sonst 404. */
   private async eintrag(id: string, ich: { id: string; rolle: string }, alle: boolean) {
     const e = await this.repo.holeAusPapierkorb(id);
-    if (!e || !(e.geloeschtVon === ich.id || (alle && ich.rolle === 'admin'))) throw new Fachfehler(404, 'Diese Mappe liegt nicht (mehr) im Papierkorb.');
+    if (!e || !(e.geloeschtVon === ich.id || (alle && ich.rolle === 'admin'))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-liegt-nicht'));
     return e;
   }
 
@@ -6181,7 +6182,7 @@ export class Dienst {
   async stelleWiederHer(id: string, ich: { id: string; rolle: string }, alle = false, quelle?: Ausloeser) {
     const e = await this.eintrag(id, ich, alle);
     const typ = await this.repo.holeTyp(e.typId);
-    if (!typ) throw new Fachfehler(409, 'Den Mappentyp dieser Mappe gibt es nicht mehr.');
+    if (!typ) throw new Fachfehler(409, t('meldungen.dienst.den-mappentyp-dieser-mappe'));
     const r = await this.repo.stelleWiederHer(id);
     // Beim Löschen mit verknüpften Mappen entfernte Verweise (#424) kommen mit.
     const zurueck = e.entkoppelt.length ? await this.verbindeWieder(id, e.entkoppelt, ich.id) : { wieder: 0, entfallen: 0 };
@@ -6203,7 +6204,7 @@ export class Dienst {
       const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
       const korb = (await this.repo.papierkorb()).filter((e) => ids.includes(e.id));
       const geschuetzt = korb.filter((e) => inFrist(aufbewahrenBis(typen.get(e.typId)?.archiv, e)));
-      if (geschuetzt.length && streng) throw new Fachfehler(409, `Aufbewahrungspflicht bis ${datumText(aufbewahrenBis(typen.get(geschuetzt[0].typId)?.archiv, geschuetzt[0])!)} – vorher lässt sich „${geschuetzt[0].titel || 'die Mappe'}“ nicht endgültig löschen.`);
+      if (geschuetzt.length && streng) throw new Fachfehler(409, t('meldungen.dienst.aufbewahrungspflicht-bis-vorher-2', { datumText: datumText(aufbewahrenBis(typen.get(geschuetzt[0].typId)?.archiv, geschuetzt[0])!), wert: geschuetzt[0].titel || t('meldungen.dienst.die-mappe') }));
       ids = ids.filter((id) => !geschuetzt.some((e) => e.id === id));
     }
     if (!ids.length) return 0;
@@ -6370,9 +6371,9 @@ export class Dienst {
   }
 
   async setzeLoeschprotokollJahre(eingabe: unknown, von: string): Promise<number> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
     const jahre = Number(eingabe);
-    if (!Number.isInteger(jahre) || jahre < 1 || jahre > LOESCHPROTOKOLL_JAHRE_MAX) throw new Fachfehler(422, `Bitte eine ganze Zahl von 1 bis ${LOESCHPROTOKOLL_JAHRE_MAX} Jahren angeben.`);
+    if (!Number.isInteger(jahre) || jahre < 1 || jahre > LOESCHPROTOKOLL_JAHRE_MAX) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-ganze-zahl-3', { LOESCHPROTOKOLL_JAHRE_MAX }));
     await this.einstellungen.schreibe('loeschprotokoll', { jahre });
     protokoll.modul('datenschutz').info('Aufbewahrung des Löschprotokolls geändert', { jahre, von });
     return jahre;
@@ -6390,24 +6391,24 @@ export class Dienst {
     const f = { ...liesFilter(q), max: LOESCH_MAX * 10 };
     const { eintraege, gesamt } = await this.repo.loeschprotokoll(f);
     const tag = new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(new Date());
-    if (format === 'csv') { const b = csvAus(LOESCH_SPALTEN, eintraege.map(alsZeile)); return { name: `Löschprotokoll ${tag}.csv`, mime: 'text/csv; charset=utf-8', inhalt: b }; }
-    const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
+    if (format === 'csv') { const b = csvAus(LOESCH_SPALTEN, eintraege.map(alsZeile)); return { name: t('meldungen.dienst.loeschprotokoll-csv', { tag }), mime: 'text/csv; charset=utf-8', inhalt: b }; }
+    const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
     const filter = [f.von && `ab ${datumText(f.von)}`, f.bis && `bis ${datumText(f.bis)}`, f.typId && `Mappentyp ${eintraege.find((e) => e.typId === f.typId)?.typ ?? f.typId}`,
-      f.grund && (f.grund === 'ohne' ? 'ohne Grund' : LOESCHGRUENDE[f.grund]), f.schritt && LOESCHSCHRITTE[f.schritt], f.vorgang && `Vorgang ${f.vorgang}`, f.suche && `Suche „${f.suche}“`].filter(Boolean).join(', ');
+      f.grund && (f.grund === 'ohne' ? t('meldungen.dienst.ohne-grund') : LOESCHGRUENDE[f.grund]), f.schritt && LOESCHSCHRITTE[f.schritt], f.vorgang && `Vorgang ${f.vorgang}`, f.suche && `Suche „${f.suche}“`].filter(Boolean).join(', ');
     const b = await schriftstueckPdf({
-      titel: 'Löschprotokoll', untertitel: x.mandant, quer: true,
-      stand: `Erstellt am ${zeit(new Date().toISOString())} von ${x.von} · Ablago ${x.version} · ${eintraege.length}${gesamt > eintraege.length ? ` von ${gesamt}` : ''} Einträge${filter ? ` · Filter: ${filter}` : ''}`,
-      vorbemerkung: 'Nachweis über gelöschte Mappen und Dokumente (Art. 5 Abs. 2 DSGVO). Das Löschprotokoll enthält keine Titel, Feldwerte oder Dateinamen; Dokumente sind über ihre Prüfsumme (SHA-256) wiedererkennbar. Es lässt sich nicht ändern.',
-      abschnitte: [{ titel: 'Einträge', bloecke: [{ art: 'tabelle', breiten: [0.9, 0.85, 0.95, 0.8, 1.6, 2.1, 0.9, 1.0, 1.1], kopf: ['Zeit', 'Schritt', 'Mappentyp · Nummer', 'Wie', 'Mappe / Dokument', 'Inhalt', 'Von', 'Grund', 'Vorgang'],
+      titel: t('meldungen.dienst.loeschprotokoll'), untertitel: x.mandant, quer: true,
+      stand: t('meldungen.dienst.erstellt-am-von-ablago', { zeit: zeit(new Date().toISOString()), von: x.von, version: x.version, eintraege: eintraege.length, wert: gesamt > eintraege.length ? ` von ${gesamt}` : '', wert2: filter ? ` · Filter: ${filter}` : '' }),
+      vorbemerkung: t('meldungen.dienst.nachweis-ueber-geloeschte-mappen'),
+      abschnitte: [{ titel: t('meldungen.dienst.eintraege'), bloecke: [{ art: 'tabelle', breiten: [0.9, 0.85, 0.95, 0.8, 1.6, 2.1, 0.9, 1.0, 1.1], kopf: ['Zeit', 'Schritt', t('meldungen.dienst.mappentyp-nummer'), 'Wie', t('meldungen.dienst.mappe-dokument'), 'Inhalt', 'Von', 'Grund', 'Vorgang'],
         zeilen: eintraege.map((e) => [
           zeit(e.zeit), LOESCHSCHRITTE[e.schritt], [e.typ, e.nummer].filter(Boolean).join(' · '), LOESCHWEGE[e.weg] ?? e.weg,
-          e.art === 'mappe' ? `Mappe ${e.mappeId}` : `Dokument ${e.dokumentId}${e.version && e.version > 1 ? ` (Version ${e.version})` : ''}${e.archivnummer ? ` · Archivnummer ${e.archivnummer}` : ''}`,
-          e.art === 'mappe' ? (e.anzahl ? `${e.anzahl.dokumente} Dokumente, ${e.anzahl.versionen} ältere Versionen, ${e.anzahl.notizen} Notizen, ${e.anzahl.verweise} Verweise entfernt` : '')
-            : `SHA-256 ${e.sha256} · ${e.groesse} Bytes · ${e.mime}${e.seiten ? ` · ${e.seiten} Seiten` : ''}`,
+          e.art === 'mappe' ? `Mappe ${e.mappeId}` : t('meldungen.dienst.dokument', { dokumentId: String(e.dokumentId), wert: e.version && e.version > 1 ? ` (Version ${e.version})` : '', wert2: e.archivnummer ? ` · Archivnummer ${e.archivnummer}` : '' }),
+          e.art === 'mappe' ? (e.anzahl ? t('meldungen.dienst.dokumente-aeltere-versionen-notizen', { dokumente: e.anzahl.dokumente, versionen: e.anzahl.versionen, notizen: e.anzahl.notizen, verweise: e.anzahl.verweise }) : '')
+            : t('meldungen.dienst.sha-256-bytes', { sha256: String(e.sha256), groesse: String(e.groesse), mime: String(e.mime), wert: e.seiten ? ` · ${e.seiten} Seiten` : '' }),
           `${e.von}${e.ausloeser !== 'benutzer' ? ` (${AUSLOESER[e.ausloeser]})` : ''}`, [e.grund ? LOESCHGRUENDE[e.grund] : '', e.grundText].filter(Boolean).join(': '), e.vorgang ? `${e.vorgang}${e.startId === e.mappeId ? ' (Start)' : ''}` : '',
         ]) }] }],
     });
-    return { name: `Löschprotokoll ${tag}.pdf`, mime: 'application/pdf', inhalt: b };
+    return { name: t('meldungen.dienst.loeschprotokoll-pdf', { tag }), mime: 'application/pdf', inhalt: b };
   }
 
   /** Für den Vollexport: alle Einträge (älteste zuerst). */
@@ -6435,7 +6436,7 @@ export class Dienst {
   /** Alle Demo-Mappen samt Dokumenten entfernen – in Paketen mit Fortschritt (#248). */
   async entferneDemo(fortschritt: (fertig: number, gesamt: number) => void = () => {}, paket = 1000) {
     const echte = await this.repo.echteVerweiseAufDemo();
-    if (echte) throw new Fachfehler(409, `${echte} echte ${echte === 1 ? 'Mappe verweist' : 'Mappen verweisen'} auf Demo-Mappen. Entferne zuerst diese Verweise.`);
+    if (echte) throw new Fachfehler(409, t('meldungen.dienst.echte-mappen-verweisen-auf', { anzahl: echte }));
     const gesamt = [...(await this.repo.zaehleDemo()).values()].reduce((a, b) => a + b, 0);
     let entfernt = 0;
     fortschritt(0, gesamt);
@@ -6455,7 +6456,7 @@ export class Dienst {
    * es sind tausende. Volltext wie beim Hochladen; eingereiht wird gesammelt (demoTexterkennung).
    */
   async legeDemoDokumentAn(mappeId: string, typ: Mappentyp, registerKey: string, name: string, mime: string, inhalt: Buffer, benutzerId: string | null) {
-    if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
+    if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.dienst.die-datei-ist-zu'));
     const sha256 = createHash('sha256').update(inhalt).digest('hex');
     const erkannt = erkenneAnzeigbar(inhalt);
     await this.dateien.schreibe(sha256, inhalt);
@@ -6490,7 +6491,7 @@ export class Dienst {
    */
   async fundstellen(z: Zugriff | undefined, pruefwerte: unknown, ohneMappe?: string): Promise<Record<string, Fundstelle[]>> {
     const liste = Array.isArray(pruefwerte) ? [...new Set(pruefwerte.filter((x): x is string => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x)))] : [];
-    if (liste.length > 100) throw new Fachfehler(422, 'Höchstens 100 Prüfwerte auf einmal.');
+    if (liste.length > 100) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-100-pruefwerte-auf'));
     const erg: Record<string, Fundstelle[]> = {};
     for (const sha of liste) {
       const docs = (await this.repo.dokumenteMitSha(sha)).filter((d) => d.mappeId !== ohneMappe);
@@ -6546,14 +6547,14 @@ export class Dienst {
    */
   async ladeHoch(mappeId: string, e: { register?: string; name?: string; typ?: string; gleicherName?: string; herkunft?: Herkunft; volltext?: Volltextuebernahme }, inhalt: unknown, benutzerId: string | null) {
     const m = await this.repo.holeMappe(mappeId);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const typ = await this.repo.holeTyp(m.typId);
     const reg = typ?.register.find((r) => r.key === e.register && r.art === 'dokumente');
-    if (!reg) throw new Fachfehler(422, 'Dieses Dokumentenregister gibt es an der Mappe nicht.');
+    if (!reg) throw new Fachfehler(422, t('meldungen.dienst.dieses-dokumentenregister-gibt-es-2'));
     // Upload als temporäre Datei (#746) oder Puffer; ganz gelesen wird er nur, wo es nötig ist (PDF verkleinern).
     let ein = Eingang.aus(inhalt);
-    if (!ein || ein.groesse === 0) throw new Fachfehler(422, 'Die Datei ist leer.');
-    if (ein.groesse > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
+    if (!ein || ein.groesse === 0) throw new Fachfehler(422, t('meldungen.dienst.die-datei-ist-leer'));
+    if (ein.groesse > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.dienst.die-datei-ist-zu'));
     // Automatisch verkleinern (#393): neue PDFs von außen (Hochladen, Eingangsordner, Postfach, API, WebDAV) ab einer Größe.
     let automatisch: { vorher: number; nachher: number; stufe: Stufe } | null = null;
     if (AUTOMATISCH_VERKLEINERN.has(e.herkunft ?? 'hochgeladen') && !e.volltext) {
@@ -6562,15 +6563,15 @@ export class Dienst {
     }
     const groesse = ein.groesse;
     const art = e.gleicherName ?? 'zaehler';
-    if (!['zaehler', 'version', 'ersetzen'].includes(art)) throw new Fachfehler(422, 'gleicherName: zaehler, version oder ersetzen.');
+    if (!['zaehler', 'version', 'ersetzen'].includes(art)) throw new Fachfehler(422, t('meldungen.dienst.gleichername-zaehler-version-oder'));
     const vorhanden = (await this.repo.listeDokumente(mappeId)).filter((d) => d.registerKey === reg.key);
     const gleich = vorhanden.find((d) => d.name.toLowerCase() === dateiname(e.name).toLowerCase());
     if (gleich && art === 'version') {
-      if (!reg.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung ausgeschaltet – eine neue Version ist nicht möglich.');
+      if (!reg.versionierung) throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist'));
       return { dokument: await this.ersetzeDokument(gleich.id, { name: e.name, typ: e.typ, herkunft: e.herkunft }, ein, benutzerId), gleicherInhalt: [], version: true };
     }
     if (gleich && art === 'ersetzen') {
-      if (reg.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung eingeschaltet – lade das Dokument als neue Version hoch.');
+      if (reg.versionierung) throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist-2'));
       await this.loescheDokument(gleich.id, benutzerId);
     }
     let name = dateiname(e.name);
@@ -6629,13 +6630,13 @@ export class Dienst {
 
   async holeDokument(id: string) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return d;
   }
 
   async dokumentInhalt(id: string) {
     const dokument = await this.repo.holeDokument(id);
-    if (!dokument) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!dokument) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return { dokument, inhalt: await this.dateien.lies(dokument.sha256) };
   }
 
@@ -6649,7 +6650,7 @@ export class Dienst {
     return { vorlagen: liesVorlagen(roh?.vorlagen), typen };
   }
   private async schreibeStempelDaten(d: { vorlagen: StempelVorlage[]; typen: Record<string, StempelTyp> }) {
-    if (!this.einstellungen) throw new Fachfehler(409, 'Einstellungen lassen sich hier nicht speichern.');
+    if (!this.einstellungen) throw new Fachfehler(409, t('meldungen.dienst.einstellungen-lassen-sich-hier'));
     await this.einstellungen.schreibe('stempel', d);
   }
 
@@ -6660,8 +6661,8 @@ export class Dienst {
   async speichereStempelVorlage(id: string | null, eingabe: unknown, von: string): Promise<StempelVorlage[]> {
     const d = await this.stempelDaten();
     const alt = id ? d.vorlagen.find((v) => v.id === id) : undefined;
-    if (id && !alt) throw new Fachfehler(404, 'Diese Stempel-Vorlage gibt es nicht (mehr).');
-    if (!id && d.vorlagen.length >= STEMPEL_VORLAGEN_MAX) throw new Fachfehler(422, `Höchstens ${STEMPEL_VORLAGEN_MAX} Stempel-Vorlagen.`);
+    if (id && !alt) throw new Fachfehler(404, t('meldungen.dienst.diese-stempel-vorlage-gibt'));
+    if (!id && d.vorlagen.length >= STEMPEL_VORLAGEN_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-stempel-vorlagen', { STEMPEL_VORLAGEN_MAX }));
     const o = (eingabe ?? {}) as Record<string, unknown>;
     const name = String(o.name ?? alt?.name ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, STEMPEL_NAME_MAX);
     // Neue Vorlagen beginnen mit 70 % und „wie Tinte“ (#799); gespeichert ist eine Umstellung erledigt (ohne `umgestellt`).
@@ -6678,10 +6679,10 @@ export class Dienst {
   async loescheStempelVorlage(id: string, von: string): Promise<StempelVorlage[]> {
     const d = await this.stempelDaten();
     const v = d.vorlagen.find((x) => x.id === id);
-    if (!v) throw new Fachfehler(404, 'Diese Stempel-Vorlage gibt es nicht (mehr).');
+    if (!v) throw new Fachfehler(404, t('meldungen.dienst.diese-stempel-vorlage-gibt'));
     const typen = await this.repo.listeTypen();
     const nutzer = Object.entries(d.typen).filter(([t, s]) => s.vorlage === id && typen.some((x) => x.id === t)).map(([t]) => typen.find((x) => x.id === t)!.name);
-    if (nutzer.length) throw new Fachfehler(409, `Die Vorlage „${v.name}“ wird noch von ${nutzer.length === 1 ? 'dem Mappentyp' : 'den Mappentypen'} ${nutzer.map((n) => `„${n}“`).join(', ')} verwendet.`);
+    if (nutzer.length) throw new Fachfehler(409, t('meldungen.dienst.die-vorlage-wird-noch', { anzahl: nutzer.length, name: v.name, map: nutzer.map((n) => `„${n}“`).join(', ') }));
     // Stempel beim Lesen über das Laufwerk (#722): ohne Angabe gilt die mitgelieferte Vorlage.
     const laufwerk = (await this.einstellungen?.lies('webdav')) as { stempel?: unknown } | null;
     if ((laufwerk && 'stempel' in laufwerk ? laufwerk.stempel : WEBDAV_VORLAGE) === id) throw new Fachfehler(409, t('api.webdav.vorlage-in-gebrauch', { name: v.name }));
@@ -6694,13 +6695,13 @@ export class Dienst {
   /** Stempel-Einstellung eines Mappentyps prüfen (vor dem Speichern des Typs). */
   private async pruefeStempelTyp(v: unknown): Promise<StempelTyp | null> {
     if (v && typeof v === 'object' && typeof (v as { modus?: unknown }).modus === 'string' && !((v as { modus: string }).modus in STEMPEL_MODI)) {
-      throw new Fachfehler(422, 'Stempel beim Weitergeben: unbekannte Einstellung.', { allgemein: ['Stempel beim Weitergeben: unbekannte Einstellung.'], felder: {}, orte: ['stempel'] });
+      throw new Fachfehler(422, t('meldungen.dienst.stempel-beim-weitergeben-unbekannte'), { allgemein: [t('meldungen.dienst.stempel-beim-weitergeben-unbekannte')], felder: {}, orte: ['stempel'] });
     }
-    const t = liesStempelTyp(v);
-    if (t?.vorlage && !(await this.stempelDaten()).vorlagen.some((x) => x.id === t.vorlage)) {
-      throw new Fachfehler(422, 'Stempel beim Weitergeben: Diese Vorlage gibt es nicht (mehr).', { allgemein: ['Stempel beim Weitergeben: Diese Vorlage gibt es nicht (mehr).'], felder: {}, orte: ['stempel'] });
+    const eintrag = liesStempelTyp(v);
+    if (eintrag?.vorlage && !(await this.stempelDaten()).vorlagen.some((x) => x.id === eintrag.vorlage)) {
+      throw new Fachfehler(422, t('meldungen.dienst.stempel-beim-weitergeben-diese'), { allgemein: [t('meldungen.dienst.stempel-beim-weitergeben-diese')], felder: {}, orte: ['stempel'] });
     }
-    return t;
+    return eintrag;
   }
   private async setzeStempelTyp(typId: string, t: StempelTyp | null) {
     if (!this.einstellungen) return;
@@ -6747,7 +6748,7 @@ export class Dienst {
   /** Gestempelte Kopie eines Dokuments fürs Laufwerk (#722); das gespeicherte Original bleibt unverändert. */
   async laufwerkAusgabe(d: Dokument, m: Pick<Mappe, 'titel'>, plan: GeltenderStempel, leser: string): Promise<Ausgabe> {
     return fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await this.liesGanz(d.sha256) }, { stempel: plan },
-      { benutzer: leser, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer ?? null, entsperrt: this.entsperrtZu });
+      { benutzer: leser, mappe: m.titel || t('meldungen.dienst.ohne-titel'), archivnummer: d.archivnummer ?? null, entsperrt: this.entsperrtZu });
   }
 
   private async liesGanz(sha256: string): Promise<Buffer> {
@@ -6762,7 +6763,7 @@ export class Dienst {
     const text = bearbeitet.find((a) => a.stempeltext)?.stempeltext ?? null;
     const klein = bearbeitet.filter((a) => a.verkleinert);
     await this.notiere(mappeId, von, 'weitergegeben', {
-      text: `${weitergabeWas(ausgaben)}${plan?.empfaenger ? ` an ${plan.empfaenger}` : ''} (${wie}: ${bearbeitet.map((a) => a.name).join(', ')})`,
+      text: `${weitergabeWas(ausgaben)}${plan?.empfaenger ? t('meldungen.dienst.an-2', { empfaenger: plan.empfaenger }) : ''} (${wie}: ${bearbeitet.map((a) => a.name).join(', ')})`,
       stempel: text, an: plan?.empfaenger || null, wie, vorlage: plan?.vorlage ?? null, pflicht: plan?.pflicht ?? false, dokumente: bearbeitet.map((a) => a.name),
       ...(klein.length ? { verkleinert: { vorher: klein.reduce((s, a) => s + a.verkleinert!.vorher, 0), nachher: klein.reduce((s, a) => s + a.verkleinert!.nachher, 0) } } : {}),
     });
@@ -6778,7 +6779,7 @@ export class Dienst {
    * die übrigen bleiben Original – ohne Rückfrage. `lies`/`strom` lesen dann die richtige Datei.
    */
   private async archivWahl(fassung: unknown) {
-    if (fassung !== undefined && fassung !== null && fassung !== 'original' && fassung !== 'archiv') throw new Fachfehler(422, '„fassung“ kennt nur „original“ und „archiv“.');
+    if (fassung !== undefined && fassung !== null && fassung !== 'original' && fassung !== 'archiv') throw new Fachfehler(422, t('meldungen.dienst.fassung-kennt-nur-original'));
     const original = new Map<string, Dokument>();
     const waehle = async (d: Dokument): Promise<Dokument> => {
       if (fassung !== 'archiv') return d;
@@ -6800,7 +6801,7 @@ export class Dienst {
   private async ausgabeQuelle(d: Pick<Dokument, 'name' | 'mime' | 'sha256' | 'groesse' | 'anzeigbar'>, fassung: unknown, nurWo = false): Promise<{ name: string; mime: string; sha256: string; groesse: number; anzeigbar: boolean; inhalt: () => Promise<Buffer>; archiv: boolean }> {
     const original = { name: d.name, mime: d.mime, sha256: d.sha256, groesse: d.groesse, anzeigbar: d.anzeigbar, inhalt: () => this.liesGanz(d.sha256), archiv: false };
     if (fassung === undefined || fassung === null || fassung === 'original') return original;
-    if (fassung !== 'archiv') throw new Fachfehler(422, '„fassung“ kennt nur „original“ und „archiv“.');
+    if (fassung !== 'archiv') throw new Fachfehler(422, t('meldungen.dienst.fassung-kennt-nur-original'));
     const f = await this.archiv?.lies(d.sha256);
     if (!f || (nurWo && f.info.erechnung)) { if (nurWo) return original; throw new Fachfehler(404, t('pakete.archiv.keine')); }
     return { name: archivfassungName(d.name), mime: 'application/pdf', sha256: f.info.sha256, groesse: f.inhalt.length, anzeigbar: true, inhalt: async () => f.inhalt, archiv: true };
@@ -6808,18 +6809,18 @@ export class Dienst {
 
   async dokumentFuerAusgabe(id: string, o: { version?: number; stempel?: unknown; verkleinern?: unknown; fassung?: unknown; ich: { id: string | null; name: string } }) {
     const dokument = await this.repo.holeDokument(id);
-    if (!dokument) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!dokument) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const datei = o.version != null ? (await this.versionInhalt(id, o.version)).version : await this.ausgabeQuelle(dokument, o.fassung);
     const m = await this.repo.holeMappe(dokument.mappeId);
     const plan = m ? await this.stempelPlan(m.typId, wunschAus(o.stempel), empfaengerAus(o.stempel)) : null;
     // Verkleinert herunterladen (#393): nur PDFs; das gespeicherte Dokument bleibt, wie es ist.
     const klein = stufeAus(o.verkleinern);
-    if (klein && datei.mime !== 'application/pdf' && !plan) throw new Fachfehler(422, `„${datei.name}“ ist kein PDF – verkleinern lassen sich nur PDFs.`);
+    if (klein && datei.mime !== 'application/pdf' && !plan) throw new Fachfehler(422, t('meldungen.dienst.ist-kein-pdf-verkleinern', { name: datei.name }));
     const lies = async () => ('archiv' in datei && datei.archiv ? datei.inhalt() : this.liesGanz(datei.sha256));
     if (!plan && !klein) return { name: datei.name, mime: datei.mime, anzeigbar: datei.anzeigbar, groesse: datei.groesse, inhalt: ('archiv' in datei && datei.archiv ? await datei.inhalt() : await this.dateien.lies(datei.sha256)) as Buffer | Readable, gestempelt: false };
     const a = await fuerAusgabe({ name: datei.name, mime: datei.mime, inhalt: await lies() }, { stempel: plan, verkleinern: klein },
-      { benutzer: o.ich.name, mappe: m!.titel || 'Ohne Titel', archivnummer: dokument.archivnummer, entsperrt: this.entsperrtZu }, true);
-    await this.notiereWeitergabe(m!.id, o.ich.id, o.version != null ? `heruntergeladen, Version ${o.version}` : 'archiv' in datei && datei.archiv ? 'heruntergeladen (Archivfassung)' : 'heruntergeladen', plan, [a]);
+      { benutzer: o.ich.name, mappe: m!.titel || t('meldungen.dienst.ohne-titel'), archivnummer: dokument.archivnummer, entsperrt: this.entsperrtZu }, true);
+    await this.notiereWeitergabe(m!.id, o.ich.id, o.version != null ? t('meldungen.dienst.heruntergeladen-version', { version: o.version }) : 'archiv' in datei && datei.archiv ? t('meldungen.dienst.heruntergeladen-archivfassung') : 'heruntergeladen', plan, [a]);
     if (plan) protokoll.modul('dokumente').info('Dokument mit Stempel heruntergeladen', { id, mappe: m!.id, pflicht: plan.pflicht });
     if (a.verkleinert) protokoll.modul('dokumente').info('Dokument verkleinert heruntergeladen', { id, mappe: m!.id, vorher: a.verkleinert.vorher, nachher: a.verkleinert.nachher });
     return { name: a.name, mime: a.mime, anzeigbar: true, groesse: a.inhalt.length, inhalt: a.inhalt as Buffer | Readable, gestempelt: !!a.gestempelt, verkleinert: a.verkleinert ?? null };
@@ -6840,8 +6841,8 @@ export class Dienst {
     const punkt = f.d.name.lastIndexOf('.');
     const name = art === 'archiv' ? ((f.info as { imOriginal?: boolean }).imOriginal ? f.d.name : archivfassungName(f.d.name)) : `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (umgewandelt).pdf`;
     const mime = art === 'archiv' ? 'application/pdf' : (f.info as FassungInfo).mime;
-    const a = await fuerAusgabe({ name, mime, inhalt: f.inhalt }, { stempel: plan }, { benutzer: o.ich.name, mappe: m!.titel || 'Ohne Titel', archivnummer: f.d.archivnummer ?? null }, true);
-    await this.notiereWeitergabe(m!.id, o.ich.id, art === 'archiv' ? 'über die API (Archivfassung)' : 'über die API (umgewandelte Fassung)', plan, [a]);
+    const a = await fuerAusgabe({ name, mime, inhalt: f.inhalt }, { stempel: plan }, { benutzer: o.ich.name, mappe: m!.titel || t('meldungen.dienst.ohne-titel'), archivnummer: f.d.archivnummer ?? null }, true);
+    await this.notiereWeitergabe(m!.id, o.ich.id, art === 'archiv' ? t('meldungen.dienst.ueber-die-api-archivfassung') : t('meldungen.dienst.ueber-die-api-umgewandelte'), plan, [a]);
     protokoll.modul('dokumente').info('Fassung mit Stempel über die API ausgegeben', { id, mappe: m!.id, art, pflicht: plan.pflicht });
     return a;
   }
@@ -6855,13 +6856,13 @@ export class Dienst {
    */
   async gestempelteSeiten(id: string, o: { stempel?: unknown; ich: { id: string | null; name: string } }): Promise<{ schluessel: string; pdf: Buffer } | null> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const m = await this.repo.holeMappe(d.mappeId);
     if (!m) return null;
     const wunsch = wunschAus(o.stempel);
     const plan = await this.stempelPlan(m.typId, wunsch, empfaengerAus(o.stempel));
     if (!plan) return null;
-    const kontext = { benutzer: o.ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer ?? null, datum: stempelDatum() };
+    const kontext = { benutzer: o.ich.name, mappe: m.titel || t('meldungen.dienst.ohne-titel'), archivnummer: d.archivnummer ?? null, datum: stempelDatum() };
     const schluessel = `stempel:${d.sha256}:${createHash('sha256').update(JSON.stringify([plan, kontext])).digest('hex')}`;
     let p = this.apiKopien.get(schluessel);
     if (!p) {
@@ -6870,11 +6871,11 @@ export class Dienst {
         if (kernTyp(d.mime)) quelle = { name: d.name, mime: d.mime, inhalt: await this.liesGanz(d.sha256) };
         else {
           const f = await this.umwandlung?.lies(d.sha256);
-          if (!f) throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG, und es gibt keine umgewandelte Fassung – davon gibt es kein Seitenbild.`);
+          if (!f) throw new Fachfehler(422, t('meldungen.dienst.ist-weder-pdf-noch', { name: d.name }));
           quelle = { name: d.name, mime: f.info.mime, inhalt: f.inhalt };
         }
         const a = await fuerAusgabe(quelle, { stempel: plan }, kontext, true);
-        await this.notiereWeitergabe(m.id, o.ich.id, 'über die API (Seitenbilder)', plan, [a]);
+        await this.notiereWeitergabe(m.id, o.ich.id, t('meldungen.dienst.ueber-die-api-seitenbilder'), plan, [a]);
         return a.inhalt;
       })();
       this.apiKopien.set(schluessel, p);
@@ -6886,7 +6887,7 @@ export class Dienst {
 
   async loescheDokument(id: string, benutzerId: string | null = null, anlass: Anlass = { weg: 'ersetzt' }) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     // Archivmodus (#212): Dokumente bleiben bis Fristende; ändern nur als neue Version.
     await this.pruefeArchivDokument(d.mappeId, 'löschen');
     // Alle Versionen (#194) gehen mit.
@@ -6913,8 +6914,8 @@ export class Dienst {
 
   private async pdfVon(id: string): Promise<{ d: Dokument; inhalt: Buffer }> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    if (d.mime !== 'application/pdf') throw new Fachfehler(422, `„${d.name}“ ist kein PDF – bearbeiten lassen sich nur PDF-Dokumente.`);
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
+    if (d.mime !== 'application/pdf') throw new Fachfehler(422, t('meldungen.dienst.ist-kein-pdf-bearbeiten', { name: d.name }));
     const s = await this.dateien.lies(d.sha256);
     return { d, inhalt: Buffer.isBuffer(s) ? s : Buffer.concat(await s.toArray() as Buffer[]) };
   }
@@ -6929,23 +6930,23 @@ export class Dienst {
     // Abruf mit API-Schlüssel und Stempel (#799): aus der gestempelten Kopie.
     if (gestempelt) return graubild(gestempelt.pdf, nr, dpi, farbe);
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     // Andere Dateitypen (#577): die Seiten der umgewandelten Fassung (PDF, PNG oder JPEG) eines Pakets.
     if (!kernTyp(d.mime)) {
       const f = await this.umwandlung?.lies(d.sha256);
-      if (!f) throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG, und es gibt keine umgewandelte Fassung – davon gibt es kein Seitenbild.`);
+      if (!f) throw new Fachfehler(422, t('meldungen.dienst.ist-weder-pdf-noch', { name: d.name }));
       if (f.info.mime === 'application/pdf') return graubild(f.inhalt, nr, dpi, farbe);
-      if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
+      if (nr !== 1) throw new Fachfehler(404, t('meldungen.dienst.seite-gibt-es-nicht', { nr }));
       return graubild(await bildSeitePdf(f.inhalt, f.info.mime), 1, 72, farbe);
     }
     if (d.mime === 'image/jpeg' || d.mime === 'image/png') {
-      if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
+      if (nr !== 1) throw new Fachfehler(404, t('meldungen.dienst.seite-gibt-es-nicht', { nr }));
       const s = await this.dateien.lies(d.sha256);
       const bild = Buffer.isBuffer(s) ? s : Buffer.concat(await s.toArray() as Buffer[]);
       // Das Bild liegt in Originalgröße (1 Bildpunkt = 1 pt): bei 72 dpi kommen genau seine Bildpunkte.
       return graubild(await bildSeitePdf(bild, d.mime), 1, 72, farbe);
     }
-    if (d.mime !== 'application/pdf') throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG – davon gibt es kein Seitenbild.`);
+    if (d.mime !== 'application/pdf') throw new Fachfehler(422, t('meldungen.dienst.ist-weder-pdf-noch-2', { name: d.name }));
     const { inhalt } = await this.pdfVon(id);
     return graubild(inhalt, nr, dpi, farbe);
   }
@@ -6960,7 +6961,7 @@ export class Dienst {
   async pdfSeitenbild(id: string, nr: number, gestempelt?: { schluessel: string; pdf: Buffer } | null): Promise<Buffer | null> {
     if (gestempelt) return Number.isInteger(nr) && nr >= 1 && nr <= SEITENBILDER_MAX ? this.seitenbilder.bild(gestempelt.schluessel, nr, async () => gestempelt.pdf) : null;
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     if (d.mime !== 'application/pdf' || !Number.isInteger(nr) || nr < 1 || nr > SEITENBILDER_MAX) return null;
     return this.seitenbilder.bild(d.sha256, nr, async () => (await this.pdfVon(id)).inhalt);
   }
@@ -6984,9 +6985,9 @@ export class Dienst {
     const m = await this.repo.holeMappe(d.mappeId);
     const typ = m ? await this.repo.holeTyp(m.typId) : undefined;
     const reg = typ?.register.find((r) => r.key === d.registerKey && r.art === 'dokumente');
-    if (!m || !typ || !reg) throw new Fachfehler(409, 'Das Register dieses Dokuments gibt es nicht mehr.');
+    if (!m || !typ || !reg) throw new Fachfehler(409, t('meldungen.dienst.das-register-dieses-dokuments'));
     const gleich = starts.length === 1 && seiten.length === info.anzahl && seiten.every((s, i) => s.nr === i + 1 && !s.drehung);
-    if (gleich) throw new Fachfehler(422, 'Es hat sich nichts geändert.');
+    if (gleich) throw new Fachfehler(422, t('meldungen.dienst.es-hat-sich-nichts'));
     const teileBuf = await teile(inhalt, seiten, starts);
     const gedreht = seiten.filter((s) => s.drehung).length;
     const was = { dokument: d.name, seiten: seiten.length, vorher: info.anzahl, ...(gedreht ? { gedreht } : {}), ...(starts.length > 1 ? { teile: starts.length } : {}) };
@@ -7000,7 +7001,7 @@ export class Dienst {
       erstes = await this.ersetzeDokument(d.id, { name: name1, typ: 'application/pdf', herkunft: 'bearbeitet' }, teileBuf[0], von);
     } else {
       if (e.bestaetigt !== true) {
-        throw new Fachfehler(409, `Für dieses Register ist die Versionierung ausgeschaltet: Das bearbeitete PDF ersetzt das bisherige${korb ? ', das bisherige kommt in den Papierkorb' : ' – das bisherige ist danach weg'}. Bitte bestätigen.`, { rueckfrage: true, papierkorb: korb });
+        throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist-3', { wert: korb ? t('meldungen.dienst.das-bisherige-kommt-in') : t('meldungen.dienst.das-bisherige-ist-danach') }), { rueckfrage: true, papierkorb: korb });
       }
       await this.loescheDokument(d.id, von);
       erstes = (await this.ladeHoch(m.id, { register: reg.key, name: name1, typ: 'application/pdf', herkunft: 'bearbeitet' }, teileBuf[0], von)).dokument;
@@ -7015,24 +7016,24 @@ export class Dienst {
   }
 
   private async teilePost(post: Mappe, typ: Mappentyp, reg: Register, d: Dokument, teileBuf: Buffer[], von: string | null, z: Zugriff | undefined, was: Record<string, unknown>) {
-    const betreff = auswahlText(post.werte.betreff) || 'Post';
+    const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
     const posten: Mappe[] = [];
     const dokumente: Dokument[] = [];
     for (const [i, b] of teileBuf.entries()) {
       // Je Teil: neue Post mit ihrem Dokument und beiden Ereignissen (post.angelegt, dokument.hochgeladen) ganz oder gar nicht (#404).
       await this.inTransaktion(async () => {
         const neu = await this.legePostAn({
-          betreff: `${betreff} (Teil ${i + 1})`, datum: post.werte.datum, absender: post.werte.absender ?? '', kanal: auswahlText(post.werte.kanal),
+          betreff: t('meldungen.dienst.teil', { betreff, wert: i + 1 }), datum: post.werte.datum, absender: post.werte.absender ?? '', kanal: auswahlText(post.werte.kanal),
           fuer: alsListe(post.werte.fuer)[0] ?? null,
         }, { id: von, name: '' }, z, undefined, undefined, undefined, post.werte);
-        await this.notiere(neu.id, von, 'post_geteilt', { text: `Teil ${i + 1} von ${teileBuf.length} aus „${betreff}“`, post: post.id, postTyp: typ.id });
+        await this.notiere(neu.id, von, 'post_geteilt', { text: t('meldungen.dienst.teil-von-aus', { wert: i + 1, teileBuf: teileBuf.length, betreff }), post: post.id, postTyp: typ.id });
         dokumente.push((await this.ladeHoch(neu.id, { register: reg.key, name: teilName(d.name, i + 1), typ: 'application/pdf', herkunft: 'bearbeitet' }, b, von)).dokument);
         posten.push((await this.repo.holeMappe(neu.id))!);
       });
     }
     const bezug = [...new Set([...alsListe(post.werte.bezug), ...posten.map((p) => p.id)])];
     await this.schreibeSystemMappe(typ, post.id, { bezug, stand: POST_STAND.erledigt }, von);
-    await this.notiere(post.id, von, 'post_geteilt', { ...was, text: `„${d.name}“ in ${posten.length} Posts geteilt`, posten: posten.map((p) => p.id), postTyp: typ.id });
+    await this.notiere(post.id, von, 'post_geteilt', { ...was, text: t('meldungen.dienst.in-posts-geteilt', { name: d.name, posten: posten.length }), posten: posten.map((p) => p.id), postTyp: typ.id });
     await this.postAufgaben(post.id, von);
     protokoll.modul('ablage').info('Post geteilt', { post: post.id, teile: posten.length });
     return { dokumente, posten };
@@ -7047,48 +7048,48 @@ export class Dienst {
   async fuegePdfZusammen(eingabe: unknown, von: string | null, z?: Zugriff) {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const ids = Array.isArray(e.dokumente) ? [...new Set(e.dokumente.map(String))] : [];
-    if (ids.length < 2) throw new Fachfehler(422, 'Bitte mindestens zwei PDF-Dokumente wählen.');
-    if (ids.length > 100) throw new Fachfehler(422, 'Höchstens 100 Dokumente auf einmal.');
+    if (ids.length < 2) throw new Fachfehler(422, t('meldungen.dienst.bitte-mindestens-zwei-pdf'));
+    if (ids.length > 100) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-100-dokumente-auf'));
     const entfernen = e.originaleEntfernen === true;
     const quellen: Array<{ d: Dokument; inhalt: Buffer }> = [];
     for (const id of ids) {
       const d = await this.repo.holeDokument(id);
-      if (!d) throw new Fachfehler(404, 'Ein gewähltes Dokument gibt es nicht (mehr).');
+      if (!d) throw new Fachfehler(404, t('meldungen.dienst.ein-gewaehltes-dokument-gibt'));
       if (z) await this.pruefeRecht(z, d.mappeId, entfernen ? 'U' : 'R');
       quellen.push(await this.pdfVon(id));
     }
     const zielId = istUuid(text(e.ziel)) ? text(e.ziel) : quellen[0].d.mappeId;
     const ziel = z ? await this.pruefeRecht(z, zielId, 'U') : await this.repo.holeMappe(zielId);
-    if (!ziel) throw new Fachfehler(404, 'Die gewählte Mappe gibt es nicht.');
+    if (!ziel) throw new Fachfehler(404, t('meldungen.dienst.die-gewaehlte-mappe-gibt'));
     const zielTyp = await this.repo.holeTyp(ziel.typId);
     const regs = zielTyp?.register.filter((r) => r.art === 'dokumente') ?? [];
     const reg = e.register ? regs.find((r) => r.key === text(e.register)) : regs.find((r) => r.key === quellen[0].d.registerKey && ziel.id === quellen[0].d.mappeId) ?? regs[0];
-    if (!reg) throw new Fachfehler(422, regs.length ? 'Dieses Dokumentenregister gibt es an der Mappe nicht.' : 'Die Mappe hat kein Dokumentenregister.');
+    if (!reg) throw new Fachfehler(422, regs.length ? t('meldungen.dienst.dieses-dokumentenregister-gibt-es-2') : t('meldungen.dienst.die-mappe-hat-kein'));
     const mappen = [...new Set(quellen.map((q) => q.d.mappeId))];
     if (entfernen) {
       for (const mid of mappen) await this.pruefeArchivDokument(mid, 'entfernen');
       if ((await this.papierkorbTage()) === 0 && e.bestaetigt !== true) {
-        throw new Fachfehler(409, 'Der Papierkorb ist ausgeschaltet: Die Ausgangsdokumente sind nach dem Zusammenfügen weg. Bitte bestätigen.', { rueckfrage: true, papierkorb: false });
+        throw new Fachfehler(409, t('meldungen.dienst.der-papierkorb-ist-ausgeschaltet'), { rueckfrage: true, papierkorb: false });
       }
     }
     const buf = await fuegeZusammen(quellen.map((q) => q.inhalt));
-    if (buf.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Zusammengefügt wäre das PDF größer als 100 MB.');
+    if (buf.length > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.dienst.zusammengefuegt-waere-das-pdf'));
     let name = dateiname(text(e.name) || quellen[0].d.name);
     if (!/\.pdf$/i.test(name)) name += '.pdf';
     // Erst entfernen, dann ablegen: so bekommt das Ergebnis den Namen des ersten ohne „(2)“.
     if (entfernen) for (const q of quellen) await this.loescheDokument(q.d.id, von);
     const neu = (await this.ladeHoch(ziel.id, { register: reg.key, name, typ: 'application/pdf', herkunft: 'bearbeitet' }, buf, von)).dokument;
     const was = { dokument: neu.name, zusammengefuegt: quellen.map((q) => q.d.name), seiten: (await seitenInfo(buf)).anzahl };
-    await this.notiere(ziel.id, von, 'pdf_bearbeitet', { ...was, text: `${quellen.length} PDFs zu „${neu.name}“ zusammengefügt` });
+    await this.notiere(ziel.id, von, 'pdf_bearbeitet', { ...was, text: t('meldungen.dienst.pdfs-zu-zusammengefuegt', { quellen: quellen.length, name: neu.name }) });
     const erledigt: string[] = [];
     if (entfernen) {
       const zielTitel = await this.titel(ziel);
       for (const mid of mappen.filter((x) => x !== ziel.id)) {
         const p = await this.repo.holeMappe(mid);
-        const t = p ? await this.repo.holeTyp(p.typId) : undefined;
-        if (!p || t?.system !== 'post' || (await this.repo.listeDokumente(mid)).length) continue;
-        await this.schreibeSystemMappe(t, p.id, { bezug: [...new Set([...alsListe(p.werte.bezug), ziel.id])], stand: POST_STAND.erledigt }, von);
-        await this.notiere(p.id, von, 'zugeordnet', { text: `Dokumente zusammengefügt in „${zielTitel}“`, ziel: ziel.id, zielTyp: ziel.typId });
+        const eintrag = p ? await this.repo.holeTyp(p.typId) : undefined;
+        if (!p || eintrag?.system !== 'post' || (await this.repo.listeDokumente(mid)).length) continue;
+        await this.schreibeSystemMappe(eintrag, p.id, { bezug: [...new Set([...alsListe(p.werte.bezug), ziel.id])], stand: POST_STAND.erledigt }, von);
+        await this.notiere(p.id, von, 'zugeordnet', { text: t('meldungen.dienst.dokumente-zusammengefuegt-in', { zielTitel }), ziel: ziel.id, zielTyp: ziel.typId });
         await this.postAufgaben(p.id, von);
         erledigt.push(p.id);
       }
@@ -7107,7 +7108,7 @@ export class Dienst {
   async postAusFotos(eingabe: unknown, fotos: Buffer[], ich: { id: string | null; name: string }, z?: Zugriff, kanal: string = POST_KANAL.hochgeladen): Promise<{ post: Mappe; dokument: Dokument; seiten: number }> {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const pdf = await bilderZuPdf(fotos);
-    if (pdf.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Als PDF wären die Fotos größer als 100 MB – bitte weniger Seiten auf einmal.');
+    if (pdf.length > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.dienst.als-pdf-waeren-die'));
     const betreff = text(e.betreff).replace(/[\r\n]+/g, ' ').trim().slice(0, 250) || fotoBetreff();
     const post = await this.legePostAn({ betreff, ...(e.fuer ? { fuer: e.fuer } : {}) }, ich, z, kanal);
     const typ = await this.postTyp();
@@ -7124,10 +7125,10 @@ export class Dienst {
    */
   private async haengeSeitenAn(d: Dokument, inhalt: Buffer, anhang: Buffer[], von: string | null, text: string): Promise<{ dokument: Dokument; seiten: number }> {
     const { m, reg } = await this.registerVon(d).then(async (x) => ({ ...x, m: await this.repo.holeMappe(d.mappeId) }));
-    if (!m || !reg) throw new Fachfehler(409, 'Das Register dieses Dokuments gibt es nicht mehr.');
+    if (!m || !reg) throw new Fachfehler(409, t('meldungen.dienst.das-register-dieses-dokuments'));
     await this.pruefeArchivDokument(m.id, 'ersetzen');
     const buf = await fuegeZusammen([inhalt, ...anhang]);
-    if (buf.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Zusammen wäre das PDF größer als 100 MB.');
+    if (buf.length > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.dienst.zusammen-waere-das-pdf'));
     let dokument: Dokument;
     if (reg.versionierung) dokument = await this.ersetzeDokument(d.id, { name: d.name, typ: 'application/pdf', herkunft: 'bearbeitet' }, buf, von);
     else {
@@ -7146,18 +7147,18 @@ export class Dienst {
   async fotosAnMappe(mappeId: string, eingabe: unknown, fotos: Buffer[], von: string | null, z?: Zugriff): Promise<{ dokument: Dokument; seiten: number }> {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const m = z ? await this.pruefeRecht(z, mappeId, 'U') : await this.repo.holeMappe(mappeId);
-    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const neu = await bilderZuPdf(fotos);
     if (e.dokument) {
       const { d, inhalt } = await this.pdfVon(text(e.dokument));
-      if (d.mappeId !== m.id) throw new Fachfehler(422, 'Das Dokument gehört nicht zu dieser Mappe.');
+      if (d.mappeId !== m.id) throw new Fachfehler(422, t('meldungen.dienst.das-dokument-gehoert-nicht'));
       const n = fotos.length;
-      return this.haengeSeitenAn(d, inhalt, [neu], von, n === 1 ? `Eine Seite an „${d.name}“ angehängt (fotografiert)` : `${n} Seiten an „${d.name}“ angehängt (fotografiert)`);
+      return this.haengeSeitenAn(d, inhalt, [neu], von, t('meldungen.dienst.seiten-an-angehaengt-fotografiert', { anzahl: n, name: d.name }));
     }
     const typ = await this.repo.holeTyp(m.typId);
     const regs = typ?.register.filter((r) => r.art === 'dokumente') ?? [];
     const reg = e.register ? regs.find((r) => r.key === text(e.register)) : regs[0];
-    if (!reg) throw new Fachfehler(422, 'Die Mappe hat kein Dokumentenregister.');
+    if (!reg) throw new Fachfehler(422, t('meldungen.dienst.die-mappe-hat-kein'));
     const dokument = (await this.ladeHoch(m.id, { register: reg.key, name: `${dateiname(fotoBetreff().replace(/^Post/, 'Fotos'))}.pdf`, typ: 'application/pdf', herkunft: 'hochgeladen' }, neu, von)).dokument;
     return { dokument, seiten: fotos.length };
   }
@@ -7169,17 +7170,17 @@ export class Dienst {
    */
   async legePostZusammen(zielId: string, eingabe: unknown, von: string | null, z?: Zugriff): Promise<{ post: Mappe; dokument: Dokument; seiten: number }> {
     const quelleId = text((eingabe as Record<string, unknown> | null)?.quelle);
-    if (!istUuid(quelleId) || quelleId === zielId) throw new Fachfehler(422, 'Bitte die Post wählen, deren Seiten angehängt werden.');
+    if (!istUuid(quelleId) || quelleId === zielId) throw new Fachfehler(422, t('meldungen.dienst.bitte-die-post-waehlen'));
     const ziel = z ? await this.pruefeRecht(z, zielId, 'U') : await this.repo.holeMappe(zielId);
     const quelle = z ? await this.pruefeRecht(z, quelleId, 'D') : await this.repo.holeMappe(quelleId);
-    if (!ziel || !quelle) throw new Fachfehler(404, 'Diese Post gibt es nicht.');
+    if (!ziel || !quelle) throw new Fachfehler(404, t('meldungen.dienst.diese-post-gibt-es'));
     const typ = await this.postTyp();
-    if (ziel.typId !== typ.id || quelle.typId !== typ.id) throw new Fachfehler(422, 'Zusammenlegen geht nur mit zwei Posts.');
-    if (istVersendet(ziel.werte) || istVersendet(quelle.werte)) throw new Fachfehler(422, 'Versendete E-Mails bleiben, wie sie verschickt wurden.');
+    if (ziel.typId !== typ.id || quelle.typId !== typ.id) throw new Fachfehler(422, t('meldungen.dienst.zusammenlegen-geht-nur-mit'));
+    if (istVersendet(ziel.werte) || istVersendet(quelle.werte)) throw new Fachfehler(422, t('meldungen.dienst.versendete-e-mails-bleiben'));
     const quellDoks = await this.repo.listeDokumente(quelleId);
-    if (!quellDoks.length) throw new Fachfehler(422, 'Die gewählte Post hat keine Dokumente.');
+    if (!quellDoks.length) throw new Fachfehler(422, t('meldungen.dienst.die-gewaehlte-post-hat'));
     const fremd = quellDoks.filter((d) => d.mime !== 'application/pdf' && d.mime !== 'image/jpeg' && d.mime !== 'image/png');
-    if (fremd.length) throw new Fachfehler(422, `„${fremd[0].name}“ ist kein PDF und kein Foto – solche Dateien lassen sich nicht anhängen. Ordne die Post stattdessen zu.`);
+    if (fremd.length) throw new Fachfehler(422, t('meldungen.dienst.ist-kein-pdf-und', { name: fremd[0].name }));
     const anhang: Buffer[] = [];
     for (const d of quellDoks) {
       const s = await this.dateien.lies(d.sha256);
@@ -7191,15 +7192,15 @@ export class Dienst {
     let erg: { dokument: Dokument; seiten: number };
     if (zielPdf) {
       const { inhalt } = await this.pdfVon(zielPdf.id);
-      erg = await this.haengeSeitenAn(zielPdf, inhalt, anhang, von, `Seiten aus der Post „${qTitel}“ angehängt`);
+      erg = await this.haengeSeitenAn(zielPdf, inhalt, anhang, von, t('meldungen.dienst.seiten-aus-der-post', { qTitel }));
     } else {
       const buf = await fuegeZusammen(anhang);
       const reg = typ.register.find((r) => r.art === 'dokumente')!;
       const dokument = (await this.ladeHoch(zielId, { register: reg.key, name: `${dateiname(auswahlText(ziel.werte.betreff) || 'Post')}.pdf`, typ: 'application/pdf', herkunft: 'bearbeitet' }, buf, von)).dokument;
       erg = { dokument, seiten: (await seitenInfo(buf)).anzahl };
-      await this.notiere(zielId, von, 'pdf_bearbeitet', { dokument: dokument.name, seiten: erg.seiten, text: `Seiten aus der Post „${qTitel}“ übernommen` });
+      await this.notiere(zielId, von, 'pdf_bearbeitet', { dokument: dokument.name, seiten: erg.seiten, text: t('meldungen.dienst.seiten-aus-der-post-2', { qTitel }) });
     }
-    await this.notiere(quelleId, von, 'zugeordnet', { text: `Seiten an die Post „${await this.titel(ziel)}“ angehängt (zusammengelegt)`, ziel: zielId, zielTyp: typ.id });
+    await this.notiere(quelleId, von, 'zugeordnet', { text: t('meldungen.dienst.seiten-an-die-post', { titel: await this.titel(ziel) }), ziel: zielId, zielTyp: typ.id });
     await this.loescheMappe(quelleId, von);
     protokoll.modul('ablage').info('Posts zusammengelegt', { ziel: zielId, quelle: quelleId, seiten: erg.seiten });
     return { post: (await this.repo.holeMappe(zielId))!, ...erg };
@@ -7237,14 +7238,14 @@ export class Dienst {
     const stufe = e.stufe === undefined ? STANDARD_STUFE : stufeAus(e.stufe) ?? STANDARD_STUFE;
     const { d, inhalt } = await this.pdfVon(id);
     const { typ, reg } = await this.registerVon(d);
-    if (!reg) throw new Fachfehler(409, 'Das Register dieses Dokuments gibt es nicht mehr.');
+    if (!reg) throw new Fachfehler(409, t('meldungen.dienst.das-register-dieses-dokuments'));
     const korb = (await this.papierkorbTage()) > 0;
     if (!reg.versionierung && e.bestaetigt !== true) {
-      throw new Fachfehler(409, `Für dieses Register ist die Versionierung ausgeschaltet: Das verkleinerte PDF ersetzt das bisherige${korb ? ', das bisherige kommt in den Papierkorb' : ' – das bisherige ist danach weg'}. Bitte bestätigen.`, { rueckfrage: true, papierkorb: korb });
+      throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist-4', { wert: korb ? t('meldungen.dienst.das-bisherige-kommt-in') : t('meldungen.dienst.das-bisherige-ist-danach') }), { rueckfrage: true, papierkorb: korb });
     }
     const r = await verkleinere(inhalt, stufe);
     if (!r.lohnt) {
-      const meldung = `„${d.name}“ lässt sich kaum verkleinern (weniger als ${Math.round(MIN_ERSPARNIS * 100)} %) – das Dokument bleibt unverändert.`;
+      const meldung = t('meldungen.dienst.laesst-sich-kaum-verkleinern', { name: d.name, round: Math.round(MIN_ERSPARNIS * 100) });
       return { dokument: d, unveraendert: true, vorher: r.vorher, nachher: r.vorher, stufe, meldung };
     }
     const ocr = d.ocr?.stand === 'fertig' ? { text: (await this.repo.volltext(d.id)) ?? '', seiten: d.ocr.seiten ?? null, info: d.ocr.info ?? null } : null;
@@ -7269,10 +7270,10 @@ export class Dienst {
       neu = (await this.ladeHoch(d.mappeId, { register: reg.key, name: d.name, typ: 'application/pdf', herkunft: 'bearbeitet', ...(ocr ? { volltext: ocr } : {}) }, r.inhalt, von)).dokument;
       if (d.archivnummer) neu = await this.setzeArchivnummer(neu.id, d.archivnummer, von).catch(() => neu);
     }
-    const text = `verkleinert ${ergebnisText(r.vorher, r.nachher)}, Stufe ${STUFEN[stufe].name} (${STUFEN[stufe].dpi} dpi)`;
+    const text = t('meldungen.dienst.verkleinert-stufe-dpi', { ergebnisText: ergebnisText(r.vorher, r.nachher), name: STUFEN[stufe].name, dpi: STUFEN[stufe].dpi });
     await this.notiere(d.mappeId, von, 'pdf_bearbeitet', { dokument: d.name, text, verkleinert: { vorher: r.vorher, nachher: r.nachher, stufe }, seiten: r.seiten, vorher: r.seiten });
     protokoll.modul('dokumente').info('PDF verkleinert', { id: d.id, stufe, vorher: r.vorher, nachher: r.nachher, bilder: r.bilder });
-    return { dokument: neu, unveraendert: false, vorher: r.vorher, nachher: r.nachher, stufe, meldung: `Verkleinert ${ergebnisText(r.vorher, r.nachher)}.` };
+    return { dokument: neu, unveraendert: false, vorher: r.vorher, nachher: r.nachher, stufe, meldung: t('meldungen.dienst.verkleinert', { ergebnisText: ergebnisText(r.vorher, r.nachher) }) };
   }
 
   private async legeDateiAb(inhalt: Buffer): Promise<string> {
@@ -7292,11 +7293,11 @@ export class Dienst {
     return verkleinernEinstellungAus(await this.einstellungen?.lies('verkleinern'));
   }
   async setzeVerkleinernEinstellung(eingabe: unknown): Promise<VerkleinernEinstellung> {
-    if (!this.einstellungen) throw new Fachfehler(409, 'Einstellungen sind nicht verfügbar.');
+    if (!this.einstellungen) throw new Fachfehler(409, t('meldungen.dienst.einstellungen-sind-nicht-verfuegbar'));
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const abMb = Number(e.abMb);
-    if (!Number.isFinite(abMb) || abMb < 1 || abMb > 100) throw new Fachfehler(422, 'Ab welcher Größe: 1 bis 100 MB.');
-    if (!istStufe(e.stufe)) throw new Fachfehler(422, 'Stufe: bildschirm, standard oder druck.');
+    if (!Number.isFinite(abMb) || abMb < 1 || abMb > 100) throw new Fachfehler(422, t('meldungen.dienst.ab-welcher-groesse-1'));
+    if (!istStufe(e.stufe)) throw new Fachfehler(422, t('meldungen.dienst.stufe-bildschirm-standard-oder'));
     const neu: VerkleinernEinstellung = { automatisch: e.automatisch === true, abMb: Math.round(abMb * 10) / 10, stufe: e.stufe };
     await this.einstellungen.schreibe('verkleinern', neu);
     protokoll.modul('werkbank').info('Automatisch verkleinern geändert', { ...neu });
@@ -7326,7 +7327,7 @@ export class Dienst {
    */
   async grosseDokumente(f: { ab?: unknown; stufe?: unknown }) {
     const ab = Number(f.ab ?? 2);
-    if (!Number.isFinite(ab) || ab < 0 || ab > 100) throw new Fachfehler(422, 'ab: 0 bis 100 MB.');
+    if (!Number.isFinite(ab) || ab < 0 || ab > 100) throw new Fachfehler(422, t('meldungen.dienst.ab-0-bis-100'));
     const stufe = f.stufe === undefined || f.stufe === '' ? STANDARD_STUFE : stufeAus(f.stufe) ?? STANDARD_STUFE;
     const docs = await this.repo.grossePdfs(Math.round(ab * 1024 * 1024), GROSSE_MAX);
     const bezuege = await this.repo.bezuege([...new Set(docs.map((d) => d.mappeId))]);
@@ -7347,8 +7348,8 @@ export class Dienst {
   verkleinereViele(eingabe: unknown, von: { id: string | null; email: string }) {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const ids = Array.isArray(e.ids) ? [...new Set(e.ids.map(String))].filter(istUuid) : [];
-    if (!ids.length) throw new Fachfehler(422, 'Bitte mindestens ein Dokument wählen.');
-    if (ids.length > GROSSE_MAX) throw new Fachfehler(422, `Höchstens ${GROSSE_MAX} Dokumente auf einmal.`);
+    if (!ids.length) throw new Fachfehler(422, t('meldungen.dienst.bitte-mindestens-ein-dokument'));
+    if (ids.length > GROSSE_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-dokumente-auf-einmal', { GROSSE_MAX }));
     const stufe = stufeAus(e.stufe ?? STANDARD_STUFE) ?? STANDARD_STUFE;
     const ohneOriginal = e.ohneOriginal === true;
     // Ohne Versionierung ersetzt das Verkleinern das Dokument – das muss hier einmal für alle bestätigt sein.
@@ -7379,8 +7380,8 @@ export class Dienst {
 
   private async schwaerzbar(id: string): Promise<{ d: Dokument; inhalt: Buffer }> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    if (!kannSchwaerzen(d.mime)) throw new Fachfehler(422, `„${d.name}“ lässt sich nicht schwärzen – das geht mit PDFs und Bildern (JPEG, PNG).`);
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
+    if (!kannSchwaerzen(d.mime)) throw new Fachfehler(422, t('meldungen.dienst.laesst-sich-nicht-schwaerzen', { name: d.name }));
     return { d, inhalt: await this.liesGanz(d.sha256) };
   }
 
@@ -7398,8 +7399,8 @@ export class Dienst {
   /** Für den Dialog: Seiten mit Größe und Wörtern (für Suchbegriffe und Vorschläge), was mit dem Ergebnis geschieht. */
   async schwaerzenVorschau(id: string) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    if (!kannSchwaerzen(d.mime)) throw new Fachfehler(422, `„${d.name}“ lässt sich nicht schwärzen – das geht mit PDFs und Bildern (JPEG, PNG).`);
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
+    if (!kannSchwaerzen(d.mime)) throw new Fachfehler(422, t('meldungen.dienst.laesst-sich-nicht-schwaerzen', { name: d.name }));
     const a = await this.schwaerzAnalyseVon(d, () => this.liesGanz(d.sha256));
     const { reg } = await this.registerVon(d);
     return { id: d.id, name: d.name, mime: d.mime, sha256: d.sha256, ...a, versioniert: !!reg?.versionierung, kopieName: geschwaerztName(d.name), muster: MUSTER };
@@ -7410,7 +7411,7 @@ export class Dienst {
   async schwaerzSeitenbild(id: string, nr: number, gestempelt?: { pdf: Buffer } | null): Promise<Buffer | null> {
     if (gestempelt) return Number.isInteger(nr) && nr >= 1 && nr <= SCHWAERZEN_MAX_SEITEN ? schwaerzSeitenbild(gestempelt.pdf, 'application/pdf', nr) : null;
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     if (!kannSchwaerzen(d.mime) || !Number.isInteger(nr) || nr < 1 || nr > SCHWAERZEN_MAX_SEITEN) return null;
     const k = `${d.sha256}:${nr}`;
     let p = this.schwaerzBilder.get(k);
@@ -7432,11 +7433,11 @@ export class Dienst {
   async schwaerzeDokument(id: string, eingabe: unknown, von: string | null) {
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const ziel = e.ziel === undefined || e.ziel === null || e.ziel === '' ? 'kopie' : e.ziel;
-    if (ziel !== 'kopie' && ziel !== 'version') throw new Fachfehler(422, 'ziel: kopie oder version.');
+    if (ziel !== 'kopie' && ziel !== 'version') throw new Fachfehler(422, t('meldungen.dienst.ziel-kopie-oder-version'));
     const { d, inhalt } = await this.schwaerzbar(id);
     const { typ, reg } = await this.registerVon(d);
-    if (!reg) throw new Fachfehler(409, 'Das Register dieses Dokuments gibt es nicht mehr.');
-    if (ziel === 'version' && !reg.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung ausgeschaltet – die geschwärzte Fassung kann nur ein eigenes Dokument werden (ziel: kopie).');
+    if (!reg) throw new Fachfehler(409, t('meldungen.dienst.das-register-dieses-dokuments'));
+    if (ziel === 'version' && !reg.versionierung) throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist-5'));
     let begriffe: string[];
     try { begriffe = pruefeBegriffe(e.begriffe); } catch (x) { throw new Fachfehler(422, (x as Error).message); }
     const roh = e.muster === undefined || e.muster === null ? [] : Array.isArray(e.muster) ? e.muster : [e.muster];
@@ -7449,14 +7450,14 @@ export class Dienst {
     bereiche = [...bereiche, ...bereicheVon(a.seiten, gefunden.flat()), ...(muster.length ? bereicheVon(a.seiten, findeMuster(a.seiten, muster)) : [])];
     if (!bereiche.length) {
       throw new Fachfehler(422, begriffe.length || muster.length
-        ? `Nichts zu schwärzen: ${begriffe.length ? (begriffe.length === 1 ? 'Der Suchbegriff kommt im Text des Dokuments nicht vor' : 'Keiner der Suchbegriffe kommt im Text des Dokuments vor') : 'Keines der Muster kommt im Text des Dokuments vor'}${a.quelle === 'keine' ? ' (das Dokument hat keinen lesbaren Text)' : ''}.`
-        : 'Nichts zu schwärzen: Bitte Bereiche, Suchbegriffe oder Muster angeben.');
+        ? t('meldungen.dienst.nichts-zu-schwaerzen', { wert: begriffe.length ? (t('meldungen.dienst.keiner-der-suchbegriffe-kommt', { anzahl: begriffe.length })) : t('meldungen.dienst.keines-der-muster-kommt'), wert2: a.quelle === 'keine' ? t('meldungen.dienst.das-dokument-hat-keinen') : '' })
+        : t('meldungen.dienst.nichts-zu-schwaerzen-bitte'));
     }
     const r = await schwaerze(inhalt, d.mime, a, bereiche);
     // Volltext der geschwärzten Fassung (#459): Hat jede Seite eine Textebene, gilt der Text ohne die geschwärzten
     // Wörter gleich. Sonst (Scan, Foto, gemischt) läuft sie wie ein neues Dokument durch Textebene und Paket – das
     // Paket sieht nur die geschwärzte Fassung, nie das Original.
-    const volltext = r.text !== null && !a.seiten.some((s) => !s.woerter.length) ? { text: r.text, seiten: r.seiten, info: 'Textebene nach dem Schwärzen (ohne die geschwärzten Stellen)' } : null;
+    const volltext = r.text !== null && !a.seiten.some((s) => !s.woerter.length) ? { text: r.text, seiten: r.seiten, info: t('meldungen.dienst.textebene-nach-dem-schwaerzen') } : null;
     const stellen = stellenText(bereiche);
     let neu: Dokument;
     if (ziel === 'version') {
@@ -7473,13 +7474,13 @@ export class Dienst {
         this.danach(() => this.neueDateien([v]));
         if (volltext) this.danach(() => void this.volltextFertig({ dokument: v.id, mappe: d.mappeId }, { quelle: 'kern', text: !!volltext.text.trim(), mime: r.mime, seiten: volltext.seiten ?? null }).catch(() => {}));
         const x = await this.nachNeuerVersion(d, { ...v, ocr: volltext ? { stand: 'fertig' } as Dokument['ocr'] : v.ocr }, typ, reg, von);
-        await this.notiere(d.mappeId, von, 'geschwaerzt', { dokument: d.name, text: `geschwärzte Fassung als Version ${x.version ?? ''} von „${d.name}“ erstellt (${stellen})`, version: x.version, stellen: r.bereiche, seiten: r.betroffen });
+        await this.notiere(d.mappeId, von, 'geschwaerzt', { dokument: d.name, text: t('meldungen.dienst.geschwaerzte-fassung-als-version', { wert: x.version ?? '', name: d.name, stellen }), version: x.version, stellen: r.bereiche, seiten: r.betroffen });
         return x;
       });
     } else {
       neu = await this.inTransaktion(async () => {
         const x = (await this.ladeHoch(d.mappeId, { register: reg.key, name: geschwaerztName(d.name), typ: r.mime, herkunft: 'geschwaerzt', ...(volltext ? { volltext } : {}) }, r.inhalt, von)).dokument;
-        await this.notiere(d.mappeId, von, 'geschwaerzt', { dokument: x.name, text: `geschwärzte Fassung „${x.name}“ von „${d.name}“ erstellt (${stellen})`, quelle: d.name, stellen: r.bereiche, seiten: r.betroffen });
+        await this.notiere(d.mappeId, von, 'geschwaerzt', { dokument: x.name, text: t('meldungen.dienst.geschwaerzte-fassung-von-erstellt', { name: x.name, name2: d.name, stellen }), quelle: d.name, stellen: r.bereiche, seiten: r.betroffen });
         return x;
       });
     }
@@ -7487,7 +7488,7 @@ export class Dienst {
     return {
       dokument: neu, ziel, stellen: r.bereiche, seiten: r.betroffen,
       begriffe: gefunden.map((f) => ({ gefunden: f.length })),
-      meldung: ziel === 'version' ? `Geschwärzt (${stellen}) – Version ${neu.version ?? ''}; die ungeschwärzte Fassung bleibt als ältere Version.` : `„${neu.name}“ angelegt (${stellen}); das Original bleibt unverändert.`,
+      meldung: ziel === 'version' ? t('meldungen.dienst.geschwaerzt-version-die', { stellen, wert: neu.version ?? '' }) : t('meldungen.dienst.angelegt-das-original-bleibt', { name: neu.name, stellen }),
     };
   }
 
@@ -7502,13 +7503,13 @@ export class Dienst {
   /** Archivnummer am Dokument setzen oder entfernen (leer); eindeutig je Haushalt. */
   async setzeArchivnummer(id: string, eingabe: unknown, von: string | null): Promise<Dokument> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const nr = archivnummerAus(eingabe);
-    if (nr && nr.length > 40) throw new Fachfehler(422, 'Die Archivnummer ist zu lang (höchstens 40 Zeichen).');
-    if (nr && /\s/.test(nr)) throw new Fachfehler(422, 'Die Archivnummer darf keine Leerzeichen enthalten.');
+    if (nr && nr.length > 40) throw new Fachfehler(422, t('meldungen.dienst.die-archivnummer-ist-zu'));
+    if (nr && /\s/.test(nr)) throw new Fachfehler(422, t('meldungen.dienst.die-archivnummer-darf-keine'));
     if ((d.archivnummer ?? null) === nr) return d;
     if (!(await this.repo.setzeArchivnummer(id, nr))) {
-      throw new Fachfehler(409, `Die Archivnummer „${nr}“ hat schon ein anderes Dokument. Jede Nummer gibt es nur einmal – prüfe den Aufkleber.`);
+      throw new Fachfehler(409, t('meldungen.dienst.die-archivnummer-hat-schon', { nr: String(nr) }));
     }
     await this.notiere(d.mappeId, von, 'archivnummer', { dokument: d.name, text: nr ? `${d.name}: ${nr}` : `${d.name}: entfernt`, alt: d.archivnummer ?? null, neu: nr });
     protokoll.modul('dokumente').info(nr ? 'Archivnummer gesetzt' : 'Archivnummer entfernt', { id, nr, vorher: d.archivnummer ?? undefined });
@@ -7520,7 +7521,7 @@ export class Dienst {
     const nr = archivnummerAus(eingabe);
     const d = nr ? await this.repo.findeArchivnummer(nr) : undefined;
     const m = d ? await this.repo.holeMappe(d.mappeId) : undefined;
-    if (!d || !m || !(await this.lesbare(z, [m.id])).has(m.id)) throw new Fachfehler(404, `Zur Archivnummer „${nr ?? ''}“ gibt es kein Dokument, das du sehen darfst.`);
+    if (!d || !m || !(await this.lesbare(z, [m.id])).has(m.id)) throw new Fachfehler(404, t('meldungen.dienst.zur-archivnummer-gibt-es', { wert: nr ?? '' }));
     return { dokument: d, mappeId: m.id, typId: m.typId, titel: m.titel ?? '' };
   }
 
@@ -7533,10 +7534,10 @@ export class Dienst {
     const anzahl = Number(e.anzahl ?? 0);
     const etikett = String(e.etikett ?? '48x25') as Etikett;
     const start = Number(e.start ?? 1);
-    if (!(etikett in ETIKETTEN)) throw new Fachfehler(422, 'Unbekanntes Etikettenformat.');
+    if (!(etikett in ETIKETTEN)) throw new Fachfehler(422, t('meldungen.dienst.unbekanntes-etikettenformat'));
     const f = ETIKETTEN[etikett];
-    if (!Number.isInteger(anzahl) || anzahl < 1 || anzahl > 500) throw new Fachfehler(422, 'Bitte 1 bis 500 Aufkleber.');
-    if (!Number.isInteger(start) || start < 1 || start > f.spalten * f.zeilen) throw new Fachfehler(422, `Das Startfeld muss zwischen 1 und ${f.spalten * f.zeilen} liegen.`);
+    if (!Number.isInteger(anzahl) || anzahl < 1 || anzahl > 500) throw new Fachfehler(422, t('meldungen.dienst.bitte-1-bis-500'));
+    if (!Number.isInteger(start) || start < 1 || start > f.spalten * f.zeilen) throw new Fachfehler(422, t('meldungen.dienst.das-startfeld-muss-zwischen', { wert: f.spalten * f.zeilen }));
     await this.archivKreis();
     const nummern = await this.repo.zieheNummern(ARCHIV_KREIS, anzahl, new Date());
     const pdf = await aufkleberPdf(nummern, etikett, start, ARCHIV_PRAEFIX);
@@ -7703,7 +7704,7 @@ export class Dienst {
     const mappen = new Map((await this.repo.holeMappen(baum.knoten.filter((k) => !k.gesperrt && k.rechte.D).map((k) => k.id))).map((m) => [m.id, m] as const));
     for (const [id, m] of mappen) {
       const typ = z.typen.get(m.typId);
-      if (!darfLoeschen(typ, m)) nichtLoeschbar[id] = m.systemKennung ? 'Systemrollen lassen sich nicht löschen' : `Mappen vom Typ „${typ?.name ?? ''}“ lassen sich nicht löschen`;
+      if (!darfLoeschen(typ, m)) nichtLoeschbar[id] = m.systemKennung ? t('meldungen.dienst.systemrollen-lassen-sich-nicht-2') : t('meldungen.dienst.mappen-vom-typ-lassen-3', { wert: typ?.name ?? '' });
     }
     const v = { baum, kanten, geteilt, nichtLoeschbar };
     return { ...v, vorschlag: loeschVorschlag(v), papierkorbTage: await this.papierkorbTage() };
@@ -7717,20 +7718,20 @@ export class Dienst {
    */
   async loescheMitVerknuepften(startId: string, eingabe: unknown, benutzerId: string, z: Zugriff, quelle?: Ausloeser) {
     const e = (eingabe && typeof eingabe === 'object' ? eingabe : {}) as Record<string, unknown>;
-    if (!e.auswahl || typeof e.auswahl !== 'object') throw new Fachfehler(422, 'Bitte die Auswahl angeben (Mappen-Id → loeschen, entkoppeln oder behalten; z. B. der Vorschlag aus der Vorschau).');
+    if (!e.auswahl || typeof e.auswahl !== 'object') throw new Fachfehler(422, t('meldungen.dienst.bitte-die-auswahl-angeben'));
     const v = await this.loeschVorschau(startId, e, z);
     const plan = planeLoeschung(v, liesLoeschAuswahl(e.auswahl));
-    if (!plan.loeschen.length) throw new Fachfehler(422, 'Nach dieser Auswahl wird keine Mappe gelöscht.', { plan });
+    if (!plan.loeschen.length) throw new Fachfehler(422, t('meldungen.dienst.nach-dieser-auswahl-wird'), { plan });
     const weg = new Set(plan.loeschen);
     const gekappt = new Set(plan.entkoppeln.map((k) => `${k.quelleId}|${k.feldKey}|${k.zielId}`));
     // Zur Sicherheit je Mappe wie beim einzelnen Löschen prüfen – mit allen Verweisen, nicht nur denen im Baum.
     const mappen = new Map((await this.repo.holeMappen(plan.loeschen)).map((m) => [m.id, m] as const));
     for (const id of plan.loeschen) {
       const m = mappen.get(id);
-      if (!m) throw new Fachfehler(409, 'Eine der Mappen gibt es inzwischen nicht mehr. Bitte die Vorschau neu laden.');
+      if (!m) throw new Fachfehler(409, t('meldungen.dienst.eine-der-mappen-gibt'));
       const rueck = (await this.repo.rueckverweise(id)).filter((r) => !weg.has(r.quelleId) && !gekappt.has(`${r.quelleId}|${r.feldKey}|${id}`));
       const p = await this.loeschPruefung(m, z.typen.get(m.typId), rueck);
-      if (!p.ok) throw new Fachfehler(p.status, `„${m.titel || 'Ohne Titel'}“: ${p.grund} Bitte die Vorschau neu laden.`);
+      if (!p.ok) throw new Fachfehler(p.status, t('meldungen.dienst.bitte-die-vorschau-neu', { wert: m.titel || t('meldungen.dienst.ohne-titel'), grund: p.grund }));
     }
     // Verweise bleibender Mappen entfernen (🔗 „nur Verweis entfernen“).
     const entkoppelt: Record<string, Array<{ quelleId: string; feldKey: string }>> = {};
@@ -7756,7 +7757,7 @@ export class Dienst {
       verweise: Object.fromEntries(Object.entries(entkoppelt).map(([id, l]) => [id, l.length])) }), kontext);
     const start = v.baum.knoten[0];
     const z_ = plan.zahlen;
-    const text = `mit verknüpften Mappen gelöscht (${z_.mappen} ${z_.mappen === 1 ? 'Mappe' : 'Mappen'}, ${z_.dokumente} ${z_.dokumente === 1 ? 'Dokument' : 'Dokumente'})`;
+    const text = t('meldungen.dienst.mit-verknuepften-mappen-geloescht', { mappen: z_.mappen, wert: t('meldungen.dienst.mappen', { anzahl: z_.mappen }), dokumente: z_.dokumente, wert2: t('meldungen.dienst.dokumente', { anzahl: z_.dokumente }) });
     await this.repo.historieSchreibe(plan.loeschen.map((mappeId) => ({ mappeId, benutzerId, art: 'papierkorb' as const, daten: {
       vorgang, text, ...(mappeId === start.id ? { zahlen: z_ } : { start: start.id }),
     } })));
@@ -7793,7 +7794,7 @@ export class Dienst {
     const da = (await this.repo.erinnerungen({ mappeId: startId, empfaengerId: benutzerId })).find((e) => e.text === x.text && e.datum === x.datum);
     if (da) return { id: da.id, datum: da.datum, text: da.text };
     const r = await this.repo.legeErinnerungAn({ id: randomUUID(), mappeId: startId, empfaengerId: benutzerId, datum: x.datum, text: x.text, erstellt: '', erstelltVon: benutzerId });
-    await this.notiere(startId, benutzerId, 'aufgabe', { text: `Erinnerung für ${await this.name(benutzerId)} am ${datumDe(x.datum)}: ${x.text}`, aufgabenart: 'erinnerung', fuer: benutzerId, aufgabentext: x.text });
+    await this.notiere(startId, benutzerId, 'aufgabe', { text: t('meldungen.dienst.erinnerung-fuer-am', { name: await this.name(benutzerId), datumDe: datumDe(x.datum), text: x.text }), aufgabenart: 'erinnerung', fuer: benutzerId, aufgabentext: x.text });
     return { id: r.id, datum: r.datum, text: r.text };
   }
 
@@ -7836,10 +7837,10 @@ export class Dienst {
    */
   async stelleVorgangWiederHer(vorgang: string, ich: { id: string; rolle: string }, alle = false, quelle?: Ausloeser) {
     const eintraege = (await this.repo.papierkorb(alle && ich.rolle === 'admin' ? {} : { von: ich.id })).filter((e) => e.vorgang === vorgang);
-    if (!istUuid(vorgang) || !eintraege.length) throw new Fachfehler(404, 'Diesen Vorgang gibt es (im Papierkorb) nicht mehr.');
+    if (!istUuid(vorgang) || !eintraege.length) throw new Fachfehler(404, t('meldungen.dienst.diesen-vorgang-gibt-es'));
     const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
     const fehlt = eintraege.find((e) => !typen.has(e.typId));
-    if (fehlt) throw new Fachfehler(409, `Den Mappentyp von „${fehlt.titel || 'Ohne Titel'}“ gibt es nicht mehr.`);
+    if (fehlt) throw new Fachfehler(409, t('meldungen.dienst.den-mappentyp-von-gibt', { wert: fehlt.titel || t('meldungen.dienst.ohne-titel') }));
     const ids = eintraege.map((e) => e.id);
     const { verweiseEntfallen } = await this.repo.stelleMehrereWiederHer(ids);
     await this.repo.historieSchreibe(ids.map((mappeId) => ({ mappeId, benutzerId: ich.id, art: 'wiederhergestellt' as const, daten: { vorgang } })));
@@ -7925,7 +7926,7 @@ export class Dienst {
    */
   async auskunftDaten(e: unknown, z: Zugriff, x: { mandant: string; version: string }): Promise<AuskunftDaten> {
     const o = (e ?? {}) as Record<string, unknown>;
-    if (o.geprueft !== true) throw new Fachfehler(422, 'Bitte bestätige, dass du die Auswahl geprüft hast – ungeprüft geht nichts hinaus.');
+    if (o.geprueft !== true) throw new Fachfehler(422, t('meldungen.dienst.bitte-bestaetige-dass-du'));
     const vorschau = await this.auskunftVorschau({ mappeId: o.mappeId, tiefe: o.tiefe, richtungen: o.richtungen }, z);
     const bekannt = vorschau.mappen;
     const bezug = new Map(vorschau.baum.knoten.filter((k) => k.nurBezug && k.ueber).map((k) => [k.id, k] as const));
@@ -7936,7 +7937,7 @@ export class Dienst {
     const erwaehnungen: AuskunftErwaehnung[] = a.erwaehnungen.filter((id) => !a.mappen.includes(id)).map((id) => bezug.get(id)!)
       .map((k) => ({ mappeId: k.id, typ: k.typ, titel: k.titel, feld: k.ueber!.feld, richtung: k.ueber!.richtung }));
     const passwort = typeof o.passwort === 'string' && o.passwort ? o.passwort : null;
-    if (passwort && passwort.length < AUSKUNFT_PASSWORT_MIN) throw new Fachfehler(422, `Das Passwort für die ZIP-Datei braucht mindestens ${AUSKUNFT_PASSWORT_MIN} Zeichen.`);
+    if (passwort && passwort.length < AUSKUNFT_PASSWORT_MIN) throw new Fachfehler(422, t('meldungen.dienst.das-passwort-fuer-die', { AUSKUNFT_PASSWORT_MIN }));
     const start = (await this.repo.holeMappe(vorschau.baum.startId))!;
     const ds = await this.datenschutz();
     const ohneGeheim = (t: Mappentyp, w: Werte): Werte => Object.fromEntries(Object.entries(w).filter(([k, v]) => !istVerschluesselt(v) && t.felder.find((f) => f.key === k)?.typ !== 'passwort'));
@@ -7997,7 +7998,7 @@ export class Dienst {
   async auskunftNachweis(d: AuskunftDaten, von: { id: string; email: string }, info: { id: string; bytes: number }) {
     const n = d.anzahl;
     await this.notiere(d.start.id, von.id, 'auskunft', {
-      text: `Auskunft nach Art. 15 DSGVO erstellt: ${n.mappen} ${n.mappen === 1 ? 'Mappe' : 'Mappen'}, ${n.dokumente} ${n.dokumente === 1 ? 'Dokument' : 'Dokumente'}`,
+      text: t('meldungen.dienst.auskunft-nach-art-15', { mappen: n.mappen, wert: t('meldungen.dienst.mappen', { anzahl: n.mappen }), dokumente: n.dokumente, wert2: t('meldungen.dienst.dokumente', { anzahl: n.dokumente }) }),
       mappen: n.mappen, dokumente: n.dokumente, notizen: n.notizen, historie: n.historie, ohneNotizen: n.ohneNotizen, ...(n.erwaehnungen ? { erwaehnungen: n.erwaehnungen } : {}),
       ...(d.gruende.length ? { gruende: d.gruende } : {}), verschluesselt: !!d.passwort, auskunft: info.id,
     });
@@ -8010,10 +8011,10 @@ export class Dienst {
     const m = await this.pruefeRecht(z, String(o.mappeId ?? ''), 'R');
     const eingang = typeof o.eingang === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.eingang) ? o.eingang : heuteIn();
     const bis = fristBis(eingang);
-    const text = `Auskunft nach Art. 15 DSGVO an ${m.titel || 'Ohne Titel'} bis ${datumText(bis)} (Anfrage vom ${datumText(eingang)})`;
+    const text = t('meldungen.dienst.auskunft-nach-art-15-2', { wert: m.titel || t('meldungen.dienst.ohne-titel'), datumText: datumText(bis), datumText2: datumText(eingang) });
     // feldKey (#668): so findet die Liste der Auskünfte die Antwortfrist wieder.
     const a = await this.neueAufgabe({ id: randomUUID(), mappeId: m.id, empfaengerId: von, art: 'manuell', feldKey: FRIST_SCHLUESSEL, text, datum: bis, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
-    await this.notiere(m.id, von, 'aufgabe', { text: `für ${await this.name(von)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: von, aufgabentext: text });
+    await this.notiere(m.id, von, 'aufgabe', { text: t('meldungen.dienst.fuer', { name: await this.name(von), text }), aufgabe: a.id, aufgabenart: 'manuell', fuer: von, aufgabentext: text });
     return this.leiteUm(a);
   }
 
@@ -8037,8 +8038,8 @@ export class Dienst {
   /** Nachweis (#668): Herunterladen bzw. Löschen einer Auskunft in der Historie der Person – ohne Inhalte. */
   async auskunftNotiz(stand: { id: string; mappeId: string }, von: string, art: 'download' | 'geloescht') {
     await this.notiere(stand.mappeId, von, 'auskunft', art === 'download'
-      ? { text: 'Auskunft heruntergeladen', zustellung: 'download', auskunft: stand.id }
-      : { text: 'Auskunft gelöscht', geloescht: true, auskunft: stand.id });
+      ? { text: t('meldungen.dienst.auskunft-heruntergeladen'), zustellung: 'download', auskunft: stand.id }
+      : { text: t('meldungen.dienst.auskunft-geloescht'), geloescht: true, auskunft: stand.id });
   }
 
   /* ---------- Auskunft zustellen (#455): per E-Mail oder Abruf-Link mit Abrufcode ---------- */
@@ -8058,9 +8059,9 @@ export class Dienst {
    * kennt das DMS nicht und schickt es darum auch nie mit. Zu groß für E-Mail → Abruf-Link.
    */
   async auskunftPerEmail(stand: AuskunftStand & { name: string }, datei: () => Readable, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null) {
-    if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse). Nutze den Abruf-Link oder gib die Datei selbst weiter.');
-    if (!stand.verschluesselt) throw new Fachfehler(422, 'Per E-Mail geht eine Auskunft nur mit Passwort (verschlüsselt). Erzeuge sie mit Passwort neu oder stelle sie über einen Abruf-Link zu.');
-    if (stand.bytes > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Auskunft ist mit ${Math.round(stand.bytes / 1e6)} MB zu groß für eine E-Mail (höchstens ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB). Stelle sie über einen Abruf-Link zu.`);
+    if (!mailer) throw new Fachfehler(409, t('meldungen.dienst.der-e-mail-versand-2'));
+    if (!stand.verschluesselt) throw new Fachfehler(422, t('meldungen.dienst.per-e-mail-geht'));
+    if (stand.bytes > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, t('meldungen.dienst.die-auskunft-ist-mit', { round: Math.round(stand.bytes / 1e6), round2: Math.round(EMAIL_MAX_ANHAENGE / 1e6) }));
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const vorlage = auskunftMail.zip((await this.datenschutz()).anrede);
     const { an, betreff, nachricht } = Dienst.emailKopf({ betreff: vorlage.betreff, nachricht: vorlage.nachricht, ...e });
@@ -8068,9 +8069,9 @@ export class Dienst {
     try {
       await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge: [{ name: `${stand.name}.zip`, mime: 'application/zip', inhalt: datei() }] });
     } catch (x) {
-      throw new Fachfehler(502, `Die E-Mail wurde nicht verschickt: ${(x as Error).message}`);
+      throw new Fachfehler(502, t('meldungen.dienst.die-e-mail-wurde', { message: (x as Error).message }));
     }
-    await this.notiere(stand.mappeId, ich.id, 'auskunft', { text: `Auskunft per E-Mail gesendet an ${an.join(', ')} (verschlüsselt, ${Math.max(1, Math.round(stand.bytes / 1024))} KB)`, zustellung: 'email', an, betreff, auskunft: stand.id, bytes: stand.bytes });
+    await this.notiere(stand.mappeId, ich.id, 'auskunft', { text: t('meldungen.dienst.auskunft-per-e-mail', { an: an.join(', '), max: Math.max(1, Math.round(stand.bytes / 1024)) }), zustellung: 'email', an, betreff, auskunft: stand.id, bytes: stand.bytes });
     protokoll.modul('datenschutz').info('Auskunft per E-Mail gesendet', { mappeId: stand.mappeId, empfaenger: an.length, mb: Math.round(stand.bytes / 1024 ** 2), von: ich.email });
     return { an };
   }
@@ -8083,11 +8084,11 @@ export class Dienst {
   async auskunftLinkAnlegen(stand: AuskunftStand, eingabe: unknown, ich: { id: string; name: string; email: string }, x: { adresse: string; mailer: Mailer | null }) {
     const e = liesLinkEingabe(eingabe);
     if (e.fehler.length) throw new Fachfehler(422, e.fehler.join(' '));
-    if (e.senden && !x.mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse). Kopiere den Link und schicke ihn selbst.');
-    if (e.senden && !istEmail(e.an)) throw new Fachfehler(422, 'Bitte eine gültige E-Mail-Adresse für den Link angeben.');
-    if (!x.adresse) throw new Fachfehler(409, 'Die Adresse von Ablago ist nicht bekannt (Werkbank → E-Mail und Adresse).');
+    if (e.senden && !x.mailer) throw new Fachfehler(409, t('meldungen.dienst.der-e-mail-versand-3'));
+    if (e.senden && !istEmail(e.an)) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-gueltige-e'));
+    if (!x.adresse) throw new Fachfehler(409, t('meldungen.dienst.die-adresse-von-ablago'));
     for (const alt of await this.repo.auskunftLinks({ auskunftId: stand.id })) {
-      if (linkStatus(alt) === 'aktiv' && (await this.repo.widerrufeAuskunftLink(alt.id))) await this.notiere(alt.mappeId, ich.id, 'auskunft', { text: 'Abruf-Link zurückgezogen (ersetzt durch einen neuen)', zustellung: 'link', link: alt.id, auskunft: stand.id });
+      if (linkStatus(alt) === 'aktiv' && (await this.repo.widerrufeAuskunftLink(alt.id))) await this.notiere(alt.mappeId, ich.id, 'auskunft', { text: t('meldungen.dienst.abruf-link-zurueckgezogen-ersetzt'), zustellung: 'link', link: alt.id, auskunft: stand.id });
     }
     const schluessel = neuerSchluessel();
     const code = e.code ?? neuerAbrufcode();
@@ -8106,11 +8107,11 @@ export class Dienst {
       const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
       try { await x.mailer!.sende(e.an, m.betreff, m.nachricht, { antwortAn }); } catch (f) {
         await this.repo.widerrufeAuskunftLink(link.id);
-        throw new Fachfehler(502, `Die E-Mail mit dem Link wurde nicht verschickt: ${(f as Error).message}`);
+        throw new Fachfehler(502, t('meldungen.dienst.die-e-mail-mit', { message: (f as Error).message }));
       }
     }
     await this.notiere(stand.mappeId, ich.id, 'auskunft', {
-      text: `Abruf-Link erstellt: gültig bis ${bis}, ${link.maxAbrufe === 1 ? 'ein Abruf' : `höchstens ${link.maxAbrufe} Abrufe`}${e.senden ? `, per E-Mail an ${e.an}` : ''}${link.codeArt === 'eigen' ? ', eigener Abrufcode' : ''}`,
+      text: t('meldungen.dienst.abruf-link-erstellt-gueltig', { anzahl: link.maxAbrufe, bis, wert: e.senden ? t('meldungen.dienst.per-e-mail-an', { an: e.an }) : '', wert2: link.codeArt === 'eigen' ? t('meldungen.dienst.eigener-abrufcode') : '' }),
       zustellung: 'link', link: link.id, auskunft: stand.id, ablauf: link.ablauf, maxAbrufe: link.maxAbrufe, ...(e.senden ? { an: [e.an] } : {}),
     });
     protokoll.modul('datenschutz').info('Abruf-Link erstellt', { mappeId: stand.mappeId, link: link.id, tage: e.tage, abrufe: e.abrufe, code: link.codeArt, mail: e.senden, von: ich.email });
@@ -8122,9 +8123,9 @@ export class Dienst {
   /** Zurückziehen (#455): Der Link gilt sofort nicht mehr; die Zeile bleibt als Nachweis. */
   async auskunftLinkWiderrufen(id: string, ich: { id: string; email: string }): Promise<AuskunftLink> {
     const [l] = await this.repo.auskunftLinks({ id, max: 1 });
-    if (!l) throw new Fachfehler(404, 'Diesen Abruf-Link gibt es nicht.');
+    if (!l) throw new Fachfehler(404, t('meldungen.dienst.diesen-abruf-link-gibt'));
     if (await this.repo.widerrufeAuskunftLink(id)) {
-      await this.notiere(l.mappeId, ich.id, 'auskunft', { text: 'Abruf-Link zurückgezogen', zustellung: 'link', link: id, auskunft: l.auskunftId });
+      await this.notiere(l.mappeId, ich.id, 'auskunft', { text: t('meldungen.dienst.abruf-link-zurueckgezogen'), zustellung: 'link', link: id, auskunft: l.auskunftId });
       protokoll.modul('datenschutz').info('Abruf-Link zurückgezogen', { mappeId: l.mappeId, link: id, von: ich.email });
     }
     return (await this.auskunftLinks({ auskunftId: l.auskunftId })).find((x) => x.id === id)!;
@@ -8159,16 +8160,16 @@ export class Dienst {
     if (!c || !(await pruefePasswort(c, link.code))) {
       const f = await this.repo.auskunftLinkFehlversuch(link.id, LINK_FEHLVERSUCHE_MAX);
       const gesperrt = !!f?.gesperrt;
-      await this.notiere(link.mappeId, null, 'auskunft', { text: `Abruf fehlgeschlagen: falscher Abrufcode${gesperrt ? ` – Link nach ${f!.fehlversuche} Fehlversuchen gesperrt` : ''}`, zustellung: 'abruf', erfolg: false, link: link.id, auskunft: link.auskunftId });
+      await this.notiere(link.mappeId, null, 'auskunft', { text: t('meldungen.dienst.abruf-fehlgeschlagen-falscher', { wert: gesperrt ? t('meldungen.dienst.link-nach-fehlversuchen-gesperrt', { fehlversuche: f!.fehlversuche }) : '' }), zustellung: 'abruf', erfolg: false, link: link.id, auskunft: link.auskunftId });
       if (gesperrt) {
         protokoll.modul('datenschutz').warn('Abruf-Link nach Fehlversuchen gesperrt', { mappeId: link.mappeId, link: link.id, versuche: f!.fehlversuche });
-        await this.auskunftMelden(link, `Abruf-Link für die Auskunft an ${link.titel || 'Ohne Titel'} nach ${f!.fehlversuche} falschen Abrufcodes gesperrt`, 'gesperrt');
+        await this.auskunftMelden(link, t('meldungen.dienst.abruf-link-fuer-die', { wert: link.titel || t('meldungen.dienst.ohne-titel'), fehlversuche: f!.fehlversuche }), 'gesperrt');
       }
       return { art: 'falsch', link };
     }
     const st = linkStatus(link);
     if (st !== 'aktiv') {
-      await this.notiere(link.mappeId, null, 'auskunft', { text: `Abruf versucht, aber der Link ist ${LINK_STATUS[st]}`, zustellung: 'abruf', erfolg: false, link: link.id, auskunft: link.auskunftId });
+      await this.notiere(link.mappeId, null, 'auskunft', { text: t('meldungen.dienst.abruf-versucht-aber-der', { LINK_STATUS: LINK_STATUS[st] }), zustellung: 'abruf', erfolg: false, link: link.id, auskunft: link.auskunftId });
       return { art: 'ungueltig', link };
     }
     return { art: 'ok', link };
@@ -8182,10 +8183,10 @@ export class Dienst {
   /** Nachweis eines Abrufs (#455): Historie und Benachrichtigung an Ersteller und Favoriten-Inhaber. */
   async auskunftAbgerufen(link: AuskunftLink, nr: number, vollstaendig: boolean, standVon?: string) {
     await this.notiere(link.mappeId, null, 'auskunft', {
-      text: vollstaendig ? `Auskunft abgerufen (${nr}. von höchstens ${link.maxAbrufe} Abrufen)` : `Abruf abgebrochen (${nr}. von höchstens ${link.maxAbrufe} Abrufen)`,
+      text: vollstaendig ? t('meldungen.dienst.auskunft-abgerufen-von-hoechstens', { nr, maxAbrufe: link.maxAbrufe }) : t('meldungen.dienst.abruf-abgebrochen-von-hoechstens', { nr, maxAbrufe: link.maxAbrufe }),
       zustellung: 'abruf', erfolg: vollstaendig, link: link.id, auskunft: link.auskunftId, nr,
     });
-    if (vollstaendig) await this.auskunftMelden(link, `Auskunft an ${link.titel || 'Ohne Titel'} wurde abgerufen`, 'abgerufen', standVon);
+    if (vollstaendig) await this.auskunftMelden(link, t('meldungen.dienst.auskunft-an-wurde-abgerufen', { wert: link.titel || t('meldungen.dienst.ohne-titel') }), 'abgerufen', standVon);
   }
 
   /**
@@ -8232,14 +8233,14 @@ export class Dienst {
     const m = await this.repo.holeMappe(mappeId);
     const typ = m ? await this.repo.holeTyp(m.typId) : undefined;
     const bis = m ? aufbewahrenBis(typ?.archiv, m) : null;
-    if (inFrist(bis)) throw new Fachfehler(409, `Aufbewahrungspflicht bis ${datumText(bis!)} – Dokumente dieser Mappe lassen sich vorher nicht ${was}. Ändern geht als neue Version.`, { aufbewahrenBis: bis });
+    if (inFrist(bis)) throw new Fachfehler(409, t('meldungen.dienst.aufbewahrungspflicht-bis-dokumente', { datumText: datumText(bis!), was }), { aufbewahrenBis: bis });
   }
 
   /** Vorschau beim Einschalten: wie viele Mappen betroffen, wie viele schon „darf weg“. */
   async archivVorschau(typId: string, e: unknown) {
     const typ = istUuid(typId) ? await this.repo.holeTyp(typId) : undefined;
     const archiv = bereinigeTyp({ felder: typ?.felder ?? [], archiv: e }).archiv;
-    if (!archiv) throw new Fachfehler(422, `Bitte eine Frist von 1 bis ${JAHRE_MAX} Jahren angeben.`);
+    if (!archiv) throw new Fachfehler(422, t('meldungen.dienst.bitte-eine-frist-von', { JAHRE_MAX }));
     const mappen = typ ? await this.repo.listeMappen(typ.id) : [];
     return { mappen: mappen.length, darfWeg: mappen.filter((m) => !inFrist(aufbewahrenBis(archiv, m))).length };
   }
@@ -8268,8 +8269,8 @@ export class Dienst {
           const s = await this.dateien.lies(sha);
           const h = createHash('sha256');
           if (Buffer.isBuffer(s)) h.update(s); else for await (const teil of s) h.update(teil as Buffer);
-          if (h.digest('hex') !== sha) grund = 'Inhalt verändert';
-        } catch { grund = 'Datei fehlt'; }
+          if (h.digest('hex') !== sha) grund = t('meldungen.dienst.inhalt-veraendert');
+        } catch { grund = t('meldungen.dienst.datei-fehlt'); }
         if (grund) abweichungen.push({ sha256: sha, grund, dokumente: alle.filter((x) => x.sha256 === sha) });
         fortschritt(i + 1, shas.length);
       }
@@ -8291,13 +8292,13 @@ export class Dienst {
   /** Neue Version eines Dokuments – unabhängig von Name und Dateityp; nur mit eingeschalteter Versionierung. */
   async ersetzeDokument(id: string, e: { name?: string; typ?: string; herkunft?: Herkunft }, inhalt: unknown, benutzerId: string | null): Promise<Dokument> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const { typ, reg } = await this.registerVon(d);
-    if (!reg?.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung ausgeschaltet – Ersetzen ist nicht möglich.');
+    if (!reg?.versionierung) throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist-6'));
     // Upload als temporäre Datei (#746) oder Puffer.
     const ein = Eingang.aus(inhalt);
-    if (!ein || ein.groesse === 0) throw new Fachfehler(422, 'Die Datei ist leer.');
-    if (ein.groesse > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
+    if (!ein || ein.groesse === 0) throw new Fachfehler(422, t('meldungen.dienst.die-datei-ist-leer'));
+    if (ein.groesse > MAX_DATEIGROESSE) throw new Fachfehler(413, t('meldungen.dienst.die-datei-ist-zu'));
     const sha256 = await ein.sha256();
     const erkannt = erkenneAnzeigbar(ein.kopf);
     const angegeben = erkenneBildtyp(ein.kopf) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
@@ -8313,11 +8314,11 @@ export class Dienst {
   /** Eine ältere Version zurückholen: als neue, höchste Version; es geht nichts verloren. */
   async holeVersionZurueck(id: string, nummer: number, benutzerId: string | null): Promise<Dokument> {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     const v = await this.repo.holeVersion(id, nummer);
-    if (!v) throw new Fachfehler(404, `Version ${nummer} gibt es nicht (mehr).`);
+    if (!v) throw new Fachfehler(404, t('meldungen.dienst.version-gibt-es-nicht', { nummer }));
     const { typ, reg } = await this.registerVon(d);
-    if (!reg?.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung ausgeschaltet – Zurückholen ist nicht möglich.');
+    if (!reg?.versionierung) throw new Fachfehler(409, t('meldungen.dienst.fuer-dieses-register-ist-7'));
     const neu = await this.repo.ersetzeDokument(id, {
       name: v.name, mime: v.mime, groesse: v.groesse, sha256: v.sha256, anzeigbar: v.anzeigbar, erstelltVon: benutzerId, herkunft: 'zurueckgeholt', volltext: v.volltext,
     });
@@ -8349,13 +8350,13 @@ export class Dienst {
 
   async versionen(id: string) {
     const d = await this.repo.holeDokument(id);
-    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
     return { aktuell: d, aeltere: await this.repo.versionenVon(id) };
   }
 
   async versionInhalt(id: string, nummer: number) {
     const v = await this.repo.holeVersion(id, nummer);
-    if (!v) throw new Fachfehler(404, `Version ${nummer} gibt es nicht (mehr).`);
+    if (!v) throw new Fachfehler(404, t('meldungen.dienst.version-gibt-es-nicht', { nummer }));
     const { volltext: _v, ...version } = v;
     return { version, inhalt: await this.dateien.lies(v.sha256) };
   }
@@ -8375,6 +8376,6 @@ function sprachliste(x: unknown, feld: string, max = Object.keys(TEXTSPRACHEN).l
 /** Seitensprachen eines Pakets (#579): je Seite null (das DMS erkennt sie) oder ein bis zwei Sprachen. */
 function sprachlisten(x: unknown): Array<string[] | null> | undefined {
   if (x === undefined || x === null) return undefined;
-  if (!Array.isArray(x) || !x.length || x.length > MAX_SEITENSPRACHEN) throw new Fachfehler(422, `seitensprachen: Liste mit einem Eintrag je Seite erwartet (höchstens ${MAX_SEITENSPRACHEN}).`);
+  if (!Array.isArray(x) || !x.length || x.length > MAX_SEITENSPRACHEN) throw new Fachfehler(422, t('meldungen.dienst.seitensprachen-liste-mit-einem', { MAX_SEITENSPRACHEN }));
   return x.map((e, i) => (e === null ? null : sprachliste(e, `seitensprachen[${i}]`, SPRACHEN_JE_SEITE)));
 }

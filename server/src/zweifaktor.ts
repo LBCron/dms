@@ -5,6 +5,7 @@ import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Zwei-Faktor-Anmeldung (#242): TOTP (Authenticator-App, RFC 6238) und Wiederherstellungscodes.
@@ -131,12 +132,12 @@ export class Zweifaktor {
 
   /** Einrichten, Schritt 2: Code aus der App bestätigt das Geheimnis; liefert die Wiederherstellungscodes (einmalig). */
   async bestaetige(id: string, code: unknown, von: string): Promise<string[]> {
-    const neu = () => new Fachfehler(409, 'Bitte die Einrichtung neu beginnen (nach 10 Minuten verfällt der QR-Code).');
+    const neu = () => new Fachfehler(409, t('meldungen.zweifaktor.bitte-die-einrichtung-neu'));
     const e = await this.zustand.lies(ENTWURF, id);
     const klar = typeof e?.wert === 'string' ? this.entschluessele(e.wert) : null;
     if (!klar) throw neu();
     const schritt = this.passt(ausBase32(klar), String(code ?? ''), -1);
-    if (schritt === null) throw new Fachfehler(422, 'Der Code stimmt nicht. Uhrzeit von Handy und Ablago prüfen und den aktuellen Code eingeben.');
+    if (schritt === null) throw new Fachfehler(422, t('meldungen.zweifaktor.der-code-stimmt-nicht'));
     // Einmal einlösbar: Zwei gleichzeitige Bestätigungen legen nicht zweimal Wiederherstellungscodes an.
     if (!(await this.zustand.nimm(ENTWURF, id))) throw neu();
     const codes = neueCodes();
@@ -177,7 +178,7 @@ export class Zweifaktor {
 
   async neueCodes(id: string, von: string): Promise<string[]> {
     const g = await this.lies(id);
-    if (!g) throw new Fachfehler(409, 'Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.');
+    if (!g) throw new Fachfehler(409, t('meldungen.zweifaktor.die-zwei-faktor-anmeldung'));
     const codes = neueCodes();
     await this.schreibe(id, { ...g, codes: codes.map(hash) });
     log.info('Neue Wiederherstellungscodes', { benutzer: id, von });

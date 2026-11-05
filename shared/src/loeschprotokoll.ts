@@ -7,33 +7,34 @@
 import { kreisVon } from './nummernkreis';
 import type { Mappentyp, Werte } from './model';
 import { zeitzone } from './region';
+import { t } from './texte';
 
 export const LOESCHGRUENDE = {
-  frist: 'Frist abgelaufen („Aufbewahrung abgelaufen“)',
-  verlangen: 'Auf Verlangen der betroffenen Person',
-  nicht_noetig: 'Nicht mehr nötig',
+  frist: t('gemeinsam.loeschprotokoll.frist-abgelaufen-aufbewahrung'),
+  verlangen: t('gemeinsam.loeschprotokoll.auf-verlangen-der-betroffenen'),
+  nicht_noetig: t('gemeinsam.loeschprotokoll.nicht-mehr-noetig'),
   sonstiges: 'Sonstiges',
 } as const;
 export type Loeschgrund = keyof typeof LOESCHGRUENDE;
 export const GRUND_TEXT_MAX = 200;
 
-export const LOESCHSCHRITTE = { papierkorb: 'in den Papierkorb', endgueltig: 'endgültig gelöscht', wiederhergestellt: 'wiederhergestellt' } as const;
+export const LOESCHSCHRITTE = { papierkorb: t('gemeinsam.loeschprotokoll.in-den-papierkorb'), endgueltig: t('gemeinsam.loeschprotokoll.endgueltig-geloescht'), wiederhergestellt: 'wiederhergestellt' } as const;
 export type Loeschschritt = keyof typeof LOESCHSCHRITTE;
 
 /** Wie gelöscht wurde. */
 export const LOESCHWEGE = {
   einzeln: 'einzeln',
-  mehrere: 'mehrere ausgewählt',
-  verknuepft: 'mit verknüpften Mappen',
-  dokument: 'Dokument einzeln',
-  ersetzt: 'Dokument ersetzt',
-  version: 'ältere Version entfernt',
-  papierkorb: 'aus dem Papierkorb',
-  leeren: 'Papierkorb geleert',
-  abmelden: 'Papierkorb beim Abmelden geleert',
-  ablauf: 'Aufbewahrung im Papierkorb abgelaufen',
-  ausgeschaltet: 'Papierkorb ausgeschaltet',
-  zurueckgerollt: 'Paketinstallation zurückgenommen',
+  mehrere: t('gemeinsam.loeschprotokoll.mehrere-ausgewaehlt'),
+  verknuepft: t('gemeinsam.loeschprotokoll.mit-verknuepften-mappen'),
+  dokument: t('gemeinsam.loeschprotokoll.dokument-einzeln'),
+  ersetzt: t('gemeinsam.loeschprotokoll.dokument-ersetzt'),
+  version: t('gemeinsam.loeschprotokoll.aeltere-version-entfernt'),
+  papierkorb: t('gemeinsam.loeschprotokoll.aus-dem-papierkorb'),
+  leeren: t('gemeinsam.loeschprotokoll.papierkorb-geleert'),
+  abmelden: t('gemeinsam.loeschprotokoll.papierkorb-beim-abmelden-geleert'),
+  ablauf: t('gemeinsam.loeschprotokoll.aufbewahrung-im-papierkorb'),
+  ausgeschaltet: t('gemeinsam.loeschprotokoll.papierkorb-ausgeschaltet'),
+  zurueckgerollt: t('gemeinsam.loeschprotokoll.paketinstallation-zurueckgenommen'),
 } as const;
 export type Loeschweg = keyof typeof LOESCHWEGE;
 
@@ -150,7 +151,7 @@ export function passt(e: LoeschEintrag, f: LoeschFilter): boolean {
 
 /* ---------- Ausgabe ---------- */
 
-export const LOESCH_SPALTEN = ['Zeit', 'Schritt', 'Art', 'Mappentyp', 'Nummer', 'Mappen-Id', 'Dokument-Id', 'Archivnummer', 'Version', 'SHA-256', 'Größe (Bytes)', 'Dateityp', 'Seiten', 'Dokumente', 'Versionen', 'Notizen', 'Verweise entfernt', 'Wie', 'Von', 'Auslöser', 'Grund', 'Grund (Text)', 'Vorgang', 'Start-Mappe'];
+export const LOESCH_SPALTEN = ['Zeit', 'Schritt', 'Art', 'Mappentyp', 'Nummer', t('gemeinsam.loeschprotokoll.mappen-id'), t('gemeinsam.loeschprotokoll.dokument-id'), 'Archivnummer', 'Version', 'SHA-256', t('gemeinsam.loeschprotokoll.groesse-bytes'), 'Dateityp', 'Seiten', 'Dokumente', 'Versionen', 'Notizen', t('gemeinsam.loeschprotokoll.verweise-entfernt'), 'Wie', 'Von', 'Auslöser', 'Grund', t('gemeinsam.loeschprotokoll.grund-text'), 'Vorgang', t('gemeinsam.loeschprotokoll.start-mappe')];
 
 export function alsZeile(e: LoeschEintrag): string[] {
   const z = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));

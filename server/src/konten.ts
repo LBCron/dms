@@ -109,7 +109,7 @@ export class Konten {
 
   /** Erster Aufruf: legt den Administrator an und meldet ihn an. */
   async einrichten(e: { email?: unknown; name?: unknown; passwort?: unknown }, info: Geraet = OHNE_GERAET) {
-    if (!(await this.einrichtungNoetig())) throw new Fachfehler(409, 'Die Einrichtung ist bereits abgeschlossen.');
+    if (!(await this.einrichtungNoetig())) throw new Fachfehler(409, t('meldungen.konten.die-einrichtung-ist-bereits'));
     const email = pruefeEmail(e.email);
     const passwort = pruefePasswortRegeln(e.passwort);
     // #818: Die erste Person bekommt „Gesamte Verwaltung“ – ein eigenes Admin-Konto gibt es nicht mehr.
@@ -184,18 +184,18 @@ export class Konten {
    * Beendet alle Sitzungen des Benutzers.
    */
   async setzePasswortDirekt(email: unknown, passwort: unknown) {
-    const t = await this.repo.holeHash(text(email).toLowerCase());
-    if (!t) throw new Fachfehler(404, `Unter ${text(email)} gibt es keinen Benutzer.`);
-    await this.repo.setzeHash(t.benutzer.id, await hashePasswort(pruefePasswortRegeln(passwort)));
-    await this.repo.loescheLinksVon(t.benutzer.id);
-    await this.repo.loescheSitzungenVon(t.benutzer.id);
-    return t.benutzer;
+    const eintrag = await this.repo.holeHash(text(email).toLowerCase());
+    if (!eintrag) throw new Fachfehler(404, t('meldungen.konten.unter-gibt-es-keinen', { text: text(email) }));
+    await this.repo.setzeHash(eintrag.benutzer.id, await hashePasswort(pruefePasswortRegeln(passwort)));
+    await this.repo.loescheLinksVon(eintrag.benutzer.id);
+    await this.repo.loescheSitzungenVon(eintrag.benutzer.id);
+    return eintrag.benutzer;
   }
 
   /** Eigenes Passwort bestätigen (z. B. vor dem Abschalten der Zwei-Faktor-Anmeldung). */
   async pruefeEigenesPasswort(b: Benutzer, passwort: unknown) {
-    const t = await this.repo.holeHash(b.email);
-    if (!t || !(await pruefePasswort(typeof passwort === 'string' ? passwort : '', t.hash))) throw new Fachfehler(403, 'Das Passwort stimmt nicht.');
+    const eintrag = await this.repo.holeHash(b.email);
+    if (!eintrag || !(await pruefePasswort(typeof passwort === 'string' ? passwort : '', eintrag.hash))) throw new Fachfehler(403, t('meldungen.konten.das-passwort-stimmt-nicht'));
   }
 
   /** Zweiter Schritt (#242): Code aus der App oder ein Wiederherstellungscode. */
@@ -355,7 +355,7 @@ export class Konten {
   async bestaetigeFrisch(b: Benutzer, schluessel: string | undefined, s: SitzungIntern | undefined, e: { passwort?: unknown; code?: unknown }, ip: string) {
     if (!schluessel || !s) throw new Fachfehler(401, t('anmeldung.fehler.bitte-anmelden'));
     if (s.vertretungId) throw new Fachfehler(403, t('konten.verwaltung.fehler.vertretung'));
-    await this.bestaetigeErneut(b, e, ip, 'heikle Handlung');
+    await this.bestaetigeErneut(b, e, ip, t('meldungen.konten.heikle-handlung'));
     const jetzt = new Date(this.uhr());
     await this.repo.setzeSitzungsVerwaltung(hasheSchluessel(schluessel), { frisch: jetzt, verwaltungBestaetigt: jetzt });
     log.info('Frisch angemeldet für eine heikle Handlung', { person: b.email, imVerwaltungsmodus: this.modusAktiv(b, s) });
@@ -444,13 +444,13 @@ export class Konten {
   /* ---------- Sitzungen (Admin) ---------- */
 
   async sitzungenVon(benutzerId: string, aktuelleId?: string) {
-    if (!(await this.person(benutzerId))) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!(await this.person(benutzerId))) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     return (await this.repo.listeSitzungen(benutzerId)).map(({ hash: _h, ...x }) => ({ ...x, aktuell: x.id === aktuelleId }));
   }
 
   async beendeSitzung(benutzerId: string, id: string) {
     const s = (await this.repo.listeSitzungen(benutzerId)).find((x) => x.id === id);
-    if (!s) throw new Fachfehler(404, 'Diese Sitzung gibt es nicht (mehr).');
+    if (!s) throw new Fachfehler(404, t('meldungen.konten.diese-sitzung-gibt-es'));
     if (s.vertretungId) await this.repo.beendeVertretung(s.vertretungId);
     await this.repo.loescheSitzungMitId(benutzerId, id);
   }
@@ -500,10 +500,10 @@ export class Konten {
   async vertrete(admin: Benutzer, adminSchluessel: string | undefined, zielId: string, info: Geraet) {
     if (admin.rolle !== 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.modus'));
     const ziel = await this.person(zielId);
-    if (!ziel) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!ziel) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     this.pruefeKontoVonVerwaltenden(admin, ziel);
-    if (ziel.id === admin.id) throw new Fachfehler(409, 'Du bist bereits du selbst.');
-    if (!ziel.aktiv) throw new Fachfehler(409, 'Der Benutzer ist deaktiviert.');
+    if (ziel.id === admin.id) throw new Fachfehler(409, t('meldungen.konten.du-bist-bereits-du'));
+    if (!ziel.aktiv) throw new Fachfehler(409, t('meldungen.konten.der-benutzer-ist-deaktiviert'));
     const id = randomUUID();
     await this.repo.legeVertretungAn({ id, benutzerId: ziel.id, adminId: admin.id, adminName: admin.name || admin.email });
     const schluessel = await this.neueSitzung(ziel.id, info, id);
@@ -514,7 +514,7 @@ export class Konten {
   /** Zurück ins eigene Konto: beendet die Vertretung und meldet den Administrator wieder an. */
   async vertretungBeenden(schluessel: string | undefined, info: Geraet) {
     const a = await this.anmeldungZu(schluessel);
-    if (!a?.sitzung.vertretungId) throw new Fachfehler(409, 'Du agierst gerade nicht als anderer Benutzer.');
+    if (!a?.sitzung.vertretungId) throw new Fachfehler(409, t('meldungen.konten.du-agierst-gerade-nicht'));
     const v = await this.repo.holeVertretung(a.sitzung.vertretungId);
     await this.repo.beendeVertretung(a.sitzung.vertretungId);
     await this.repo.loescheSitzung(hasheSchluessel(schluessel!));
@@ -540,8 +540,8 @@ export class Konten {
   }
 
   async setzeEinstellung(ich: Benutzer, schluessel: string, wert: unknown) {
-    if (!/^[a-z][a-z0-9:_-]{0,80}$/i.test(schluessel)) throw new Fachfehler(422, 'Ungültiger Name der Einstellung.');
-    if (wert !== null && JSON.stringify(wert ?? null).length > 4000) throw new Fachfehler(422, 'Die Einstellung ist zu groß.');
+    if (!/^[a-z][a-z0-9:_-]{0,80}$/i.test(schluessel)) throw new Fachfehler(422, t('meldungen.konten.ungueltiger-name-der-einstellung'));
+    if (wert !== null && JSON.stringify(wert ?? null).length > 4000) throw new Fachfehler(422, t('meldungen.konten.die-einstellung-ist-zu'));
     await this.repo.setzeEinstellung(ich.id, schluessel, wert ?? null);
   }
 
@@ -552,9 +552,9 @@ export class Konten {
   /* ---------- Eigenes Profil ---------- */
 
   private async bestaetige(ich: Benutzer, passwort: unknown) {
-    const t = await this.repo.holeHash(ich.email);
-    if (!t || !(await pruefePasswort(typeof passwort === 'string' ? passwort : '', t.hash))) {
-      throw new Fachfehler(403, 'Das aktuelle Passwort stimmt nicht.');
+    const eintrag = await this.repo.holeHash(ich.email);
+    if (!eintrag || !(await pruefePasswort(typeof passwort === 'string' ? passwort : '', eintrag.hash))) {
+      throw new Fachfehler(403, t('meldungen.konten.das-aktuelle-passwort-stimmt'));
     }
   }
 
@@ -567,7 +567,7 @@ export class Konten {
     const d: { name?: string; entwicklermodus?: boolean } = {};
     if (e.name !== undefined) {
       const name = text(e.name);
-      if (!name) throw new Fachfehler(422, 'Bitte einen Namen angeben.');
+      if (!name) throw new Fachfehler(422, t('meldungen.konten.bitte-einen-namen-angeben'));
       d.name = name.slice(0, 120);
     }
     if (e.entwicklermodus !== undefined) d.entwicklermodus = !!e.entwicklermodus;
@@ -579,7 +579,7 @@ export class Konten {
     const email = pruefeEmail(e.email);
     await this.bestaetige(ich, e.passwort);
     if (email.toLowerCase() === ich.email.toLowerCase()) return ich;
-    if (await this.repo.holeHash(email)) throw new Fachfehler(409, 'Diese E-Mail-Adresse wird schon von einem anderen Benutzer verwendet.');
+    if (await this.repo.holeHash(email)) throw new Fachfehler(409, t('meldungen.konten.diese-e-mail-adresse'));
     const neu = await this.repo.aendereBenutzer(ich.id, { email });
     await this.spiegle(neu, ich.id);
     await this.benachrichtige(ich.email, mailtexte.emailGeaendert(ich.name, ich.email, email), log);
@@ -641,22 +641,22 @@ export class Konten {
   /** Abwesenheit setzen – für sich selbst oder (Administrator) für andere. Vertreter ist Pflicht, sobald sie an ist. */
   async setzeAbwesenheit(ich: Benutzer, id: string, e: { an?: unknown; von?: unknown; bis?: unknown; vertreterId?: unknown }) {
     const b = await this.person(id);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     if (id !== ich.id && ich.rolle !== 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.modus'));
     const datum = (v: unknown, was: string): string | null => {
-      const t = text(v);
-      if (!t) return null;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || Number.isNaN(Date.parse(t))) throw new Fachfehler(422, `Bitte ein gültiges Datum für „${was}“ angeben.`);
-      return t;
+      const text2 = text(v);
+      if (!text2) return null;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text2) || Number.isNaN(Date.parse(text2))) throw new Fachfehler(422, t('meldungen.konten.bitte-ein-gueltiges-datum', { was }));
+      return text2;
     };
     const a: Abwesenheit = { an: e.an === true || e.an === 'true', von: datum(e.von, 'von'), bis: datum(e.bis, 'bis'), vertreterId: text(e.vertreterId) || null };
-    if (a.von && a.bis && a.bis < a.von) throw new Fachfehler(422, '„bis“ liegt vor „von“.');
-    if (a.an && a.bis && a.bis < heuteIn()) throw new Fachfehler(422, '„bis“ liegt in der Vergangenheit.');
+    if (a.von && a.bis && a.bis < a.von) throw new Fachfehler(422, t('meldungen.konten.bis-liegt-vor-von'));
+    if (a.an && a.bis && a.bis < heuteIn()) throw new Fachfehler(422, t('meldungen.konten.bis-liegt-in-der'));
     if (a.vertreterId) {
-      if (a.vertreterId === id) throw new Fachfehler(422, 'Als Vertreter bitte einen anderen Benutzer wählen.');
+      if (a.vertreterId === id) throw new Fachfehler(422, t('meldungen.konten.als-vertreter-bitte-einen'));
       const v = await this.person(a.vertreterId);
-      if (!v || !v.aktiv) throw new Fachfehler(422, 'Der Vertreter muss ein aktiver Benutzer sein.');
-    } else if (a.an || !b.aktiv) throw new Fachfehler(422, 'Bitte einen Vertreter wählen.');
+      if (!v || !v.aktiv) throw new Fachfehler(422, t('meldungen.konten.der-vertreter-muss-ein'));
+    } else if (a.an || !b.aktiv) throw new Fachfehler(422, t('meldungen.konten.bitte-einen-vertreter-waehlen'));
     const alt = b.abwesenheit ?? KEINE_ABWESENHEIT;
     const neu = await this.repo.setzeAbwesenheit(id, a);
     await this.spiegle(neu, ich.id);
@@ -668,9 +668,9 @@ export class Konten {
   async aufgabenAnVertreter(ich: Benutzer, id: string) {
     if (id !== ich.id && ich.rolle !== 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.modus'));
     const b = await this.person(id);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     const v = b.abwesenheit?.vertreterId;
-    if (!v) throw new Fachfehler(409, 'Es ist kein Vertreter hinterlegt.');
+    if (!v) throw new Fachfehler(409, t('meldungen.konten.es-ist-kein-vertreter'));
     return { uebergeben: (await this.spiegel?.aufgabenUebergeben?.(id, v, ich.id)) ?? 0 };
   }
 
@@ -683,7 +683,7 @@ export class Konten {
       if (a.an && a.bis && a.bis < heute) {
         const neu = await this.repo.setzeAbwesenheit(b.id, { ...a, an: false, von: null, bis: null });
         await this.spiegle(neu);
-        await this.spiegel?.abwesenheitGeaendert?.(neu, a, null, `Zeitraum bis ${a.bis.split('-').reverse().join('.')} abgelaufen`);
+        await this.spiegel?.abwesenheitGeaendert?.(neu, a, null, t('meldungen.konten.zeitraum-bis-abgelaufen', { reverse: a.bis.split('-').reverse().join('.') }));
       } else if (a.an) await this.spiegle(b);
     }
   }
@@ -694,7 +694,7 @@ export class Konten {
    */
   async legeBenutzerAn(e: { email?: unknown; name?: unknown; verwaltung?: unknown }, von: string | null = null): Promise<Ergebnis> {
     const email = pruefeEmail(e.email);
-    if (await this.repo.holeHash(email)) throw new Fachfehler(409, 'Für diese E-Mail-Adresse gibt es schon einen Benutzer.');
+    if (await this.repo.holeHash(email)) throw new Fachfehler(409, t('meldungen.konten.fuer-diese-e-mail'));
     const benutzer = await this.repo.legeBenutzerAn({ id: randomUUID(), email, name: text(e.name), verwaltung: liesVerwaltung(e.verwaltung), passwortHash: null });
     await this.spiegle(benutzer, von);
     if (benutzer.verwaltung?.length) log.warn('Verwaltungsrecht vergeben', { person: benutzer.email, vorher: '–', nachher: verwaltungText(benutzer.verwaltung), von: von ?? 'Konsole' });
@@ -723,7 +723,7 @@ export class Konten {
   async setzeVerwaltung(ich: Benutzer, id: string, eingabe: unknown, mailLog: (m: string) => void = () => {}): Promise<Benutzer> {
     if (!hatGesamt(ich)) throw new Fachfehler(403, t('konten.verwaltung.fehler.vergeben'));
     const b = await this.person(id);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     const neu = liesVerwaltung(eingabe);
     if (gleicheVerwaltung(b.verwaltung, neu)) return b;
     const r = await this.repo.aendereGeschuetzt(id, { verwaltung: neu }, schutzGesamt);
@@ -740,17 +740,17 @@ export class Konten {
 
   async aendereBenutzer(ich: Benutzer, id: string, e: { name?: unknown; aktiv?: unknown }) {
     const b = await this.person(id);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     const d: Partial<Pick<Benutzer, 'name' | 'aktiv'>> = {};
     if (e.name !== undefined) d.name = text(e.name);
     if (e.aktiv !== undefined) d.aktiv = !!e.aktiv;
-    if (id === ich.id && d.aktiv === false) throw new Fachfehler(409, 'Du kannst dich nicht selbst deaktivieren.');
+    if (id === ich.id && d.aktiv === false) throw new Fachfehler(409, t('meldungen.konten.du-kannst-dich-nicht'));
     if (d.aktiv !== undefined && d.aktiv !== b.aktiv) this.pruefeKontoVonVerwaltenden(ich, b);
     // Deaktivieren nur mit Vertreter und ohne offene Aufgaben (#77, #78); der Vertreter wirkt danach dauerhaft.
     if (d.aktiv === false && b.aktiv) {
-      if (!b.abwesenheit?.vertreterId) throw new Fachfehler(409, 'Bitte zuerst einen Vertreter hinterlegen.');
+      if (!b.abwesenheit?.vertreterId) throw new Fachfehler(409, t('meldungen.konten.bitte-zuerst-einen-vertreter'));
       const offen = (await this.spiegel?.offeneAufgaben?.(id)) ?? 0;
-      if (offen) throw new Fachfehler(409, `${b.name || b.email} hat noch ${offen === 1 ? 'eine offene Aufgabe' : `${offen} offene Aufgaben`}. Bitte zuerst an den Vertreter geben.`);
+      if (offen) throw new Fachfehler(409, t('meldungen.konten.hat-noch-offene-aufgaben', { anzahl: offen, wert: b.name || b.email }));
     }
     let neu = b;
     if (d.aktiv !== undefined && d.aktiv !== b.aktiv) {
@@ -766,13 +766,13 @@ export class Konten {
 
   async loescheBenutzer(ich: Benutzer, id: string) {
     const b = await this.person(id);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
-    if (id === ich.id) throw new Fachfehler(409, 'Du kannst dich nicht selbst löschen.');
+    if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
+    if (id === ich.id) throw new Fachfehler(409, t('meldungen.konten.du-kannst-dich-nicht-2'));
     this.pruefeKontoVonVerwaltenden(ich, b);
     if (zaehltAlsGesamt(b) && !(await this.repo.listeBenutzer()).some((x) => x.id !== id && zaehltAlsGesamt(x))) throw new Fachfehler(409, t('konten.verwaltung.fehler.letzte'));
     // Wer schon angemeldet war, hat Spuren hinterlassen (angelegt von, Verweise): deaktivieren statt löschen (#26).
     // Löschen bleibt für Einladungen, die nie angenommen wurden, z. B. bei einer vertippten Adresse.
-    if (b.hatPasswort || b.letzteAnmeldung) throw new Fachfehler(409, 'Wer sich schon angemeldet hat, wird deaktiviert statt gelöscht. So bleiben Verweise und „angelegt von“ erhalten.');
+    if (b.hatPasswort || b.letzteAnmeldung) throw new Fachfehler(409, t('meldungen.konten.wer-sich-schon-angemeldet'));
     // Mit Papierkorb (#43): deaktivieren und die Mappe in den Papierkorb; das Konto wird erst beim Leeren gelöscht.
     if (this.spiegel?.inPapierkorb && (await this.spiegel.papierkorbAn?.())) {
       await this.spiegel.inPapierkorb(id, ich.id);
@@ -868,7 +868,7 @@ export class Konten {
   async notfallzugang(minuten: number, jetzt = new Date()): Promise<{ benutzer: Benutzer; link: string; ablauf: Date }> {
     const teile = Object.fromEntries(new Intl.DateTimeFormat('de-DE', { timeZone: zeitzone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
       .formatToParts(jetzt).map((x) => [x.type, x.value]));
-    const name = `Notfall-Admin ${teile.day}.${teile.month}.${teile.year} ${teile.hour}:${teile.minute}`;
+    const name = t('meldungen.konten.notfall-admin', { day: teile.day, month: teile.month, year: teile.year, hour: teile.hour, minute: teile.minute });
     const email = `notfall-${teile.year}${teile.month}${teile.day}-${teile.hour}${teile.minute}${teile.second}@notfall.invalid`;
     const benutzer = await this.repo.legeBenutzerAn({ id: randomUUID(), email, name, verwaltung: [GESAMT], passwortHash: null });
     await this.spiegle(benutzer);
@@ -880,7 +880,7 @@ export class Konten {
 
   async neuerLink(id: string): Promise<Ergebnis> {
     const b = await this.person(id);
-    if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+    if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     return this.verschickeLink(b, b.hatPasswort ? 'zuruecksetzen' : 'einladung');
   }
 

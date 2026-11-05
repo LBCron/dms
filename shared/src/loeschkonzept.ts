@@ -8,6 +8,7 @@
 import { FRISTEN, type Archiv } from './archiv';
 import type { Datenschutz } from './auskunft';
 import { BELIEBIGER_TYP, type Feld, type Systemtyp } from './model';
+import { t } from './texte';
 
 export interface LoeschkonzeptTyp { id: string; name: string; felder: Feld[]; archiv?: Archiv | null; system?: Systemtyp | null }
 
@@ -60,17 +61,17 @@ export type Block =
 export interface Abschnitt { titel: string; bloecke: Block[] }
 export interface Loeschkonzept { titel: string; untertitel: string; stand: string; vorbemerkung: string; abschnitte: Abschnitt[]; luecken: Luecke[]; datenarten: Datenart[] }
 
-export const LOESCHKONZEPT_TITEL = 'Löschkonzept: Aufbewahren, Sperren und Löschen mit Ablago';
+export const LOESCHKONZEPT_TITEL = t('gemeinsam.loeschkonzept.loeschkonzept-aufbewahren-sperren');
 export const FEHLT = (was: string) => `[${was}]`;
 
-const jahre = (n: number) => `${n} ${n === 1 ? 'Jahr' : 'Jahre'}`;
-const tage = (n: number) => `${n} ${n === 1 ? 'Tag' : 'Tagen'}`;
+const jahre = (n: number) => `${n} ${t('gemeinsam.loeschkonzept.jahre', { anzahl: n })}`;
+const tage = (n: number) => `${n} ${t('gemeinsam.loeschkonzept.tagen', { anzahl: n })}`;
 const datum = (iso: string) => iso.slice(0, 10).split('-').reverse().join('.');
 const ohneSystem = (t: LoeschkonzeptTyp) => t.system !== 'benutzer' && t.system !== 'rolle';
 
 /** Löschweg nach dem Löschen: Papierkorb mit Frist oder sofort endgültig. */
 export function korbText(papierkorbTage: number) {
-  return papierkorbTage > 0 ? `Papierkorb → endgültig nach ${tage(papierkorbTage)}` : 'sofort endgültig (kein Papierkorb)';
+  return papierkorbTage > 0 ? t('gemeinsam.loeschkonzept.papierkorb-endgueltig-nach', { tage: tage(papierkorbTage) }) : t('gemeinsam.loeschkonzept.sofort-endgueltig-kein-papierkorb');
 }
 
 /**
@@ -83,27 +84,27 @@ export function personenbezug(typen: LoeschkonzeptTyp[], datenschutz: Pick<Daten
   const ds = (id: string) => datenschutz.typen[id] ?? { person: false, zweck: '' };
   const personen = new Set(eigene.filter((t) => ds(t.id).person).map((t) => t.id));
   const karte = new Map<string, Personenbezug>();
-  for (const t of eigene) {
-    const verweise = t.felder
-      .filter((f) => f.typ === 'referenz' && f.zielTyp && (personen.has(f.zielTyp) || (f.zielTyp === BELIEBIGER_TYP && personen.size > 0)) && f.zielTyp !== t.id)
-      .map((f) => ({ feld: f.label, ziel: f.zielTyp === BELIEBIGER_TYP ? 'zugeordnete Personen' : name.get(f.zielTyp!) ?? f.zielTyp! }));
-    const bezug: Personenbezug['bezug'] | null = personen.has(t.id) ? 'person' : verweise.length ? 'verweis' : ds(t.id).zweck.trim() ? 'zweck' : null;
-    if (bezug) karte.set(t.id, { bezug, verweise });
+  for (const loeschkonzeptTyp of eigene) {
+    const verweise = loeschkonzeptTyp.felder
+      .filter((f) => f.typ === 'referenz' && f.zielTyp && (personen.has(f.zielTyp) || (f.zielTyp === BELIEBIGER_TYP && personen.size > 0)) && f.zielTyp !== loeschkonzeptTyp.id)
+      .map((f) => ({ feld: f.label, ziel: f.zielTyp === BELIEBIGER_TYP ? t('gemeinsam.loeschkonzept.zugeordnete-personen') : name.get(f.zielTyp!) ?? f.zielTyp! }));
+    const bezug: Personenbezug['bezug'] | null = personen.has(loeschkonzeptTyp.id) ? 'person' : verweise.length ? 'verweis' : ds(loeschkonzeptTyp.id).zweck.trim() ? 'zweck' : null;
+    if (bezug) karte.set(loeschkonzeptTyp.id, { bezug, verweise });
   }
   return karte;
 }
 
 /** „über „Inhaber“ auf Person“, mehrere mit „und“ (#664). */
 export function verweisText(v: Personenverweis[]) {
-  const teile = v.map((x) => `über „${x.feld}“ auf ${x.ziel}`);
+  const teile = v.map((x) => t('gemeinsam.loeschkonzept.ueber-auf', { feld: x.feld, ziel: x.ziel }));
   return teile.length <= 1 ? teile.join('') : `${teile.slice(0, -1).join(', ')} und ${teile[teile.length - 1]}`;
 }
 
 /** Grund, warum ein Mappentyp Personendaten enthält – als Satzteil nach „weil …“. */
 export function grundText(b: Personenbezug) {
-  return b.bezug === 'person' ? 'du ihn als „betrifft eine Person“ markiert hast'
+  return b.bezug === 'person' ? t('gemeinsam.loeschkonzept.du-ihn-als-betrifft')
     : b.bezug === 'verweis' ? `er ${verweisText(b.verweise)} verweist`
-    : 'du einen Zweck für ihn hinterlegt hast';
+    : t('gemeinsam.loeschkonzept.du-einen-zweck-fuer');
 }
 
 /**
@@ -116,25 +117,25 @@ export function datenarten(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' 
   const ds = (id: string) => q.datenschutz.typen[id] ?? { person: false, zweck: '' };
   const karte = personenbezug(q.typen, q.datenschutz);
   const zeilen: Datenart[] = [];
-  for (const t of typen) {
-    const zweck = ds(t.id).zweck.trim();
-    const pb = karte.get(t.id);
+  for (const loeschkonzeptTyp of typen) {
+    const zweck = ds(loeschkonzeptTyp.id).zweck.trim();
+    const pb = karte.get(loeschkonzeptTyp.id);
     if (!pb) continue;
     const bezug = pb.bezug;
-    const betroffene = bezug === 'person' ? `${t.name} (die Person selbst)`
+    const betroffene = bezug === 'person' ? t('gemeinsam.loeschkonzept.die-person-selbst', { name: loeschkonzeptTyp.name })
       : bezug === 'verweis' ? pb.verweise.map((v) => `${v.ziel} (über „${v.feld}“)`).join(', ')
       : FEHLT('Betroffene');
-    const a = t.archiv ?? null;
+    const a = loeschkonzeptTyp.archiv ?? null;
     const vorschlag = a ? FRISTEN.find((x) => x.jahre === a.jahre)?.text : undefined;
-    const stichtag = a ? `${a.stichtag ? `„${t.felder.find((f) => f.key === a.stichtag)?.label ?? a.stichtag}“` : 'Anlagedatum der Mappe'}, ab Ende des Kalenderjahres` : FEHLT('Beginn der Frist');
+    const stichtag = a ? t('gemeinsam.loeschkonzept.ab-ende-des-kalenderjahres', { wert: a.stichtag ? `„${loeschkonzeptTyp.felder.find((f) => f.key === a.stichtag)?.label ?? a.stichtag}“` : t('gemeinsam.loeschkonzept.anlagedatum-der-mappe') }) : FEHLT(t('gemeinsam.loeschkonzept.beginn-der-frist'));
     zeilen.push({
-      typId: t.id, typ: t.name, bezug, betroffene,
+      typId: loeschkonzeptTyp.id, typ: loeschkonzeptTyp.name, bezug, betroffene,
       zweck: zweck || FEHLT('Zweck'),
       frist: a ? jahre(a.jahre) : FEHLT('Frist'),
-      grund: FEHLT(vorschlag ? `Grund, z. B. ${vorschlag}` : 'Grund der Frist'),
+      grund: FEHLT(vorschlag ? `Grund, z. B. ${vorschlag}` : t('gemeinsam.loeschkonzept.grund-der-frist')),
       stichtag,
       sperre: a ? 'Archivmodus' : 'keine',
-      loeschweg: a ? `„Aufbewahrung abgelaufen“ → ${korbText(q.papierkorbTage)}` : `${FEHLT('Ansicht „…“')}, löschen von Hand → ${korbText(q.papierkorbTage)}`,
+      loeschweg: a ? t('gemeinsam.loeschkonzept.aufbewahrung-abgelaufen', { korbText: korbText(q.papierkorbTage) }) : t('gemeinsam.loeschkonzept.loeschen-von-hand', { FEHLT: FEHLT('Ansicht „…“'), korbText: korbText(q.papierkorbTage) }),
     });
   }
   const rang = { person: 0, verweis: 1, zweck: 2 } as const;
@@ -144,8 +145,8 @@ export function datenarten(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' 
 /** Lücken, die das DMS kennt: Datenart ohne Zweck oder Frist, kein Verantwortlicher, gar keine Datenart. */
 export function luecken(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' | 'papierkorbTage'>, arten = datenarten(q)): Luecke[] {
   const l: Luecke[] = [];
-  if (!q.datenschutz.verantwortlicher.trim()) l.push({ art: 'verantwortlicher', text: 'Kein Verantwortlicher hinterlegt – bitte unter Datenschutz-Auskünfte → Einstellungen ergänzen.' });
-  if (!arten.length) l.push({ art: 'keine', text: 'Kein Mappentyp betrifft eine Person – lege unter „Personendaten in Mappentypen“ fest, welche Mappentypen Personen betreffen.' });
+  if (!q.datenschutz.verantwortlicher.trim()) l.push({ art: 'verantwortlicher', text: t('gemeinsam.loeschkonzept.kein-verantwortlicher-hinterlegt') });
+  if (!arten.length) l.push({ art: 'keine', text: t('gemeinsam.loeschkonzept.kein-mappentyp-betrifft-eine') });
   const bezug = personenbezug(q.typen, q.datenschutz);
   for (const a of arten) {
     const fehlt: ('zweck' | 'frist')[] = [];
@@ -155,7 +156,7 @@ export function luecken(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' | '
     const b = bezug.get(a.typId) ?? { bezug: a.bezug, verweise: [] };
     const was = fehlt.map((f) => (f === 'zweck' ? 'Zweck' : 'Aufbewahrungsfrist')).join(' · ');
     l.push({ art: 'typ', typId: a.typId, typ: a.typ, bezug: b.bezug, verweise: b.verweise, fehlt,
-      text: `${a.typ} – enthält Personendaten, weil ${grundText(b)}. Es fehlen: ${was}.` });
+      text: t('gemeinsam.loeschkonzept.enthaelt-personendaten-weil-es', { typ: a.typ, grundText: grundText(b), was }) });
   }
   return l;
 }
@@ -168,96 +169,96 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
   const ohne = q.typen.filter(ohneSystem).filter((t) => !arten.some((a) => a.typId === t.id)).map((t) => t.name).sort((a, b) => a.localeCompare(b, 'de'));
   const korb = q.papierkorbTage > 0;
   const s = q.sicherung;
-  const sicherungText = !s ? 'keine automatischen Sicherungen eingerichtet' : !s.aktiv ? 'automatische Sicherung ausgeschaltet' : [
+  const sicherungText = !s ? t('gemeinsam.loeschkonzept.keine-automatischen-sicherungen') : !s.aktiv ? t('gemeinsam.loeschkonzept.automatische-sicherung-ausgeschaltet') : [
     s.haeufigkeit === 'taeglich' && s.aufbewahrung.taeglich ? `${s.aufbewahrung.taeglich} tägliche` : '',
     s.aufbewahrung.woechentlich ? `${s.aufbewahrung.woechentlich} wöchentliche` : '',
     s.aufbewahrung.monatlich ? `${s.aufbewahrung.monatlich} monatliche` : '',
-  ].filter(Boolean).join(', ') || 'nur die jeweils letzte';
+  ].filter(Boolean).join(', ') || t('gemeinsam.loeschkonzept.nur-die-jeweils-letzte');
 
   const abschnitte: Abschnitt[] = [
-    { titel: '1. Allgemeines', bloecke: [{ art: 'tabelle', breiten: [1, 2.4], kopf: ['', ''], zeilen: [
-      ['Verantwortlicher', verantwortlicher || FEHLT('Name, Anschrift – wie unter Werkbank → Datenschutz-Auskünfte-Auskünfte → Einstellungen')],
-      ['Ansprechpartner für Datenschutz', FEHLT('Name, E-Mail – ggf. Datenschutzbeauftragter')],
-      ['Verantwortlich für Löschungen', FEHLT('Name')],
+    { titel: t('gemeinsam.loeschkonzept.1-allgemeines'), bloecke: [{ art: 'tabelle', breiten: [1, 2.4], kopf: ['', ''], zeilen: [
+      ['Verantwortlicher', verantwortlicher || FEHLT(t('gemeinsam.loeschkonzept.name-anschrift-wie-unter'))],
+      [t('gemeinsam.loeschkonzept.ansprechpartner-fuer-datenschutz'), FEHLT(t('gemeinsam.loeschkonzept.name-e-mail-ggf'))],
+      [t('gemeinsam.loeschkonzept.verantwortlich-fuer-loeschungen'), FEHLT('Name')],
       ['Vertretung', FEHLT('Name')],
-      ['Eingesetzte Software', `Ablago (Open Source, https://github.com/motom001/dms), Version ${q.version}, selbst betrieben auf ${FEHLT('Gerät / Anbieter')}`],
-      ['Geltungsbereich', arten.length ? `Datenarten aus Abschnitt 2: ${arten.map((a) => a.typ).join(', ')}` : FEHLT('Welche Daten: z. B. Mieter und Mietverhältnisse, Kunden, Lieferanten, Beschäftigte …')],
-      ['Gültig ab', FEHLT('Datum')],
+      [t('gemeinsam.loeschkonzept.eingesetzte-software'), `Ablago (Open Source, https://github.com/motom001/dms), Version ${q.version}, selbst betrieben auf ${FEHLT(t('gemeinsam.loeschkonzept.geraet-anbieter'))}`],
+      ['Geltungsbereich', arten.length ? t('gemeinsam.loeschkonzept.datenarten-aus-abschnitt-2', { map: arten.map((a) => a.typ).join(', ') }) : FEHLT(t('gemeinsam.loeschkonzept.welche-daten-z-b'))],
+      [t('gemeinsam.loeschkonzept.gueltig-ab'), FEHLT('Datum')],
     ] }] },
-    { titel: '2. Datenarten und Fristen', bloecke: [
-      { art: 'absatz', text: `Jeder Mappentyp in Ablago ist eine Datenart. Die Tabelle enthält die Mappentypen, die eine Person betreffen, auf eine solche verweisen oder für die ein Zweck hinterlegt ist (Stand ${datum(q.stand)}). Zweck und „betrifft eine Person“ stehen unter Werkbank → Löschkonzept → Personendaten in Mappentypen, Frist und Stichtag im Archivmodus unter Werkbank → Mappentypen.` },
-      { art: 'tabelle', breiten: [1.1, 1.3, 1.3, 0.6, 1.1, 1.2, 0.95, 1.4], kopf: ['Datenart (Mappentyp)', 'Betroffene', 'Zweck', 'Frist', 'Grund der Frist', 'Beginn der Frist (Stichtag)', 'Sperre in Ablago', 'Löschweg'],
+    { titel: t('gemeinsam.loeschkonzept.2-datenarten-und-fristen'), bloecke: [
+      { art: 'absatz', text: t('gemeinsam.loeschkonzept.jeder-mappentyp-in-ablago', { datum: datum(q.stand) }) },
+      { art: 'tabelle', breiten: [1.1, 1.3, 1.3, 0.6, 1.1, 1.2, 0.95, 1.4], kopf: [t('gemeinsam.loeschkonzept.datenart-mappentyp'), 'Betroffene', 'Zweck', 'Frist', t('gemeinsam.loeschkonzept.grund-der-frist'), t('gemeinsam.loeschkonzept.beginn-der-frist-stichtag'), t('gemeinsam.loeschkonzept.sperre-in-ablago'), 'Löschweg'],
         zeilen: arten.length ? arten.map((a) => [a.typ, a.betroffene, a.zweck, a.frist, a.grund, a.stichtag, a.sperre, a.loeschweg])
           : [[FEHLT('Mappentyp'), FEHLT('Betroffene'), FEHLT('Zweck'), FEHLT('Frist'), FEHLT('Grund'), FEHLT('Stichtag'), 'keine', FEHLT('Löschweg')]] },
-      ...(fehlt.length ? [{ art: 'hinweis' as const, titel: 'Bitte ergänzen', punkte: fehlt.map((x) => x.text) }] : []),
-      ...(ohne.length ? [{ art: 'absatz' as const, text: `Ohne Personenbezug (nicht in der Tabelle): ${ohne.join(', ')}. Betrifft einer davon doch Personen, markiere ihn unter Werkbank → Löschkonzept → Personendaten in Mappentypen und erzeuge das Löschkonzept neu.` }] : []),
-      { art: 'absatz', text: 'Sperre in Ablago:' },
+      ...(fehlt.length ? [{ art: 'hinweis' as const, titel: t('gemeinsam.loeschkonzept.bitte-ergaenzen'), punkte: fehlt.map((x) => x.text) }] : []),
+      ...(ohne.length ? [{ art: 'absatz' as const, text: t('gemeinsam.loeschkonzept.ohne-personenbezug-nicht-in', { ohne: ohne.join(', ') }) }] : []),
+      { art: 'absatz', text: t('gemeinsam.loeschkonzept.sperre-in-ablago-2') },
       { art: 'punkte', punkte: [
-        'Archivmodus (Werkbank → Mappentypen → Archivmodus): Mappen und Dokumente dieses Mappentyps lassen sich bis zum Ende der Aufbewahrungsfrist nicht löschen – auch nicht von Administratoren, über den Papierkorb oder die Schnittstelle. Dokumente ändern sich nur als neue Version. Die Frist läuft bis zum 31.12. des Stichtagsjahres plus die Jahre.',
-        'Keine: Die Mappen lassen sich jederzeit löschen. Wer das darf, regeln die Berechtigungen (Abschnitt 5).',
+        t('gemeinsam.loeschkonzept.archivmodus-werkbank-mappentypen'),
+        t('gemeinsam.loeschkonzept.keine-die-mappen-lassen'),
       ] },
-      { art: 'absatz', text: 'Löschweg:' },
+      { art: 'absatz', text: t('gemeinsam.loeschkonzept.loeschweg') },
       { art: 'punkte', punkte: [
-        'Aufbewahrung abgelaufen: Nach Fristende stehen die Mappen unter Werkbank → Benutzer und Sicherheit → Aufbewahrung abgelaufen. Ablago löscht nie von selbst.',
-        `Ansicht: Für Fristen ohne Archivmodus zeigt die Ansicht ${FEHLT('Name')} die fälligen Mappen nach dem Feld ${FEHLT('Datumsfeld')}.`,
-      ] },
-    ] },
-    { titel: '3. Regelmäßiges Löschen', bloecke: [{ art: 'punkte', punkte: [
-      `${FEHLT('Wer')} geht ${FEHLT('jährlich, z. B. im Januar')} Werkbank → Aufbewahrung abgelaufen und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf.${q.loeschprotokoll ? ' Ablago hält jede Löschung im Löschprotokoll fest (Abschnitt 8).' : ` ${FEHLT('Wer')} hält fest, wann das geschah (Abschnitt 8).`}`,
-      korb ? `Gelöschte Mappen und Dokumente kommen in den Papierkorb (Werkbank → Papierkorb, Aufbewahrung ${tage(q.papierkorbTage)}). Danach löscht Ablago sie mit ihren Dateien und dem Volltext endgültig.`
-        : 'Der Papierkorb ist ausgeschaltet: Gelöschte Mappen und Dokumente löscht Ablago sofort endgültig mit ihren Dateien und dem Volltext.',
-      `Die Historie endgültig gelöschter Mappen bleibt ${tage(q.historieTage)} (Werkbank → Papierkorb), damit sich nachvollziehen lässt, was mit ihnen geschah. Die Historie lebender Mappen und von Mappen im Archivmodus bleibt immer.`,
-    ] }] },
-    { titel: '4. Sperren auf Verlangen', bloecke: [
-      { art: 'absatz', text: 'Verlangt eine Person die Löschung, aber eine Aufbewahrungsfrist steht entgegen (Art. 17 Abs. 3 DSGVO), werden ihre Daten bis Fristende gesperrt (Art. 18 DSGVO):' },
-      { art: 'punkte', punkte: [
-        'Mappen im Archivmodus sind gegen Löschen gesperrt (Abschnitt 2).',
-        `Zugriff: Der Mappentyp hat das Ja/Nein-Feld ${FEHLT('Gesperrt')}. Eine Regel in den Berechtigungen erlaubt bei „Gesperrt ist ja“ Lesen und Bearbeiten nur der Rolle ${FEHLT('Datenschutz')}. Administratoren sehen weiterhin alles.`,
-        'An der Mappe steht eine Notiz mit Datum der Anfrage und dem Ende der Sperre.',
-        'Nach Fristende wird gelöscht wie in Abschnitt 3.',
+        t('gemeinsam.loeschkonzept.aufbewahrung-abgelaufen-nach'),
+        t('gemeinsam.loeschkonzept.ansicht-fuer-fristen-ohne', { FEHLT: FEHLT('Name'), FEHLT2: FEHLT('Datumsfeld') }),
       ] },
     ] },
-    { titel: '5. Wer löschen darf', bloecke: [{ art: 'punkte', punkte: [
-      `Löschen dürfen ${FEHLT('z. B. nur die Rolle … / alle, die die Mappe bearbeiten dürfen')} (Werkbank → Mappentypen → Berechtigungen, Recht „Löschen“).`,
-      'Endgültig löschen und den Papierkorb leeren: jeder Benutzer für das, was er selbst gelöscht hat; Administratoren für alles (Werkbank → Papierkorb).',
-      `Administratoren: ${FEHLT('Namen')}. Für sie gelten die Berechtigungen nicht.`,
+    { titel: t('gemeinsam.loeschkonzept.3-regelmaessiges-loeschen'), bloecke: [{ art: 'punkte', punkte: [
+      t('gemeinsam.loeschkonzept.geht-werkbank-aufbewahrung', { FEHLT: FEHLT('Wer'), FEHLT2: FEHLT(t('gemeinsam.loeschkonzept.jaehrlich-z-b-im')), wert: q.loeschprotokoll ? t('gemeinsam.loeschkonzept.ablago-haelt-jede-loeschung') : t('gemeinsam.loeschkonzept.haelt-fest-wann-das', { FEHLT: FEHLT('Wer') }) }),
+      korb ? t('gemeinsam.loeschkonzept.geloeschte-mappen-und-dokumente', { tage: tage(q.papierkorbTage) })
+        : t('gemeinsam.loeschkonzept.der-papierkorb-ist-ausgeschaltet'),
+      t('gemeinsam.loeschkonzept.die-historie-endgueltig-geloeschter', { tage: tage(q.historieTage) }),
     ] }] },
-    { titel: '6. Kopien außerhalb der Ablage', bloecke: [
-      { art: 'absatz', text: 'Gelöschte Daten können noch an diesen Stellen liegen; sie fallen so weg:' },
-      { art: 'tabelle', breiten: [1.4, 1.2, 1.6], kopf: ['Wo', 'Wie lange', 'Wie gelöscht'], zeilen: [
-        ['Automatische Sicherungen (Werkbank → Sicherung)', sicherungText, 'Ablago entfernt ältere Sicherungen nach jeder automatischen Sicherung'],
-        ['Von Hand angelegte Sicherungen', 'bis zum Löschen', `${FEHLT('Wer')} löscht sie ${FEHLT('wann')}`],
-        ['Kopie der Sicherungen außer Haus', FEHLT('z. B. die letzten 4 Wochen'), FEHLT('Wer, wie')],
+    { titel: t('gemeinsam.loeschkonzept.4-sperren-auf-verlangen'), bloecke: [
+      { art: 'absatz', text: t('gemeinsam.loeschkonzept.verlangt-eine-person-die') },
+      { art: 'punkte', punkte: [
+        t('gemeinsam.loeschkonzept.mappen-im-archivmodus-sind'),
+        t('gemeinsam.loeschkonzept.zugriff-der-mappentyp-hat', { FEHLT: FEHLT('Gesperrt'), FEHLT2: FEHLT('Datenschutz') }),
+        t('gemeinsam.loeschkonzept.an-der-mappe-steht'),
+        t('gemeinsam.loeschkonzept.nach-fristende-wird-geloescht'),
+      ] },
+    ] },
+    { titel: t('gemeinsam.loeschkonzept.5-wer-loeschen-darf'), bloecke: [{ art: 'punkte', punkte: [
+      t('gemeinsam.loeschkonzept.loeschen-duerfen-werkbank', { FEHLT: FEHLT(t('gemeinsam.loeschkonzept.z-b-nur-die')) }),
+      t('gemeinsam.loeschkonzept.endgueltig-loeschen-und-den'),
+      t('gemeinsam.loeschkonzept.administratoren-fuer-sie-gelten', { FEHLT: FEHLT('Namen') }),
+    ] }] },
+    { titel: t('gemeinsam.loeschkonzept.6-kopien-ausserhalb-der'), bloecke: [
+      { art: 'absatz', text: t('gemeinsam.loeschkonzept.geloeschte-daten-koennen-noch') },
+      { art: 'tabelle', breiten: [1.4, 1.2, 1.6], kopf: ['Wo', t('gemeinsam.loeschkonzept.wie-lange'), t('gemeinsam.loeschkonzept.wie-geloescht')], zeilen: [
+        [t('gemeinsam.loeschkonzept.automatische-sicherungen-werkbank'), sicherungText, t('gemeinsam.loeschkonzept.ablago-entfernt-aeltere-sicherungen')],
+        [t('gemeinsam.loeschkonzept.von-hand-angelegte-sicherungen'), t('gemeinsam.loeschkonzept.bis-zum-loeschen'), t('gemeinsam.loeschkonzept.loescht-sie', { FEHLT: FEHLT('Wer'), FEHLT2: FEHLT('wann') })],
+        [t('gemeinsam.loeschkonzept.kopie-der-sicherungen-ausser'), FEHLT(t('gemeinsam.loeschkonzept.z-b-die-letzten')), FEHLT(t('gemeinsam.loeschkonzept.wer-wie'))],
         // #797: eigener Export-Ordner, nicht in der Sicherung; dieselbe Frist wie die Auskunft.
-        ['Vollexporte und persönliche Exporte (Export-Ordner, nicht Teil der Sicherung)', `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}`, 'Ablago löscht sie nach dem Herunterladen, spätestens nach Ablauf der Frist'],
-        ['Bereitliegende Auskünfte', `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}, mit Abruf-Link bis dieser abläuft`, 'Ablago löscht sie selbst'],
-        ['Protokoll (Werkbank → Protokoll, Container-Logs)', `24 Stunden in der Werkbank; Container-Logs ${FEHLT('nach Einstellung von Docker')}`, FEHLT('ggf. Log-Rotation einstellen')],
-        ['Heruntergeladene Dateien, Ausdrucke, E-Mails', FEHLT('Regel'), FEHLT('Regel')],
+        [t('gemeinsam.loeschkonzept.vollexporte-und-persoenliche-exporte'), `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}`, t('gemeinsam.loeschkonzept.ablago-loescht-sie-nach')],
+        [t('gemeinsam.loeschkonzept.bereitliegende-auskuenfte'), t('gemeinsam.loeschkonzept.hoechstens-mit-abruf-link', { replace: tage(q.auskunftTage).replace('Tagen', 'Tage') }), t('gemeinsam.loeschkonzept.ablago-loescht-sie-selbst')],
+        [t('gemeinsam.loeschkonzept.protokoll-werkbank-protokoll'), t('gemeinsam.loeschkonzept.24-stunden-in-der', { FEHLT: FEHLT(t('gemeinsam.loeschkonzept.nach-einstellung-von-docker')) }), FEHLT(t('gemeinsam.loeschkonzept.ggf-log-rotation-einstellen'))],
+        [t('gemeinsam.loeschkonzept.heruntergeladene-dateien-ausdrucke-e'), FEHLT('Regel'), FEHLT('Regel')],
       ] },
     ] },
-    { titel: '7. Benutzerkonten', bloecke: [{ art: 'punkte', punkte: [
-      'Konten, die schon benutzt wurden, werden deaktiviert, nicht gelöscht (Werkbank → Benutzer → Zugang sperren). Der Name bleibt bei „angelegt von“ und in der Historie stehen.',
-      'Einladungen, die nie angenommen wurden, werden gelöscht.',
-      `${FEHLT('Wer')} deaktiviert Konten von Personen, die gehen, ${FEHLT('am letzten Arbeitstag')}.`,
+    { titel: t('gemeinsam.loeschkonzept.7-benutzerkonten'), bloecke: [{ art: 'punkte', punkte: [
+      t('gemeinsam.loeschkonzept.konten-die-schon-benutzt'),
+      t('gemeinsam.loeschkonzept.einladungen-die-nie-angenommen'),
+      t('gemeinsam.loeschkonzept.deaktiviert-konten-von-personen', { FEHLT: FEHLT('Wer'), FEHLT2: FEHLT(t('gemeinsam.loeschkonzept.am-letzten-arbeitstag')) }),
     ] }] },
-    { titel: '8. Nachweis', bloecke: [{ art: 'punkte', punkte: q.loeschprotokoll ? [
-      `Ablago führt ein Löschprotokoll (Werkbank → Löschkonzept → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – ohne Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern, wird als PDF oder CSV ausgegeben und nach ${q.loeschprotokoll.jahre === 1 ? 'einem Jahr' : `${q.loeschprotokoll.jahre} Jahren`} automatisch gekürzt.`,
-      'Bei Löschungen auf Verlangen wählt, wer löscht, den Grund „Auf Verlangen der betroffenen Person“.',
-      'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz-Auskünfte).',
+    { titel: t('gemeinsam.loeschkonzept.8-nachweis'), bloecke: [{ art: 'punkte', punkte: q.loeschprotokoll ? [
+      t('gemeinsam.loeschkonzept.ablago-fuehrt-ein-loeschprotokoll', { anzahl: q.loeschprotokoll.jahre }),
+      t('gemeinsam.loeschkonzept.bei-loeschungen-auf-verlangen'),
+      t('gemeinsam.loeschkonzept.auskuenfte-nach-art-15'),
     ] : [
-      `Löschungen auf Verlangen und das regelmäßige Löschen hält ${FEHLT('Wer')} in ${FEHLT('einer Mappe „Datenschutzanfragen“ / einer Liste')} fest: Datum, Anlass, welche Datenarten – ohne die gelöschten Daten selbst.`,
-      'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz-Auskünfte).',
+      t('gemeinsam.loeschkonzept.loeschungen-auf-verlangen-und', { FEHLT: FEHLT('Wer'), FEHLT2: FEHLT(t('gemeinsam.loeschkonzept.einer-mappe-datenschutzanfragen')) }),
+      t('gemeinsam.loeschkonzept.auskuenfte-nach-art-15'),
     ] }] },
-    { titel: '9. Änderungen dieses Löschkonzepts', bloecke: [{ art: 'tabelle', breiten: [1, 2.4, 1.2], kopf: ['Datum', 'Was geändert', 'Wer'], zeilen: [
-      [datum(q.stand), `aus Ablago erzeugt (Version ${q.version})`, FEHLT('Name')],
-      [FEHLT('Datum'), FEHLT('erste Version'), FEHLT('Name')],
+    { titel: t('gemeinsam.loeschkonzept.9-aenderungen-dieses-loeschkonzepts'), bloecke: [{ art: 'tabelle', breiten: [1, 2.4, 1.2], kopf: ['Datum', t('gemeinsam.loeschkonzept.was-geaendert'), 'Wer'], zeilen: [
+      [datum(q.stand), t('gemeinsam.loeschkonzept.aus-ablago-erzeugt-version', { version: q.version }), FEHLT('Name')],
+      [FEHLT('Datum'), FEHLT(t('gemeinsam.loeschkonzept.erste-version')), FEHLT('Name')],
     ] }] },
   ];
   return {
     titel: LOESCHKONZEPT_TITEL,
     untertitel: q.mandant || verantwortlicher || '',
-    stand: `Stand ${datum(q.stand)} · aus Ablago ${q.version} erzeugt`,
-    vorbemerkung: 'Erzeugt aus den Mappentypen und Einstellungen deines Ablago. Alles in [eckigen Klammern] ersetzt du durch deine Angaben oder streichst es. Das Dokument ist ein Ausgangspunkt, keine Rechtsberatung – stimme Fristen und Gründe mit deiner Steuerberatung bzw. deinem Datenschutzbeauftragten ab. Erzeuge es neu, wenn sich Mappentypen oder Fristen ändern, und halte die Änderungstabelle am Ende aktuell.',
+    stand: t('gemeinsam.loeschkonzept.stand-aus-ablago-erzeugt', { datum: datum(q.stand), version: q.version }),
+    vorbemerkung: t('gemeinsam.loeschkonzept.erzeugt-aus-den-mappentypen'),
     abschnitte, luecken: fehlt, datenarten: arten,
   };
 }

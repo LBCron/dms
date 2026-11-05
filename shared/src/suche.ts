@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Volltextsuche (#45, #161): Neben Wortformen („Rechnung“ → „Rechnungen“) findet die Suche einen Begriff
  * auch als Teil eines Wortes („Ofen“ → „Backofen“, „Ofenrohr“). Server (PostgreSQL und Arbeitsspeicher) teilt
@@ -63,12 +64,12 @@ export function liesWortgruppe(roh: unknown): { woerter: string[]; fehler: strin
   const liste = Array.isArray(roh) ? roh.map((x) => (typeof x === 'string' ? x : String(x ?? ''))) : typeof roh === 'string' ? roh.split(/[,;\n]/) : [];
   const woerter: string[] = [];
   for (const w of liste.map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean)) {
-    if (w.length > SYNONYM_LAENGE) return { woerter: [], fehler: `„${w.slice(0, 20)}…“ ist zu lang (höchstens ${SYNONYM_LAENGE} Zeichen).` };
-    if (w.length < 2) return { woerter: [], fehler: `„${w}“ ist zu kurz (mindestens 2 Zeichen).` };
+    if (w.length > SYNONYM_LAENGE) return { woerter: [], fehler: t('gemeinsam.suche.ist-zu-lang-hoechstens', { w: w.slice(0, 20), SYNONYM_LAENGE }) };
+    if (w.length < 2) return { woerter: [], fehler: t('gemeinsam.suche.ist-zu-kurz-mindestens', { w }) };
     if (!woerter.some((x) => falte(x) === falte(w))) woerter.push(w);
   }
-  if (woerter.length < 2) return { woerter: [], fehler: 'Eine Gruppe braucht mindestens zwei verschiedene Wörter.' };
-  if (woerter.length > SYNONYM_MAX) return { woerter: [], fehler: `Höchstens ${SYNONYM_MAX} Wörter je Gruppe.` };
+  if (woerter.length < 2) return { woerter: [], fehler: t('gemeinsam.suche.eine-gruppe-braucht-mindestens') };
+  if (woerter.length > SYNONYM_MAX) return { woerter: [], fehler: t('gemeinsam.suche.hoechstens-woerter-je-gruppe', { SYNONYM_MAX }) };
   return { woerter, fehler: null };
 }
 

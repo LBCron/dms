@@ -6,16 +6,18 @@ import { markdownZelle } from '../../../shared/src/maskieren';
 import { api, type Systemuebersicht, type Vergleich } from '../api';
 import { Hilfe, useHandbuch } from '../Hilfe';
 import { useKonto } from '../konto';
+import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Technik und Versionen (#15): installierte Komponenten, als Text für ein
  * GitHub-Issue kopierbar, und ein Abgleich mit neueren Versionen auf Knopfdruck.
  */
 const groesse = (b: number) => (b < 1024 ** 2 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(1).replace('.', ',')} MB` : `${(b / 1024 ** 3).toFixed(2).replace('.', ',')} GB`);
-const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 const STATUS: Record<Vergleich['status'], { text: string; art: string }> = {
-  aktuell: { text: 'aktuell', art: 'gut' }, neuer: { text: 'Neueres verfügbar', art: 'warn' },
-  veraltet: { text: 'nicht mehr unterstützt', art: 'stufe-error' }, unbekannt: { text: 'unbekannt', art: '' },
+  aktuell: { text: t('werkbank.technik.aktuell-2'), art: 'gut' }, neuer: { text: t('werkbank.technik.neueres-verfuegbar'), art: 'warn' },
+  veraltet: { text: t('werkbank.technik.nicht-mehr-unterstuetzt'), art: 'stufe-error' }, unbekannt: { text: t('werkbank.technik.unbekannt'), art: '' },
 };
 
 type Zeilen = Array<[string, Array<[string, string]>]>;
@@ -24,60 +26,60 @@ function zeilenAus(u: Systemuebersicht): Zeilen {
   const db = 'version' in u.datenbank ? u.datenbank : null;
   return [
     ['Ablago', [
-      ['Version', u.dms.version],
-      ['Commit', u.dms.commit ? u.dms.commit.slice(0, 7) : 'unbekannt (lokal gebaut)'],
-      ['Image gebaut', zeit(u.dms.gebaut)],
-      ['Image', u.dms.variante === 'komplett' ? 'dms-komplett (mit PostgreSQL im Container)' : 'dms'],
+      [t('werkbank.technik.version'), u.dms.version],
+      [t('werkbank.technik.commit'), u.dms.commit ? u.dms.commit.slice(0, 7) : t('werkbank.technik.unbekannt-lokal-gebaut')],
+      [t('werkbank.technik.image-gebaut'), zeit(u.dms.gebaut)],
+      [t('werkbank.technik.image'), u.dms.variante === 'komplett' ? t('werkbank.technik.dms-komplett-mit-postgresql') : 'dms'],
     ]],
-    ['Laufzeit', [
+    [t('werkbank.technik.laufzeit'), [
       ['Node.js', u.laufzeit.node],
-      ['Betriebssystem', `${u.laufzeit.system}${u.laufzeit.alpine ? ` (Alpine ${u.laufzeit.alpine})` : ''}`],
-      ['Architektur', u.laufzeit.architektur],
-      ['Container', u.laufzeit.container ? 'ja' : 'nein'],
-      ['Zeitzone', u.laufzeit.zeitzone],
-      ['Läuft seit', zeit(u.laufzeit.laeuftSeit)],
+      [t('werkbank.technik.betriebssystem'), `${u.laufzeit.system}${u.laufzeit.alpine ? t('werkbank.technik.alpine', { alpine: u.laufzeit.alpine }) : ''}`],
+      [t('werkbank.technik.architektur'), u.laufzeit.architektur],
+      [t('werkbank.technik.container'), u.laufzeit.container ? t('werkbank.technik.ja') : t('werkbank.technik.nein')],
+      [t('werkbank.technik.zeitzone'), u.laufzeit.zeitzone],
+      [t('werkbank.technik.laeuft-seit'), zeit(u.laufzeit.laeuftSeit)],
     ]],
-    ['Datenbank', db ? [
+    [t('werkbank.technik.datenbank'), db ? [
       ['PostgreSQL', db.version],
-      ['Ort', u.dms.variante === 'komplett' ? 'im Container (dms-komplett)' : 'eigener Datenbank-Server bzw. Container'],
-      ['Größe', groesse(db.groesseBytes)],
-      ['Mappen / Mappentypen / Benutzer', `${db.mappen.toLocaleString('de-DE')} / ${db.typen} / ${db.benutzer}`],
-      ['Dokumente', `${db.dokumente.toLocaleString('de-DE')} (${groesse(db.dokumenteBytes)})`],
-    ] : [['Fehler', (u.datenbank as { fehler: string }).fehler]]],
-    ['Bibliotheken (Server)', Object.entries(u.bibliotheken).map(([k, v]) => [k, v ?? 'nicht gefunden'])],
-    ['Oberfläche', [['React', reactVersion], ['Browser', geraetText(navigator.userAgent)]]],
+      [t('werkbank.technik.ort'), u.dms.variante === 'komplett' ? t('werkbank.technik.im-container-dms-komplett') : t('werkbank.technik.eigener-datenbank-server-bzw')],
+      [t('werkbank.technik.groesse'), groesse(db.groesseBytes)],
+      [t('werkbank.technik.mappen-mappentypen-benutzer'), `${db.mappen.toLocaleString(gebietsschema())} / ${db.typen} / ${db.benutzer}`],
+      [t('werkbank.technik.dokumente'), `${db.dokumente.toLocaleString(gebietsschema())} (${groesse(db.dokumenteBytes)})`],
+    ] : [[t('werkbank.technik.fehler'), (u.datenbank as { fehler: string }).fehler]]],
+    [t('werkbank.technik.bibliotheken-server'), Object.entries(u.bibliotheken).map(([k, v]) => [k, v ?? t('werkbank.technik.nicht-gefunden')])],
+    [t('werkbank.technik.oberflaeche'), [['React', reactVersion], [t('werkbank.technik.browser'), geraetText(navigator.userAgent)]]],
     // Feste Ordner im Container (#115); wohin sie zeigen, bestimmen die Volumes der Compose-Datei.
-    ['Ordner', (u.ordner ?? []).map((o): [string, string] => [o.pfad, o.gesamt === null || o.frei === null ? 'nicht messbar' : `${groesse(o.belegt ?? 0)} belegt, ${groesse(o.frei)} frei von ${groesse(o.gesamt)}${o.volume === false ? ' – kein eigenes Volume!' : ''}`])],
-    ['Einstellungen', [...Object.entries(u.einstellungen), ...(u.variablen ?? []).map((v): [string, string] => [v, 'überflüssig – aus der Compose-Datei entfernen'])]],
+    [t('werkbank.technik.ordner'), (u.ordner ?? []).map((o): [string, string] => [o.pfad, o.gesamt === null || o.frei === null ? t('werkbank.technik.nicht-messbar') : t('werkbank.technik.belegt-frei-von', { groesse: groesse(o.belegt ?? 0), groesse2: groesse(o.frei), groesse3: groesse(o.gesamt), wert: o.volume === false ? t('werkbank.technik.kein-eigenes-volume') : '' })])],
+    [t('werkbank.technik.einstellungen'), [...Object.entries(u.einstellungen), ...(u.variablen ?? []).map((v): [string, string] => [v, t('werkbank.technik.ueberfluessig-aus-der-compose')])]],
   ];
 }
 
 /** Markdown für ein GitHub-Issue. */
 /** #216: Was der Betreiber selbst aktualisiert – und was mit einem DMS-Update kommt. */
-const GRUPPEN = [['selbst', 'Von dir zu aktualisieren'], ['dms', 'Kommt mit Ablago']] as const;
+const GRUPPEN = [['selbst', t('werkbank.technik.von-dir-zu-aktualisieren')], ['dms', t('werkbank.technik.kommt-mit-ablago')]] as const;
 function gruppiert(abgleich: Vergleich[]): Array<[string, Vergleich[]]> {
   return GRUPPEN.map(([g, titel]) => [titel, abgleich.filter((v) => (v.gruppe ?? 'selbst') === g)]);
 }
 /** In „Kommt mit dem DMS“ ist Neueres keine Aufgabe für den Betreiber; nicht mehr unterstützt bleibt eine Warnung. */
 function statusVon(v: Vergleich): { text: string; art: string } {
-  if (v.gruppe === 'dms' && v.status === 'neuer') return { text: 'kommt mit Ablago-Update', art: '' };
+  if (v.gruppe === 'dms' && v.status === 'neuer') return { text: t('werkbank.technik.kommt-mit-ablago-update'), art: '' };
   return STATUS[v.status];
 }
 const istAufgabe = (v: Vergleich) => ((v.gruppe ?? 'selbst') === 'selbst' && v.status === 'neuer') || v.status === 'veraltet';
 
 function alsText(z: Zeilen, abgleich: Vergleich[] | null): string {
-  const t = ['### Systemangaben (Ablago)', '', '| Bereich | Angabe | Wert |', '| --- | --- | --- |'];
-  for (const [g, liste] of z) for (const [k, v] of liste) t.push(`| ${g} | ${k} | ${markdownZelle(v)} |`);
+  const eintrag = [t('werkbank.technik.systemangaben-ablago'), '', t('werkbank.technik.bereich-angabe-wert'), '| --- | --- | --- |'];
+  for (const [g, liste] of z) for (const [k, v] of liste) eintrag.push(`| ${g} | ${k} | ${markdownZelle(v)} |`);
   if (abgleich) {
-    t.push('', '#### Versionsabgleich', '', '| Komponente | Installiert | Aktuell | Status |', '| --- | --- | --- | --- |');
+    eintrag.push('', t('werkbank.technik.versionsabgleich'), '', t('werkbank.technik.komponente-installiert-aktuell'), '| --- | --- | --- | --- |');
     for (const [titel, liste] of gruppiert(abgleich)) {
       if (!liste.length) continue;
-      t.push(`| **${titel}** | | | |`);
-      for (const v of liste) t.push(`| ${v.bezeichnung ?? v.komponente} | ${v.installiert ?? '–'} | ${v.aktuell ?? '–'} | ${statusVon(v).text} |`);
+      eintrag.push(`| **${titel}** | | | |`);
+      for (const v of liste) eintrag.push(`| ${v.bezeichnung ?? v.komponente} | ${v.installiert ?? '–'} | ${v.aktuell ?? '–'} | ${statusVon(v).text} |`);
     }
   }
-  t.push('', `_Erstellt am ${new Date().toLocaleString('de-DE')}_`);
-  return t.join('\n');
+  eintrag.push('', t('werkbank.technik.erstellt-am', { wert: new Date().toLocaleString(gebietsschema()) }));
+  return eintrag.join('\n');
 }
 
 export function useTechnik(sichtbar: boolean) {
@@ -91,12 +93,12 @@ export function useTechnik(sichtbar: boolean) {
 export type TechnikZustand = ReturnType<typeof useTechnik>;
 
 /** Was installiert ist (#366: früher die mittlere Spalte), als Abschnitt unter „Neuere Versionen“. */
-function Installiert({ t }: { t: TechnikZustand }) {
+function Installiert({ t: eintrag }: { t: TechnikZustand }) {
   return (
     <section className="blatt" id="installiert">
-      <h2 className="h3">Installiert</h2>
-      {t.fehler && <div className="hinweis schlecht"><p>{t.fehler}</p></div>}
-      {!t.u ? <p className="leise">Lade …</p> : zeilenAus(t.u).map(([gruppe, liste]) => (
+      <h2 className="h3">{t('werkbank.technik.installiert')}</h2>
+      {eintrag.fehler && <div className="hinweis schlecht"><p>{eintrag.fehler}</p></div>}
+      {!eintrag.u ? <p className="leise">{t('werkbank.technik.lade')}</p> : zeilenAus(eintrag.u).map(([gruppe, liste]) => (
         <section key={gruppe} className="technikgruppe">
           <h3 className="ueber">{gruppe}</h3>
           <dl>{liste.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className={/^\d|^[0-9a-f]{7}$/.test(v) ? 'mono' : ''}>{v}</dd></div>)}</dl>
@@ -106,7 +108,7 @@ function Installiert({ t }: { t: TechnikZustand }) {
   );
 }
 
-export function TechnikPanel({ t, abschnitt }: { t: TechnikZustand; abschnitt?: boolean }) {
+export function TechnikPanel({ t: eintrag, abschnitt }: { t: TechnikZustand; abschnitt?: boolean }) {
   const handbuch = useHandbuch();
   const { version } = useKonto();
   const release = /^\d+\.\d+\.\d+$/.test(version ?? '');
@@ -115,46 +117,46 @@ export function TechnikPanel({ t, abschnitt }: { t: TechnikZustand; abschnitt?: 
   const [kopiert, setKopiert] = useState(false);
   async function pruefen() {
     setLaeuft(true); setFehler(undefined);
-    try { t.setAbgleich(await api.versionsabgleich({ react: reactVersion })); } catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
+    try { eintrag.setAbgleich(await api.versionsabgleich({ react: reactVersion })); } catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
   }
   async function kopieren() {
-    if (!t.u) return;
-    const text = alsText(zeilenAus(t.u), t.abgleich);
+    if (!eintrag.u) return;
+    const text = alsText(zeilenAus(eintrag.u), eintrag.abgleich);
     try { await navigator.clipboard.writeText(text); setKopiert(true); setTimeout(() => setKopiert(false), 2500); }
-    catch { setFehler('Kopieren nicht möglich (der Browser erlaubt die Zwischenablage nur über HTTPS oder localhost). Der Text steht unten zum Markieren.'); }
+    catch { setFehler(t('werkbank.technik.kopieren-nicht-moeglich-der')); }
   }
-  const aufgaben = t.abgleich?.filter(istAufgabe) ?? [];
-  const komplett = t.u?.dms.variante === 'komplett';
+  const aufgaben = eintrag.abgleich?.filter(istAufgabe) ?? [];
+  const komplett = eintrag.u?.dms.variante === 'komplett';
   const imageName = komplett ? 'ghcr.io/motom001/dms-komplett' : 'ghcr.io/motom001/dms';
   return (
     <div className="einspaltig">
-      <Kopf titel="Version und Updates" abschnitt={abschnitt} id="version">
-        <p className="leise">Für Fragen an den Support: Übersicht kopieren und in ein <a className="verweis" href="https://github.com/motom001/dms/issues/new?template=wunsch.md" target="_blank" rel="noreferrer">GitHub-Issue</a> einfügen. Passwörter und Zugangsdaten stehen nicht darin. Wie alles zusammenhängt, beschreibt <a className="verweis" href={handbuch('admin', 'technik/')} target="_blank" rel="noreferrer">das Administratorhandbuch</a>. <Hilfe ort="werkbank.technik" /></p>
+      <Kopf titel={t('werkbank.technik.version-und-updates')} abschnitt={abschnitt} id="version">
+        <p className="leise">{tn('werkbank.technik.fuer-fragen-an-den', { link: <a className="verweis" href="https://github.com/motom001/dms/issues/new?template=wunsch.md" target="_blank" rel="noreferrer">{t('werkbank.technik.github-issue')}</a>, link2: <a className="verweis" href={handbuch('admin', 'technik/')} target="_blank" rel="noreferrer">{t('werkbank.technik.das-administratorhandbuch')}</a>, hilfe: <Hilfe ort="werkbank.technik" /> })}</p>
       </Kopf>
       <div className="blatt">
-        <h2 className="h3">Für den Support</h2>
+        <h2 className="h3">{t('werkbank.technik.fuer-den-support')}</h2>
         <div className="knoepfe">
-          <button className="knopf primaer" disabled={!t.u} onClick={() => void kopieren()}>{kopiert ? 'Kopiert' : 'Übersicht für GitHub kopieren'}</button>
+          <button className="knopf primaer" disabled={!eintrag.u} onClick={() => void kopieren()}>{kopiert ? t('werkbank.technik.kopiert') : t('werkbank.technik.uebersicht-fuer-github-kopieren')}</button>
         </div>
-        {fehler?.startsWith('Kopieren') && t.u && <textarea className="mono klein" rows={8} readOnly value={alsText(zeilenAus(t.u), t.abgleich)} onFocus={(e) => e.target.select()} />}
+        {fehler === t('werkbank.technik.kopieren-nicht-moeglich-der') && eintrag.u && <textarea className="mono klein" rows={8} readOnly value={alsText(zeilenAus(eintrag.u), eintrag.abgleich)} onFocus={(e) => e.target.select()} />}
       </div>
       <div className="blatt">
-        <h2 className="h3">Neuere Versionen</h2>
-        {release && <p>Was sich seit deiner Version {version} geändert hat: <a className="verweis" href={handbuch('admin', 'neu/')} target="_blank" rel="noreferrer">Neu in dieser Version</a> im Handbuch, <a className="verweis" href="https://github.com/motom001/dms/releases" target="_blank" rel="noreferrer">alle Releases</a> und <a className="verweis" href={`https://github.com/motom001/dms/compare/v${version}...main`} target="_blank" rel="noreferrer">alle Änderungen seit {version}</a> auf GitHub.</p>}
-        <p className="leise">Fragt GitHub (Ablago), endoflife.date (Node.js, PostgreSQL, Alpine) und npm (Bibliotheken). Ablago verbindet sich dafür nur jetzt, auf Knopfdruck, mit dem Internet.</p>
-        <div className="knoepfe"><button className="knopf" disabled={laeuft} onClick={() => void pruefen()}>{laeuft ? 'Prüfe …' : t.abgleich ? 'Erneut prüfen' : 'Jetzt prüfen'}</button></div>
-        {fehler && !fehler.startsWith('Kopieren') && <p className="fehlertext">{fehler}</p>}
-        {t.abgleich && (
+        <h2 className="h3">{t('werkbank.technik.neuere-versionen')}</h2>
+        {release && <p>{tn('werkbank.technik.was-sich-seit-deiner', { version, link: <a className="verweis" href={handbuch('admin', 'neu/')} target="_blank" rel="noreferrer">{t('werkbank.technik.neu-in-dieser-version')}</a>, link2: <a className="verweis" href="https://github.com/motom001/dms/releases" target="_blank" rel="noreferrer">{t('werkbank.technik.alle-releases')}</a>, link3: <a className="verweis" href={`https://github.com/motom001/dms/compare/v${version}...main`} target="_blank" rel="noreferrer">{tn('werkbank.technik.alle-aenderungen-seit', { version })}</a> })}</p>}
+        <p className="leise">{t('werkbank.technik.fragt-github-ablago-endoflife')}</p>
+        <div className="knoepfe"><button className="knopf" disabled={laeuft} onClick={() => void pruefen()}>{laeuft ? t('werkbank.technik.pruefe') : eintrag.abgleich ? t('werkbank.technik.erneut-pruefen') : t('werkbank.technik.jetzt-pruefen')}</button></div>
+        {fehler && fehler !== t('werkbank.technik.kopieren-nicht-moeglich-der') && <p className="fehlertext">{fehler}</p>}
+        {eintrag.abgleich && (
           <>
             <p className={aufgaben.length ? 'hinweis warn' : 'hinweis gut'}>{aufgaben.length
-              ? aufgaben.map((v) => v.status === 'veraltet' ? `${v.bezeichnung ?? v.komponente} wird nicht mehr unterstützt.` : v.komponente === 'Ablago' ? 'Eine neuere Ablago-Version ist verfügbar.' : `Für ${v.bezeichnung ?? v.komponente} gibt es ein Update.`).join(' ')
-              : 'Für dich ist nichts zu tun.'}</p>
-            {gruppiert(t.abgleich).map(([titel, liste]) => liste.length > 0 && (
+              ? aufgaben.map((v) => v.status === 'veraltet' ? t('werkbank.technik.wird-nicht-mehr-unterstuetzt', { wert: v.bezeichnung ?? v.komponente }) : v.komponente === 'Ablago' ? t('werkbank.technik.eine-neuere-ablago-version') : t('werkbank.technik.fuer-gibt-es-ein', { wert: v.bezeichnung ?? v.komponente })).join(' ')
+              : t('werkbank.technik.fuer-dich-ist-nichts')}</p>
+            {gruppiert(eintrag.abgleich).map(([titel, liste]) => liste.length > 0 && (
               <div key={titel}>
                 <p className="ueber abstand-oben">{titel}</p>
                 <div className="tabellenrahmen">
                   <table className="tabelle">
-                    <thead><tr><th>Komponente</th><th>Installiert</th><th>Aktuell</th><th>Status</th></tr></thead>
+                    <thead><tr><th>{t('werkbank.technik.komponente')}</th><th>{t('werkbank.technik.installiert')}</th><th>{t('werkbank.technik.aktuell')}</th><th>{t('werkbank.technik.status')}</th></tr></thead>
                     <tbody>
                       {liste.map((v) => { const s = statusVon(v); return (
                         <tr key={v.komponente}>
@@ -169,11 +171,11 @@ export function TechnikPanel({ t, abschnitt }: { t: TechnikZustand; abschnitt?: 
                 </div>
               </div>
             ))}
-            <p className="leise klein">Aktualisieren: Das Image <span className="mono">{imageName}</span> enthält Node.js, Alpine und die Bibliotheken{komplett ? ' – und PostgreSQL' : ''}. Neu ziehen und den Container neu starten genügt.{komplett ? '' : ' PostgreSQL ist ein eigenes Image (postgres:17), das du getrennt neu ziehst.'} Die Bibliotheken aktualisiert das Projekt; sie kommen mit dem nächsten Ablago-Update.</p>
+            <p className="leise klein">{tn('werkbank.technik.aktualisieren-das-image-enthaelt', { span: <span className="mono">{imageName}</span>, wert: komplett ? t('werkbank.technik.und-postgresql') : '', wert2: komplett ? '' : t('werkbank.technik.postgresql-ist-ein-eigenes') })}</p>
           </>
         )}
       </div>
-      <Installiert t={t} />
+      <Installiert t={eintrag} />
     </div>
   );
 }

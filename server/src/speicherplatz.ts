@@ -3,6 +3,7 @@ import { Fachfehler } from './fehler';
 import { belegung, statfsMesser, type Messer, type Ordner, type OrdnerBelegung } from './ordner';
 import { protokoll } from './protokoll';
 import type { Wartung } from './wartung';
+import { t } from './sprache';
 
 /**
  * Speicherplatz-Überwachung (#116) in zwei Stufen:
@@ -13,7 +14,7 @@ import type { Wartung } from './wartung';
  */
 
 const log = protokoll.modul('system');
-export const LIMIT_TEXT = 'Speicherplatzlimit erreicht';
+export const LIMIT_TEXT = t('meldungen.speicherplatz.speicherplatzlimit-erreicht');
 export const VORLAUF_MIN = 5;
 const GB = 1024 ** 3;
 
@@ -90,7 +91,7 @@ export class Speicherplatz {
     const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
     const neu = { warnung: pruefeSchwelle(o.warnung, alt.warnung, 'Warnschwelle'), grenze: pruefeSchwelle(o.grenze, alt.grenze, 'Grenze') };
     if (neu.warnung.einheit === neu.grenze.einheit && neu.warnung.wert < neu.grenze.wert) {
-      throw new Fachfehler(422, 'Die Warnschwelle muss mindestens so viel freien Platz verlangen wie die Grenze – sonst käme die Warnung erst nach der Grenze.');
+      throw new Fachfehler(422, t('meldungen.speicherplatz.die-warnschwelle-muss-mindestens'));
     }
     await this.d.einstellungen.schreibe('speicherplatz', neu);
     log.info('Speicherplatz-Schwellen geändert', { von, warnung: schwelleText(neu.warnung), grenze: schwelleText(neu.grenze) });
@@ -148,10 +149,10 @@ export class Speicherplatz {
       if (!alt.gewarnt) {
         neu.gewarnt = true;
         log.warn('Speicherplatz knapp: Warnschwelle unterschritten', { warnschwelle: schwelleText(s.einstellung.warnung), ordner: knapp.join('; ') });
-        await this.mail('Speicherplatz wird knapp',
-          `Der freie Speicherplatz von Ablago liegt unter der Warnschwelle (${schwelleText(s.einstellung.warnung)}):\n\n${knapp.join('\n')}\n\n`
-          + `Unter der Grenze (${schwelleText(s.einstellung.grenze)}) sperrt Ablago das Hochladen und geht in den Wartungsmodus. `
-          + 'Schaffe rechtzeitig Platz (alte Sicherungen löschen, Papierkorb leeren) oder vergrößere den Speicher. Details: Werkbank → Wartung und Fehlersuche → Systemzustand.');
+        await this.mail(t('meldungen.speicherplatz.speicherplatz-wird-knapp'),
+          t('meldungen.speicherplatz.der-freie-speicherplatz-von', { schwelleText: schwelleText(s.einstellung.warnung), knapp: knapp.join('\n') })
+          + t('meldungen.speicherplatz.unter-der-grenze-sperrt', { schwelleText: schwelleText(s.einstellung.grenze) })
+          + t('meldungen.speicherplatz.schaffe-rechtzeitig-platz-alte'));
       }
     } else {
       neu.gewarnt = true;
@@ -160,10 +161,7 @@ export class Speicherplatz {
         log.error('Speicherplatzlimit erreicht: Hochladen gesperrt, Wartungsmodus startet', { grenze: schwelleText(s.einstellung.grenze), ordner: knapp.join('; ') });
         const an = await this.d.wartung?.automatisch('speicherplatz', LIMIT_TEXT, VORLAUF_MIN);
         await this.mail(LIMIT_TEXT,
-          `Der freie Speicherplatz von Ablago liegt unter der Grenze (${schwelleText(s.einstellung.grenze)}):\n\n${knapp.join('\n')}\n\n`
-          + 'Das Hochladen ist ab sofort gesperrt. '
-          + (an ? `In ${VORLAUF_MIN} Minuten startet der Wartungsmodus; danach können nur Personen arbeiten, die verwalten dürfen. ` : 'Der Wartungsmodus ist bereits an. ')
-          + 'Schaffe in der Werkbank Platz (alte Sicherungen löschen, Papierkorb leeren) und beende danach den Wartungsmodus selbst – er endet nicht von allein.');
+          t('meldungen.speicherplatz.das-hochladen-ist-ab', { wert: t('meldungen.speicherplatz.der-freie-speicherplatz-von-2', { schwelleText: schwelleText(s.einstellung.grenze), knapp: knapp.join('\n') }), wert2: (an ? t('meldungen.speicherplatz.in-minuten-startet-der', { VORLAUF_MIN }) : t('meldungen.speicherplatz.der-wartungsmodus-ist-bereits')) }));
       }
     }
     if (JSON.stringify(neu) !== JSON.stringify(alt)) await this.d.einstellungen.schreibe('speicherplatz_stand', neu);
@@ -180,7 +178,7 @@ export class Speicherplatz {
     if (s.zustand === 'grenze') {
       if (vorher !== 'grenze') void this.pruefe().catch(() => {});
       const o = s.ordner.find((x) => x.zustand === 'grenze');
-      throw new Fachfehler(507, `${LIMIT_TEXT}: Hochladen ist gesperrt${o?.frei != null ? ` (${gbText(o.frei)} frei)` : ''}. Bitte wende dich an die Person, die Ablago verwaltet.`);
+      throw new Fachfehler(507, `${LIMIT_TEXT}: Hochladen ist gesperrt${o?.frei != null ? t('meldungen.speicherplatz.frei', { gbText: gbText(o.frei) }) : ''}. Bitte wende dich an die Person, die Ablago verwaltet.`);
     }
   }
 

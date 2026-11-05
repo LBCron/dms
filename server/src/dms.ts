@@ -5,6 +5,8 @@
  */
 import { readFile } from 'node:fs/promises';
 import { ALS_KOPF, KONSOLE_KOPF, konsolenDatei, lokaleUrl, type KonsolenDatei } from './konsole';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 export class KonsolenFehler extends Error {
   constructor(message: string, readonly code = 1) { super(message); }
@@ -27,7 +29,7 @@ export function zerlege(args: string[]): Zerlegt {
     else if (k === 'admin' || k === 'alle') opt.werte[k] = 'ja';
     else {
       const wert = v ?? args[++i];
-      if (wert === undefined) throw new KonsolenFehler(`--${k} braucht einen Wert.`, 2);
+      if (wert === undefined) throw new KonsolenFehler(t('meldungen.dms.braucht-einen-wert', { k }), 2);
       if (k === 'als') opt.als = wert; else opt.werte[k] = wert;
     }
   }
@@ -90,14 +92,14 @@ export async function verbinde(env: NodeJS.ProcessEnv, als: string | undefined, 
       // Läuft der Server, aber ohne Konsolenzugang? Dann ist es der Einrichtungsmodus.
       const url = lokaleUrl(Number(env.PORT ?? 3000), env.HOST);
       const g = await holen(`${url}/api/gesundheit`).then(async (r) => ({ ok: r.ok, zustand: (JSON.parse(await r.text()) as { zustand?: string }).zustand })).catch(() => null);
-      if (g?.ok) throw new KonsolenFehler('Ablago läuft im Einrichtungsmodus (noch keine Datenbank angebunden). Richte es zuerst im Browser ein; danach geht der Befehl dms.', 3);
+      if (g?.ok) throw new KonsolenFehler(t('meldungen.dms.ablago-laeuft-im-einrichtungsmodus'), 3);
       // Startseite (#802): Ablago ist erreichbar, aber noch nicht bereit.
-      if (g?.zustand === 'startet') throw new KonsolenFehler('Ablago startet gerade (Migrationen und Vorbereitungen). Den Fortschritt zeigt die Seite im Browser; versuche es danach noch einmal.', 3);
-      if (g?.zustand === 'fehler') throw new KonsolenFehler('Ablago konnte nicht starten. Der Grund steht auf der Seite im Browser und im Protokoll des Containers.', 3);
-      throw new KonsolenFehler('Ablago läuft nicht (oder startet gerade). Prüfe das Protokoll des Containers und versuche es in einer Minute noch einmal.', 3);
+      if (g?.zustand === 'startet') throw new KonsolenFehler(t('meldungen.dms.ablago-startet-gerade-migrationen'), 3);
+      if (g?.zustand === 'fehler') throw new KonsolenFehler(t('meldungen.dms.ablago-konnte-nicht-starten'), 3);
+      throw new KonsolenFehler(t('meldungen.dms.ablago-laeuft-nicht-oder'), 3);
     }
-    if ((e as NodeJS.ErrnoException).code === 'EACCES') throw new KonsolenFehler(`Keine Berechtigung für ${datei}. Rufe dms als derselbe Benutzer auf wie Ablago (z. B. docker exec ohne --user).`, 3);
-    throw new KonsolenFehler(`${datei} ist nicht lesbar: ${(e as Error).message}`, 3);
+    if ((e as NodeJS.ErrnoException).code === 'EACCES') throw new KonsolenFehler(t('meldungen.dms.keine-berechtigung-fuer-rufe', { datei }), 3);
+    throw new KonsolenFehler(t('meldungen.dms.ist-nicht-lesbar', { datei, message: (e as Error).message }), 3);
   }
   return {
     async anfrage<T>(methode: string, pfad: string, body?: unknown): Promise<T> {
@@ -109,7 +111,7 @@ export async function verbinde(env: NodeJS.ProcessEnv, als: string | undefined, 
           body: body !== undefined ? JSON.stringify(body) : undefined,
         });
       } catch {
-        throw new KonsolenFehler('Ablago antwortet nicht. Läuft es noch? (Nach einem Neustart einfach noch einmal versuchen.)', 3);
+        throw new KonsolenFehler(t('meldungen.dms.ablago-antwortet-nicht-laeuft'), 3);
       }
       const text = await r.text();
       let daten: unknown = null;
@@ -128,29 +130,29 @@ export async function verbinde(env: NodeJS.ProcessEnv, als: string | undefined, 
 export interface Ein { frage(text: string, verdeckt?: boolean): Promise<string>; interaktiv: boolean }
 export interface Aus { zeile(text: string): void; json(daten: unknown): void }
 
-const zeit = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–');
+const zeit = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' }) : '–');
 const tabelle = (zeilen: string[][]) => {
   const breite = zeilen[0]?.map((_, i) => Math.max(...zeilen.map((z) => (z[i] ?? '').length))) ?? [];
   return zeilen.map((z) => z.map((x, i) => (i === z.length - 1 ? x : x.padEnd(breite[i]))).join('  ').trimEnd());
 };
 
 /** Verwaltungsrecht (#818) für die Liste: „Gesamte Verwaltung“, Bereiche oder „–“. */
-const verwaltet = (v?: string[]) => (!v?.length ? '–' : v.includes('*') ? 'Gesamte Verwaltung' : v.join(', '));
+const verwaltet = (v?: string[]) => (!v?.length ? '–' : v.includes('*') ? t('meldungen.dms.gesamte-verwaltung') : v.join(', '));
 interface BenutzerZeile { id: string; email: string; name: string; verwaltung?: string[]; aktiv: boolean; hatPasswort: boolean; letzteAnmeldung: string | null }
 
 async function benutzerZu(v: Verbindung, email: string | undefined): Promise<BenutzerZeile> {
-  if (!email) throw new KonsolenFehler('Bitte die E-Mail-Adresse angeben.', 2);
+  if (!email) throw new KonsolenFehler(t('meldungen.dms.bitte-die-e-mail'), 2);
   const liste = await v.anfrage<BenutzerZeile[]>('GET', '/api/benutzer');
   const b = liste.find((x) => x.email.toLowerCase() === email.toLowerCase());
-  if (!b) throw new KonsolenFehler(`Unter ${email} gibt es keinen Benutzer.`, 1);
+  if (!b) throw new KonsolenFehler(t('meldungen.dms.unter-gibt-es-keinen', { email }), 1);
   return b;
 }
 
 async function bestaetige(ein: Ein, opt: Optionen, frage: string) {
   if (opt.ja) return;
-  if (!ein.interaktiv) throw new KonsolenFehler(`${frage} – ohne Terminal bitte mit --ja bestätigen.`, 2);
+  if (!ein.interaktiv) throw new KonsolenFehler(t('meldungen.dms.ohne-terminal-bitte-mit', { frage }), 2);
   const a = (await ein.frage(`${frage} [j/N] `)).trim().toLowerCase();
-  if (a !== 'j' && a !== 'ja' && a !== 'y' && a !== 'yes') throw new KonsolenFehler('Abgebrochen.', 1);
+  if (a !== 'j' && a !== 'ja' && a !== 'y' && a !== 'yes') throw new KonsolenFehler(t('meldungen.dms.abgebrochen'), 1);
 }
 
 /* ---------- Befehle ---------- */
@@ -166,52 +168,52 @@ export async function fuehreAus(z: Zerlegt, v: Verbindung, ein: Ein, aus: Aus): 
   switch (b) {
     case 'passwort': {
       const email = rest[0];
-      if (!email) throw new KonsolenFehler('Aufruf: dms passwort <email> [--passwort <neu>]', 2);
+      if (!email) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-passwort-email'), 2);
       let pw = opt.werte.passwort;
       if (pw === undefined) {
-        if (!ein.interaktiv) throw new KonsolenFehler('Ohne Terminal das Passwort mit --passwort angeben (oder docker exec -it verwenden).', 2);
-        pw = await ein.frage('Neues Passwort: ', true);
-        if ((await ein.frage('Wiederholen: ', true)) !== pw) throw new KonsolenFehler('Die beiden Passwörter stimmen nicht überein.', 1);
+        if (!ein.interaktiv) throw new KonsolenFehler(t('meldungen.dms.ohne-terminal-das-passwort'), 2);
+        pw = await ein.frage(t('meldungen.dms.neues-passwort'), true);
+        if ((await ein.frage(t('meldungen.dms.wiederholen'), true)) !== pw) throw new KonsolenFehler(t('meldungen.dms.die-beiden-passwoerter-stimmen'), 1);
       }
       const r = await v.anfrage<{ email: string; aktiv: boolean; zweifaktor: boolean }>('POST', '/api/konsole/passwort', { email, passwort: pw });
       return zeige(r, () => [
-        `Passwort für ${r.email} gesetzt; alle Sitzungen dieses Benutzers sind beendet.`,
-        ...(r.aktiv ? [] : ['Achtung: Der Benutzer ist deaktiviert und kann sich so nicht anmelden.']),
-        ...(r.zweifaktor ? [`Die Zwei-Faktor-Anmeldung ist eingerichtet. Ohne Handy: dms zweifaktor-zuruecksetzen ${r.email}`] : []),
+        t('meldungen.dms.passwort-fuer-gesetzt-alle', { email: r.email }),
+        ...(r.aktiv ? [] : [t('meldungen.dms.achtung-der-benutzer-ist')]),
+        ...(r.zweifaktor ? [t('meldungen.dms.die-zwei-faktor-anmeldung', { email: r.email })] : []),
       ]);
     }
     case 'zweifaktor-zuruecksetzen': {
       const u = await benutzerZu(v, rest[0]);
-      await bestaetige(ein, opt, `Zwei-Faktor-Anmeldung von ${u.email} zurücksetzen?`);
+      await bestaetige(ein, opt, t('meldungen.dms.zwei-faktor-anmeldung-von', { email: u.email }));
       await v.anfrage('POST', `/api/benutzer/${u.id}/zweifaktor/zuruecksetzen`);
-      return zeige({ ok: true, email: u.email }, () => `Zwei-Faktor-Anmeldung von ${u.email} entfernt.`);
+      return zeige({ ok: true, email: u.email }, () => t('meldungen.dms.zwei-faktor-anmeldung-von-2', { email: u.email }));
     }
     case 'gesperrt': {
       const s = await v.anfrage<{ gesperrt: Array<{ ip: string; grund: string; seit: string; bis: string | null }> }>('GET', '/api/werkbank/anmeldeschutz');
       return zeige(s.gesperrt, () => (s.gesperrt.length
-        ? tabelle([['IP', 'seit', 'bis', 'Grund'], ...s.gesperrt.map((g) => [g.ip, zeit(g.seit), g.bis ? zeit(g.bis) : 'bis entsperrt', g.grund])])
-        : 'Keine Adresse gesperrt.'));
+        ? tabelle([['IP', 'seit', 'bis', 'Grund'], ...s.gesperrt.map((g) => [g.ip, zeit(g.seit), g.bis ? zeit(g.bis) : t('meldungen.dms.bis-entsperrt'), g.grund])])
+        : t('meldungen.dms.keine-adresse-gesperrt')));
     }
     case 'entsperren': {
-      if (!rest[0]) throw new KonsolenFehler('Aufruf: dms entsperren <ip>   (Liste: dms gesperrt)', 2);
+      if (!rest[0]) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-entsperren-ip'), 2);
       await v.anfrage('POST', '/api/werkbank/anmeldeschutz/entsperren', { ip: rest[0] });
       return zeige({ ok: true, ip: rest[0] }, () => `${rest[0]} entsperrt.`);
     }
     case 'wartung': {
       if (rest[0] === 'aus') {
         await v.anfrage('POST', '/api/werkbank/wartung/aus');
-        return zeige({ ok: true }, () => 'Wartungsmodus beendet.');
+        return zeige({ ok: true }, () => t('meldungen.dms.wartungsmodus-beendet'));
       }
-      if (rest[0]) throw new KonsolenFehler('Aufruf: dms wartung [aus]', 2);
+      if (rest[0]) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-wartung-aus'), 2);
       const w = await v.anfrage<{ stufe?: string; aktiv?: boolean; text?: string; ende?: string | null; beginn?: string | null }>('GET', '/api/werkbank/wartung');
-      return zeige(w, () => (w.stufe && w.stufe !== 'aus' ? `Wartungsmodus: ${w.stufe}${w.text ? ` – ${w.text}` : ''}${w.ende ? ` (bis ${zeit(w.ende)})` : ''}` : 'Kein Wartungsmodus.'));
+      return zeige(w, () => (w.stufe && w.stufe !== 'aus' ? t('meldungen.dms.wartungsmodus', { stufe: w.stufe, wert: w.text ? ` – ${w.text}` : '', wert2: w.ende ? ` (bis ${zeit(w.ende)})` : '' }) : t('meldungen.dms.kein-wartungsmodus')));
     }
     case 'abmelden': {
       if (opt.werte.alle) {
-        await bestaetige(ein, opt, 'Alle Benutzer auf allen Geräten abmelden?');
+        await bestaetige(ein, opt, t('meldungen.dms.alle-benutzer-auf-allen'));
         let beendet = 0;
         for (const u of await v.anfrage<BenutzerZeile[]>('GET', '/api/benutzer')) beendet += (await v.anfrage<{ beendet: number }>('DELETE', `/api/benutzer/${u.id}/sitzungen`)).beendet;
-        return zeige({ beendet }, () => `${beendet} Sitzungen beendet.`);
+        return zeige({ beendet }, () => t('meldungen.dms.sitzungen-beendet', { beendet }));
       }
       const u = await benutzerZu(v, rest[0]);
       const r = await v.anfrage<{ beendet: number }>('DELETE', `/api/benutzer/${u.id}/sitzungen`);
@@ -222,59 +224,59 @@ export async function fuehreAus(z: Zerlegt, v: Verbindung, ein: Ein, aus: Aus): 
       const db = s.datenbank;
       return zeige(s, () => [
         `Ablago ${s.dms.version} (${s.dms.variante})${s.dms.commit ? `, Commit ${s.dms.commit.slice(0, 7)}` : ''}`,
-        `Läuft seit ${zeit(s.laufzeit.laeuftSeit)} · Node ${s.laufzeit.node} · ${s.laufzeit.zeitzone}`,
+        t('meldungen.dms.laeuft-seit-node', { zeit: zeit(s.laufzeit.laeuftSeit), node: s.laufzeit.node, zeitzone: s.laufzeit.zeitzone }),
         `Datenbank: ${'fehler' in db ? `Fehler – ${String(db.fehler)}` : Object.entries(db).filter(([, x]) => typeof x !== 'object').map(([k, x]) => `${k} ${String(x)}`).join(' · ')}`,
       ]);
     }
     case 'sicherung': {
       if (rest[0] === 'jetzt') {
         const l = await v.anfrage<{ name?: string; zustand?: string }>('POST', '/api/werkbank/sicherung/jetzt');
-        return zeige(l, () => `Sicherung gestartet${l.name ? `: ${l.name}` : ''}. Fortschritt: dms sicherung`);
+        return zeige(l, () => t('meldungen.dms.sicherung-gestartet-fortschritt-dms', { wert: l.name ? `: ${l.name}` : '' }));
       }
       if (rest[0] === 'pruefen') {
-        if (!rest[1]) throw new KonsolenFehler('Aufruf: dms sicherung pruefen <name>', 2);
+        if (!rest[1]) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-sicherung-pruefen'), 2);
         const r = await v.anfrage<unknown>('POST', `/api/werkbank/sicherung/${encodeURIComponent(rest[1])}/pruefen`);
-        return zeige(r, () => `Prüfung von ${rest[1]} gestartet. Ergebnis: dms sicherung`);
+        return zeige(r, () => t('meldungen.dms.pruefung-von-gestartet-ergebnis', { rest: rest[1] }));
       }
-      if (rest[0]) throw new KonsolenFehler('Aufruf: dms sicherung [jetzt | pruefen <name>]', 2);
+      if (rest[0]) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-sicherung-jetzt'), 2);
       const s = await v.anfrage<{ lauf: { zustand?: string; name?: string } | null; liste: Array<{ name: string; bytes?: number; erstellt?: string; geprueft?: { ok: boolean } | null }> }>('GET', '/api/werkbank/sicherung');
       return zeige(s, () => [
-        ...(s.lauf ? [`Läuft gerade: ${s.lauf.name ?? ''} ${s.lauf.zustand ?? ''}`.trim()] : []),
-        ...(s.liste.length ? tabelle([['Name', 'Größe'], ...s.liste.map((x) => [x.name, x.bytes !== undefined ? `${(x.bytes / 1024 ** 2).toFixed(1)} MB` : ''])]) : ['Noch keine Sicherung.']),
+        ...(s.lauf ? [t('meldungen.dms.laeuft-gerade', { wert: s.lauf.name ?? '', wert2: s.lauf.zustand ?? '' }).trim()] : []),
+        ...(s.liste.length ? tabelle([['Name', 'Größe'], ...s.liste.map((x) => [x.name, x.bytes !== undefined ? `${(x.bytes / 1024 ** 2).toFixed(1)} MB` : ''])]) : [t('meldungen.dms.noch-keine-sicherung')]),
       ]);
     }
     case 'benutzer': {
       const [unter, email, ...name] = rest;
       if (!unter) {
         const liste = await v.anfrage<BenutzerZeile[]>('GET', '/api/benutzer');
-        return zeige(liste, () => tabelle([['E-Mail', 'Name', 'Verwaltung', 'Status', 'Letzte Anmeldung'],
+        return zeige(liste, () => tabelle([['E-Mail', 'Name', 'Verwaltung', 'Status', t('meldungen.dms.letzte-anmeldung')],
           ...liste.map((u) => [u.email, u.name, verwaltet(u.verwaltung), !u.aktiv ? 'deaktiviert' : u.hatPasswort ? 'aktiv' : 'eingeladen', zeit(u.letzteAnmeldung)])]));
       }
       if (unter === 'anlegen') {
-        if (!email) throw new KonsolenFehler('Aufruf: dms benutzer anlegen <email> <name> [--admin]', 2);
+        if (!email) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-benutzer-anlegen'), 2);
         const r = await v.anfrage<{ benutzer: BenutzerZeile; mailVerschickt: boolean; link?: string }>('POST', '/api/benutzer', { email, name: name.join(' '), ...(opt.werte.admin ? { verwaltung: ['*'] } : {}) });
-        return zeige(r, () => [`${r.benutzer.email} angelegt (${verwaltet(r.benutzer.verwaltung)}).`, r.mailVerschickt ? 'Die Einladung ist per Mail unterwegs.' : r.link ? `Einladungslink: ${r.link}` : 'Keine Einladung verschickt.']);
+        return zeige(r, () => [`${r.benutzer.email} angelegt (${verwaltet(r.benutzer.verwaltung)}).`, r.mailVerschickt ? t('meldungen.dms.die-einladung-ist-per') : r.link ? `Einladungslink: ${r.link}` : t('meldungen.dms.keine-einladung-verschickt')]);
       }
       if (unter === 'deaktivieren' || unter === 'aktivieren') {
         const u = await benutzerZu(v, email);
-        if (unter === 'deaktivieren') await bestaetige(ein, opt, `${u.email} deaktivieren? Alle Sitzungen enden.`);
+        if (unter === 'deaktivieren') await bestaetige(ein, opt, t('meldungen.dms.deaktivieren-alle-sitzungen-enden', { email: u.email }));
         await v.anfrage('PUT', `/api/benutzer/${u.id}`, { aktiv: unter === 'aktivieren' });
         return zeige({ ok: true, email: u.email, aktiv: unter === 'aktivieren' }, () => `${u.email} ${unter === 'aktivieren' ? 'aktiviert' : 'deaktiviert'}.`);
       }
-      throw new KonsolenFehler('Aufruf: dms benutzer [anlegen | deaktivieren | aktivieren]', 2);
+      throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-benutzer-anlegen-2'), 2);
     }
     case 'api': {
       const [methode, pfad, json] = rest;
-      if (!methode || !pfad || !/^(GET|POST|PUT|DELETE)$/i.test(methode) || !pfad.startsWith('/api/')) throw new KonsolenFehler('Aufruf: dms api <GET|POST|PUT|DELETE> </api/…> [json]', 2);
+      if (!methode || !pfad || !/^(GET|POST|PUT|DELETE)$/i.test(methode) || !pfad.startsWith('/api/')) throw new KonsolenFehler(t('meldungen.dms.aufruf-dms-api-get'), 2);
       let body: unknown;
-      if (json !== undefined) { try { body = JSON.parse(json); } catch { throw new KonsolenFehler('Der dritte Teil muss gültiges JSON sein, z. B. \'{"ip":"1.2.3.4"}\'.', 2); } }
+      if (json !== undefined) { try { body = JSON.parse(json); } catch { throw new KonsolenFehler(t('meldungen.dms.der-dritte-teil-muss'), 2); } }
       const r = await v.anfrage<unknown>(methode.toUpperCase(), pfad, body);
       return aus.json(r);
     }
     case undefined: case 'hilfe': case 'help': case '-h':
       return aus.zeile(HILFE);
     default:
-      throw new KonsolenFehler(`Unbekannter Befehl „${b}“. Übersicht: dms hilfe`, 2);
+      throw new KonsolenFehler(t('meldungen.dms.unbekannter-befehl-uebersicht-dms', { b }), 2);
   }
 }
 
@@ -296,7 +298,7 @@ function terminalEin(): Ein {
         if (verdeckt && stdin.isTTY) stdin.setRawMode(false);
         stdin.pause();
         if (verdeckt) process.stdout.write('\n');
-        if (wert === null) fehler(new KonsolenFehler('Abgebrochen.', 130)); else fertig(wert);
+        if (wert === null) fehler(new KonsolenFehler(t('meldungen.dms.abgebrochen'), 130)); else fertig(wert);
       };
       const bei = (teil: string) => {
         for (const c of teil) {
@@ -315,7 +317,7 @@ export async function haupt(args: string[], env: NodeJS.ProcessEnv = process.env
   try {
     const z = zerlege(args);
     if (!z.befehl.length || ['hilfe', 'help', '-h'].includes(z.befehl[0])) { aus.zeile(HILFE); return 0; }
-    if (!BEFEHLE.includes(z.befehl[0])) throw new KonsolenFehler(`Unbekannter Befehl „${z.befehl[0]}“. Übersicht: dms hilfe`, 2);
+    if (!BEFEHLE.includes(z.befehl[0])) throw new KonsolenFehler(t('meldungen.dms.unbekannter-befehl-uebersicht-dms-2', { befehl: z.befehl[0] }), 2);
     await fuehreAus(z, await verbinde(env, z.opt.als), terminalEin(), aus);
     return 0;
   } catch (e) {

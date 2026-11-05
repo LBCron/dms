@@ -20,6 +20,7 @@ import { ladeArgumente } from './modul';
 import { protokoll } from '../protokoll';
 import type { AnLaeufer, Grenzen, VomLaeufer } from './prozess';
 import type { Hostantwort } from './arbeiter';
+import { t } from '../sprache';
 
 const log = protokoll.modul('werkbank');
 
@@ -134,13 +135,13 @@ export class Paketlaeufer implements PaketLaeufer {
     // „Frag deine Ablage“ (#444): Das Paket mit dms:antworten beantwortet Fragen aus den Ausschnitten des Kerns.
     o.dienst.fragen.anbieter = {
       paket: () => this.paketMit('dms:antworten'),
-      antworte: (paket, eingang, teil) => this.schnittstelle(paket, 'dms:antworten', eingang, { bezeichnung: 'Frage beantwortet', teil }),
+      antworte: (paket, eingang, teil) => this.schnittstelle(paket, 'dms:antworten', eingang, { bezeichnung: t('meldungen.verwaltung.frage-beantwortet'), teil }),
     };
     // „Aus Dokument ausfüllen“ per Paket (#511): Pakete mit dms:erkennen, mit Zeitlimit.
     o.dienst.erkennung.anbieter = {
       pakete: () => this.pakete.filter((x) => hatSchnittstelle(x.laeufer, 'dms:erkennen') && this.ladefehler.has(x.id) && !this.ladefehler.get(x.id))
         .map((x) => ({ id: x.id, name: x.name, netz: hatNetz(x.laeufer) })),
-      erkenne: (paket, eingang, ms) => this.schnittstelle(paket, 'dms:erkennen', eingang, { bezeichnung: 'Felder erkannt', ms }),
+      erkenne: (paket, eingang, ms) => this.schnittstelle(paket, 'dms:erkennen', eingang, { bezeichnung: t('meldungen.verwaltung.felder-erkannt'), ms }),
     };
   }
 
@@ -161,7 +162,7 @@ export class Paketlaeufer implements PaketLaeufer {
     if (this.nachlaufUhr) clearInterval(this.nachlaufUhr);
     this.nachlaufUhr = null;
     const k = this.kind; this.kind = null; this.bereit = false;
-    this.beendeAufrufe(abbruch('Der Paket-Läufer wurde beendet.', true));
+    this.beendeAufrufe(abbruch(t('meldungen.verwaltung.der-paket-laeufer-wurde'), true));
     if (k && k.exitCode === null) { k.kill(); await new Promise((ok) => { k.once('exit', ok); setTimeout(ok, 2000); }); }
   }
 
@@ -278,7 +279,7 @@ export class Paketlaeufer implements PaketLaeufer {
       if (this.kind !== kind) return;
       this.kind = null; this.bereit = false;
       if (!this.aus) this.absturz = new Date().toISOString();
-      this.beendeAufrufe(abbruch(`Der Paket-Läufer ist abgestürzt (${sig ?? code})${zuletzt.trim() ? `: ${zuletzt.trim().split('\n').slice(-3).join(' ')}` : ''}.`));
+      this.beendeAufrufe(abbruch(t('meldungen.verwaltung.der-paket-laeufer-ist', { wert: String(sig ?? code), wert2: zuletzt.trim() ? `: ${zuletzt.trim().split('\n').slice(-3).join(' ')}` : '' })));
       if (this.aus) return;
       log.error('Paket-Läufer beendet – Neustart', { code, signal: sig, neustarts: this.neustarts, ausgabe: zuletzt.slice(-300) });
       const warte = Math.min(60_000, 1000 * 2 ** Math.min(this.neustarts++, 6));
@@ -288,7 +289,7 @@ export class Paketlaeufer implements PaketLaeufer {
 
   private async beendeKind() {
     const k = this.kind; this.kind = null; this.bereit = false;
-    this.beendeAufrufe(abbruch('Der Paket-Läufer wurde beendet (keine Pakete mit Code mehr).', true));
+    this.beendeAufrufe(abbruch(t('meldungen.verwaltung.der-paket-laeufer-wurde-2'), true));
     if (k) k.kill();
   }
 
@@ -376,14 +377,14 @@ export class Paketlaeufer implements PaketLaeufer {
   private async vektorAnfrage(text: string, ms: number): Promise<{ paket: string; modell: string; vektor: Float32Array | null; schwelle: number } | null> {
     const paket = this.vektorPaket();
     if (!paket || !this.laeuft()) return null;
-    const r = await this.rufe(paket, 'aktion', { aktion: 'dms:vektor', text: text.slice(0, 2000) }, { ms, vorrang: true, bezeichnung: text ? 'Vektor eines Suchbegriffs' : 'Modell abfragen' });
+    const r = await this.rufe(paket, 'aktion', { aktion: 'dms:vektor', text: text.slice(0, 2000) }, { ms, vorrang: true, bezeichnung: text ? t('meldungen.verwaltung.vektor-eines-suchbegriffs') : t('meldungen.verwaltung.modell-abfragen') });
     if (!r.ok) return null;
     try {
       const j = JSON.parse(r.text) as { modell?: unknown; vektor?: unknown; schwelle?: unknown };
       const s = Number(j.schwelle);
       return { paket, modell: liesModell(j.modell), vektor: text ? liesVektor(j.vektor) : null, schwelle: Number.isFinite(s) && s > -1 && s < 1 ? s : SCHWELLE_STANDARD };
     } catch (e) {
-      this.notiere(paket, { stufe: 2, text: `Antwort auf „dms:vektor“ unbrauchbar: ${(e as Error).message}` });
+      this.notiere(paket, { stufe: 2, text: t('meldungen.verwaltung.antwort-auf-dms-vektor', { message: (e as Error).message }) });
       return null;
     }
   }
@@ -450,14 +451,14 @@ export class Paketlaeufer implements PaketLaeufer {
 
   /** Einen Aufruf ausführen und auf das Ergebnis warten. ms: eigene, kürzere Wartezeit; vorrang: vor die Warteschlange. */
   private async rufe(paket: string, art: 'ereignis' | 'aktion', eingang: Record<string, unknown>, opt: { ms?: number; vorrang?: boolean; bezeichnung?: string; teil?: (text: string) => void; ohneInhalt?: boolean } = {}): Promise<Ergebnis> {
-    if (!this.kind || !this.bereit) return abbruch('Der Paket-Läufer läuft gerade nicht.', true);
+    if (!this.kind || !this.bereit) return abbruch(t('meldungen.verwaltung.der-paket-laeufer-laeuft'), true);
     const p = this.pakete.find((x) => x.id === paket);
     if (!p) throw new Error('Dieses Paket hat keinen Code.');
     const nr = this.nr++;
     const json = JSON.stringify({ ...eingang, paket: { id: p.id, version: p.version }, einstellungen: eingang.einstellungen ?? await this.o.einstellungen(paket).catch(() => ({})) });
     // Eigene Zeitgrenze über der des Läufers: Antwortet der Läufer gar nicht mehr, hängt hier nichts.
     const r = await new Promise<Ergebnis>((ok) => {
-      const uhr = setTimeout(() => { if (this.aufrufe.delete(nr)) ok(abbruch(opt.ms ? `Keine Antwort innerhalb von ${opt.ms} ms.` : 'Der Paket-Läufer hat nicht geantwortet.')); }, opt.ms ?? this.grenzen.sekunden * 1000 + 15_000);
+      const uhr = setTimeout(() => { if (this.aufrufe.delete(nr)) ok(abbruch(opt.ms ? t('meldungen.verwaltung.keine-antwort-innerhalb-von', { ms: opt.ms }) : t('meldungen.verwaltung.der-paket-laeufer-hat'))); }, opt.ms ?? this.grenzen.sekunden * 1000 + 15_000);
       uhr.unref?.();
       this.aufrufe.set(nr, { ok: (x) => { clearTimeout(uhr); ok(x); }, ...(opt.teil ? { teil: opt.teil } : {}) });
       this.sende({ art: 'aufruf', nr, paket, eingang: { art, json }, ...(opt.vorrang ? { vorrang: true } : {}) });
@@ -503,7 +504,7 @@ export class Paketlaeufer implements PaketLaeufer {
   private async stellePaketZu(paket: string, es: PaketEreignis[]): Promise<void> {
     for (const e of es) {
       if (!this.laeuft()) return; // Wartung oder Läufer weg: später, ohne Versuch
-      if (!this.pakete.some((p) => p.id === paket)) { await this.o.dienst.ereignisFehlgeschlagen(e.id, 'Das Paket hat keinen Code mehr.', null); continue; }
+      if (!this.pakete.some((p) => p.id === paket)) { await this.o.dienst.ereignisFehlgeschlagen(e.id, t('meldungen.verwaltung.das-paket-hat-keinen'), null); continue; }
       // Antwort jedes Aufrufs (#636): z. B. Stand der Kopie außer Haus – das Paket meldet ihn, statt selbst zu schreiben.
       const antwort = (r: Ergebnis, beginn: number) => r.ohneVersuch ? Promise.resolve() :
         this.o.dienst.nachEreignisAufruf(paket, e, { ok: r.ok, text: r.text, fehler: r.fehler, rc: r.rc, beginn }).catch((f) => log.warn('Paket-Läufer: Antwort des Pakets nicht übernommen', { paket, art: e.art, fehler: (f as Error).message }));
@@ -514,7 +515,7 @@ export class Paketlaeufer implements PaketLaeufer {
       for (let weiter = r.ok ? liesWeiter(r.text) : null; weiter; weiter = r.ok ? liesWeiter(r.text) : null) {
         const abschnitt = (Number(e.daten.abschnitt) || 0) + 1;
         const max = this.o.weiterMax ?? WEITER_MAX;
-        if (abschnitt > max) { this.notiere(paket, { stufe: 2, text: `Ereignis nach ${max} Fortsetzungen beendet.` }); break; }
+        if (abschnitt > max) { this.notiere(paket, { stufe: 2, text: t('meldungen.verwaltung.ereignis-nach-fortsetzungen-beendet', { max }) }); break; }
         e.daten = { ...e.daten, weiter, abschnitt };
         await this.o.dienst.ereignisDaten(e.id, e.daten);
         await this.o.dienst.texterkennungFortschritt(paket, e, weiter).catch(() => {});

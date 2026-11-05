@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Fachfehler } from './fehler';
 import { meldeFortschritt, neuerStand, schliessePhasen, type Auftrag, type Fortschritt, type PhasenPlan } from '../../shared/src/auftrag';
+import { t } from './sprache';
 
 export type { Auftrag, AuftragPhase, Fortschritt, PhasenPlan } from '../../shared/src/auftrag';
 
@@ -23,7 +24,7 @@ export class Auftraege {
    * und gibt ihr Ergebnis bis dahin zurück.
    */
   starte(art: string, titel: string, arbeit: (fortschritt: Fortschritt, signal?: AbortSignal) => Promise<unknown>, phasen: PhasenPlan[] = [], opt: { abbrechbar?: boolean } = {}): Auftrag {
-    if (this.letzter?.status === 'laeuft') throw new Fachfehler(409, `Es läuft bereits: ${this.letzter.titel}. Bitte warten, bis das fertig ist.`);
+    if (this.letzter?.status === 'laeuft') throw new Fachfehler(409, t('meldungen.auftrag.es-laeuft-bereits-bitte', { titel: this.letzter.titel }));
     const a: Auftrag = { id: randomUUID(), art, titel, status: 'laeuft', ...neuerStand(phasen), gestartet: new Date().toISOString(), ...(opt.abbrechbar ? { abbrechbar: true } : {}) };
     this.letzter = a;
     const signal = opt.abbrechbar ? (this.abbruch = new AbortController()).signal : undefined;
@@ -49,8 +50,8 @@ export class Auftraege {
   /** Den laufenden Auftrag abbrechen (#458) – nur, wenn er sich abbrechen lässt (und es dieser ist). */
   abbrechen(id?: unknown): Auftrag {
     const a = this.letzter;
-    if (!a || a.status !== 'laeuft' || (id !== undefined && id !== a.id)) throw new Fachfehler(409, 'Es läuft gerade kein Auftrag (mehr).');
-    if (!a.abbrechbar || !this.abbruch) throw new Fachfehler(409, `„${a.titel}“ lässt sich nicht abbrechen.`);
+    if (!a || a.status !== 'laeuft' || (id !== undefined && id !== a.id)) throw new Fachfehler(409, t('meldungen.auftrag.es-laeuft-gerade-kein'));
+    if (!a.abbrechbar || !this.abbruch) throw new Fachfehler(409, t('meldungen.auftrag.laesst-sich-nicht-abbrechen', { titel: a.titel }));
     a.abgebrochen = true;
     this.abbruch.abort();
     this.log(`${a.titel}: abgebrochen`);

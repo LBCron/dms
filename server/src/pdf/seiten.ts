@@ -8,6 +8,7 @@ import { Fachfehler } from '../fehler';
 import { bildArt, exifAusrichtung } from './bild';
 import { eigenerPuffer } from './puffer';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 /** Eine Seite im Ergebnis: Nummer im Original (ab 1) und zusätzliche Drehung im Uhrzeigersinn. */
 export interface SeitenWahl { nr: number; drehung?: number }
@@ -17,8 +18,8 @@ async function lade(inhalt: Buffer): Promise<PDFDocument> {
     return await ladePdf(inhalt, { updateMetadata: false });
   } catch (e) {
     const m = (e as Error).message;
-    if (/encrypt/i.test(m)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht bearbeiten.');
-    throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');
+    if (/encrypt/i.test(m)) throw new Fachfehler(422, t('meldungen.seiten.das-pdf-ist-mit'));
+    throw new Fachfehler(422, t('meldungen.seiten.die-datei-laesst-sich'));
   }
 }
 
@@ -29,7 +30,7 @@ async function lade(inhalt: Buffer): Promise<PDFDocument> {
 async function lesbar<T>(f: () => Promise<T>): Promise<T> {
   try { return await f(); } catch (e) {
     if (e instanceof Fachfehler) throw e;
-    throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');
+    throw new Fachfehler(422, t('meldungen.seiten.die-datei-laesst-sich'));
   }
 }
 
@@ -84,13 +85,13 @@ const DREHUNG_EXIF: Record<number, number> = { 3: 180, 6: 90, 8: 270 };
  * eigenerPuffer() an pdf-lib (sonst übersieht es den Versatz des Buffers).
  */
 export async function bilderZuPdf(bilder: Buffer[]): Promise<Buffer> {
-  if (!bilder.length) throw new Fachfehler(422, 'Keine Fotos.');
+  if (!bilder.length) throw new Fachfehler(422, t('meldungen.seiten.keine-fotos'));
   const doc = await PDFDocument.create();
   for (const [i, b] of bilder.entries()) {
     const art = bildArt(b);
-    if (!art) throw new Fachfehler(422, `Foto ${i + 1}: nur JPEG und PNG lassen sich als Seite übernehmen.`);
+    if (!art) throw new Fachfehler(422, t('meldungen.seiten.foto-nur-jpeg-und', { wert: i + 1 }));
     let bild;
-    try { bild = art === 'image/png' ? await doc.embedPng(eigenerPuffer(b)) : await doc.embedJpg(eigenerPuffer(b)); } catch { throw new Fachfehler(422, `Foto ${i + 1} lässt sich nicht lesen.`); }
+    try { bild = art === 'image/png' ? await doc.embedPng(eigenerPuffer(b)) : await doc.embedJpg(eigenerPuffer(b)); } catch { throw new Fachfehler(422, t('meldungen.seiten.foto-laesst-sich-nicht', { wert: i + 1 })); }
     const f = FOTOSEITE_PT / Math.max(bild.width, bild.height);
     const w = bild.width * f, h = bild.height * f;
     const seite = doc.addPage([w, h]);

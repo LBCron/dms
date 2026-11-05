@@ -36,14 +36,14 @@ const EMAIL: Schema = { type: 'string', minLength: 3, maxLength: 254, pattern: '
 export const SCHEMA: Schema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: `${HANDBUCH_BASIS}/admin/aktuell/einrichtungsdatei/${SCHEMA_DATEI}`,
-  title: 'Einrichtung von Ablago',
-  description: 'Was der Einrichtungsassistent gesammelt hat – ohne Passwörter und ohne Schlüssel. Formatversion 1.',
+  title: t('meldungen.einrichtungsdatei.einrichtung-von-ablago'),
+  description: t('meldungen.einrichtungsdatei.was-der-einrichtungsassistent'),
   type: 'object', additionalProperties: false, required: ['ablago-einrichtung', 'ablage', 'konto'],
   properties: {
-    'ablago-einrichtung': { const: EINRICHTUNG_FORMAT, description: 'Formatversion dieser Datei.' },
+    'ablago-einrichtung': { const: EINRICHTUNG_FORMAT, description: t('meldungen.einrichtungsdatei.formatversion-dieser-datei') },
     datenbank: {
       type: 'object', additionalProperties: false, required: ['rechner', 'port', 'name', 'benutzer'],
-      description: 'Verbindung zu PostgreSQL. Gilt nur, solange Ablago noch keine Datenbank hat.',
+      description: t('meldungen.einrichtungsdatei.verbindung-zu-postgresql-gilt'),
       properties: {
         rechner: { type: 'string', minLength: 1, maxLength: 255 },
         port: { type: 'integer', minimum: 1, maximum: 65535 },
@@ -52,21 +52,21 @@ export const SCHEMA: Schema = {
         passwort: verweis('DB_PASSWORT'),
       },
     },
-    ablage: { type: 'string', minLength: 1, maxLength: 30, description: 'Name der Ablage, z. B. „Familie Beispiel“.' },
+    ablage: { type: 'string', minLength: 1, maxLength: 30, description: t('meldungen.einrichtungsdatei.name-der-ablage-z') },
     konto: {
       type: 'object', additionalProperties: false, required: ['email'],
-      description: 'Dein Konto: die Person, die Ablago einrichtet. Sie bekommt „Gesamte Verwaltung“ und arbeitet auch in der Ablage. Bis 0.192 hieß der Abschnitt „administrator“ – das liest Ablago weiter.',
+      description: t('meldungen.einrichtungsdatei.dein-konto-die-person'),
       properties: { name: { type: 'string', maxLength: 100 }, email: EMAIL, passwort: verweis('KONTO_PASSWORT') },
     },
     pakete: {
-      type: 'array', maxItems: 100, description: 'Pakete aus dem offiziellen Katalog, jeweils die neueste passende Version. Fehlt die Liste, wählst du im Assistenten.',
+      type: 'array', maxItems: 100, description: t('meldungen.einrichtungsdatei.pakete-aus-dem-offiziellen'),
       items: {
         type: 'object', additionalProperties: false, required: ['id'],
         properties: {
           id: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-z0-9][a-z0-9-]*$' },
-          beispiele: { type: 'boolean', description: 'Beispiel-Mappen des Pakets anlegen.' },
+          beispiele: { type: 'boolean', description: t('meldungen.einrichtungsdatei.beispiel-mappen-des-pakets') },
           automatisierungen: {
-            type: 'object', description: 'Mitgelieferte Automatisierungen: Schlüssel → eingeschaltet (true) oder aus (false).',
+            type: 'object', description: t('meldungen.einrichtungsdatei.mitgelieferte-automatisierungen'),
             propertyNames: { pattern: '^[a-z0-9][a-z0-9_-]*$', maxLength: 64 }, additionalProperties: { type: 'boolean' },
           },
         },
@@ -75,9 +75,9 @@ export const SCHEMA: Schema = {
     optionales: {
       type: 'object', additionalProperties: false,
       properties: {
-        adresse: { type: 'string', minLength: 1, maxLength: 300, pattern: '^https?://', description: 'Adresse von Ablago für Links in E-Mails.' },
-        bundesland: { enum: Object.keys(BUNDESLAENDER), description: 'Für die Feiertage (Werkbank → Region).' },
-        beispiele: { type: 'boolean', description: 'Beispiel-Mappentypen laden.' },
+        adresse: { type: 'string', minLength: 1, maxLength: 300, pattern: '^https?://', description: t('meldungen.einrichtungsdatei.adresse-von-ablago-fuer') },
+        bundesland: { enum: Object.keys(BUNDESLAENDER), description: t('meldungen.einrichtungsdatei.fuer-die-feiertage-werkbank') },
+        beispiele: { type: 'boolean', description: t('meldungen.einrichtungsdatei.beispiel-mappentypen-laden') },
         'e-mail': {
           type: 'object', additionalProperties: false, required: ['server'],
           properties: {

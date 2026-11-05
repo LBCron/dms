@@ -12,6 +12,7 @@
  * Diese Datei teilen Server und Oberfläche: Grenzen, Stand, Wortpositionen und ihre Prüfung.
  */
 import type { Wort } from './schwaerzen';
+import { t } from './texte';
 
 /** Ab dieser Version kennt das DMS `dms:archivfassung`, `code.archivfassung` und das Ereignis `datei.archivfassung`. */
 export const DMS_ARCHIVFASSUNG_AB = '0.149.0';
@@ -95,14 +96,14 @@ export function pruefeWoerter(x: unknown, seiten: number): Array<Wort[] | null> 
     gesamt += s.length;
     if (gesamt > WOERTER_MAX) throw new Error(`woerter: höchstens ${WOERTER_MAX} Wörter je Dokument.`);
     return s.map((w, j): Wort => {
-      const wo = `woerter: Seite ${i + 1}, Wort ${j + 1}`;
+      const wo = t('gemeinsam.archivfassung.woerter-seite-wort', { wert: i + 1, wert2: j + 1 });
       if (!Array.isArray(w) || w.length !== 5 || typeof w[0] !== 'string' || !w.slice(1).every(zahl)) throw new Error(`${wo}: [Text, x, y, b, h] erwartet.`);
-      const [t, xx, y, b, h] = w as Wort;
-      if (!t.trim() || t.length > WORT_MAX_LAENGE) throw new Error(`${wo}: der Text ist leer oder länger als ${WORT_MAX_LAENGE} Zeichen.`);
+      const [text, xx, y, b, h] = w as Wort;
+      if (!text.trim() || text.length > WORT_MAX_LAENGE) throw new Error(`${wo}: der Text ist leer oder länger als ${WORT_MAX_LAENGE} Zeichen.`);
       const e = 0.001;
       if (xx < -e || y < -e || b <= 0 || h <= 0 || xx + b > 1 + e || y + h > 1 + e) throw new Error(`${wo}: Lage außerhalb der Seite (relativ 0…1, x + b und y + h höchstens 1).`);
       const r = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 1e5) / 1e5;
-      return [t, r(xx), r(y), r(b), r(h)];
+      return [text, r(xx), r(y), r(b), r(h)];
     });
   });
 }

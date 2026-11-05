@@ -3,15 +3,16 @@ import { api, type DatenbankStand } from '../api';
 import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Lange Datenbankzugriffe (#12) und was gerade in der Datenbank läuft – seit #407 unter
  * Einstellungen → Datenbank-Anbindung, unter der Verbindung: Einstellungen (Schwelle, Aufbewahrung)
  * direkt bei der Liste der gespeicherten Langläufer (#366), darunter „Was läuft gerade“.
  */
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
-const dauer = (ms: number) => (ms >= 10_000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${ms.toLocaleString('de-DE')} ms`);
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'medium' });
+const dauer = (ms: number) => (ms >= 10_000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${ms.toLocaleString(gebietsschema())} ms`);
 
 export function useDatenbank(sichtbar: boolean) {
   const [stand, setStand] = useState<DatenbankStand | null>(null);
@@ -22,8 +23,8 @@ export function useDatenbank(sichtbar: boolean) {
   useEffect(() => {
     if (!sichtbar) return;
     void laden();
-    const t = setInterval(() => void laden(), 5000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void laden(), 5000);
+    return () => clearInterval(timer);
   }, [sichtbar, laden]);
   return { stand, fehler, laden };
 }
@@ -34,7 +35,7 @@ export function DatenbankAbschnitte({ z, offen }: { z: DatenbankZustand; offen?:
   return (
     <>
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
-      {z.stand?.einstellungen ? <Einstellungen z={z} offen={offen} /> : !z.stand && <p className="leise">Lade …</p>}
+      {z.stand?.einstellungen ? <Einstellungen z={z} offen={offen} /> : !z.stand && <p className="leise">{t('werkbank.datenbank.lade')}</p>}
       <Auslastung z={z} />
       <Laufend z={z} />
     </>
@@ -58,9 +59,9 @@ function Langlaeufer({ z, offen }: { z: DatenbankZustand; offen?: string }) {
   const umschalten = (id: string) => setAuf((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   return (
     <div className="stapel">
-      <h3 className="zwischen">Gespeicherte Zugriffe und Anfragen <span className="zusatz">· neueste oben</span></h3>
+      <h3 className="zwischen">{tn('werkbank.datenbank.gespeicherte-zugriffe-und-anfragen', { span: <span className="zusatz">{t('werkbank.datenbank.neueste-oben')}</span> })}</h3>
       {!liste.length
-        ? <p className="leise">Keine – alle Zugriffe waren schneller als die Schwelle.</p>
+        ? <p className="leise">{t('werkbank.datenbank.keine-alle-zugriffe-waren')}</p>
         : <ul ref={rahmen} className="aufklappliste festhoehe">
             {liste.map((l) => {
               const id = String(l.id);
@@ -74,18 +75,18 @@ function Langlaeufer({ z, offen }: { z: DatenbankZustand; offen?: string }) {
                   {offenHier && (
                     <dl className="eigenschaften klein">
                       {l.zugriff.startsWith('Anfrage: ')
-                        ? <><dt>Aufteilung</dt><dd>{l.zugriff.slice(9)}</dd></>
-                        : <><dt>Abfrage</dt><dd className="mono">{l.zugriff}</dd></>}
-                      <dt>Aufrufer</dt><dd>{[l.anfrage, l.benutzer].filter(Boolean).join(' · ') || 'außerhalb einer Anfrage'}</dd>
-                      <dt>Dauer</dt><dd>{dauer(l.dauerMs)}</dd>
-                      <dt>Zeit</dt><dd>{zeit(l.zeit)}</dd>
+                        ? <><dt>{t('werkbank.datenbank.aufteilung')}</dt><dd>{l.zugriff.slice(9)}</dd></>
+                        : <><dt>{t('werkbank.datenbank.abfrage')}</dt><dd className="mono">{l.zugriff}</dd></>}
+                      <dt>{t('werkbank.datenbank.aufrufer')}</dt><dd>{[l.anfrage, l.benutzer].filter(Boolean).join(' · ') || t('werkbank.datenbank.ausserhalb-einer-anfrage')}</dd>
+                      <dt>{t('werkbank.datenbank.dauer')}</dt><dd>{dauer(l.dauerMs)}</dd>
+                      <dt>{t('werkbank.datenbank.zeit')}</dt><dd>{zeit(l.zeit)}</dd>
                     </dl>
                   )}
                 </li>
               );
             })}
           </ul>}
-      <p className="leise klein">Ein Datenbankzugriff ist eine Methode der Datenzugriffsschicht (z. B. <span className="mono">mappen.seite</span> für eine Seite einer Ansicht) und kann mehrere SQL-Anweisungen umfassen. Einträge „Anfrage“ betreffen eine ganze Anfrage, aufgeteilt in Warten, Datenbank, Rechte, Aufbereitung und JSON. Mehr Einzelheiten zur selben Zeit stehen im <Link to="/werkbank/protokoll" className="verweis">Protokoll</Link> (Modul datenbank).</p>
+      <p className="leise klein">{tn('werkbank.datenbank.ein-datenbankzugriff-ist-eine', { span: <span className="mono">{'mappen.seite'}</span>, link: <Link to="/werkbank/protokoll" className="verweis">{t('werkbank.datenbank.protokoll')}</Link> })}</p>
     </div>
   );
 }
@@ -102,20 +103,20 @@ function Einstellungen({ z, offen }: { z: DatenbankZustand; offen?: string }) {
   async function speichern(ev: FormEvent) {
     ev.preventDefault();
     setSendet(true);
-    try { await api.datenbankEinstellen({ schwelleMs: Number(schwelle), tage: Number(tage) }); setMeldung({ art: 'gut', text: 'Gespeichert.' }); await z.laden(); }
+    try { await api.datenbankEinstellen({ schwelleMs: Number(schwelle), tage: Number(tage) }); setMeldung({ art: 'gut', text: t('werkbank.datenbank.gespeichert') }); await z.laden(); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
   }
   return (
     <form className="blatt" id="lange-zugriffe" onSubmit={speichern} onKeyDown={ent.tasten}>
-      <h2 className="h3">Lange Datenbankzugriffe <Hilfe ort="werkbank.datenbank" /></h2>
-      <p className="leise">Jeder Datenbankzugriff wird gestoppt. Was länger dauert als die Schwelle, landet in der Liste und als Warnung im Protokoll.</p>
+      <h2 className="h3">{tn('werkbank.datenbank.lange-datenbankzugriffe', { hilfe: <Hilfe ort="werkbank.datenbank" /> })}</h2>
+      <p className="leise">{t('werkbank.datenbank.jeder-datenbankzugriff-wird-gestoppt')}</p>
       <div className="raster">
-        <label className="eigenschaft"><span>Lang ab <small>Millisekunden, Standard 500</small></span><input type="number" min={1} max={600000} value={schwelle} onChange={(x) => setSchwelle(x.target.value)} /></label>
-        <label className="eigenschaft"><span>Aufbewahren <small>Tage, Standard 30</small></span><input type="number" min={1} max={3650} value={tage} onChange={(x) => setTage(x.target.value)} /></label>
+        <label className="eigenschaft"><span>{tn('werkbank.datenbank.lang-ab', { klein: <small>{t('werkbank.datenbank.millisekunden-standard-500')}</small> })}</span><input type="number" min={1} max={600000} value={schwelle} onChange={(x) => setSchwelle(x.target.value)} /></label>
+        <label className="eigenschaft"><span>{tn('werkbank.datenbank.aufbewahren', { klein: <small>{t('werkbank.datenbank.tage-standard-30')}</small> })}</span><input type="number" min={1} max={3650} value={tage} onChange={(x) => setTage(x.target.value)} /></label>
       </div>
       <Langlaeufer z={z} offen={offen} />
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'}>{meldung.text}</p>}
-      <Speicherleiste ent={ent} gegenstand="Einstellungen" sendet={sendet} />
+      <Speicherleiste ent={ent} gegenstand={t('werkbank.datenbank.einstellungen')} sendet={sendet} />
     </form>
   );
 }
@@ -128,21 +129,21 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
   const a = z.stand?.auslastung;
   if (!a) return null;
   const w = a.aktuell && (a.aktuell.seitSekunden >= 10 || !a.vorher) ? a.aktuell : a.vorher ?? a.aktuell;
-  const zahl = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 1 })} ms`;
+  const zahl = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} ms`;
   return (
     <div className="blatt">
-      <h2 className="h3">Auslastung des Servers</h2>
+      <h2 className="h3">{t('werkbank.datenbank.auslastung-des-servers')}</h2>
       {!w
-        ? <p className="leise">Noch keine Messwerte.</p>
+        ? <p className="leise">{t('werkbank.datenbank.noch-keine-messwerte')}</p>
         : <>
-            {w.p99 >= 100 && <div className="hinweis warn"><p>Der Server war zeitweise beschäftigt: Anfragen mussten bis zu {zahl(w.max)} warten, bevor er sie bearbeiten konnte.</p></div>}
+            {w.p99 >= 100 && <div className="hinweis warn"><p>{t('werkbank.datenbank.der-server-war-zeitweise', { zahl: zahl(w.max) })}</p></div>}
             <dl className="eigenschaften">
-              <dt>Wartezeit üblich</dt><dd>{zahl(w.median)}</dd>
-              <dt>Wartezeit 99 %</dt><dd>{zahl(w.p99)}</dd>
-              <dt>Wartezeit höchstens</dt><dd>{zahl(w.max)}</dd>
+              <dt>{t('werkbank.datenbank.wartezeit-ueblich')}</dt><dd>{zahl(w.median)}</dd>
+              <dt>{t('werkbank.datenbank.wartezeit-99')}</dt><dd>{zahl(w.p99)}</dd>
+              <dt>{t('werkbank.datenbank.wartezeit-hoechstens')}</dt><dd>{zahl(w.max)}</dd>
             </dl>
           </>}
-      <p className="leise klein">Verzögerung der Ereignisschleife in der letzten Minute: So lange musste eine Anfrage höchstens warten, weil der Server gerade etwas anderes rechnete. Werte unter 50 ms sind unauffällig. In der Zeitmessung (Entwicklermodus) erscheint dieses Warten bei den anderen Anfragen als „Leitung“.</p>
+      <p className="leise klein">{t('werkbank.datenbank.verzoegerung-der-ereignisschleife-in')}</p>
       <Verbindungen z={z} />
     </div>
   );
@@ -152,7 +153,7 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
 function Verbindungen({ z }: { z: DatenbankZustand }) {
   const v = z.stand?.verbindungen;
   if (!v) return null;
-  const zahl = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 1 })} ms`;
+  const zahl = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} ms`;
   return (
     <>
       <h3 className="h4">{t('systemzustand.verbindungen.titel')}</h3>
@@ -169,15 +170,15 @@ function Laufend({ z }: { z: DatenbankZustand }) {
   const lang = liste.filter((q) => q.seitMs >= schwelle).length;
   return (
     <div className="blatt" id="laeuft-gerade">
-      <h2 className="h3">Was läuft gerade</h2>
-      {lang > 0 && <div className="hinweis warn"><p>{lang} {lang === 1 ? 'Abfrage läuft' : 'Abfragen laufen'} schon länger als {dauer(schwelle)}.</p></div>}
+      <h2 className="h3">{t('werkbank.datenbank.was-laeuft-gerade')}</h2>
+      {lang > 0 && <div className="hinweis warn"><p>{t('werkbank.datenbank.abfragen-laufen-schon-laenger', { anzahl: lang, dauer: dauer(schwelle) })}</p></div>}
       {!liste.length
-        ? <p className="leise">Gerade keine Abfrage in der Datenbank (außer dieser). Wird alle fünf Sekunden aktualisiert.</p>
+        ? <p className="leise">{t('werkbank.datenbank.gerade-keine-abfrage-in')}</p>
         : <ul className="sitzungsliste">
             {liste.map((q) => (
               <li key={q.pid}>
                 <div>
-                  <strong className={q.seitMs >= schwelle ? 'fehlertext' : ''}>{dauer(q.seitMs)}</strong> <span className="leise klein">{q.zustand} · Prozess {q.pid}{q.anwendung ? ` · ${q.anwendung}` : ''}</span>
+                  <strong className={q.seitMs >= schwelle ? 'fehlertext' : ''}>{dauer(q.seitMs)}</strong> <span className="leise klein">{t('werkbank.datenbank.prozess', { zustand: q.zustand, pid: q.pid, wert: q.anwendung ? ` · ${q.anwendung}` : '' })}</span>
                   <span className="mono klein blockzeile">{q.abfrage}</span>
                 </div>
               </li>

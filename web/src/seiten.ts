@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Ausschnitt, Mappe, Sortierung } from '../../shared/src/model';
 import { api, type Bezuege, type Unscharf } from './api';
+import { t } from './sprache';
 
 export const SEITE = 100;
 
 /** Anzeigetitel einer Mappe (der Server speichert ihn; leer = ohne Titel). */
-export const titelOder = (t: string | undefined) => t || 'Ohne Titel';
+export const titelOder = (eintrag: string | undefined) => eintrag || t('oberflaeche.seiten.ohne-titel');
 
 /**
  * Mappen einer Sicht, seitenweise geladen (je 100, sortiert nach Titel).

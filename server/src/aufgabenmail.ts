@@ -7,6 +7,7 @@ import type { Mailer } from './mail';
 import { protokoll } from './protokoll';
 import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
 import { datumsformat, liesRegion } from '../../shared/src/region';
+import { t } from './sprache';
 
 /**
  * Tägliche Zusammenfassung der offenen Aufgaben (#54): keine Mail je Aufgabe, sondern einmal
@@ -36,10 +37,10 @@ export function wirksameZeit(eigen: unknown, std: MailEinstellung): MailZeit & {
 export function pruefeZeit(e: unknown): MailZeit {
   const x = (e ?? {}) as Record<string, unknown>;
   const uhrzeit = x.uhrzeit == null || x.uhrzeit === '' ? null : String(x.uhrzeit);
-  if (uhrzeit !== null && (!UHRZEIT.test(uhrzeit) || Number(uhrzeit.slice(3)) % 15)) throw new Fachfehler(422, 'Uhrzeit als HH:MM im 15-Minuten-Raster, z. B. 07:00 oder 18:45.');
-  if (x.tage !== undefined && !Array.isArray(x.tage)) throw new Fachfehler(422, 'Wochentage als Liste, 1 = Montag bis 7 = Sonntag.');
+  if (uhrzeit !== null && (!UHRZEIT.test(uhrzeit) || Number(uhrzeit.slice(3)) % 15)) throw new Fachfehler(422, t('mail.aufgabenmail.uhrzeit-als-hh-mm'));
+  if (x.tage !== undefined && !Array.isArray(x.tage)) throw new Fachfehler(422, t('mail.aufgabenmail.wochentage-als-liste-1'));
   const tage = x.tage === undefined ? STANDARD_TAGE : [...new Set((x.tage as unknown[]).map(Number))].sort();
-  if (tage.some((t) => !Number.isInteger(t) || t < 1 || t > 7)) throw new Fachfehler(422, 'Wochentage als Liste, 1 = Montag bis 7 = Sonntag.');
+  if (tage.some((t) => !Number.isInteger(t) || t < 1 || t > 7)) throw new Fachfehler(422, t('mail.aufgabenmail.wochentage-als-liste-1'));
   return { uhrzeit, tage, feiertage: x.feiertage !== false };
 }
 
@@ -70,11 +71,11 @@ export class Aufgabenmail {
   }
 
   async speichere(e: unknown): Promise<MailEinstellung> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('mail.aufgabenmail.einstellungen-sind-nicht'));
     const x = (e ?? {}) as Record<string, unknown>;
     const alt = await this.einstellung();
     const uhrzeit = x.uhrzeit === undefined ? alt.uhrzeit : String(x.uhrzeit);
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, 'Uhrzeit als HH:MM, z. B. 07:00.');
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, t('mail.aufgabenmail.uhrzeit-als-hh-mm-2'));
     // Bundesland: seit #726 unter Werkbank → Region (PUT /api/werkbank/region); hier wird es nicht mehr gespeichert.
     const gespeichert = (await this.einstellungen.lies('aufgaben_mail')) as Partial<MailEinstellung> | null;
     const neu = { aktiv: x.aktiv === undefined ? alt.aktiv : x.aktiv === true, uhrzeit, ...(gespeichert?.bundesland !== undefined ? { bundesland: gespeichert.bundesland } : {}) };
@@ -113,7 +114,7 @@ export class Aufgabenmail {
   /** Jetzt senden (auch aus der Werkbank zum Ausprobieren). Liefert die Anzahl verschickter Mails. */
   async sende(): Promise<number> {
     const mailer = this.mailer();
-    if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse).');
+    if (!mailer) throw new Fachfehler(409, t('mail.aufgabenmail.der-e-mail-versand'));
     let n = 0;
     for (const b of await this.quelle.benutzer()) {
       if (!b.aktiv || !b.email) continue;
@@ -151,10 +152,10 @@ export class Aufgabenmail {
       const liste = await this.quelle.aufgabenVon(b);
       if (!liste.length) return false;
       const basis = this.adresse().replace(/\/+$/, '');
-      const zeilen = await Promise.all(liste.map(async (a) => `- ${a.mappeTitel || 'Ohne Titel'} (${await this.quelle.typName(a.typId)}): ${a.text}\n  ${basis}/ablage/eingang/${a.mappeId}`));
-      const text = `Hallo ${b.name || b.email},\n\ndu hast ${liste.length === 1 ? 'eine offene Aufgabe' : `${liste.length} offene Aufgaben`} in Ablago:\n\n${zeilen.join('\n')}\n\nAlle findest du unter „Zu erledigen“: ${basis}/ablage/eingang\n\nUhrzeit und Wochentage dieser Zusammenfassung stellst du unter „Mein Konto“ ein; dort kannst du sie auch abbestellen.\n`;
+      const zeilen = await Promise.all(liste.map(async (a) => t('mail.aufgabenmail.ablage-eingang', { titel: a.mappeTitel || t('mail.aufgabenmail.ohne-titel'), typName: await this.quelle.typName(a.typId), text: a.text, basis, mappeId: a.mappeId })));
+      const text = t('mail.aufgabenmail.hallo-du-hast-offene', { anzahl: liste.length, name: b.name || b.email, zeilen: zeilen.join('\n'), basis });
       try {
-        await mailer.sende(b.email, `Ablago: ${liste.length === 1 ? 'eine offene Aufgabe' : `${liste.length} offene Aufgaben`}`, text);
+        await mailer.sende(b.email, `Ablago: ${t('mail.aufgabenmail.offene-aufgaben', { anzahl: liste.length })}`, text);
         return true;
       } catch (e) {
         protokoll.modul('mail').warn('Aufgaben-Mail nicht verschickt', { an: b.email, fehler: (e as Error).message });

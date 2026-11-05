@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, type WerkbankUebersicht } from '../api';
 import { Link } from '../ort';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { useHandbuch } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { sicherungsHinweise } from './Sicherung';
@@ -11,6 +11,7 @@ import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
 import { ENGPASS_VARIABLE } from '../../../shared/src/systemlast';
 import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
 import { akzeptierbar, GRUND_MAX, ordneMeldungen, type Akzeptiert, type Schwere } from '../../../shared/src/meldungen';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Übersicht (#68): was zu tun ist, auf einen Blick; Gruppen der Leiste.
@@ -20,13 +21,13 @@ import { akzeptierbar, GRUND_MAX, ordneMeldungen, type Akzeptiert, type Schwere 
 
 
 
-const zahl = (n: number) => n.toLocaleString('de-DE');
-const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'medium' });
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
+const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { dateStyle: 'medium' });
 const bytes = (b: number) => (b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(0)} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
 
 const platzText = (o: Array<{ frei: number | null }>) => {
   const f = Math.min(...o.map((x) => x.frei ?? Infinity));
-  return Number.isFinite(f) ? bytes(f) : 'genug Platz';
+  return Number.isFinite(f) ? bytes(f) : t('werkbank.uebersicht.genug-platz');
 };
 
 /** Eine Meldung der Übersicht; `schluessel` bleibt je Meldungsart gleich (#816: Akzeptieren), `datum` sortiert innerhalb der Stufe. */
@@ -41,13 +42,13 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   const h: Hinweis[] = [];
   const tr = u.tresor;
   // Notfallzugang (#108): bis er umbenannt oder deaktiviert ist.
-  for (const n of u.notfallzugaenge ?? []) h.push({ schluessel: `notfallzugang:${n.id}`, datum: n.erstellt, art: 'schlecht', text: <><strong>Notfallzugang „{n.name}“ ist aktiv.</strong> Er entstand über eine RESCUE-Datei am {datum(n.erstellt)}. Gib ihm einen richtigen Namen oder deaktiviere ihn – warst du das nicht, sofort deaktivieren.</>, ziel: `/werkbank/benutzer/${n.id}`, knopf: 'Zum Benutzer' });
+  for (const n of u.notfallzugaenge ?? []) h.push({ schluessel: `notfallzugang:${n.id}`, datum: n.erstellt, art: 'schlecht', text: <>{tn('werkbank.uebersicht.er-entstand-ueber-eine', { b: <strong>{t('werkbank.uebersicht.notfallzugang-ist-aktiv', { name: n.name })}</strong>, datum: datum(n.erstellt) })}</>, ziel: `/werkbank/benutzer/${n.id}`, knopf: t('werkbank.uebersicht.zum-benutzer') });
   // Notfallcode vom Notfallblatt benutzt (#815): bis jemand den Hinweis als gelesen markiert.
   for (const n of u.notfallcodeBenutzt ?? []) h.push({ schluessel: `notfallzugang.benutzt:${n.id}`, datum: n.am, art: 'schlecht', text: <><strong>{t('werkbank.uebersicht.notfallcode', { datum: datum(n.am), name: n.name })}</strong> {t('werkbank.uebersicht.notfallcode.text')}</>, ziel: `/werkbank/benutzer/${n.benutzerId}`, knopf: t('werkbank.uebersicht.notfallcode.knopf'), erledigen: t('werkbank.uebersicht.notfallcode.gelesen') });
   // Speicherplatz (#116): Grenze, Warnschwelle, wieder genug Platz bei laufender Wartung.
   const sp = u.speicherplatz;
-  if (sp?.zustand === 'grenze') h.push({ schluessel: 'speicherplatz.grenze', art: 'schlecht', text: <><strong>Speicherplatzlimit erreicht.</strong> Hochladen ist gesperrt{u.wartung?.ausloeser === 'speicherplatz' ? (u.wartung.stufe === 'aktiv' ? ', der Wartungsmodus läuft' : ', der Wartungsmodus beginnt gleich') : ''}. Schaffe Platz und beende danach den Wartungsmodus.</>, ziel: '/werkbank/systemzustand', knopf: 'Zum Systemzustand' });
-  else if (sp?.zustand === 'warnung') h.push({ schluessel: 'speicherplatz.knapp', art: 'warn', text: <><strong>Der Speicherplatz wird knapp.</strong> Noch {platzText(sp.ordner)} frei – unter der Grenze wird das Hochladen gesperrt.</>, ziel: '/werkbank/systemzustand', knopf: 'Zum Systemzustand' });
+  if (sp?.zustand === 'grenze') h.push({ schluessel: 'speicherplatz.grenze', art: 'schlecht', text: <>{tn('werkbank.uebersicht.hochladen-ist-gesperrt-schaffe', { b: <strong>{t('werkbank.uebersicht.speicherplatzlimit-erreicht')}</strong>, wert: u.wartung?.ausloeser === 'speicherplatz' ? (u.wartung.stufe === 'aktiv' ? t('werkbank.uebersicht.der-wartungsmodus-laeuft') : t('werkbank.uebersicht.der-wartungsmodus-beginnt-gleich')) : '' })}</>, ziel: '/werkbank/systemzustand', knopf: t('werkbank.uebersicht.zum-systemzustand') });
+  else if (sp?.zustand === 'warnung') h.push({ schluessel: 'speicherplatz.knapp', art: 'warn', text: <>{tn('werkbank.uebersicht.noch-frei-unter-der', { b: <strong>{t('werkbank.uebersicht.der-speicherplatz-wird-knapp')}</strong>, platzText: platzText(sp.ordner) })}</>, ziel: '/werkbank/systemzustand', knopf: t('werkbank.uebersicht.zum-systemzustand') });
   // Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %.
   // Automatisierungen (#675): angehaltene zuerst, dann fehlgeschlagene Läufe.
   const au = u.automatisierungen;
@@ -61,35 +62,35 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   if (u.engpaesse?.length) h.push({ schluessel: 'engpass', art: 'warn', text: <><strong>{t('systemzustand.engpass.uebersicht')}</strong> {[...new Set(u.engpaesse.map((e) => ENGPASS_VARIABLE[e]))].join(', ')}</>, ziel: '/werkbank/systemzustand#engpass', knopf: t('systemzustand.warnung.knopf') });
   // Erweiterungen der Suche (#562): fehlen oder lägen im Schema, das eine Wiederherstellung löscht.
   if (u.erweiterungen?.length) h.push({ schluessel: 'erweiterungen', art: 'warn', text: <><strong>{t('systemzustand.erweiterung.uebersicht')}</strong> {u.erweiterungen.map((e) => e.name).join(', ')}</>, ziel: '/werkbank/systemzustand#erweiterungen', knopf: t('systemzustand.warnung.knopf') });
-  if (sp?.wartungBeenden) h.push({ schluessel: 'speicherplatz.wartung-beenden', art: 'warn', text: <><strong>Wieder {platzText(sp.ordner)} frei.</strong> Der Wartungsmodus wegen des Speicherplatzes endet nicht von selbst – Wartung beenden?</>, ziel: '/werkbank/systemzustand', knopf: 'Wartung beenden' });
-  if (u.wartung && u.wartung.stufe !== 'aus' && !sp?.wartungBeenden) h.push({ schluessel: 'wartung', art: 'warn', text: <><strong>Der Wartungsmodus ist {u.wartung.stufe === 'aktiv' ? 'aktiv' : 'angekündigt'}.</strong> {u.wartung.stufe === 'aktiv' ? 'Nur Administratoren können arbeiten.' : 'Bald werden alle anderen abgemeldet.'}</>, ziel: '/werkbank/wartung#wartungsmodus', knopf: 'Zum Wartungsmodus' });
-  if (tr && tr.zustand === 'fehlt') h.push({ schluessel: 'tresor.fehlt', art: 'warn', text: <><strong>Es gibt noch keinen Schlüssel für Passwörter.</strong> Bis dahin lassen sich keine Passwörter speichern (E-Mail-Versand, Postfächer, Passwortfelder).</>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
-  else if (tr && tr.zustand === 'verloren') h.push({ schluessel: 'tresor.verloren', art: 'schlecht', text: <><strong>Der Schlüssel für Passwörter fehlt.</strong> Gespeicherte Passwörter sind nicht lesbar.</>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
-  else if (tr && tr.zustand === 'falsch') h.push({ schluessel: 'tresor.falsch', art: 'schlecht', text: <><strong>Die Schlüsseldatei passt nicht zu den gespeicherten Passwörtern.</strong></>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
-  else if (tr && tr.eingebunden === false) h.push({ schluessel: 'tresor.volume', art: 'warn', text: <><strong>Die Schlüsseldatei liegt nicht auf einem eigenen Volume.</strong> Wird der Container neu erstellt (z. B. beim Update), ist sie weg.</>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
-  else if (tr && tr.betroffen) h.push({ schluessel: 'tresor.betroffen', art: 'warn', text: <><strong>{tr.betroffen === 1 ? 'Ein Passwort ist' : `${tr.betroffen} Passwörter sind`} nicht lesbar oder unverschlüsselt.</strong></>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
+  if (sp?.wartungBeenden) h.push({ schluessel: 'speicherplatz.wartung-beenden', art: 'warn', text: <>{tn('werkbank.uebersicht.der-wartungsmodus-wegen-des', { b: <strong>{t('werkbank.uebersicht.wieder-frei', { platzText: platzText(sp.ordner) })}</strong> })}</>, ziel: '/werkbank/systemzustand', knopf: t('werkbank.uebersicht.wartung-beenden') });
+  if (u.wartung && u.wartung.stufe !== 'aus' && !sp?.wartungBeenden) h.push({ schluessel: 'wartung', art: 'warn', text: <><strong>{t('werkbank.uebersicht.der-wartungsmodus-ist', { wert: u.wartung.stufe === 'aktiv' ? t('werkbank.uebersicht.aktiv') : t('werkbank.uebersicht.angekuendigt') })}</strong> {u.wartung.stufe === 'aktiv' ? t('werkbank.uebersicht.nur-administratoren-koennen-arbeiten') : t('werkbank.uebersicht.bald-werden-alle-anderen')}</>, ziel: '/werkbank/wartung#wartungsmodus', knopf: t('werkbank.uebersicht.zum-wartungsmodus') });
+  if (tr && tr.zustand === 'fehlt') h.push({ schluessel: 'tresor.fehlt', art: 'warn', text: <>{tn('werkbank.uebersicht.bis-dahin-lassen-sich', { b: <strong>{t('werkbank.uebersicht.es-gibt-noch-keinen')}</strong> })}</>, ziel: '/werkbank/verschluesselung', knopf: t('werkbank.uebersicht.zur-verschluesselung') });
+  else if (tr && tr.zustand === 'verloren') h.push({ schluessel: 'tresor.verloren', art: 'schlecht', text: <>{tn('werkbank.uebersicht.gespeicherte-passwoerter-sind-nicht', { b: <strong>{t('werkbank.uebersicht.der-schluessel-fuer-passwoerter')}</strong> })}</>, ziel: '/werkbank/verschluesselung', knopf: t('werkbank.uebersicht.zur-verschluesselung') });
+  else if (tr && tr.zustand === 'falsch') h.push({ schluessel: 'tresor.falsch', art: 'schlecht', text: <><strong>{t('werkbank.uebersicht.die-schluesseldatei-passt-nicht')}</strong></>, ziel: '/werkbank/verschluesselung', knopf: t('werkbank.uebersicht.zur-verschluesselung') });
+  else if (tr && tr.eingebunden === false) h.push({ schluessel: 'tresor.volume', art: 'warn', text: <>{tn('werkbank.uebersicht.wird-der-container-neu', { b: <strong>{t('werkbank.uebersicht.die-schluesseldatei-liegt-nicht')}</strong> })}</>, ziel: '/werkbank/verschluesselung', knopf: t('werkbank.uebersicht.zur-verschluesselung') });
+  else if (tr && tr.betroffen) h.push({ schluessel: 'tresor.betroffen', art: 'warn', text: <><strong>{t('werkbank.uebersicht.passwoerter-sind-nicht-lesbar', { anzahl: tr.betroffen })}</strong></>, ziel: '/werkbank/verschluesselung', knopf: t('werkbank.uebersicht.zur-verschluesselung') });
   // Postfächer mit OAuth (#358): Anmeldung abgelaufen/entzogen oder noch nicht erfolgt – bis dahin kein Abruf.
   for (const p of u.postfachAnmeldung ?? []) h.push(p.zustand === 'abgelaufen'
-    ? { schluessel: `postfach.abgelaufen:${p.id}`, art: 'schlecht', text: <><strong>Postfach „{p.name}“: Die Anmeldung ist abgelaufen oder wurde entzogen.</strong> Bis zur neuen Anmeldung holt Ablago dort keine Mails ab.</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: 'Neu anmelden' }
-    : { schluessel: `postfach.anmelden:${p.id}`, art: 'warn', text: <><strong>Postfach „{p.name}“ ist noch nicht angemeldet.</strong> Mit OAuth 2.0 erst nach der Anmeldung beim Anbieter abrufbar.</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: 'Anmelden' });
+    ? { schluessel: `postfach.abgelaufen:${p.id}`, art: 'schlecht', text: <>{tn('werkbank.uebersicht.bis-zur-neuen-anmeldung', { b: <strong>{t('werkbank.uebersicht.postfach-die-anmeldung-ist', { name: p.name })}</strong> })}</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: t('werkbank.uebersicht.neu-anmelden') }
+    : { schluessel: `postfach.anmelden:${p.id}`, art: 'warn', text: <>{tn('werkbank.uebersicht.mit-oauth-2-0', { b: <strong>{t('werkbank.uebersicht.postfach-ist-noch-nicht', { name: p.name })}</strong> })}</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: t('werkbank.uebersicht.anmelden') });
   // Sicherung (#105): fehlgeschlagen, zu alt, Notfallblatt, Speicherort.
-  if (u.sicherung) for (const x of sicherungsHinweise(u.sicherung)) h.push({ ...x, ziel: '/werkbank/sicherung', knopf: 'Zur Sicherung' });
+  if (u.sicherung) for (const x of sicherungsHinweise(u.sicherung)) h.push({ ...x, ziel: '/werkbank/sicherung', knopf: t('werkbank.uebersicht.zur-sicherung') });
   // Export-Ordner (#797): im Sicherungsordner, oder Exporte beim Update von dort verschoben.
   if (u.exporte) for (const x of exportHinweise(u.exporte)) h.push({ ...x, ziel: '/werkbank/vollexport', knopf: t('werkbank.export.knopf') });
   // #128: API-Schlüssel gehören zu normalen Benutzern.
   // Datenbank-Anbindung (#119)
-  if (u.anbindung?.umgebung === 'abweichend') h.push({ schluessel: 'anbindung.abweichend', art: 'warn', text: <><strong>DATABASE_URL weicht von der Datenbank-Anbindung ab und wird ignoriert.</strong> Führend ist die Anbindung unter /data/geheim; entferne die Variable aus der Compose-Datei.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
-  if (u.anbindung?.neustartNoetig) h.push({ schluessel: 'anbindung.neustart', art: 'warn', text: <><strong>Die Datenbank-Anbindung ist geändert</strong> und gilt erst nach einem Neustart von Ablago.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
+  if (u.anbindung?.umgebung === 'abweichend') h.push({ schluessel: 'anbindung.abweichend', art: 'warn', text: <>{tn('werkbank.uebersicht.fuehrend-ist-die-anbindung', { b: <strong>{t('werkbank.uebersicht.database-url-weicht-von')}</strong> })}</>, ziel: '/werkbank/anbindung', knopf: t('werkbank.uebersicht.zur-anbindung') });
+  if (u.anbindung?.neustartNoetig) h.push({ schluessel: 'anbindung.neustart', art: 'warn', text: <>{tn('werkbank.uebersicht.und-gilt-erst-nach', { b: <strong>{t('werkbank.uebersicht.die-datenbank-anbindung-ist')}</strong> })}</>, ziel: '/werkbank/anbindung', knopf: t('werkbank.uebersicht.zur-anbindung') });
   // DMS_LASTTEST in einer echten Installation (#612): Der Lasttest ist nicht gestartet, das DMS läuft normal.
   if (u.lasttestAbbruch) h.push({ schluessel: 'lasttest', art: 'warn', text: <><strong>{t('lasttest.uebersicht')}</strong> {u.lasttestAbbruch} {t('lasttest.uebersicht.text')}</>, ziel: '/werkbank/systemzustand#version', knopf: t('lasttest.uebersicht.knopf') });
   // Pflicht-Einstellungen eines Pakets fehlen (#405, z. B. im Ablauf „später ausfüllen“): bis sie da sind, läuft das Paket nicht.
   for (const p of u.paketeEinstellungen ?? []) h.push({ schluessel: `paket-einstellungen:${p.id}`, art: 'warn', text: <><strong>{t('pakete.ablauf.aufgabe', { name: p.name })}</strong> {t('pakete.ablauf.aufgabe.text')}</>, ziel: `/werkbank/pakete/${p.id}?reiter=einstellungen`, knopf: t('pakete.ablauf.aufgabe.knopf') });
   // Im Einrichtungsassistenten übersprungen (#119): hier nachholen.
   const nachholen: Record<string, { text: string; ziel: string; knopf: string }> = {
-    optional: { text: 'Adresse, E-Mail-Versand und Bundesland einstellen', ziel: '/werkbank/betrieb', knopf: 'Zu E-Mail und Adresse' },
-    pakete: { text: 'Pakete dazuholen, z. B. die Texterkennung, damit gescannte Dokumente durchsuchbar werden', ziel: '/werkbank/pakete', knopf: 'Zu den Paketen' },
+    optional: { text: t('werkbank.uebersicht.adresse-e-mail-versand'), ziel: '/werkbank/betrieb', knopf: t('werkbank.uebersicht.zu-e-mail-und') },
+    pakete: { text: t('werkbank.uebersicht.pakete-dazuholen-z-b'), ziel: '/werkbank/pakete', knopf: t('werkbank.uebersicht.zu-den-paketen') },
   };
-  for (const x of u.einrichtung?.uebersprungen ?? []) if (nachholen[x] && !(x === 'optional' && u.mail)) h.push({ schluessel: `einrichtung:${x}`, art: 'info', text: <><strong>Aus der Einrichtung übersprungen:</strong> {nachholen[x].text}.</>, ziel: nachholen[x].ziel, knopf: nachholen[x].knopf });
+  for (const x of u.einrichtung?.uebersprungen ?? []) if (nachholen[x] && !(x === 'optional' && u.mail)) h.push({ schluessel: `einrichtung:${x}`, art: 'info', text: <><strong>{t('werkbank.uebersicht.aus-der-einrichtung-uebersprungen')}</strong> {nachholen[x].text}.</>, ziel: nachholen[x].ziel, knopf: nachholen[x].knopf });
   // Konzept Verwaltungsmodus, Punkt 7 (#821): Nach der Einrichtung eine zweite Person mit Verwaltungsrecht empfehlen –
   // ein Hinweis, kein Balken; „Nein, danke“ gilt dauerhaft.
   if (u.zweitePerson) h.push({ schluessel: 'verwaltung.zweite-person', art: 'info', text: <><strong>{t('werkbank.uebersicht.zweite')}</strong> {t('werkbank.uebersicht.zweite.text')}</>, ziel: '/werkbank/benutzer/neu', knopf: t('werkbank.uebersicht.zweite.knopf'), erledigen: t('werkbank.uebersicht.zweite.nein') });
@@ -98,17 +99,17 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   if (vh) h.push({ schluessel: 'variablen', art: 'info', text: vh.zeilen.length === 1
     ? <><strong>{vh.titel}</strong> <span className="mono">{vh.zeilen[0].name}</span> – {vh.zeilen[0].grund}. {vh.schluss}</>
     : <><strong>{vh.titel}</strong>{vh.zeilen.map((z) => <span key={z.name} style={{ display: 'block' }}>· <span className="mono">{z.name}</span> – {z.grund}</span>)}{vh.schluss}</>, ziel: vh.ziel, knopf: vh.knopf });
-  if (!u.mail) h.push({ schluessel: 'mail', art: 'warn', text: <><strong>Der E-Mail-Versand ist nicht eingerichtet.</strong> Einladungen, die tägliche Zusammenfassung der Aufgaben und „Per E-Mail versenden“ gehen erst danach.</>, ziel: '/werkbank/betrieb', knopf: 'E-Mail einrichten' });
-  if (u.fehlermeldungen) h.push({ schluessel: 'fehlermeldungen', art: 'warn', text: <><strong>{u.fehlermeldungen === 1 ? 'Ein gemeldeter Fehler' : `${zahl(u.fehlermeldungen)} gemeldete Fehler`}</strong> von Benutzern.</>, ziel: '/werkbank/fehlermeldungen', knopf: 'Ansehen' });
+  if (!u.mail) h.push({ schluessel: 'mail', art: 'warn', text: <>{tn('werkbank.uebersicht.einladungen-die-taegliche', { b: <strong>{t('werkbank.uebersicht.der-e-mail-versand')}</strong> })}</>, ziel: '/werkbank/betrieb', knopf: t('werkbank.uebersicht.e-mail-einrichten') });
+  if (u.fehlermeldungen) h.push({ schluessel: 'fehlermeldungen', art: 'warn', text: <>{tn('werkbank.uebersicht.von-benutzern', { b: <strong>{t('werkbank.uebersicht.gemeldete-fehler', { anzahl: u.fehlermeldungen, zahl: zahl(u.fehlermeldungen) })}</strong> })}</>, ziel: '/werkbank/fehlermeldungen', knopf: t('werkbank.uebersicht.ansehen') });
   // Texterkennung ist seit #459 ein Paket: ohne Paket deutlich, sobald Scans darauf warten, sonst als Hinweis.
   if (u.texterkennungPaket === false) h.push({ schluessel: 'texterkennung.paket', art: u.texterkennung?.paket ? 'warn' : 'info', text: <><strong>{t('volltext.uebersicht.fehlt')}</strong> {t('volltext.uebersicht.fehlt.text')}{u.texterkennung?.paket ? ` ${t('volltext.werkbank.paket.ohne', { anzahl: u.texterkennung.paket })}` : ''}</>, ziel: `/werkbank/pakete/${TEXTERKENNUNG_PAKET}`, knopf: t('volltext.uebersicht.fehlt.knopf') });
-  if (u.texterkennung?.fehler) h.push({ schluessel: 'texterkennung.fehler', art: 'warn', text: <><strong>{u.texterkennung.fehler === 1 ? 'Ein Dokument' : `${zahl(u.texterkennung.fehler)} Dokumente`}</strong> mit Fehler in der Texterkennung.</>, ziel: '/werkbank/texterkennung', knopf: 'Zur Texterkennung' });
+  if (u.texterkennung?.fehler) h.push({ schluessel: 'texterkennung.fehler', art: 'warn', text: <>{tn('werkbank.uebersicht.mit-fehler-in-der', { b: <strong>{t('werkbank.uebersicht.dokumente', { anzahl: u.texterkennung.fehler, zahl: zahl(u.texterkennung.fehler) })}</strong> })}</>, ziel: '/werkbank/texterkennung', knopf: t('werkbank.uebersicht.zur-texterkennung') });
   // #719: Niemand im Alltag bekommt die Aufgaben ohne Empfänger, obwohl es Benutzer ohne Admin-Rechte gibt.
   if (u.aufgabenEmpfaenger && !u.aufgabenEmpfaenger.benutzerId && u.aufgabenEmpfaenger.moeglich > 0) h.push({ schluessel: 'aufgabenempfaenger', art: 'info', text: <>{t('werkbank.aufgabenempfaenger.uebersicht')}</>, ziel: '/werkbank/benutzer', knopf: t('werkbank.aufgabenempfaenger.uebersicht.knopf') });
   // #798: Aufgaben bei Personen ohne Leserecht – Rechte richten oder Leserecht auf Zeit geben.
   if (u.ohneLeserecht) h.push({ schluessel: 'aufgaben.ohne-leserecht', art: 'warn', text: <><strong>{t('werkbank.ohne-leserecht.offen', { anzahl: u.ohneLeserecht })}.</strong> {t('werkbank.ohne-leserecht.hinweis')}</>, ziel: '/werkbank/aufgaben/ohne-leserecht', knopf: t('werkbank.ohne-leserecht.knopf') });
-  if (u.aufgaben.ohneEmpfaenger) h.push({ schluessel: 'aufgaben.ohne-empfaenger', art: 'info', text: <><strong>{u.aufgaben.ohneEmpfaenger === 1 ? 'Eine Aufgabe' : `${zahl(u.aufgaben.ohneEmpfaenger)} Aufgaben`}</strong> für die Administratoren (ohne einzelnen Empfänger).</>, ziel: '/ablage/eingang', knopf: 'Zu erledigen öffnen' });
-  if (u.unpassend) h.push({ schluessel: 'mappen.unpassend', art: 'info', text: <><strong>{u.unpassend === 1 ? 'Eine Mappe passt' : `${zahl(u.unpassend)} Mappen passen`}</strong> nicht zur aktuellen Definition ihres Mappentyps.</>, ziel: '/werkbank/typen', knopf: 'Zu den Mappentypen' });
+  if (u.aufgaben.ohneEmpfaenger) h.push({ schluessel: 'aufgaben.ohne-empfaenger', art: 'info', text: <>{tn('werkbank.uebersicht.fuer-die-administratoren-ohne', { b: <strong>{t('werkbank.uebersicht.aufgaben', { anzahl: u.aufgaben.ohneEmpfaenger, zahl: zahl(u.aufgaben.ohneEmpfaenger) })}</strong> })}</>, ziel: '/ablage/eingang', knopf: t('werkbank.uebersicht.zu-erledigen-oeffnen') });
+  if (u.unpassend) h.push({ schluessel: 'mappen.unpassend', art: 'info', text: <>{tn('werkbank.uebersicht.nicht-zur-aktuellen-definition', { b: <strong>{t('werkbank.uebersicht.mappen-passen', { anzahl: u.unpassend, zahl: zahl(u.unpassend) })}</strong> })}</>, ziel: '/werkbank/typen', knopf: t('werkbank.uebersicht.zu-den-mappentypen') });
   return h;
 }
 
@@ -141,7 +142,7 @@ export function useUebersicht() {
 }
 export type UebersichtZustand = ReturnType<typeof useUebersicht>;
 
-const kurzDatum = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const kurzDatum = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 
 /** „Zur Kenntnis nehmen“ (#816): nur für gelbe Warnungen und Hinweise; die Begründung ist freiwillig. */
 function Akzeptieren({ h, u }: { h: Hinweis; u: UebersichtZustand }) {
@@ -208,13 +209,13 @@ export function UebersichtListe({ u }: { u: UebersichtZustand }) {
   const h = u.geordnet?.offen ?? [];
   return (
     <>
-      <Listenkopf titel="Übersicht" hilfe="werkbank.uebersicht" beschreibung="Was in dieser Installation gerade zu tun ist.">
-        <button type="button" className="knopf klein" onClick={() => void u.laden()}>Neu laden</button>
+      <Listenkopf titel={t('werkbank.uebersicht.uebersicht')} hilfe="werkbank.uebersicht" beschreibung={t('werkbank.uebersicht.was-in-dieser-installation')}>
+        <button type="button" className="knopf klein" onClick={() => void u.laden()}>{t('werkbank.uebersicht.neu-laden')}</button>
       </Listenkopf>
       {u.fehler && <div className="hinweis schlecht"><p>{u.fehler}</p></div>}
       {/* Am Handy steht die Übersicht in der Liste: zuerst die Kacheln (#816), darunter die Meldungen. */}
       {u.stand && <div className="nur-schmal-block"><Kacheln s={u.stand} /></div>}
-      {!u.stand ? <p className="leise">Lade …</p> : !h.length ? <p className="leise leerliste">Alles eingerichtet – nichts zu tun.</p> : (
+      {!u.stand ? <p className="leise">{t('werkbank.uebersicht.lade')}</p> : !h.length ? <p className="leise leerliste">{t('werkbank.uebersicht.alles-eingerichtet-nichts-zu')}</p> : (
         <ul className="mappenliste meldungsliste">
           {h.map((x) => (
             <li key={x.schluessel} className={`meldung ${x.art}`}>
@@ -236,11 +237,11 @@ export function UebersichtPanel({ u }: { u: UebersichtZustand }) {
   return (
     <div className="einspaltig uebersicht">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Übersicht</h1>
-        <p className="leise">Hinweise, Stand und Bestand auf einen Blick. Mehr steht im <a href={handbuch('admin')} target="_blank" rel="noreferrer" className="verweis">Administratorhandbuch ↗</a>. Zu viele Bereiche links? <Link to="/werkbank/ansicht" className="verweis">Werkbank anpassen</Link></p>
+        <p className="ueber">{t('werkbank.uebersicht.werkbank')}</p>
+        <h1>{t('werkbank.uebersicht.uebersicht')}</h1>
+        <p className="leise">{tn('werkbank.uebersicht.hinweise-stand-und-bestand', { link: <a href={handbuch('admin')} target="_blank" rel="noreferrer" className="verweis">{t('werkbank.uebersicht.administratorhandbuch')}</a>, link2: <Link to="/werkbank/ansicht" className="verweis">{t('werkbank.uebersicht.werkbank-anpassen')}</Link> })}</p>
       </div>
-      {!s ? <p className="leise">Lade …</p> : (
+      {!s ? <p className="leise">{t('werkbank.uebersicht.lade')}</p> : (
         <>
           {/* Erst, was alles zu tun ist (Kacheln), darunter die konkreten Meldungen – rot, gelb, Hinweise (#816). */}
           <Kacheln s={s} />
@@ -252,7 +253,7 @@ export function UebersichtPanel({ u }: { u: UebersichtZustand }) {
                 <Akzeptieren h={x} u={u} />
               </div>
             ))
-            : <div className="hinweis gut"><p><strong>Alles eingerichtet.</strong> Es gibt gerade nichts zu tun.</p></div>}
+            : <div className="hinweis gut"><p>{tn('werkbank.uebersicht.es-gibt-gerade-nichts', { b: <strong>{t('werkbank.uebersicht.alles-eingerichtet')}</strong> })}</p></div>}
           <BewusstAkzeptiert u={u} />
         </>
       )}
@@ -263,12 +264,12 @@ export function UebersichtPanel({ u }: { u: UebersichtZustand }) {
 function Kacheln({ s }: { s: WerkbankUebersicht }) {
   return (
           <div className="kacheln">
-            <Kachel titel="Aufgaben" ziel="/werkbank/aufgaben" wert={zahl(s.aufgaben.offen)} unter="offen" />
-            <Kachel titel="Texterkennung" ziel="/werkbank/texterkennung" wert={s.texterkennung ? zahl(s.texterkennung.wartet + s.texterkennung.laeuft) : '–'} unter={s.texterkennung ? `in der Warteschlange · ${zahl(s.texterkennung.fehler)} mit Fehler` : 'nicht eingerichtet'} />
-            <Kachel titel="Papierkorb" ziel="/werkbank/papierkorb" wert={zahl(s.papierkorb.anzahl)} unter={s.papierkorb.tage ? (s.papierkorb.aeltester ? `älteste vom ${datum(s.papierkorb.aeltester)} · ${s.papierkorb.tage} Tage` : `${s.papierkorb.tage} Tage Aufbewahrung`) : 'ausgeschaltet'} />
-            <Kachel titel="Gemeldete Fehler" ziel="/werkbank/fehlermeldungen" wert={s.fehlermeldungen === null ? '–' : zahl(s.fehlermeldungen)} unter="offen" />
-            {s.bestand && <Kachel titel="Bestand" ziel="/werkbank/anbindung" wert={zahl(s.bestand.mappen)} unter={`Mappen · ${zahl(s.bestand.dokumente)} Dokumente (${bytes(s.bestand.dokumenteBytes)}) · ${zahl(s.bestand.benutzer)} Benutzer`} />}
-            <Kachel titel="Version" ziel="/werkbank/systemzustand#version" wert={s.version.version} unter={s.version.commit ? `Build ${s.version.commit.slice(0, 7)} · unter Systemzustand auf Updates prüfen` : 'unter Systemzustand auf Updates prüfen'} />
+            <Kachel titel={t('werkbank.uebersicht.aufgaben-2')} ziel="/werkbank/aufgaben" wert={zahl(s.aufgaben.offen)} unter={t('werkbank.uebersicht.offen')} />
+            <Kachel titel={t('werkbank.uebersicht.texterkennung')} ziel="/werkbank/texterkennung" wert={s.texterkennung ? zahl(s.texterkennung.wartet + s.texterkennung.laeuft) : '–'} unter={s.texterkennung ? t('werkbank.uebersicht.in-der-warteschlange-mit', { zahl: zahl(s.texterkennung.fehler) }) : t('werkbank.uebersicht.nicht-eingerichtet')} />
+            <Kachel titel={t('werkbank.uebersicht.papierkorb')} ziel="/werkbank/papierkorb" wert={zahl(s.papierkorb.anzahl)} unter={s.papierkorb.tage ? (s.papierkorb.aeltester ? t('werkbank.uebersicht.aelteste-vom-tage', { datum: datum(s.papierkorb.aeltester), tage: s.papierkorb.tage }) : t('werkbank.uebersicht.tage-aufbewahrung', { tage: s.papierkorb.tage })) : t('werkbank.uebersicht.ausgeschaltet')} />
+            <Kachel titel={t('werkbank.uebersicht.gemeldete-fehler-2')} ziel="/werkbank/fehlermeldungen" wert={s.fehlermeldungen === null ? '–' : zahl(s.fehlermeldungen)} unter={t('werkbank.uebersicht.offen')} />
+            {s.bestand && <Kachel titel={t('werkbank.uebersicht.bestand')} ziel="/werkbank/anbindung" wert={zahl(s.bestand.mappen)} unter={t('werkbank.uebersicht.mappen-dokumente-benutzer', { zahl: zahl(s.bestand.dokumente), bytes: bytes(s.bestand.dokumenteBytes), zahl2: zahl(s.bestand.benutzer) })} />}
+            <Kachel titel={t('werkbank.uebersicht.version')} ziel="/werkbank/systemzustand#version" wert={s.version.version} unter={s.version.commit ? t('werkbank.uebersicht.build-unter-systemzustand-auf', { commit: s.version.commit.slice(0, 7) }) : t('werkbank.uebersicht.unter-systemzustand-auf-updates')} />
           </div>
   );
 }
@@ -309,7 +310,7 @@ export function WerkbankNavigation({ bereich, eintraege, zeigen = () => true, be
     const aus = !zeigen(e.pfad);
     return (
       <Link key={e.pfad} to={e.pfad === 'uebersicht' ? '/werkbank' : `/werkbank/${e.pfad}`} className={`sicht ${bereich === e.pfad ? 'an' : ''} ${aus ? 'ausgeblendet' : ''}`}
-        title={aus ? (e.warn ? 'Ausgeblendet – steht hier wegen eines Hinweises' : 'Ausgeblendet') : undefined}>
+        title={aus ? (e.warn ? t('werkbank.uebersicht.ausgeblendet-steht-hier-wegen') : t('werkbank.uebersicht.ausgeblendet')) : undefined}>
         <span className="nm">{e.name}</span>
         {e.warn ? <span className="zaehler" title={e.warnTitel} aria-label={e.warnTitel ? `${e.warn} – ${e.warnTitel}` : undefined}>{e.warn}</span> : e.zahl ? <span className="zahl">{e.zahl}</span> : null}
       </Link>
@@ -319,11 +320,11 @@ export function WerkbankNavigation({ bereich, eintraege, zeigen = () => true, be
   const benutzt = ausgeblendet.filter((e) => eingerichtet.includes(e.pfad)).length;
   return (
     <>
-      <div className="gruppenwahl" role="tablist" aria-label="Bereiche der Werkbank">
+      <div className="gruppenwahl" role="tablist" aria-label={t('werkbank.uebersicht.bereiche-der-werkbank')}>
         {liste.filter((e) => !e.gruppe).map(eintrag)}
         {gruppen.map((g) => (
           <button key={g} type="button" role="tab" aria-selected={gewaehlt === g} className={`sicht ${gewaehlt === g ? 'an' : ''}`} onClick={() => setGewaehlt(g)}>
-            <span className="nm">{GRUPPEN[g]}</span>{warnIn(g) && <span className="zaehler" aria-label="mit Hinweis">!</span>}
+            <span className="nm">{GRUPPEN[g]}</span>{warnIn(g) && <span className="zaehler" aria-label={t('werkbank.uebersicht.mit-hinweis')}>!</span>}
           </button>
         ))}
       </div>
@@ -343,9 +344,9 @@ export function WerkbankNavigation({ bereich, eintraege, zeigen = () => true, be
         <p className="ausgeblendet-fuss leise klein">
           {ausgeblendet.length > 0 && <>
             <button type="button" className="verweis" aria-expanded={alleZeigen} onClick={() => setAlleZeigen(!alleZeigen)}>
-              {alleZeigen ? 'Ausgeblendete verbergen' : `${ausgeblendet.length === 1 ? 'Ein Bereich' : `${ausgeblendet.length} Bereiche`} ausgeblendet${benutzt ? `, ${benutzt} davon eingerichtet` : ''}`}
+              {alleZeigen ? t('werkbank.uebersicht.ausgeblendete-verbergen') : t('werkbank.uebersicht.bereiche-ausgeblendet', { anzahl: ausgeblendet.length, wert: benutzt ? t('werkbank.uebersicht.davon-eingerichtet', { benutzt }) : '' })}
             </button>{' · '}</>}
-          <Link to="/werkbank/ansicht" className="verweis">Werkbank anpassen</Link>
+          <Link to="/werkbank/ansicht" className="verweis">{t('werkbank.uebersicht.werkbank-anpassen')}</Link>
         </p>
       </nav>
     </>

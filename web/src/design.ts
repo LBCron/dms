@@ -5,6 +5,7 @@
  * entstehen hier, damit jede Farbe auf jeder Grundlage lesbar bleibt.
  */
 import { cssOhneSpitzeKlammer } from '../../shared/src/maskieren';
+import { t } from './sprache';
 export type Grundlage = 'automatisch' | 'hell' | 'dunkel' | 'kontrast';
 export interface Design {
   id: string; name: string; grundlage: Grundlage; primaer: string; sekundaer: string; css: string;
@@ -12,7 +13,7 @@ export interface Design {
   schriftzug?: string | null;
   logo?: { sha256: string; mime: string; groesse: number } | null;
 }
-export const GRUNDLAGEN: Record<Grundlage, string> = { automatisch: 'Automatisch (nach Gerät)', hell: 'Hell', dunkel: 'Dunkel', kontrast: 'Hoher Kontrast' };
+export const GRUNDLAGEN: Record<Grundlage, string> = { automatisch: t('oberflaeche.design.automatisch-nach-geraet'), hell: t('oberflaeche.design.hell'), dunkel: t('oberflaeche.design.dunkel'), kontrast: t('oberflaeche.design.hoher-kontrast') };
 
 type Palette = Record<string, string>;
 /** Markenfarben aus dms-website/marke/ (#699). */
@@ -35,7 +36,7 @@ const NEUTRAL: Record<'hell' | 'dunkel' | 'kontrast', Palette> = {
 const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const hex = (c: number[]) => `#${c.map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 /** a mit Anteil t von b mischen. */
-export const mische = (a: string, b: string, t: number) => { const x = rgb(a), y = rgb(b); return hex(x.map((v, i) => v + (y[i] - v) * t)); };
+export const mische = (a: string, b: string, zahl: number) => { const x = rgb(a), y = rgb(b); return hex(x.map((v, i) => v + (y[i] - v) * zahl)); };
 const lum = (h: string) => { const [r, g, b] = rgb(h).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
 export const kontrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
@@ -43,7 +44,7 @@ export const kontrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(
 function lesbar(farbe: string, hinter: string, ziel = 4.5) {
   const richtung = lum(hinter) > 0.4 ? '#000000' : '#FFFFFF';
   let f = farbe;
-  for (let t = 0.08; kontrast(f, hinter) < ziel && t <= 1; t += 0.08) f = mische(farbe, richtung, t);
+  for (let zahl = 0.08; kontrast(f, hinter) < ziel && zahl <= 1; zahl += 0.08) f = mische(farbe, richtung, zahl);
   return f;
 }
 const schriftAuf = (f: string) => (kontrast(f, '#FFFFFF') >= kontrast(f, '#111111') ? '#FFFFFF' : '#111111');
@@ -97,7 +98,7 @@ export const rettungsweg = () => RETTUNG;
 /* ---------- Schriftgröße je Gerät ---------- */
 
 export type Schrift = 'klein' | 'normal' | 'gross';
-export const SCHRIFTEN: Record<Schrift, { name: string; skala: number }> = { klein: { name: 'Klein', skala: 0.9 }, normal: { name: 'Normal', skala: 1 }, gross: { name: 'Groß', skala: 1.15 } };
+export const SCHRIFTEN: Record<Schrift, { name: string; skala: number }> = { klein: { name: t('oberflaeche.design.klein'), skala: 0.9 }, normal: { name: t('oberflaeche.design.normal'), skala: 1 }, gross: { name: t('oberflaeche.design.gross'), skala: 1.15 } };
 const schriftSchluessel = (benutzer: string) => `dms:schrift:${benutzer}`;
 export function leseSchrift(benutzer: string): Schrift {
   try { const s = localStorage.getItem(schriftSchluessel(benutzer)); if (s && s in SCHRIFTEN) return s as Schrift; } catch { /* egal */ }

@@ -1,3 +1,5 @@
+import { t } from './texte';
+import { gebietsschema } from './sprache';
 /**
  * Hintergrundaufträge (#364): Stand mit Phase und Einheit, damit die Oberfläche
  * zeigt, **was** gezählt wird („Mappen anlegen: 1.000 von 1.000 ✓ · Dokumente
@@ -79,7 +81,7 @@ export function schliessePhasen(a: Pick<Auftrag, 'phase' | 'phasen'>): void {
   a.phase = undefined;
 }
 
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 
 /** Ein Teil der Anzeige je Phase: „Dokumente erzeugen: 1.326 von 1.907“. */
 export function phasenText(p: AuftragPhase): string {
@@ -96,5 +98,5 @@ export function phasenText(p: AuftragPhase): string {
  */
 export function fortschrittText(a: { fertig: number; gesamt: number; phasen?: AuftragPhase[] }, einheit = ''): string {
   if (a.phasen?.length) return a.phasen.map(phasenText).join(' · ');
-  return `${zahl(a.fertig)} von ${zahl(a.gesamt)}${einheit ? ` ${einheit}` : ''}`;
+  return t('gemeinsam.auftrag.von', { zahl: zahl(a.fertig), zahl2: zahl(a.gesamt), wert: einheit ? ` ${einheit}` : '' });
 }

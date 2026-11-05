@@ -4,8 +4,9 @@ import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
 import { fortschrittText } from '../../../shared/src/auftrag';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { JE_MAPPE_STUFEN, MAX_DEMO, MAX_DEMO_DOKUMENTE, MAX_DUPLIKATE, mengenWarnung, MISCHUNGEN, schaetzeMenge, stelleMischung, stelleVonBis, stufeVon } from '../../../shared/src/demodaten';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 type Uebersicht = Array<{ typId: string; name: string; demo: number; gesamt: number }>;
 
@@ -19,8 +20,8 @@ function useUebersicht() {
 
 type Meldung = { art: 'gut' | 'warn' | 'schlecht'; text: string; liste?: string[] };
 
-const ARTNAME: Record<Dokumentart, string> = { brief: 'Brief/Rechnung (1 Seite)', mehrseitig: 'Mehrseitiges PDF', scan: '„Gescanntes“ PDF', bild: 'Bild (JPEG/PNG)', gross: 'Große Datei (20–100 MB)' };
-const STUFENTEXT: Record<DemoStufe | 'eigen', string> = { leicht: 'leicht', realistisch: 'realistisch', schwer: 'schwer', eigen: 'eigene Mischung' };
+const ARTNAME: Record<Dokumentart, string> = { brief: t('werkbank.demo.brief-rechnung-1-seite'), mehrseitig: t('werkbank.demo.mehrseitiges-pdf'), scan: t('werkbank.demo.gescanntes-pdf'), bild: t('werkbank.demo.bild-jpeg-png'), gross: t('werkbank.demo.grosse-datei-20-100') };
+const STUFENTEXT: Record<DemoStufe | 'eigen', string> = { leicht: 'leicht', realistisch: 'realistisch', schwer: 'schwer', eigen: t('werkbank.demo.eigene-mischung') };
 
 /** Schieberegler mit Wertanzeige (#365): nativ, also mit Pfeiltasten und Bild auf/ab bedienbar. */
 function Regler({ id, name, hinweis, wert, min, max, anzeige, onChange }: {
@@ -33,29 +34,29 @@ function Regler({ id, name, hinweis, wert, min, max, anzeige, onChange }: {
     </label>
   );
 }
-const dokumente = (n: number) => `${n.toLocaleString('de-DE')} ${n === 1 ? 'Dokument' : 'Dokumente'}`;
+const dokumente = (n: number) => t('werkbank.demo.dokumente', { anzahl: n, n: n.toLocaleString(gebietsschema()) });
 
-const groesse = (b: number) => b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB` : `${Math.max(1, Math.round(b / 1024 ** 2)).toLocaleString('de-DE')} MB`;
+const groesse = (b: number) => b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB` : `${Math.max(1, Math.round(b / 1024 ** 2)).toLocaleString(gebietsschema())} MB`;
 const dauer = (ms: number) => ms < 60_000 ? `${Math.round(ms / 1000)} s` : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min` : `${(ms / 3_600_000).toFixed(1).replace('.', ',')} h`;
 
 /** Meldung zum Ergebnis eines beendeten Auftrags. */
 function meldungAus(a: Auftrag): Meldung {
-  if (a.status === 'fehler') return { art: 'schlecht', text: `${a.titel}: ${a.fehler ?? 'Fehler'}` };
-  if (a.art === 'demo-entfernen') return { art: 'gut', text: `${(a.ergebnis as { entfernt: number }).entfernt.toLocaleString('de-DE')} Demo-Mappen entfernt.` };
+  if (a.status === 'fehler') return { art: 'schlecht', text: `${a.titel}: ${a.fehler ?? t('werkbank.demo.fehler')}` };
+  if (a.art === 'demo-entfernen') return { art: 'gut', text: t('werkbank.demo.demo-mappen-entfernt', { entfernt: (a.ergebnis as { entfernt: number }).entfernt.toLocaleString(gebietsschema()) }) };
   const r = a.ergebnis as DemoErgebnis;
   const d = r.dokumente;
   return {
     art: r.uebersprungen.length || r.abgebrochen ? 'warn' : 'gut',
-    text: `${r.gesamt.toLocaleString('de-DE')} Demo-Mappen${d ? ` und ${d.anzahl.toLocaleString('de-DE')} Dokumente (${groesse(d.bytes)})` : ''} erzeugt${r.dauerMs ? ` in ${dauer(r.dauerMs)}` : ''}.${r.startwert ? ` Startwert: ${r.startwert}` : ''}`,
+    text: t('werkbank.demo.demo-mappen-erzeugt', { gesamt: r.gesamt.toLocaleString(gebietsschema()), wert: d ? t('werkbank.demo.und-dokumente', { zahl: d.anzahl.toLocaleString(gebietsschema()), groesse: groesse(d.bytes) }) : '', wert2: r.dauerMs ? t('werkbank.demo.in', { dauer: dauer(r.dauerMs) }) : '', wert3: r.startwert ? t('werkbank.demo.startwert', { startwert: r.startwert }) : '' }),
     liste: [
-      ...Object.entries(r.erzeugt).map(([k, v]) => `${k}: ${v.toLocaleString('de-DE')}`),
+      ...Object.entries(r.erzeugt).map(([k, v]) => `${k}: ${v.toLocaleString(gebietsschema())}`),
       ...(d ? [
-        `Dokumente: ${DOKUMENTARTEN.filter((x) => d.jeArt[x]).map((x) => `${ARTNAME[x]} ${d.jeArt[x].toLocaleString('de-DE')}`).join(', ')}${d.duplikate ? `, Duplikate ${d.duplikate.toLocaleString('de-DE')}` : ''}`,
-        `${d.seiten.toLocaleString('de-DE')} Seiten, ${d.texterkennung.toLocaleString('de-DE')} Dokumente in der Warteschlange der Texterkennung, Dokumente in ${dauer(d.dauerMs)}`,
+        t('werkbank.demo.dokumente-2', { map: DOKUMENTARTEN.filter((x) => d.jeArt[x]).map((x) => `${ARTNAME[x]} ${d.jeArt[x].toLocaleString(gebietsschema())}`).join(', '), wert: d.duplikate ? t('werkbank.demo.duplikate', { duplikate: d.duplikate.toLocaleString(gebietsschema()) }) : '' }),
+        t('werkbank.demo.seiten-dokumente-in-der', { seiten: d.seiten.toLocaleString(gebietsschema()), texterkennung: d.texterkennung.toLocaleString(gebietsschema()), dauer: dauer(d.dauerMs) }),
       ] : []),
-      ...(r.ohneRastern ? ['Ohne pdftoppm: Scans und Bilder wurden als einfache PDFs erzeugt.'] : []),
-      ...(r.abgebrochen ? [`Vorzeitig beendet: ${r.abgebrochen}`] : []),
-      ...r.uebersprungen.map((x) => `${x.typ} unvollständig: ${x.grund}`),
+      ...(r.ohneRastern ? [t('werkbank.demo.ohne-pdftoppm-scans-und')] : []),
+      ...(r.abgebrochen ? [t('werkbank.demo.vorzeitig-beendet', { abgebrochen: r.abgebrochen })] : []),
+      ...r.uebersprungen.map((x) => t('werkbank.demo.unvollstaendig', { typ: x.typ, grund: x.grund })),
     ],
   };
 }
@@ -78,8 +79,8 @@ function useAuftrag(fertig: (a: Auftrag) => void) {
   useEffect(() => { void abfragen(); }, [abfragen]);
   useEffect(() => {
     if (a?.status !== 'laeuft') return;
-    const t = setTimeout(() => void abfragen(), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => void abfragen(), 1000);
+    return () => clearTimeout(timer);
   }, [a, abfragen]);
   return { auftrag: a, setze: (x: Auftrag) => { zuletzt.current = x.id; setA(x); } };
 }
@@ -107,8 +108,8 @@ export function DemoPanel() {
   // … den freien Platz (und ob pdftoppm da ist) liefert der Server kurz nach der letzten Änderung.
   useEffect(() => {
     if (!anzahlOk || zuViele) return;
-    const t = setTimeout(() => { api.demoAbschaetzung(JSON.parse(schluessel) as DemoOptionen).then(setSchaetzung, () => setSchaetzung(null)); }, 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => { api.demoAbschaetzung(JSON.parse(schluessel) as DemoOptionen).then(setSchaetzung, () => setSchaetzung(null)); }, 400);
+    return () => clearTimeout(timer);
   }, [schluessel, anzahlOk, zuViele]);
   const bytes = menge?.dokumente?.bytes ?? 0;
   // Mappentypen, die sich nicht erzeugen lassen (#711) – kommt vom Server mit der Abschätzung.
@@ -117,7 +118,7 @@ export function DemoPanel() {
   const [meldung, setMeldung] = useState<Meldung>();
   const { auftrag, setze } = useAuftrag((a) => { setMeldung(meldungAus(a)); void d.neuLaden(); });
   const laeuft = auftrag?.status === 'laeuft';
-  const demo = u.reduce((s, t) => s + t.demo, 0);
+  const demo = u.reduce((s, eintrag) => s + eintrag.demo, 0);
 
   async function starte(fn: () => Promise<Auftrag>) {
     setMeldung(undefined);
@@ -127,17 +128,17 @@ export function DemoPanel() {
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Demo-Daten</h1>
-        <p className="leise">Erzeugt Mappen für die vorhandenen Mappentypen – mit passenden Werten je Feld und Verweisen auf vorhandene Mappen, wahlweise mit Dokumenten. So lässt sich beobachten, wie sich Ablago mit vielen Mappen und Dokumenten verhält. Demo-Mappen sind gekennzeichnet und lassen sich gesammelt wieder entfernen. <Hilfe ort="werkbank.demo" /></p>
+        <p className="ueber">{t('werkbank.demo.werkbank')}</p>
+        <h1>{t('werkbank.demo.demo-daten')}</h1>
+        <p className="leise">{tn('werkbank.demo.erzeugt-mappen-fuer-die', { hilfe: <Hilfe ort="werkbank.demo" /> })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art} stapel`}><p>{meldung.text}</p>{meldung.liste && <ul>{meldung.liste.map((x) => <li key={x}>{x}</li>)}</ul>}</div>}
       {laeuft && auftrag && (
         <div className="hinweis info stapel" role="status">
-          <p><strong>{auftrag.titel}</strong> … läuft im Hintergrund, du kannst die Seite auch verlassen.</p>
+          <p>{tn('werkbank.demo.laeuft-im-hintergrund-du', { b: <strong>{auftrag.titel}</strong> })}</p>
           {auftrag.gesamt > 0 && <>
             <progress max={auftrag.gesamt} value={auftrag.fertig} />
-            <p className="klein leise">{fortschrittText(auftrag, 'Mappen')}</p>
+            <p className="klein leise">{fortschrittText(auftrag, t('werkbank.demo.mappen'))}</p>
             {/* Weniger als bestellt (#711): Gründe je Mappentyp, sobald der Schritt Mappen fertig ist. */}
             {auftrag.phasen.some((p) => p.gruende?.length) && (
               <details className="klein"><summary>{t('werkbank.demo.warum')}</summary>
@@ -150,38 +151,38 @@ export function DemoPanel() {
       )}
 
       {/* Der Ablageort (#168) gehört zum Standard und zählt hier nicht als eigener Mappentyp. */}
-      {!d.typen.some((t) => !t.system && t.schluessel !== 'ablageort') ? (
+      {!d.typen.some((mappentyp) => !mappentyp.system && mappentyp.schluessel !== 'ablageort') ? (
         <div className="blatt">
-          <h2 className="h3">Beispiel-Mappentypen</h2>
-          <p className="leise">Vertragspartner, Vertrag, Rechnung und Zahlung mit Registern und ein paar Mappen. Nur möglich, solange es außer dem Ablageort noch keine Mappentypen gibt. Verträge und Rechnungen bekommen dabei das Feld „Verbleib Originaldokumente“ und ein paar Ablageorte.</p>
+          <h2 className="h3">{t('werkbank.demo.beispiel-mappentypen')}</h2>
+          <p className="leise">{t('werkbank.demo.vertragspartner-vertrag-rechnung-und')}</p>
           <div className="knoepfe"><button className="knopf primaer" disabled={laeuft} onClick={() => void (async () => {
             setMeldung(undefined);
-            try { await api.beispiele(); setMeldung({ art: 'gut', text: 'Beispiele geladen.' }); } catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
+            try { await api.beispiele(); setMeldung({ art: 'gut', text: t('werkbank.demo.beispiele-geladen') }); } catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
             await d.neuLaden();
-          })()}>Beispiele laden</button></div>
+          })()}>{t('werkbank.demo.beispiele-laden')}</button></div>
         </div>
       ) : (
         <form className="blatt" onSubmit={(e) => { e.preventDefault(); void starte(() => api.demoErzeugen(optionen)); }}>
-          <h2 className="h3">Erzeugen</h2>
+          <h2 className="h3">{t('werkbank.demo.erzeugen')}</h2>
           <div className="raster">
-            <label className="eigenschaft"><span>Anzahl <small>bis 50.000 je Lauf, wird auf die Mappentypen verteilt, Belege bekommen mehr als Stammdaten</small></span>
+            <label className="eigenschaft"><span>{tn('werkbank.demo.anzahl', { klein: <small>{t('werkbank.demo.bis-50-000-je')}</small> })}</span>
               <input id="demo-anzahl" type="number" min={1} max={50000} value={anzahl} onChange={(e) => setAnzahl(e.target.value)} /></label>
-            <label className="eigenschaft"><span>Startwert <small>optional; gleicher Startwert ergibt gleiche Daten, damit Messungen vergleichbar sind</small></span>
-              <input id="demo-startwert" value={startwert} maxLength={100} placeholder="z. B. messung-1" onChange={(e) => setStartwert(e.target.value)} /></label>
+            <label className="eigenschaft"><span>{tn('werkbank.demo.startwert-2', { klein: <small>{t('werkbank.demo.optional-gleicher-startwert-ergibt')}</small> })}</span>
+              <input id="demo-startwert" value={startwert} maxLength={100} placeholder={t('werkbank.demo.z-b-messung-1')} onChange={(e) => setStartwert(e.target.value)} /></label>
           </div>
-          <label className="haken"><input id="demo-dokumente" type="checkbox" checked={mitDok} onChange={(e) => setMitDok(e.target.checked)} /><span>Dokumente erzeugen <small className="leise">(nur für Mappentypen mit Dokumentenregister)</small></span></label>
+          <label className="haken"><input id="demo-dokumente" type="checkbox" checked={mitDok} onChange={(e) => setMitDok(e.target.checked)} /><span>{tn('werkbank.demo.dokumente-erzeugen', { klein: <small className="leise">{t('werkbank.demo.nur-fuer-mappentypen-mit')}</small> })}</span></label>
           {mitDok && <>
             <div className="raster">
-              <Regler id="demo-anteil" name="Mappen mit Dokumenten" wert={anteil} min={0} max={100} anzeige={`${anteil} %`} onChange={setAnteil} />
-              <Regler id="demo-von" name="Dokumente je Mappe von" wert={stufeVon(jeMappe.von)} min={0} max={JE_MAPPE_STUFEN.length - 1}
+              <Regler id="demo-anteil" name={t('werkbank.demo.mappen-mit-dokumenten')} wert={anteil} min={0} max={100} anzeige={`${anteil} %`} onChange={setAnteil} />
+              <Regler id="demo-von" name={t('werkbank.demo.dokumente-je-mappe-von')} wert={stufeVon(jeMappe.von)} min={0} max={JE_MAPPE_STUFEN.length - 1}
                 anzeige={dokumente(jeMappe.von)} onChange={(i) => setJeMappe(stelleVonBis(jeMappe, 'von', JE_MAPPE_STUFEN[i]))} />
               <Regler id="demo-bis" name="bis" wert={stufeVon(jeMappe.bis)} min={0} max={JE_MAPPE_STUFEN.length - 1}
                 anzeige={dokumente(jeMappe.bis)} onChange={(i) => setJeMappe(stelleVonBis(jeMappe, 'bis', JE_MAPPE_STUFEN[i]))} />
-              <Regler id="demo-duplikate" name="Gewollte Duplikate" hinweis="gleiche Datei in mehreren Mappen" wert={duplikate} min={0} max={MAX_DUPLIKATE} anzeige={`${duplikate} %`} onChange={setDuplikate} />
+              <Regler id="demo-duplikate" name={t('werkbank.demo.gewollte-duplikate')} hinweis={t('werkbank.demo.gleiche-datei-in-mehreren')} wert={duplikate} min={0} max={MAX_DUPLIKATE} anzeige={`${duplikate} %`} onChange={setDuplikate} />
             </div>
             <fieldset className="stapel mischung">
-              <legend>Mischung <small className="leise">– zusammen immer 100 %</small></legend>
-              <label className="eigenschaft schmal"><span>Vorlage</span>
+              <legend>{tn('werkbank.demo.mischung', { klein: <small className="leise">{t('werkbank.demo.zusammen-immer-100')}</small> })}</legend>
+              <label className="eigenschaft schmal"><span>{t('werkbank.demo.vorlage')}</span>
                 <select id="demo-stufe" value={stufe} onChange={(e) => { const v = e.target.value as DemoStufe | 'eigen'; setStufe(v); if (v !== 'eigen') setMischung(MISCHUNGEN[v]); }}>
                   {(['leicht', 'realistisch', 'schwer', 'eigen'] as const).map((x) => <option key={x} value={x}>{STUFENTEXT[x]}</option>)}
                 </select></label>
@@ -191,31 +192,31 @@ export function DemoPanel() {
                     onChange={(n) => { setStufe('eigen'); setMischung(stelleMischung(mischung, a, n)); }} />
                 ))}
               </div>
-              <p className="leise klein">Bewegst du einen Regler, passen sich die anderen im bisherigen Verhältnis an. Summe: {DOKUMENTARTEN.reduce((x, a) => x + mischung[a], 0)} %</p>
+              <p className="leise klein">{t('werkbank.demo.bewegst-du-einen-regler')}{' '}{DOKUMENTARTEN.reduce((x, a) => x + mischung[a], 0)} %</p>
             </fieldset>
-            <p className="leise klein">Die Texterkennung vieler „gescannter“ PDFs und Bilder dauert auf einem NAS eher Tage als Stunden; sie läuft danach im Hintergrund. Sicherungen werden entsprechend größer.</p>
+            <p className="leise klein">{t('werkbank.demo.die-texterkennung-vieler-gescannter')}</p>
           </>}
           {menge && (
             <div className={`hinweis ${!reicht || zuViele ? 'schlecht' : warnung ? 'warn' : 'info'} stapel`} role="status" aria-live="polite">
-              <p><strong>Abschätzung:</strong> ≈ {(menge.mappen - fehlen).toLocaleString('de-DE')} Mappen{fehlen > 0 && <> ({t('werkbank.demo.nichtErzeugbar', { anzahl: fehlen.toLocaleString('de-DE') })})</>}
-                {menge.dokumente && <>, ≈ {dokumente(menge.dokumente.dokumente)} mit ≈ {menge.dokumente.seiten.toLocaleString('de-DE')} Seiten, zusammen ≈ {groesse(menge.dokumente.bytes)}; ≈ {menge.dokumente.ocrSeiten.toLocaleString('de-DE')} Seiten für die Texterkennung</>}.
-                {schaetzung && schaetzung.frei !== null && <> Frei: {groesse(schaetzung.frei)}, frei bleiben müssen mindestens {groesse(schaetzung.mindest)}.</>}</p>
+              <p>{tn('werkbank.demo.mappen-2', { b: <strong>{t('werkbank.demo.abschaetzung')}</strong>, wert: (menge.mappen - fehlen).toLocaleString(gebietsschema()) })}{fehlen > 0 && <> ({t('werkbank.demo.nichtErzeugbar', { anzahl: fehlen.toLocaleString(gebietsschema()) })})</>}
+                {menge.dokumente && <>{t('werkbank.demo.mit-seiten-zusammen-seiten', { dokumente: dokumente(menge.dokumente.dokumente), seiten: menge.dokumente.seiten.toLocaleString(gebietsschema()), groesse: groesse(menge.dokumente.bytes), ocrSeiten: menge.dokumente.ocrSeiten.toLocaleString(gebietsschema()) })}</>}.
+                {schaetzung && schaetzung.frei !== null && <> {' '}{t('werkbank.demo.frei-frei-bleiben-muessen', { groesse: groesse(schaetzung.frei), groesse2: groesse(schaetzung.mindest) })}</>}</p>
               {warnung && <p>{warnung}</p>}
-              {!reicht && <p>Der Speicherplatz reicht dafür nicht. Weniger Mappen, weniger Dokumente oder eine leichtere Mischung wählen.</p>}
-              {!!schaetzung?.nichtErzeugbar?.length && <ul className="klein">{schaetzung.nichtErzeugbar.map((x) => <li key={x.typ}>{x.typ}: {x.anzahl.toLocaleString('de-DE')} – {x.grund}</li>)}</ul>}
-              {mitDok && schaetzung && !schaetzung.rastern && <p className="klein">Ohne pdftoppm (nur in der Entwicklung) werden Scans und Bilder als einfache PDFs erzeugt.</p>}
+              {!reicht && <p>{t('werkbank.demo.der-speicherplatz-reicht-dafuer')}</p>}
+              {!!schaetzung?.nichtErzeugbar?.length && <ul className="klein">{schaetzung.nichtErzeugbar.map((x) => <li key={x.typ}>{x.typ}: {x.anzahl.toLocaleString(gebietsschema())} – {x.grund}</li>)}</ul>}
+              {mitDok && schaetzung && !schaetzung.rastern && <p className="klein">{t('werkbank.demo.ohne-pdftoppm-nur-in')}</p>}
             </div>
           )}
-          <div className="knoepfe"><button className="knopf primaer" disabled={laeuft || !anzahlOk || zuViele || !reicht}>Demo-Daten erzeugen</button></div>
+          <div className="knoepfe"><button className="knopf primaer" disabled={laeuft || !anzahlOk || zuViele || !reicht}>{t('werkbank.demo.demo-daten-erzeugen')}</button></div>
         </form>
       )}
 
       <div className="blatt">
-        <h2 className="h3">Entfernen</h2>
-        <p className="leise">Löscht alle {demo.toLocaleString('de-DE')} Demo-Mappen samt ihrer Dokumente, in Paketen zu je 1.000. Echte Mappen bleiben unberührt; verweist eine echte Mappe auf eine Demo-Mappe, wird nichts gelöscht.</p>
+        <h2 className="h3">{t('werkbank.demo.entfernen')}</h2>
+        <p className="leise">{t('werkbank.demo.loescht-alle-demo-mappen', { demo: demo.toLocaleString(gebietsschema()) })}</p>
         <div className="knoepfe"><button className="knopf gefahr-rand" disabled={!demo || laeuft} onClick={async () => {
-          if (await rueckfrage({ titel: `Alle ${demo.toLocaleString('de-DE')} Demo-Mappen löschen?`, text: 'Echte Mappen bleiben unberührt.', ja: 'Demo-Mappen löschen', gefahr: true })) void starte(() => api.demoEntfernen());
-        }}>Alle Demo-Mappen entfernen</button></div>
+          if (await rueckfrage({ titel: t('werkbank.demo.alle-demo-mappen-loeschen', { demo: demo.toLocaleString(gebietsschema()) }), text: t('werkbank.demo.echte-mappen-bleiben-unberuehrt'), ja: t('werkbank.demo.demo-mappen-loeschen'), gefahr: true })) void starte(() => api.demoEntfernen());
+        }}>{t('werkbank.demo.alle-demo-mappen-entfernen')}</button></div>
         <DemoTabelle u={u} />
       </div>
     </div>
@@ -224,14 +225,14 @@ export function DemoPanel() {
 
 /** Mappen je Mappentyp, davon Demo (#366: früher die mittlere Spalte). */
 function DemoTabelle({ u }: { u: Uebersicht }) {
-  if (!u.length) return <p className="leise klein">Noch keine Mappentypen.</p>;
-  const z = (n: number) => n.toLocaleString('de-DE');
+  if (!u.length) return <p className="leise klein">{t('werkbank.demo.noch-keine-mappentypen')}</p>;
+  const z = (n: number) => n.toLocaleString(gebietsschema());
   return (
     <div className="tabellenrahmen festhoehe">
       <table className="tabelle">
-        <thead><tr><th>Mappentyp</th><th className="zahlzelle">Mappen</th><th className="zahlzelle">davon Demo</th></tr></thead>
-        <tbody>{u.map((t) => <tr key={t.typId}><td>{t.name}</td><td className="zahlzelle">{z(t.gesamt)}</td><td className="zahlzelle">{t.demo ? z(t.demo) : '–'}</td></tr>)}</tbody>
-        <tfoot><tr><th>Summe</th><th className="zahlzelle">{z(u.reduce((s, t) => s + t.gesamt, 0))}</th><th className="zahlzelle">{z(u.reduce((s, t) => s + t.demo, 0))}</th></tr></tfoot>
+        <thead><tr><th>{t('werkbank.demo.mappentyp')}</th><th className="zahlzelle">{t('werkbank.demo.mappen')}</th><th className="zahlzelle">{t('werkbank.demo.davon-demo')}</th></tr></thead>
+        <tbody>{u.map((eintrag) => <tr key={eintrag.typId}><td>{eintrag.name}</td><td className="zahlzelle">{z(eintrag.gesamt)}</td><td className="zahlzelle">{eintrag.demo ? z(eintrag.demo) : '–'}</td></tr>)}</tbody>
+        <tfoot><tr><th>{t('werkbank.demo.summe')}</th><th className="zahlzelle">{z(u.reduce((s, eintrag) => s + eintrag.gesamt, 0))}</th><th className="zahlzelle">{z(u.reduce((s, eintrag) => s + eintrag.demo, 0))}</th></tr></tfoot>
       </table>
     </div>
   );

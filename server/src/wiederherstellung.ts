@@ -17,6 +17,7 @@ import { ortszeit, type Eintragsliste, type Metadaten, type SchlankeMetadaten, t
 import { liesKopf, liesSicherung, sha256Von, ZWECK } from './sicherungsformat';
 import { entschluesseleMit, fingerabdruck, istPruefwort, leiteAb, schluesselAusText } from './tresor';
 import { STATISTIK_SPALTEN } from './repo-pg';
+import { t } from './sprache';
 
 /**
  * Wiederherstellen einer Sicherung (#107) und Probe-Wiederherstellung (#109).
@@ -35,7 +36,7 @@ const ALT = 'dms_alt_';
 const BEHALTEN = 'dms_alt_behalten_';
 const BEHALTEN_TAGE = 7;
 /** Prüfschritt (#562): Erweiterungen der Suche vorhanden und sicher vor dem Aufräumen, Trigramm-Indizes eingespielt. */
-const ERWEITERUNGEN_SCHRITT = 'Erweiterungen der Datenbank';
+const ERWEITERUNGEN_SCHRITT = t('meldungen.wiederherstellung.erweiterungen-der-datenbank');
 
 export type Schrittstatus = 'offen' | 'laeuft' | 'ok' | 'fehler' | 'hinweis' | 'ausgelassen';
 export interface Schritt { name: string; status: Schrittstatus; info?: string }
@@ -119,7 +120,7 @@ export class Wiederherstellung {
 
   /** Belegen (synchron, vor jedem await) – sonst könnten zwei Starts gleichzeitig durchrutschen. */
   private belege() {
-    if (this.laeuft() || this.q.sicherung.laeuft()) throw new Fachfehler(409, 'Es läuft bereits eine Sicherung, Prüfung oder Wiederherstellung.');
+    if (this.laeuft() || this.q.sicherung.laeuft()) throw new Fachfehler(409, t('meldungen.wiederherstellung.es-laeuft-bereits-eine'));
     this.belegt = true;
   }
 
@@ -130,8 +131,8 @@ export class Wiederherstellung {
       this.q.pruefeCode?.(einrichtungscode);
       return 'frisch' as const;
     }
-    if (!admin) throw new Fachfehler(403, 'Das geht nur im Verwaltungsmodus mit dem Recht auf „Sicherung“.');
-    if (!this.q.wartungAktiv()) throw new Fachfehler(409, 'Wiederherstellen geht nur im aktiven Wartungsmodus – schalte ihn unter Werkbank → Wartung ein und melde alle ab.');
+    if (!admin) throw new Fachfehler(403, t('meldungen.wiederherstellung.das-geht-nur-im'));
+    if (!this.q.wartungAktiv()) throw new Fachfehler(409, t('meldungen.wiederherstellung.wiederherstellen-geht-nur-im'));
     return 'laufend' as const;
   }
 
@@ -139,59 +140,59 @@ export class Wiederherstellung {
 
   async abgleich(name: string, schluesselText?: string): Promise<Abgleich> {
     const eintrag = (await this.q.sicherung.liste()).find((x) => x.name === name);
-    if (!eintrag) throw new Fachfehler(404, 'Diese Sicherung gibt es im Sicherungsordner nicht (mehr). „Neu prüfen“ liest den Ordner neu.');
+    if (!eintrag) throw new Fachfehler(404, t('meldungen.wiederherstellung.diese-sicherung-gibt-es'));
     const probleme: string[] = []; const hinweise: string[] = [];
     // Kopie außer Haus (#585): daneben nur die schlanke Metadaten-Datei – den Rest liest das DMS mit dem Schlüssel aus der Sicherung.
     const aussen = !eintrag.meta && eintrag.schlank ? await this.metaAusSicherung(eintrag as Eintragsliste & { schlank: SchlankeMetadaten }, schluesselText) : null;
-    if (!eintrag.meta && !aussen) throw new Fachfehler(422, 'Zu dieser Sicherung fehlt die Metadaten-Datei (.json). Lege sie mit in den Sicherungsordner – bei einer Kopie außer Haus die .json vom Ziel.');
+    if (!eintrag.meta && !aussen) throw new Fachfehler(422, t('meldungen.wiederherstellung.zu-dieser-sicherung-fehlt'));
     const m = eintrag.meta ?? aussen!.meta;
     if (aussen) {
-      hinweise.push('Neben dieser Sicherung liegt nur die schlanke Metadaten-Datei (Kopie außer Haus). Version und Umfang liest Ablago mit dem Schlüssel aus der Sicherung selbst.');
+      hinweise.push(t('meldungen.wiederherstellung.neben-dieser-sicherung-liegt'));
       if (aussen.problem) probleme.push(aussen.problem);
       if (!aussen.gelesen) {
-        if (!aussen.problem) hinweise.push(`Gib den Schlüssel vom Notfallblatt ein (Fingerabdruck ${m.verschluesselung.fingerabdruck}) – dann prüft Ablago die Sicherung.`);
+        if (!aussen.problem) hinweise.push(t('meldungen.wiederherstellung.gib-den-schluessel-vom', { fingerabdruck: m.verschluesselung.fingerabdruck }));
         return { name, meta: m, vergleich: [], probleme, hinweise, schluesselNoetig: true };
       }
     }
     const heute = await this.q.laufzeit();
     // Die .json liegt unverschlüsselt daneben: was in Pfade einfließt, streng prüfen.
     if (m.datei !== `${name}.dms-sicherung` || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.haushaltId ?? '') || !Array.isArray(m.migrationen) || m.migrationen.some((x) => !/^[\w.-]+\.sql$/.test(String(x)))) {
-      throw new Fachfehler(422, 'Die Metadaten-Datei (.json) dieser Sicherung ist ungültig oder verändert.');
+      throw new Fachfehler(422, t('meldungen.wiederherstellung.die-metadaten-datei-json'));
     }
     const vergleich: Abgleich['vergleich'] = [];
 
     const unbekannt = m.migrationen.filter((x) => !heute.migrationen.includes(x));
     const dms = aussen ? -1 : vergleicheVersion(m.umgebung.dms, heute.dms);
     if (unbekannt.length) {
-      probleme.push(`Die Sicherung stammt von einer neueren Ablago-Version (${m.umgebung.dms}, Datenbank-Stand ${m.umgebung.datenbankStand}). Diese Installation (${heute.dms}) kennt ${unbekannt.length === 1 ? 'eine Änderung' : `${unbekannt.length} Änderungen`} der Datenbank nicht. Aktualisiere zuerst Ablago.`);
+      probleme.push(t('meldungen.wiederherstellung.die-sicherung-stammt-von', { anzahl: unbekannt.length, dms: m.umgebung.dms, datenbankStand: String(m.umgebung.datenbankStand), dms2: heute.dms }));
     }
-    if (aussen) vergleich.push({ was: 'Ablago', damals: 'unbekannt', heute: heute.dms, urteil: unbekannt.length ? 'fehler' : 'ok', info: unbekannt.length ? undefined : 'steht nicht in der schlanken Metadaten-Datei; maßgeblich ist der Datenbank-Stand' });
-    else vergleich.push({ was: 'Ablago', damals: m.umgebung.dms, heute: heute.dms, urteil: unbekannt.length ? 'fehler' : dms === 0 ? 'gleich' : 'ok', info: !unbekannt.length && dms < 0 ? 'älter – wird nach dem Einspielen auf den heutigen Stand gebracht' : undefined });
+    if (aussen) vergleich.push({ was: 'Ablago', damals: 'unbekannt', heute: heute.dms, urteil: unbekannt.length ? 'fehler' : 'ok', info: unbekannt.length ? undefined : t('meldungen.wiederherstellung.steht-nicht-in-der') });
+    else vergleich.push({ was: 'Ablago', damals: m.umgebung.dms, heute: heute.dms, urteil: unbekannt.length ? 'fehler' : dms === 0 ? 'gleich' : 'ok', info: !unbekannt.length && dms < 0 ? t('meldungen.wiederherstellung.aelter-wird-nach-dem') : undefined });
     const fehlende = heute.migrationen.filter((x) => !m.migrationen.includes(x)).length;
-    vergleich.push({ was: 'Datenbank-Stand', damals: m.umgebung.datenbankStand ?? '–', heute: heute.migrationen.at(-1) ?? '–', urteil: unbekannt.length ? 'fehler' : fehlende ? 'ok' : 'gleich', info: fehlende && !unbekannt.length ? `${fehlende} ${fehlende === 1 ? 'Änderung läuft' : 'Änderungen laufen'} danach` : undefined });
+    vergleich.push({ was: t('meldungen.wiederherstellung.datenbank-stand'), damals: m.umgebung.datenbankStand ?? '–', heute: heute.migrationen.at(-1) ?? '–', urteil: unbekannt.length ? 'fehler' : fehlende ? 'ok' : 'gleich', info: fehlende && !unbekannt.length ? `${fehlende} ${t('meldungen.wiederherstellung.aenderungen-laufen', { anzahl: fehlende })} danach` : undefined });
     if (!aussen) {
       const pgDamals = m.umgebung.postgres.split('.')[0]; const pgHeute = heute.postgres.split('.')[0];
-      vergleich.push({ was: 'PostgreSQL', damals: m.umgebung.postgres, heute: heute.postgres, urteil: pgDamals === pgHeute ? 'gleich' : 'ok', info: pgDamals !== pgHeute ? 'andere Hauptversion – geht, die Daten werden neu eingelesen' : undefined });
+      vergleich.push({ was: 'PostgreSQL', damals: m.umgebung.postgres, heute: heute.postgres, urteil: pgDamals === pgHeute ? 'gleich' : 'ok', info: pgDamals !== pgHeute ? t('meldungen.wiederherstellung.andere-hauptversion-geht-die') : undefined });
       vergleich.push({ was: 'Architektur', damals: m.umgebung.architektur, heute: heute.architektur, urteil: m.umgebung.architektur === heute.architektur ? 'gleich' : 'ok' });
     }
-    vergleich.push({ was: 'Ablage-Id', damals: m.haushaltId, heute: heute.haushaltId, urteil: m.haushaltId === heute.haushaltId ? 'gleich' : 'hinweis', info: m.haushaltId !== heute.haushaltId ? 'abweichend – siehe Hinweis' : undefined });
+    vergleich.push({ was: t('meldungen.wiederherstellung.ablage-id'), damals: m.haushaltId, heute: heute.haushaltId, urteil: m.haushaltId === heute.haushaltId ? 'gleich' : 'hinweis', info: m.haushaltId !== heute.haushaltId ? t('meldungen.wiederherstellung.abweichend-siehe-hinweis') : undefined });
     if (m.haushaltId !== heute.haushaltId) {
       hinweise.push(this.q.mandantUebernehmen
-        ? `Die Sicherung gehört zur Ablage ${m.haushaltId}, diese Installation ist bisher auf ${heute.haushaltId} eingestellt. Ablago übernimmt die Id der Sicherung beim Wiederherstellen.`
-        : `Die Sicherung gehört zur Ablage ${m.haushaltId}, diese Installation ist auf ${heute.haushaltId} eingestellt – sonst sind die Daten nicht zu sehen.`);
+        ? t('meldungen.wiederherstellung.die-sicherung-gehoert-zur', { haushaltId: m.haushaltId, haushaltId2: heute.haushaltId })
+        : t('meldungen.wiederherstellung.die-sicherung-gehoert-zur-2', { haushaltId: m.haushaltId, haushaltId2: heute.haushaltId }));
     }
 
     let schluesselNoetig = !aussen?.mitEingabe && this.q.tresor.fingerabdruck !== m.verschluesselung.fingerabdruck;
     if (schluesselText !== undefined && schluesselText.trim()) {
       const k = schluesselAusText(schluesselText);
-      if (!k) probleme.push('Der eingegebene Schlüssel hat nicht die richtige Form: 43 Zeichen aus A–Z, a–z, 0–9, - und _ (Leerzeichen zählen nicht).');
-      else if (fingerabdruck(k) !== m.verschluesselung.fingerabdruck) probleme.push(`Der eingegebene Schlüssel hat den Fingerabdruck ${fingerabdruck(k)}; die Sicherung braucht ${m.verschluesselung.fingerabdruck}. Nimm das Notfallblatt zu dieser Sicherung.`);
+      if (!k) probleme.push(t('meldungen.wiederherstellung.der-eingegebene-schluessel-hat'));
+      else if (fingerabdruck(k) !== m.verschluesselung.fingerabdruck) probleme.push(t('meldungen.wiederherstellung.der-eingegebene-schluessel-hat-2', { fingerabdruck: fingerabdruck(k), fingerabdruck2: m.verschluesselung.fingerabdruck }));
       else schluesselNoetig = false;
     }
-    if (schluesselNoetig) hinweise.push(`Der Schlüssel dieser Installation passt nicht zur Sicherung (Fingerabdruck ${m.verschluesselung.fingerabdruck}). Gib den Schlüssel vom Notfallblatt ein.`);
+    if (schluesselNoetig) hinweise.push(t('meldungen.wiederherstellung.der-schluessel-dieser-installation', { fingerabdruck: m.verschluesselung.fingerabdruck }));
     try {
       const { kopf } = await liesKopf(join(this.q.sicherung.ordner, m.datei));
-      if (kopf.fingerabdruck !== m.verschluesselung.fingerabdruck) probleme.push('Sicherungsdatei und Metadaten passen nicht zusammen (verschiedene Schlüssel).');
+      if (kopf.fingerabdruck !== m.verschluesselung.fingerabdruck) probleme.push(t('meldungen.wiederherstellung.sicherungsdatei-und-metadaten-passen'));
     } catch (e) { probleme.push((e as Error).message); }
     return { name, meta: m, vergleich, probleme, hinweise, schluesselNoetig };
   }
@@ -204,7 +205,7 @@ export class Wiederherstellung {
   private async metaAusSicherung(e: Eintragsliste & { schlank: SchlankeMetadaten }, schluesselText?: string): Promise<{ meta: Metadaten; gelesen: boolean; mitEingabe: boolean; problem?: string }> {
     const s = e.schlank;
     if (s.datei !== `${e.name}.dms-sicherung` || !/^[0-9a-f]{64}$/.test(String(s.sha256)) || typeof s.verschluesselung?.fingerabdruck !== 'string') {
-      throw new Fachfehler(422, 'Die Metadaten-Datei (.json) dieser Sicherung ist ungültig oder verändert.');
+      throw new Fachfehler(422, t('meldungen.wiederherstellung.die-metadaten-datei-json'));
     }
     const meta: Metadaten = {
       format: 1, datei: s.datei, haushaltId: '', art: 'manuell', ausgeloestVon: '–', beginn: s.beginn, ende: s.beginn, dauerSekunden: 0,
@@ -216,9 +217,9 @@ export class Wiederherstellung {
     };
     const text = schluesselText?.trim() ? schluesselText : null;
     const k = text ? schluesselAusText(text) : this.q.tresor.fingerabdruck === meta.verschluesselung.fingerabdruck ? schluesselAusText(this.q.tresor.alsText() ?? '') : null;
-    if (text && !k) return { meta, gelesen: false, mitEingabe: false, problem: 'Der eingegebene Schlüssel hat nicht die richtige Form: 43 Zeichen aus A–Z, a–z, 0–9, - und _ (Leerzeichen zählen nicht).' };
+    if (text && !k) return { meta, gelesen: false, mitEingabe: false, problem: t('meldungen.wiederherstellung.der-eingegebene-schluessel-hat') };
     if (!k) return { meta, gelesen: false, mitEingabe: false };
-    if (fingerabdruck(k) !== meta.verschluesselung.fingerabdruck) return { meta, gelesen: false, mitEingabe: false, problem: `Der eingegebene Schlüssel hat den Fingerabdruck ${fingerabdruck(k)}; die Sicherung braucht ${meta.verschluesselung.fingerabdruck}. Nimm das Notfallblatt zu dieser Sicherung.` };
+    if (fingerabdruck(k) !== meta.verschluesselung.fingerabdruck) return { meta, gelesen: false, mitEingabe: false, problem: t('meldungen.wiederherstellung.der-eingegebene-schluessel-hat-2', { fingerabdruck: fingerabdruck(k), fingerabdruck2: meta.verschluesselung.fingerabdruck }) };
     try {
       const it = liesSicherung(join(this.q.sicherung.ordner, s.datei), leiteAb(k, ZWECK))[Symbol.asyncIterator]();
       const erst = await it.next();
@@ -235,7 +236,7 @@ export class Wiederherstellung {
         gelesen: true, mitEingabe: !!text,
       };
     } catch (x) {
-      return { meta, gelesen: false, mitEingabe: false, problem: `Die Sicherung lässt sich mit diesem Schlüssel nicht lesen: ${(x as Error).message}` };
+      return { meta, gelesen: false, mitEingabe: false, problem: t('meldungen.wiederherstellung.die-sicherung-laesst-sich', { message: (x as Error).message }) };
     }
   }
 
@@ -243,8 +244,8 @@ export class Wiederherstellung {
     const eigen = this.q.tresor.alsText();
     const text = schluesselText?.trim() ? schluesselText : this.q.tresor.fingerabdruck === m.verschluesselung.fingerabdruck ? eigen : null;
     const k = text ? schluesselAusText(text) : null;
-    if (!k) throw new Fachfehler(422, 'Bitte den Schlüssel vom Notfallblatt eingeben.');
-    if (fingerabdruck(k) !== m.verschluesselung.fingerabdruck) throw new Fachfehler(422, `Der Schlüssel passt nicht zur Sicherung (erwartet ${m.verschluesselung.fingerabdruck}).`);
+    if (!k) throw new Fachfehler(422, t('meldungen.wiederherstellung.bitte-den-schluessel-vom'));
+    if (fingerabdruck(k) !== m.verschluesselung.fingerabdruck) throw new Fachfehler(422, t('meldungen.wiederherstellung.der-schluessel-passt-nicht', { fingerabdruck: m.verschluesselung.fingerabdruck }));
     return k;
   }
 
@@ -261,13 +262,13 @@ export class Wiederherstellung {
     const text = typeof e.schluessel === 'string' ? e.schluessel : undefined;
     const a = await this.abgleich(name, text);
     if (a.probleme.length) throw new Fachfehler(422, a.probleme.join(' '));
-    if (art === 'laufend' && e.bestaetigt !== true) throw new Fachfehler(422, 'Bitte bestätigen, dass der jetzige Stand ersetzt wird.');
+    if (art === 'laufend' && e.bestaetigt !== true) throw new Fachfehler(422, t('meldungen.wiederherstellung.bitte-bestaetigen-dass-der'));
     const k = this.schluessel(a.meta, text);
     await this.pruefePlatz(a.meta);
-    const von = admin?.email ?? 'Einrichtung (frisches System)';
+    const von = admin?.email ?? t('meldungen.wiederherstellung.einrichtung-frisches-system');
     const lauf = this.neuerLauf('wiederherstellung', name, von, [
-      ...(art === 'laufend' ? ['Sicherung des jetzigen Stands'] : []),
-      'Prüfsumme der Datei', 'Entschlüsseln und Einspielen', 'Prüfwort', 'Anzahl Mappen, Dokumente, Benutzer', 'Auf den heutigen Stand bringen', ERWEITERUNGEN_SCHRITT, 'Dateien übernehmen', 'Schlüsseldatei', 'Umschalten', 'Neustart',
+      ...(art === 'laufend' ? [t('meldungen.wiederherstellung.sicherung-des-jetzigen-stands')] : []),
+      t('meldungen.wiederherstellung.pruefsumme-der-datei'), t('meldungen.wiederherstellung.entschluesseln-und-einspielen'), 'Prüfwort', t('meldungen.wiederherstellung.anzahl-mappen-dokumente-benutzer'), t('meldungen.wiederherstellung.auf-den-heutigen-stand'), ERWEITERUNGEN_SCHRITT, t('meldungen.wiederherstellung.dateien-uebernehmen'), 'Schlüsseldatei', 'Umschalten', 'Neustart',
     ]);
     log.warn('Wiederherstellung begonnen', { sicherung: name, von, art });
     void this.fuehreAus(lauf, a, k, art).catch(() => {}).finally(() => { this.belegt = false; });
@@ -283,14 +284,14 @@ export class Wiederherstellung {
   private async starteProbeBelegt(name: string | null, von: string): Promise<{ lauf: Wiederherstellungslauf; fertig: Promise<boolean> }> {
     const liste = (await this.q.sicherung.liste()).filter((x) => x.meta);
     const ziel = name ? liste.find((x) => x.name === name) : liste[0];
-    if (!ziel) throw new Fachfehler(404, name ? 'Diese Sicherung gibt es nicht (mehr).' : 'Es gibt noch keine Sicherung zum Prüfen.');
+    if (!ziel) throw new Fachfehler(404, name ? t('meldungen.wiederherstellung.diese-sicherung-gibt-es-2') : t('meldungen.wiederherstellung.es-gibt-noch-keine'));
     const m = ziel.meta!;
     const k = this.q.tresor.fingerabdruck === m.verschluesselung.fingerabdruck ? schluesselAusText(this.q.tresor.alsText() ?? '') : null;
-    const lauf = this.neuerLauf('probe', ziel.name, von, ['Prüfsumme der Datei', 'Entschlüsseln und Einspielen', 'Prüfwort', 'Anzahl Mappen, Dokumente, Benutzer', 'Auf den heutigen Stand bringen', ERWEITERUNGEN_SCHRITT, 'Aufräumen']);
+    const lauf = this.neuerLauf('probe', ziel.name, von, [t('meldungen.wiederherstellung.pruefsumme-der-datei'), t('meldungen.wiederherstellung.entschluesseln-und-einspielen'), 'Prüfwort', t('meldungen.wiederherstellung.anzahl-mappen-dokumente-benutzer'), t('meldungen.wiederherstellung.auf-den-heutigen-stand'), ERWEITERUNGEN_SCHRITT, 'Aufräumen']);
     log.info('Probe-Wiederherstellung begonnen', { sicherung: ziel.name, von });
     const fertig = (async () => {
       if (!k) {
-        this.fehlschlag(lauf, 'Prüfsumme der Datei', `Die Sicherung braucht den Schlüssel ${m.verschluesselung.fingerabdruck}; dieser Installation hat ${this.q.tresor.fingerabdruck ?? 'keinen'}.`);
+        this.fehlschlag(lauf, t('meldungen.wiederherstellung.pruefsumme-der-datei'), t('meldungen.wiederherstellung.die-sicherung-braucht-den', { fingerabdruck: m.verschluesselung.fingerabdruck, wert: this.q.tresor.fingerabdruck ?? 'keinen' }));
         await this.merkeProbe(ziel.name, false, lauf.fehler!);
         return false;
       }
@@ -321,7 +322,7 @@ export class Wiederherstellung {
       const f = await statfs(this.q.dateiWurzel);
       const frei = f.bavail * f.bsize;
       if (frei < m.groessen.dateienBytes * 1.05 + 50 * 1024 * 1024) {
-        throw new Fachfehler(507, `Zu wenig Platz für die Dateien der Sicherung: ${(frei / 1024 ** 3).toFixed(1).replace('.', ',')} GB frei, gebraucht etwa ${(m.groessen.dateienBytes / 1024 ** 3).toFixed(1).replace('.', ',')} GB.`);
+        throw new Fachfehler(507, t('meldungen.wiederherstellung.zu-wenig-platz-fuer', { replace: (frei / 1024 ** 3).toFixed(1).replace('.', ','), replace2: (m.groessen.dateienBytes / 1024 ** 3).toFixed(1).replace('.', ',') }));
       }
     } catch (e) { if (e instanceof Fachfehler) throw e; }
   }
@@ -345,23 +346,23 @@ export class Wiederherstellung {
         // Ohne (passenden) Schlüssel lässt sich der jetzige Stand nicht sichern – z. B. wenn er verloren ist.
         // Dann bleibt das alte Schema nach dem Umschalten noch eine Weile in der Datenbank.
         behalten = true;
-        this.schritt(lauf, 'Sicherung des jetzigen Stands', 'hinweis', `nicht möglich: Diese Installation hat keinen passenden Schlüssel. Der bisherige Stand bleibt ${BEHALTEN_TAGE} Tage in der Datenbank.`);
+        this.schritt(lauf, t('meldungen.wiederherstellung.sicherung-des-jetzigen-stands'), 'hinweis', t('meldungen.wiederherstellung.nicht-moeglich-diese-installation', { BEHALTEN_TAGE }));
       } else if (art === 'laufend') {
-        schritt('Sicherung des jetzigen Stands');
+        schritt(t('meldungen.wiederherstellung.sicherung-des-jetzigen-stands'));
         const { fertig } = await this.q.sicherung.starte('vor-wiederherstellung', lauf.von);
         const vorher = await fertig;
         if (!vorher) throw new Error(`Die Sicherung des jetzigen Stands ist fehlgeschlagen: ${this.q.sicherung.aktuellerLauf()?.fehler ?? 'unbekannt'}. Ohne sie wird nichts ersetzt.`);
         ok(vorher.datei);
       }
 
-      schritt('Prüfsumme der Datei');
+      schritt(t('meldungen.wiederherstellung.pruefsumme-der-datei'));
       const pfad = join(this.q.sicherung.ordner, m.datei);
       lauf.gesamt = (await stat(pfad)).size;
       const sha = await sha256Von(pfad, (n) => { lauf.bytes = n; });
       if (sha !== m.sha256) throw new Error('Die Prüfsumme der Sicherungsdatei stimmt nicht mit den Metadaten überein – die Datei ist verändert oder beschädigt.');
       ok('unverändert');
 
-      schritt('Entschlüsseln und Einspielen');
+      schritt(t('meldungen.wiederherstellung.entschluesseln-und-einspielen'));
       await this.q.sql.unsafe(`CREATE SCHEMA ${bezeichner(schema)}`);
       neu = postgres(this.q.url, { max: 1, onnotice: () => {}, infer: true, connection: { search_path: schema } });
       await neu.unsafe(`SET search_path TO ${bezeichner(schema)}`);
@@ -391,10 +392,10 @@ export class Wiederherstellung {
           if (e.kopf.haushaltId !== m.haushaltId) throw new Error('Inhalt und Metadaten der Sicherung passen nicht zusammen (Ablage-Id).');
           zaehlerSicherung = (e.kopf.zaehler as Record<string, number>) ?? null;
         } else if (e.art === 'T') {
-          const t = { name: String(e.kopf.tabelle), spalten: (e.kopf.spalten as string[]).map(String) } as Tabelle;
-          if (OHNE_INHALT.has(t.name)) { for await (const _ of e.daten) { /* übergehen */ } continue; }
-          this.schritt(lauf, 'Entschlüsseln und Einspielen', 'laeuft', `Tabelle ${t.name}`);
-          w = await neu.unsafe(`COPY ${bezeichner(schema)}.${bezeichner(t.name)} (${t.spalten.map(bezeichner).join(', ')}) FROM STDIN`).writable();
+          const tabelle2 = { name: String(e.kopf.tabelle), spalten: (e.kopf.spalten as string[]).map(String) } as Tabelle;
+          if (OHNE_INHALT.has(tabelle2.name)) { for await (const _ of e.daten) { /* übergehen */ } continue; }
+          this.schritt(lauf, t('meldungen.wiederherstellung.entschluesseln-und-einspielen'), 'laeuft', t('meldungen.wiederherstellung.tabelle', { name: tabelle2.name }));
+          w = await neu.unsafe(`COPY ${bezeichner(schema)}.${bezeichner(tabelle2.name)} (${tabelle2.spalten.map(bezeichner).join(', ')}) FROM STDIN`).writable();
           for await (const c of e.daten) if (!w.write(c)) await once(w, 'drain');
           w.end();
           await once(w, 'finish');
@@ -462,7 +463,7 @@ export class Wiederherstellung {
         log.warn('Archivfassung in der Sicherung unvollständig – nicht übernommen', { datei: sha });
         if (!probe) for (const endung of ['json', 'fassung']) await rm(join(staging, m.haushaltId, 'archivfassungen', sha.slice(0, 2), `${sha}.${endung}`), { force: true });
       }
-      ok(`${tabellen} Tabellen, ${dateien} Dateien${fassungen ? `, ${fassungen === 1 ? 'eine umgewandelte Fassung' : `${fassungen} umgewandelte Fassungen`}` : ''}${fassungenOhne ? ` (${fassungenOhne} unvollständig, nicht übernommen)` : ''}${archiv ? `, ${archiv === 1 ? 'eine Archivfassung (PDF/A)' : `${archiv} Archivfassungen (PDF/A)`}` : ''}${archivOhne ? ` (${archivOhne} unvollständig, nicht übernommen)` : ''}${stichprobe ? `, Prüfwerte von ${stichprobe} Dateien nachgerechnet` : ''}`);
+      ok(t('meldungen.wiederherstellung.tabellen-dateien', { tabellen, dateien, wert: fassungen ? t('meldungen.wiederherstellung.umgewandelte-fassungen', { anzahl: fassungen }) : '', wert2: fassungenOhne ? t('meldungen.wiederherstellung.unvollstaendig-nicht-uebernommen', { fassungenOhne }) : '', wert3: archiv ? t('meldungen.wiederherstellung.archivfassungen-pdf-a', { anzahl: archiv }) : '', wert4: archivOhne ? t('meldungen.wiederherstellung.unvollstaendig-nicht-uebernommen-2', { archivOhne }) : '', wert5: stichprobe ? t('meldungen.wiederherstellung.pruefwerte-von-dateien-nachgerechnet', { stichprobe }) : '' }));
       // Zähler der Sequenzen nachziehen.
       for (const r of await neu`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = ${schema} AND column_default LIKE 'nextval(%'`) {
         const t = `${bezeichner(schema)}.${bezeichner(r.table_name as string)}`;
@@ -476,13 +477,13 @@ export class Wiederherstellung {
         }
       } catch { /* nur Leistung: der Autovacuum-Dienst holt es später nach */ }
 
-      schritt('Prüfwort');
+      schritt(t('meldungen.wiederherstellung.pruefwort'));
       const [pw] = await neu`SELECT wert FROM einstellungen WHERE schluessel = 'pruefwort' LIMIT 1`;
-      if (!pw) this.schritt(lauf, 'Prüfwort', 'hinweis', 'Die Sicherung enthält noch kein Prüfwort (älter als 0.20).');
+      if (!pw) this.schritt(lauf, t('meldungen.wiederherstellung.pruefwort'), 'hinweis', t('meldungen.wiederherstellung.die-sicherung-enthaelt-noch'));
       else if (!istPruefwort(entschluesseleMit(k, String(pw.wert)))) throw new Error('Das Prüfwort lässt sich mit diesem Schlüssel nicht lesen – der Schlüssel passt nicht zu den Daten.');
-      else ok('mit dem Schlüssel lesbar');
+      else ok(t('meldungen.wiederherstellung.mit-dem-schluessel-lesbar'));
 
-      schritt('Anzahl Mappen, Dokumente, Benutzer');
+      schritt(t('meldungen.wiederherstellung.anzahl-mappen-dokumente-benutzer'));
       const n = async (t: string) => Number((await neu!.unsafe(`SELECT count(*)::int AS n FROM ${bezeichner(schema)}.${bezeichner(t)}`))[0].n);
       const ist = { mappen: await n('mappen'), dokumente: await n('dokumente'), benutzer: await n('benutzer') };
       const soll = zaehlerSicherung ?? m.anzahl;
@@ -491,13 +492,13 @@ export class Wiederherstellung {
       // Kopie außer Haus mit schlanken Metadaten (#585): Anzahl aus dem Endeintrag der Sicherung (dateienEnde).
       const dateienSoll = m.anzahl.dateien >= 0 ? m.anzahl.dateien : dateienEnde;
       if (dateienSoll !== dateien) throw new Error(`Die Anzahl der Dateien stimmt nicht: ${dateien} statt ${dateienSoll ?? 'unbekannt'}.`);
-      ok(`${ist.mappen} Mappen, ${ist.dokumente} Dokumente, ${ist.benutzer} Benutzer`);
+      ok(t('meldungen.wiederherstellung.mappen-dokumente-benutzer', { mappen: ist.mappen, dokumente: ist.dokumente, benutzer: ist.benutzer }));
 
-      schritt('Auf den heutigen Stand bringen');
+      schritt(t('meldungen.wiederherstellung.auf-den-heutigen-stand'));
       const vorher = m.migrationen.length;
       await migriere(neu, this.q.migrationen, () => {});
       const nachher = Number((await neu`SELECT count(*)::int AS n FROM schema_migrationen`)[0].n);
-      ok(nachher > vorher ? `${nachher - vorher} Änderungen ausgeführt` : 'schon aktuell');
+      ok(nachher > vorher ? t('meldungen.wiederherstellung.aenderungen-ausgefuehrt', { wert: nachher - vorher }) : t('meldungen.wiederherstellung.schon-aktuell'));
       // Automatisierungen (#674): nach einer Wiederherstellung vorhanden, aber angehalten, bis ein Admin sie einschaltet.
       if (!probe) await neu`UPDATE automatisierungen SET angehalten = ${neu.json({ grund: 'wiederherstellung', text: 'Angehalten nach einer Wiederherstellung. Prüfe die Automatisierung und schalte sie wieder ein.', zeit: new Date().toISOString() })}
         WHERE aktiv AND angehalten IS NULL`;
@@ -510,17 +511,17 @@ export class Wiederherstellung {
       const indizes = mitTrgm ? await trigrammIndizes(neu, schema) : [];
       const fehlt = [
         ...problemeAus(erweiterungen).map(beschreibe),
-        ...(mitTrgm ? TRIGRAMM_INDEXNAMEN.filter((n) => !indizes.includes(n)).map((n) => `Trigramm-Index ${n} fehlt`) : []),
+        ...(mitTrgm ? TRIGRAMM_INDEXNAMEN.filter((n) => !indizes.includes(n)).map((n) => t('meldungen.wiederherstellung.trigramm-index-fehlt', { n })) : []),
       ];
       if (fehlt.length) {
         const text = `${fehlt.join('; ')}. Die Daten sind vollständig; Abhilfe steht unter Werkbank → Systemzustand.`;
         this.schritt(lauf, ERWEITERUNGEN_SCHRITT, 'hinweis', text);
-        a.hinweise.push(`Erweiterungen der Datenbank: ${text}`);
+        a.hinweise.push(t('meldungen.wiederherstellung.erweiterungen-der-datenbank-2', { text }));
         log.warn('Erweiterungen der Datenbank unvollständig', { probe, fehlt: fehlt.join('; ') });
-      } else ok('pg_trgm und unaccent vorhanden, Trigramm-Indizes angelegt');
+      } else ok(t('meldungen.wiederherstellung.pg-trgm-und-unaccent'));
 
       if (probe) {
-        schritt('Aufräumen');
+        schritt(t('meldungen.wiederherstellung.aufraeumen'));
         await neu.end(); neu = null;
         await this.q.sql.unsafe(`DROP SCHEMA ${bezeichner(schema)} CASCADE`);
         ok();
@@ -542,7 +543,7 @@ export class Wiederherstellung {
       const [{ da }] = await neu<{ da: string | null }[]>`SELECT to_regclass('ereignisse')::text AS da`;
       if (da) await neu`UPDATE ereignisse SET verteilt = now() WHERE verteilt IS NULL`;
 
-      schritt('Dateien übernehmen');
+      schritt(t('meldungen.wiederherstellung.dateien-uebernehmen'));
       let uebernommen = 0; let schonDa = 0;
       for (const d of await readdir(staging, { recursive: true, withFileTypes: true })) {
         if (!d.isFile()) continue;
@@ -560,10 +561,10 @@ export class Wiederherstellung {
         uebernommen++;
       }
       await rm(staging, { recursive: true, force: true });
-      ok(`${uebernommen} neu, ${schonDa} schon vorhanden`);
+      ok(t('meldungen.wiederherstellung.neu-schon-vorhanden', { uebernommen, schonDa }));
 
       // Die Schlüsseldatei erst ganz zum Schluss – und bei jedem späteren Fehler wieder zurück.
-      schritt('Schlüsseldatei');
+      schritt(t('meldungen.wiederherstellung.schluesseldatei'));
       const datei = this.q.tresor.datei;
       const schluesselText = k.toString('base64url');
       const vorhanden = await readFile(datei, 'utf8').then((t) => t.trim(), () => null);
@@ -573,12 +574,12 @@ export class Wiederherstellung {
         schluesselZurueck = async () => { await rm(datei, { force: true }); if (alteDatei) await rename(alteDatei, datei); };
         await mkdir(dirname(datei), { recursive: true, mode: 0o700 });
         await writeFile(datei, `${schluesselText}\n`, { mode: 0o600, flag: 'wx' });
-        ok(alteDatei ? `ersetzt; die bisherige liegt daneben (${alteDatei.split('/').pop()})` : 'angelegt');
-      } else ok('passt schon');
+        ok(alteDatei ? t('meldungen.wiederherstellung.ersetzt-die-bisherige-liegt', { pop: String(alteDatei.split('/').pop()) }) : 'angelegt');
+      } else ok(t('meldungen.wiederherstellung.passt-schon'));
 
-      schritt('Umschalten');
+      schritt(t('meldungen.wiederherstellung.umschalten'));
       const altSchema = `${behalten ? BEHALTEN : ALT}${stempel}`;
-      if (behalten) abschluss.hinweise.push(`Der bisherige Stand liegt noch ${BEHALTEN_TAGE} Tage als Schema ${altSchema} in der Datenbank (es gab vorher keine Sicherung).`);
+      if (behalten) abschluss.hinweise.push(t('meldungen.wiederherstellung.der-bisherige-stand-liegt', { BEHALTEN_TAGE, altSchema }));
       abschluss.schritte = lauf.schritte.map((s) => ({ ...s, ...(s.name === 'Umschalten' ? { status: 'ok' as const } : {}) }));
       await setze('wiederherstellung_abschluss', abschluss);
       await neu.end(); neu = null;
@@ -593,7 +594,7 @@ export class Wiederherstellung {
         log.warn('Ablage-Id der Sicherung übernommen', { mandant: m.haushaltId });
       }
       ok();
-      this.schritt(lauf, 'Neustart', 'laeuft', 'Ablago startet neu …');
+      this.schritt(lauf, t('meldungen.wiederherstellung.neustart'), 'laeuft', t('meldungen.wiederherstellung.ablago-startet-neu'));
       lauf.status = 'neustart';
       log.warn('Wiederherstellung abgeschlossen, Ablago startet neu', { sicherung: lauf.sicherung, von: lauf.von, mappen: ist.mappen, dateien });
       setTimeout(() => this.q.neustart(), 1500).unref?.();
@@ -625,7 +626,7 @@ export class Wiederherstellung {
       const vorfall = `probe:${eintrag.am}`;
       if ((await e.lies('sicherung_probe_gemeldet')) !== vorfall) {
         await e.schreibe('sicherung_probe_gemeldet', vorfall);
-        try { await this.q.anAdmins?.('Ablago: Probe-Wiederherstellung fehlgeschlagen', `Die probeweise Wiederherstellung der Sicherung ${name} ist fehlgeschlagen:\n\n${info}\n\nIm Ernstfall ließe sich diese Sicherung womöglich nicht einspielen. Details stehen in der Werkbank unter „Sicherung“.`); }
+        try { await this.q.anAdmins?.(t('meldungen.wiederherstellung.ablago-probe-wiederherstellung'), t('meldungen.wiederherstellung.die-probeweise-wiederherstellung-der', { name, info })); }
         catch (x) { log.warn('Mail zur Probe nicht verschickt', { fehler: (x as Error).message }); }
       }
     }

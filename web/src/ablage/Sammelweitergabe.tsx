@@ -3,6 +3,7 @@ import { api } from '../api';
 import { useDaten } from '../daten';
 import { rueckfrage } from '../rueckfrage';
 import { BenutzerWahl } from './Aufgaben';
+import { t, tn } from '../sprache';
 
 /**
  * Mehrere Aufgaben auf einmal weitergeben (#415, #419) – eine Komponente für Werkbank → Aufgaben und
@@ -25,7 +26,7 @@ export function useSammelauswahl(angezeigt: string[]) {
 }
 export type Sammelauswahl = ReturnType<typeof useSammelauswahl>;
 
-const aufgaben = (n: number) => (n === 1 ? 'eine Aufgabe' : `${n} Aufgaben`);
+const aufgaben = (n: number) => (t('ablage.sammelweitergabe.aufgaben', { anzahl: n }));
 
 /** Kästchen „alle angezeigten auswählen“ mit Anzeige „12 ausgewählt“. */
 export function SammelKopf({ s }: { s: Sammelauswahl }) {
@@ -36,14 +37,14 @@ export function SammelKopf({ s }: { s: Sammelauswahl }) {
       <input type="checkbox" className="wahlhaken" checked={n > 0 && n === gesamt}
         ref={(el) => { if (el) el.indeterminate = n > 0 && n < gesamt; }}
         onChange={(e) => s.alle(e.target.checked)} />
-      <span>Alle angezeigten auswählen{n > 0 && <span className="leise"> · {n} ausgewählt</span>}</span>
+      <span>{tn('ablage.sammelweitergabe.alle-angezeigten-auswaehlen', { wert: n > 0 && <span className="leise"> {' '}{t('ablage.sammelweitergabe.ausgewaehlt', { n })}</span> })}</span>
     </label>
   );
 }
 
 /** Kästchen je Aufgabe. */
 export function SammelHaken({ s, id, titel }: { s: Sammelauswahl; id: string; titel: string }) {
-  return <input type="checkbox" className="wahlhaken" checked={s.ist(id)} aria-label={`${titel} auswählen`} onChange={(e) => s.umschalten(id, e.target.checked)} />;
+  return <input type="checkbox" className="wahlhaken" checked={s.ist(id)} aria-label={t('ablage.sammelweitergabe.auswaehlen', { titel })} onChange={(e) => s.umschalten(id, e.target.checked)} />;
 }
 
 /**
@@ -77,19 +78,19 @@ export function SammelLeiste({ s, titel, vorschlag, ohne, erledigen, nachher }: 
       const r = await f(ids);
       // Was ging, fällt aus der Auswahl; was nicht ging, bleibt gewählt – für einen zweiten Versuch mit anderem Ziel.
       s.ohne(r.ok);
-      setMeldung({ text: r.ok.length ? gut(r.ok.length) : 'Nichts geändert.', nicht: r.nicht });
+      setMeldung({ text: r.ok.length ? gut(r.ok.length) : t('ablage.sammelweitergabe.nichts-geaendert'), nicht: r.nicht });
       await nachher();
     } catch (e) { setMeldung({ text: (e as Error).message, nicht: [], fehler: true }); }
     finally { setSendet(false); }
   }
 
   const weitergeben = () => void tu(
-    { titel: `${aufgaben(n)} an ${name} weitergeben?`, text: `Jede Weitergabe steht in der Historie ihrer Mappe. ${name} bekommt dazu eine Sammelbenachrichtigung unter „Zu erledigen“. Geht eine Aufgabe nicht – etwa weil ${name} die Mappe nicht lesen darf –, bleibt sie, wo sie ist.`, ja: 'Weitergeben' },
+    { titel: t('ablage.sammelweitergabe.an-weitergeben', { aufgaben: aufgaben(n), name }), text: t('ablage.sammelweitergabe.jede-weitergabe-steht-in', { name }), ja: t('ablage.sammelweitergabe.weitergeben') },
     async (ids) => { const r = await api.aufgabenWeitergeben(ids, ziel); return { ok: r.weitergegeben, nicht: r.nicht }; },
-    (k) => `${aufgaben(k)} an ${name} weitergegeben.`,
+    (k) => t('ablage.sammelweitergabe.an-weitergegeben', { aufgaben: aufgaben(k), name }),
   );
   const erledigt = () => void tu(
-    { titel: `${aufgaben(n)} als erledigt markieren?`, text: '„Passt nicht“-Aufgaben erledigen sich erst, wenn die Mappe wieder passt – sie bleiben offen.', ja: 'Erledigt' },
+    { titel: t('ablage.sammelweitergabe.als-erledigt-markieren', { aufgaben: aufgaben(n) }), text: t('ablage.sammelweitergabe.passt-nicht-aufgaben-erledigen'), ja: t('ablage.sammelweitergabe.erledigt') },
     async (ids) => { const r = await api.aufgabenErledigen(ids); return { ok: r.erledigt, nicht: r.nicht }; },
     (k) => `${aufgaben(k)} erledigt.`,
   );
@@ -97,21 +98,21 @@ export function SammelLeiste({ s, titel, vorschlag, ohne, erledigen, nachher }: 
   return (
     <>
       {n > 0 && (
-        <div className="aktionsleiste sammel-leiste" role="region" aria-label="Auswahl">
-          <span className="klein"><strong>{n}</strong> ausgewählt · <button type="button" className="textknopf klein" onClick={s.leeren}>Auswahl aufheben</button></span>
+        <div className="aktionsleiste sammel-leiste" role="region" aria-label={t('ablage.sammelweitergabe.auswahl')}>
+          <span className="klein">{tn('ablage.sammelweitergabe.ausgewaehlt-2', { b: <strong>{n}</strong> })}{' '}<button type="button" className="textknopf klein" onClick={s.leeren}>{t('ablage.sammelweitergabe.auswahl-aufheben')}</button></span>
           <span className="sammel-ziel">
-            <span className="klein">Ausgewählte weitergeben an</span>
-            <BenutzerWahl label="Ausgewählte weitergeben an" wert={ziel} setze={setZiel} ohne={ohne} />
-            <button type="button" className="knopf klein primaer" disabled={!ziel || sendet} onClick={weitergeben}>Weitergeben</button>
+            <span className="klein">{t('ablage.sammelweitergabe.ausgewaehlte-weitergeben-an')}</span>
+            <BenutzerWahl label={t('ablage.sammelweitergabe.ausgewaehlte-weitergeben-an')} wert={ziel} setze={setZiel} ohne={ohne} />
+            <button type="button" className="knopf klein primaer" disabled={!ziel || sendet} onClick={weitergeben}>{t('ablage.sammelweitergabe.weitergeben')}</button>
           </span>
-          {erledigen && <button type="button" className="knopf klein" disabled={sendet} onClick={erledigt}>Als erledigt markieren</button>}
+          {erledigen && <button type="button" className="knopf klein" disabled={sendet} onClick={erledigt}>{t('ablage.sammelweitergabe.als-erledigt-markieren-2')}</button>}
         </div>
       )}
       {meldung && (
         <div className={`hinweis ${meldung.fehler ? 'schlecht' : meldung.nicht.length ? 'warn' : 'info'}`} role="status">
-          <p>{meldung.text}{meldung.nicht.length > 0 && ` ${meldung.nicht.length === 1 ? 'Eine ging' : `${meldung.nicht.length} gingen`} nicht:`}</p>
-          {meldung.nicht.length > 0 && <ul className="klein">{meldung.nicht.slice(0, 50).map((x) => <li key={x.id}>{titel(x.id)}: {x.grund}</li>)}{meldung.nicht.length > 50 && <li>… und {meldung.nicht.length - 50} weitere</li>}</ul>}
-          <button type="button" className="textknopf klein" onClick={() => setMeldung(undefined)}>Ausblenden</button>
+          <p>{meldung.text}{meldung.nicht.length > 0 && t('ablage.sammelweitergabe.gingen-nicht', { anzahl: meldung.nicht.length })}</p>
+          {meldung.nicht.length > 0 && <ul className="klein">{meldung.nicht.slice(0, 50).map((x) => <li key={x.id}>{titel(x.id)}: {x.grund}</li>)}{meldung.nicht.length > 50 && <li>{t('ablage.sammelweitergabe.und-weitere', { wert: meldung.nicht.length - 50 })}</li>}</ul>}
+          <button type="button" className="textknopf klein" onClick={() => setMeldung(undefined)}>{t('ablage.sammelweitergabe.ausblenden')}</button>
         </div>
       )}
     </>

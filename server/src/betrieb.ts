@@ -19,7 +19,7 @@ import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 
 const log = protokoll.modul('mail');
 
-export const VERBINDUNGEN = { starttls: 'STARTTLS (meist Port 587)', ssl: 'SSL/TLS (meist Port 465)', keine: 'unverschlüsselt (nur im Heimnetz)' } as const;
+export const VERBINDUNGEN = { starttls: t('meldungen.betrieb.starttls-meist-port-587'), ssl: t('meldungen.betrieb.ssl-tls-meist-port'), keine: t('meldungen.betrieb.unverschluesselt-nur-im-heimnetz') } as const;
 export type Verbindung = keyof typeof VERBINDUNGEN;
 
 export interface MailEinstellungen {
@@ -66,7 +66,7 @@ export function pruefeAdresse(e: unknown): string {
   let u: URL;
   try { u = new URL(mitSchema); } catch { throw new Fachfehler(422, 'Bitte eine gültige Adresse angeben, z. B. http://nas.home.arpa:8080 oder https://dms.example.org.'); }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Fachfehler(422, 'Die Adresse muss mit http:// oder https:// beginnen.');
-  if (u.search || u.hash) throw new Fachfehler(422, 'Die Adresse darf keine Parameter (?…) oder Anker (#…) enthalten.');
+  if (u.search || u.hash) throw new Fachfehler(422, t('meldungen.betrieb.die-adresse-darf-keine'));
   return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, '')}`;
 }
 
@@ -100,10 +100,10 @@ function bereinige(e: unknown, alt: MailEinstellungen, verschluessele: (klartext
     if (m.verbindung === 'keine') fehler.push(t('werkbank.mail.oauth.verschluesselt'));
     if (!istEmail(m.benutzer)) fehler.push(t('werkbank.mail.oauth.benutzer'));
   }
-  if (!Number.isInteger(port) || port < 1 || port > 65535) fehler.push('Der Port muss zwischen 1 und 65535 liegen.');
-  if (m.host && !/^[a-z0-9.-]+$|^\[[0-9a-f:]+\]$/i.test(m.host)) fehler.push('Der Server ist kein gültiger Rechnername, z. B. smtp.example.org.');
-  if (m.absender && !istEmail(m.absender.replace(/^.*<([^>]+)>\s*$/, '$1'))) fehler.push('Der Absender ist keine gültige E-Mail-Adresse, z. B. dms@example.org oder „Ablago <dms@example.org>“.');
-  if (m.aktiv && !m.host) fehler.push('Zum Aktivieren braucht es einen Server.');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) fehler.push(t('meldungen.betrieb.der-port-muss-zwischen'));
+  if (m.host && !/^[a-z0-9.-]+$|^\[[0-9a-f:]+\]$/i.test(m.host)) fehler.push(t('meldungen.betrieb.der-server-ist-kein'));
+  if (m.absender && !istEmail(m.absender.replace(/^.*<([^>]+)>\s*$/, '$1'))) fehler.push(t('meldungen.betrieb.der-absender-ist-keine'));
+  if (m.aktiv && !m.host) fehler.push(t('meldungen.betrieb.zum-aktivieren-braucht-es'));
   if (fehler.length) throw new Fachfehler(422, fehler.join(' '));
   return m;
 }
@@ -180,12 +180,12 @@ export class Betrieb {
   /** Zugriffstoken für den Versand; erneuert vor Ablauf. */
   private async zugriff(m: MailEinstellungen): Promise<string> {
     if (!this.oauth || !m.anbieter) throw new Fachfehler(409, t('werkbank.mail.oauth.nicht-eingerichtet'));
-    return this.oauth.zugriffstoken({ id: VERSAND_OAUTH_ID, name: 'E-Mail-Versand', benutzer: m.benutzer, anbieter: m.anbieter });
+    return this.oauth.zugriffstoken({ id: VERSAND_OAUTH_ID, name: t('meldungen.betrieb.e-mail-versand'), benutzer: m.benutzer, anbieter: m.anbieter });
   }
 
   /** Neues Passwort verschlüsseln; ohne Schlüssel wird nichts gespeichert. */
   private verschluessele = (klartext: string): string => {
-    if (!this.tresor) throw new Fachfehler(409, 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt (Werkbank → Verschlüsselung).');
+    if (!this.tresor) throw new Fachfehler(409, t('meldungen.betrieb.passwoerter-lassen-sich-erst'));
     return this.tresor.verschluessele(klartext);
   };
 
@@ -199,8 +199,8 @@ export class Betrieb {
   private betroffen(): Betroffen[] {
     const p = this.mail.passwort;
     if (!p) return [];
-    if (!istVerschluesselt(p)) return [{ bereich: 'E-Mail und Adresse', was: 'Passwort des Mailservers', wo: 'liegt noch unverschlüsselt und wird verschlüsselt, sobald es einen Schlüssel gibt' }];
-    return this.tresor?.lesbar(p) ? [] : [{ bereich: 'E-Mail und Adresse', was: 'Passwort des Mailservers', wo: 'bitte in der Werkbank unter „E-Mail und Adresse“ neu eingeben' }];
+    if (!istVerschluesselt(p)) return [{ bereich: t('meldungen.betrieb.e-mail-und-adresse'), was: t('meldungen.betrieb.passwort-des-mailservers'), wo: t('meldungen.betrieb.liegt-noch-unverschluesselt-und') }];
+    return this.tresor?.lesbar(p) ? [] : [{ bereich: t('meldungen.betrieb.e-mail-und-adresse'), was: t('meldungen.betrieb.passwort-des-mailservers'), wo: t('meldungen.betrieb.bitte-in-der-werkbank') }];
   }
 
   /** Passwort aus älteren Ständen (Klartext) verschlüsseln, sobald es einen Schlüssel gibt. */
@@ -313,7 +313,7 @@ export class Betrieb {
   }
 
   /** Kurzangabe für die Technikübersicht. */
-  kurz() { return { mail: this.aktuellerMailer ? `über ${this.mail.host}${this.mail.anmeldung === 'oauth' ? ' (OAuth)' : ''}` : 'aus', adresse: this.adresse || '(nicht gepflegt – Adresse der Anfrage)' }; }
+  kurz() { return { mail: this.aktuellerMailer ? t('meldungen.betrieb.ueber', { host: this.mail.host, wert: this.mail.anmeldung === 'oauth' ? ' (OAuth)' : '' }) : 'aus', adresse: this.adresse || t('meldungen.betrieb.nicht-gepflegt-adresse-der') }; }
 
   /* ---------- für die Werkbank ---------- */
 
@@ -379,7 +379,7 @@ export class Betrieb {
     const x = (e ?? {}) as Record<string, unknown>;
     const eingegeben = typeof x.passwort === 'string' && x.passwort !== '' && x.passwortLoeschen !== true;
     const m = bereinige({ ...x, aktiv: false }, this.mail, (k) => k);
-    if (!m.host) throw new Fachfehler(422, 'Bitte zuerst den Server angeben.');
+    if (!m.host) throw new Fachfehler(422, t('meldungen.betrieb.bitte-zuerst-den-server'));
     if (m.anmeldung === 'oauth') {
       // Das Token nur mit der gespeicherten Anmeldung (gleicher Anbieter, gleiches Konto, Server des Anbieters).
       const g = this.mail;
@@ -402,7 +402,7 @@ export class Betrieb {
     try {
       await this.baue(m, passwort, zugriff).verify();
       log.info('Verbindung zum Mailserver geprüft', { server: m.host, ms: Date.now() - start });
-      return { ok: true, meldung: `Verbindung zu ${m.host}:${m.port} steht${m.benutzer ? `, Anmeldung als ${m.benutzer} erfolgreich` : ''} (${Date.now() - start} ms).` };
+      return { ok: true, meldung: t('meldungen.betrieb.verbindung-zu-steht-ms', { host: m.host, port: m.port, wert: m.benutzer ? t('meldungen.betrieb.anmeldung-als-erfolgreich', { benutzer: m.benutzer }) : '', wert2: Date.now() - start }) };
     } catch (f) {
       log.warn('Verbindung zum Mailserver fehlgeschlagen', { server: m.host, fehler: meldung(f, m.anmeldung) });
       return this.fehlschlag(f, m);
@@ -411,15 +411,15 @@ export class Betrieb {
 
   async sendeTestmail(e: unknown, an: unknown): Promise<MailProbe> {
     const ziel = typeof an === 'string' ? an.trim() : '';
-    if (!istEmail(ziel)) throw new Fachfehler(422, 'Bitte eine gültige E-Mail-Adresse für die Testmail angeben.');
+    if (!istEmail(ziel)) throw new Fachfehler(422, t('meldungen.betrieb.bitte-eine-gueltige-e'));
     const { m, passwort, zugriff } = await this.probe(e);
     try {
       await this.baue(m, passwort, zugriff).sendMail({
-        from: absenderVon(m), to: ziel, subject: 'Testmail von Ablago',
-        text: `Hallo,\n\ndiese Testmail kommt aus der Werkbank deines Ablago. Der E-Mail-Versand über ${m.host} funktioniert.\n`,
+        from: absenderVon(m), to: ziel, subject: t('meldungen.betrieb.testmail-von-ablago'),
+        text: t('meldungen.betrieb.hallo-diese-testmail-kommt', { host: m.host }),
       });
       log.info('Testmail verschickt', { an: ziel, server: m.host });
-      return { ok: true, meldung: `Testmail an ${ziel} verschickt. Sie sollte in wenigen Minuten ankommen (auch im Spam-Ordner nachsehen).` };
+      return { ok: true, meldung: t('meldungen.betrieb.testmail-an-verschickt-sie', { ziel }) };
     } catch (f) {
       log.warn('Testmail nicht verschickt', { an: ziel, server: m.host, fehler: meldung(f, m.anmeldung) });
       return this.fehlschlag(f, m);

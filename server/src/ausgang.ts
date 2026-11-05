@@ -48,6 +48,6 @@ export async function pruefeAlle(r: Ausgangsrechte, ausgang: Ausgang, ids: strin
   const ok = await mitnehmbar(r, ids);
   const nicht = ids.filter((id) => !ok.has(id));
   if (!nicht.length) return;
-  if (ids.length === 1 && !(await r.lesbar(ids)).has(ids[0])) throw new Fachfehler(404, 'Diese Mappe gibt es nicht oder du darfst sie nicht sehen.', { verborgen: true });
+  if (ids.length === 1 && !(await r.lesbar(ids)).has(ids[0])) throw new Fachfehler(404, t('meldungen.ausgang.diese-mappe-gibt-es'), { verborgen: true });
   throw verboten(ausgang, ids.length > 1 ? nicht : [], ids.length);
 }

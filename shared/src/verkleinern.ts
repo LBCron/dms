@@ -1,11 +1,13 @@
+import { t } from './texte';
+import { gebietsschema } from './sprache';
 /**
  * PDF verkleinern (#393): Stufen und Texte – gemeinsam für Server und Oberfläche.
  * Das Rechnen selbst steht in server/src/verkleinern.ts.
  */
 export const STUFEN = {
-  bildschirm: { name: 'Bildschirm', dpi: 100, qualitaet: 55, text: 'zum Lesen am Bildschirm und zum Verschicken' },
-  standard: { name: 'Standard', dpi: 150, qualitaet: 70, text: 'gut lesbar und ordentlich druckbar' },
-  druck: { name: 'Druck', dpi: 300, qualitaet: 85, text: 'für den Druck – nur sehr fein gescannte Seiten werden kleiner' },
+  bildschirm: { name: 'Bildschirm', dpi: 100, qualitaet: 55, text: t('gemeinsam.verkleinern.zum-lesen-am-bildschirm') },
+  standard: { name: 'Standard', dpi: 150, qualitaet: 70, text: t('gemeinsam.verkleinern.gut-lesbar-und-ordentlich') },
+  druck: { name: 'Druck', dpi: 300, qualitaet: 85, text: t('gemeinsam.verkleinern.fuer-den-druck-nur') },
 } as const;
 export type Stufe = keyof typeof STUFEN;
 export const STUFEN_LISTE = Object.keys(STUFEN) as Stufe[];
@@ -17,11 +19,11 @@ export const istStufe = (s: unknown): s is Stufe => typeof s === 'string' && Obj
 
 /** „18,4 MB“ bzw. „640 KB“ */
 export function mb(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString('de-DE')} KB`;
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString(gebietsschema())} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
 }
 
 /** „von 18,4 MB auf 2,1 MB (−89 %)“ */
 export function ergebnisText(vorher: number, nachher: number): string {
-  return `von ${mb(vorher)} auf ${mb(nachher)} (−${Math.round((1 - nachher / vorher) * 100)} %)`;
+  return t('gemeinsam.verkleinern.von-auf', { mb: mb(vorher), mb2: mb(nachher), round: Math.round((1 - nachher / vorher) * 100) });
 }

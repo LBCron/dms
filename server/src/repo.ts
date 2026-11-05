@@ -9,6 +9,7 @@ import type { Fundstelle } from './geheimnisse';
 import type { LoeschDokument, LoeschEintrag, LoeschFilter } from '../../shared/src/loeschprotokoll';
 import type { Varianten } from '../../shared/src/suche';
 import type { Seitensprache } from '../../shared/src/seitensprachen';
+import { t } from './sprache';
 
 export interface Verweis { feldKey: string; zielId: string }
 
@@ -30,7 +31,7 @@ export interface FeldweiseSchreiben {
 
 /** Die Mappe hat sich zwischen Lesen und Schreiben geändert (#609) – neu lesen und noch einmal versuchen. */
 export class StandVeraltet extends Error {
-  constructor() { super('Die Mappe hat sich inzwischen geändert.'); }
+  constructor() { super(t('meldungen.repo.die-mappe-hat-sich')); }
 }
 
 /** Neue Werte feldweise auf den aktuellen Stand legen (#609): nur Felder, die sich gegenüber `basis` ändern. */

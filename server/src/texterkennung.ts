@@ -69,7 +69,7 @@ export function bereinigeOcr(e: unknown, alt: OcrEinstellungen = OCR_STANDARD): 
   let auftraege = alt.auftraege;
   if (x.auftraege !== undefined) {
     const n = Number(x.auftraege);
-    if (!Number.isInteger(n) || n < 1 || n > 4) throw new Fachfehler(422, 'Gleichzeitige Aufträge: eine ganze Zahl von 1 bis 4.');
+    if (!Number.isInteger(n) || n < 1 || n > 4) throw new Fachfehler(422, t('meldungen.texterkennung.gleichzeitige-auftraege-eine-ganze'));
     auftraege = n;
   }
   return { aktiv: x.aktiv === undefined ? alt.aktiv : x.aktiv === true, auftraege };
@@ -121,7 +121,7 @@ export const hatText = (t: string) => t.replace(/\s/g, '').length >= 20;
 
 /** Die Textebene mit pdftotext (#459: ohne Texterkennung im Kern). */
 export const textebeneEngine: Engine = async (pfad, mime, o) => {
-  if (mime !== 'application/pdf') return { text: '', seiten: 1, info: 'Bild ohne Textebene', ohneText: [1] };
+  if (mime !== 'application/pdf') return { text: '', seiten: 1, info: t('meldungen.texterkennung.bild-ohne-textebene'), ohneText: [1] };
   if (!o.werkzeuge.pdftotext) throw new Error('pdftotext (poppler) ist nicht installiert.');
   const info = await starte('pdfinfo', [pfad], 30_000, o.signal).then((r) => r.stdout, () => '');
   const gesamt = Number(/^Pages:\s+(\d+)/m.exec(info)?.[1] ?? 1);
@@ -135,7 +135,7 @@ export const textebeneEngine: Engine = async (pfad, mime, o) => {
     if (!hatText(t)) ohneText.push(i + 1);
     texte.push(t);
   }
-  const gekuerzt = gesamt > seiten ? ` – nur die ersten ${seiten} von ${gesamt} Seiten` : '';
+  const gekuerzt = gesamt > seiten ? t('meldungen.texterkennung.nur-die-ersten-von', { seiten, gesamt }) : '';
   // Je Seite bereinigt und mit Leerzeile verbunden; die Seiten braucht die Sprache je Seite (#579).
   const seitenTexte = texte.map(sauber);
   return { text: seitenZusammensetzen(seitenTexte.map((text) => ({ text })), false).text, seiten, info: INFO_TEXTEBENE + gekuerzt, ohneText, seitenTexte };
@@ -182,9 +182,9 @@ export interface TexterkennungUmwandlung {
 /** Fassung, aus der der Kern liest (#577 umgewandelt, #827 entsperrt); `herkunft` ersetzt den Hinweis zum Paket. */
 type Lesefassung = { info: { paket: { name: string; version: string } }; inhalt: Buffer; herkunft?: string };
 /** Hinweis bei PDFs mit Passwort zum Öffnen (ohne entsperrte Fassung, #827). */
-export const INFO_PASSWORT = 'Das PDF ist mit einem Passwort geschützt.';
+export const INFO_PASSWORT = t('meldungen.texterkennung.das-pdf-ist-mit');
 /** So steht im Hinweis des Volltexts, dass er aus der entsperrten Fassung eines geschützten PDFs stammt (#827). */
-export const INFO_ENTSPERRT = 'aus der entsperrten Fassung';
+export const INFO_ENTSPERRT = t('meldungen.texterkennung.aus-der-entsperrten-fassung');
 
 export class Texterkennung {
   private laufend = 0;
@@ -221,7 +221,7 @@ export class Texterkennung {
   }
 
   async speichere(e: unknown): Promise<OcrEinstellungen> {
-    if (!this.einstellungen) throw new Fachfehler(404, 'Die Texterkennung ist nicht eingerichtet.');
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.texterkennung.die-texterkennung-ist-nicht'));
     const neu = bereinigeOcr(e, await this.optionen());
     await this.einstellungen.schreibe('ocr', neu);
     log.info('Einstellungen des Volltexts geändert', { aktiv: neu.aktiv, auftraege: neu.auftraege });
@@ -294,7 +294,7 @@ export class Texterkennung {
       e = await this.ergebnis(d, abbruch.signal, neu);
     } catch (f) {
       const m = (f as Error).message;
-      e = abbruch.signal.aborted ? { stand: 'ausgelassen', info: 'Vom Administrator abgebrochen.', text: null }
+      e = abbruch.signal.aborted ? { stand: 'ausgelassen', info: t('meldungen.texterkennung.vom-administrator-abgebrochen'), text: null }
         // Ein erneuter Versuch ändert nichts: als ausgelassen mit klarem Grund (#61).
         : /password|passwort|encrypt/i.test(m) ? { stand: 'ausgelassen', info: INFO_PASSWORT, text: null }
         : { stand: 'fehler', info: m.slice(0, 500) };
@@ -346,7 +346,7 @@ export class Texterkennung {
 
   private async ergebnis(d: Dokument, signal?: AbortSignal, neu = false): Promise<OcrErgebnis> {
     if (!DATEITYPEN[d.mime]) return this.umgewandelt(d, signal, neu);
-    if (d.groesse > MAX_MB * 1024 * 1024) return { stand: 'ausgelassen', info: `Größer als ${MAX_MB} MB.`, text: null };
+    if (d.groesse > MAX_MB * 1024 * 1024) return { stand: 'ausgelassen', info: t('meldungen.texterkennung.groesser-als-mb', { MAX_MB }), text: null };
     // Geschütztes PDF (#827): Text aus der entsperrten Fassung. Das Ereignis nennt sie (`fassung`), damit ein Paket für
     // die Texterkennung sie statt des Originals liest.
     const frei = d.mime === 'application/pdf' ? await this.entsperrt?.(d.sha256).catch(() => null) : null;
@@ -395,7 +395,7 @@ export class Texterkennung {
   private async volltextAusPaket(d: Dokument, p: { id: string; name: string; version: string; typen: string[] }, neu: boolean): Promise<OcrErgebnis> {
     if (d.groesse > VOLLTEXT_PAKET_MAX_BYTES) return { stand: 'ausgelassen', info: t('pakete.volltext.zu-gross', { typ: dateitypName(d.mime), mb: VOLLTEXT_PAKET_MAX_BYTES / 1048576 }), text: null };
     const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
-    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null, weitere: vorhanden.weitere ?? null, seitensprachen: vorhanden.seitensprachen ?? null };
+    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: t('meldungen.texterkennung.uebernommen-gleicher-inhalt', { wert: vorhanden.info ?? '' }).trim(), sprache: vorhanden.sprache ?? null, weitere: vorhanden.weitere ?? null, seitensprachen: vorhanden.seitensprachen ?? null };
     return { stand: 'paket', info: infoVolltextPaket(p), seiten: d.ocr?.seiten ?? null, ausPaket: p } as OcrErgebnis;
   }
 
@@ -438,7 +438,7 @@ export class Texterkennung {
     const wartet: OcrErgebnis = { stand: 'paket', info: infoWartet(paket), seiten: d.ocr?.seiten ?? null };
     // Gleiche Datei schon mit Text (auch von der früheren eingebauten Texterkennung oder einem Paket): übernehmen.
     const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
-    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null, weitere: vorhanden.weitere ?? null, seitensprachen: vorhanden.seitensprachen ?? null };
+    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: t('meldungen.texterkennung.uebernommen-gleicher-inhalt', { wert: vorhanden.info ?? '' }).trim(), sprache: vorhanden.sprache ?? null, weitere: vorhanden.weitere ?? null, seitensprachen: vorhanden.seitensprachen ?? null };
     if (d.mime !== 'application/pdf') return wartet;
     const r = await this.lese(d, signal, fassung);
     // Gemischt (Text und gescannte Seiten): wartet auch auf das Paket – es erkennt nur die Seiten ohne Text. „Neu“ ohne
@@ -454,7 +454,7 @@ export class Texterkennung {
    * Paket, und das erst nach dem Speichern.
    */
   async erkenneSofort(inhalt: Buffer, mime: string): Promise<{ text: string; info: string }> {
-    if (mime !== 'application/pdf') throw new Fachfehler(422, 'Fotos und Bilder liest Ablago nicht sofort – ihren Text erkennt das Paket Texterkennung nach dem Speichern.');
+    if (mime !== 'application/pdf') throw new Fachfehler(422, t('meldungen.texterkennung.fotos-und-bilder-liest'));
     const dir = await mkdtemp(join(tmpdir(), 'dms-sofort-'));
     try {
       const pfad = join(dir, 'datei');
@@ -484,7 +484,7 @@ export class Texterkennung {
   /** Neu starten: zurück in die Warteschlange (#61); bei „fertig“ ausdrücklich neu (#458). */
   async neuStarten(ids: unknown, von: string) {
     const liste = Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
-    if (!liste.length) throw new Fachfehler(422, 'Keine Dokumente gewählt.');
+    if (!liste.length) throw new Fachfehler(422, t('meldungen.texterkennung.keine-dokumente-gewaehlt'));
     for (const id of liste) this.laeufe.get(id)?.abort();
     for (const id of liste) this.neuMarken.add(id);
     // Wartet ein Dokument auf das Paket, kommt sein Ereignis gleich neu – das alte fällt weg.
@@ -511,18 +511,18 @@ export class Texterkennung {
   /** Abbrechen bzw. aus der Warteschlange nehmen: wartende werden ausgelassen, laufende beendet (#61). */
   async abbrechen(ids: unknown, von: string) {
     const liste = Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
-    if (!liste.length) throw new Fachfehler(422, 'Keine Dokumente gewählt.');
+    if (!liste.length) throw new Fachfehler(422, t('meldungen.texterkennung.keine-dokumente-gewaehlt'));
     let n = 0;
     for (const id of liste) {
       const lauf = this.laeufe.get(id);
       if (lauf) { lauf.abort(); n++; continue; }
       const d = await this.repo.holeDokument(id);
-      if (d?.ocr?.stand === 'wartet') { await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: 'Vom Administrator abgebrochen.', text: null }); n++; }
+      if (d?.ocr?.stand === 'wartet') { await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: t('meldungen.texterkennung.vom-administrator-abgebrochen'), text: null }); n++; }
       // Wartet es auf das Paket (#458): Ereignis verwerfen, Text aus dem PDF bleibt.
       if (d?.ocr?.stand === 'paket') {
         await this.repo.loescheOffeneEreignisse('volltext.fertig', [id]);
         await this.repo.loescheOffeneEreignisse('datei.volltext', [id]);
-        await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: 'Texterkennung durch Paket vom Administrator abgebrochen.', seiten: d.ocr.seiten ?? null });
+        await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: t('meldungen.texterkennung.texterkennung-durch-paket-vom'), seiten: d.ocr.seiten ?? null });
         n++;
       }
     }

@@ -7,13 +7,14 @@ import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
 import { alsMeldung, MeldungBox, type Meldung } from './Pakete';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Pakete → Paket (#534): Nach einem Update, das ein Textfeld durch einen Verweis ersetzt (`aus_text`),
  * wandelt der Administrator die alten Angaben mit Vorschau um. Je Name: vorhandene Person, neu anlegen oder
  * überspringen. Jeder Vorgang lässt sich rückgängig machen.
  */
-const datum = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const datum = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 /** Wert der Auswahl je Name: „p:<Id>“, „neu“ oder „weg“. */
 const alsWert = (e: Entscheidung) => (e.art === 'person' ? `p:${e.id}` : e.art === 'neu' ? 'neu' : 'weg');
 const ausWert = (w: string): Entscheidung => (w.startsWith('p:') ? { art: 'person', id: w.slice(2) } : w === 'neu' ? { art: 'neu' } : { art: 'ueberspringen' });

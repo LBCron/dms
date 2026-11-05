@@ -9,17 +9,18 @@ import type { OcrStand } from './model';
 import { INFO_UMWANDLUNG } from './dateiumwandlung';
 import { INFO_VOLLTEXT_PAKET } from './paketvolltext';
 import { PAKET_TEXT, PAKET_VOLLTEXT } from './pakete';
+import { t } from './texte';
 
 /** Id des Pakets Texterkennung im offiziellen Katalog (#459: für „jetzt installieren“). */
 export const TEXTERKENNUNG_PAKET = 'texterkennung';
 
 /** Hinweis bei Text aus der Textebene eines PDFs. */
-export const INFO_TEXTEBENE = 'Textebene des PDFs';
+export const INFO_TEXTEBENE = t('gemeinsam.volltext.textebene-des-pdfs');
 /** So beginnt der Hinweis, solange ein Dokument auf das Paket wartet. */
-export const INFO_WARTET = 'wartet auf Texterkennung';
+export const INFO_WARTET = t('gemeinsam.volltext.wartet-auf-texterkennung');
 
 /** Hinweis für Stand `paket`: mit dem Namen des Pakets oder ohne installiertes Paket. */
-export const infoWartet = (paket: { name: string } | null) => (paket ? `${INFO_WARTET} (Paket ${paket.name})` : `${INFO_WARTET} – kein Paket installiert`);
+export const infoWartet = (paket: { name: string } | null) => (paket ? `${INFO_WARTET} (Paket ${paket.name})` : t('gemeinsam.volltext.kein-paket-installiert', { INFO_WARTET }));
 
 export type VolltextHerkunft =
   | { art: 'pdf' }
@@ -54,4 +55,4 @@ export function volltextHerkunft(o: OcrStand | null | undefined): VolltextHerkun
 }
 
 /** Hinweis am Dokument, wenn die Datenbank ein Ergebnis auch nach mehreren Versuchen nicht annahm (#575). */
-export const NICHT_GESPEICHERT = 'Text erkannt, aber nicht gespeichert – die Datenbank war ausgelastet. Bitte erneut versuchen';
+export const NICHT_GESPEICHERT = t('gemeinsam.volltext.text-erkannt-aber-nicht');

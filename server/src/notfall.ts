@@ -3,6 +3,8 @@ import type { Benutzer } from '../../shared/src/model';
 import type { Einstellungen } from './einstellungen';
 import { protokoll } from './protokoll';
 import { zeitzone } from '../../shared/src/region';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Notfallzugang über eine RESCUE-Datei (#108): Kommt niemand mit Verwaltungsrecht mehr hinein, legt der
@@ -78,18 +80,18 @@ export class Notfallzugang {
     }
 
     const { benutzer, link, ablauf } = await this.quelle.notfallzugang(GUELTIG_MIN, jetzt);
-    const bis = ablauf.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
+    const bis = ablauf.toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
     await writeFile(this.datei, [
-      `${KENNUNG} für „${benutzer.name}“`,
-      `Erstellt: ${jetzt.toISOString()}`,
+      t('notfall.rescue.fuer', { kennung: KENNUNG, name: benutzer.name }),
+      t('notfall.rescue.erstellt', { zeit: jetzt.toISOString() }),
       '',
-      `Öffne diesen Link bis ${bis} Uhr im Browser und lege ein eigenes Passwort fest:`,
+      t('notfall.notfall.oeffne-diesen-link-bis', { bis }),
       '',
       link,
       '',
       'Steht im Link „localhost“, ersetze es durch die Adresse deines NAS, z. B. http://nas.home.arpa:8080.',
-      'Der Link gilt nur einmal. Diese Datei löscht Ablago nach 15 Minuten selbst.',
-      'Benenne den Notfall-Admin danach in der Werkbank um oder deaktiviere ihn.',
+      t('notfall.notfall.der-link-gilt-nur'),
+      t('notfall.notfall.benenne-den-notfall-admin'),
       '',
     ].join('\n'), { mode: 0o600 });
     const liste = ((await this.einstellungen.lies('notfallzugaenge')) as Eintrag[] | null) ?? [];
@@ -97,9 +99,8 @@ export class Notfallzugang {
     await this.einstellungen.schreibe('notfallzugaenge', liste.slice(-20));
     log.warn('Notfallzugang angelegt (RESCUE-Datei)', { benutzer: benutzer.name, gueltigBis: ablauf.toISOString(), datei: this.datei });
     try {
-      await this.anAdmins('Ablago: Notfallzugang angelegt',
-        `Auf dem NAS wurde eine RESCUE-Datei angelegt. Ablago hat daraufhin „${benutzer.name}“ mit „Gesamte Verwaltung“ angelegt; der Anmeldelink steht nur in dieser Datei und gilt bis ${bis} Uhr.\n\n`
-        + 'Warst du das nicht, deaktiviere den Benutzer sofort in der Werkbank unter „Benutzer“ und prüfe, wer Zugriff auf das NAS hat.');
+      await this.anAdmins(t('notfall.notfall.ablago-notfallzugang-angelegt'),
+        t('notfall.notfall.warst-du-das-nicht', { wert: t('notfall.notfall.auf-dem-nas-wurde', { name: benutzer.name, bis }) }));
     } catch (e) { log.warn('Mail zum Notfallzugang nicht verschickt', { fehler: (e as Error).message }); }
     return 'angelegt';
   }

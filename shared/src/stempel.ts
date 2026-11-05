@@ -1,4 +1,5 @@
 import { zeitzone } from './region';
+import { t } from './texte';
 /**
  * Stempel und Wasserzeichen beim Weitergeben (#394, #799).
  *
@@ -9,15 +10,15 @@ import { zeitzone } from './region';
  */
 
 export const STEMPEL_LAGEN = {
-  diagonal: 'Diagonal (Wasserzeichen)',
+  diagonal: t('gemeinsam.stempel.diagonal-wasserzeichen'),
   kopf: 'Kopfzeile',
   fuss: 'Fußzeile',
-  ecke: 'Ecke oben rechts',
-  stempel: 'Stempel (frei platzierbar)',
+  ecke: t('gemeinsam.stempel.ecke-oben-rechts'),
+  stempel: t('gemeinsam.stempel.stempel-frei-platzierbar'),
 } as const;
 export type StempelLage = keyof typeof STEMPEL_LAGEN;
 
-export const STEMPEL_SEITEN = { alle: 'Alle Seiten', erste: 'Nur die erste Seite' } as const;
+export const STEMPEL_SEITEN = { alle: t('gemeinsam.stempel.alle-seiten'), erste: t('gemeinsam.stempel.nur-die-erste-seite') } as const;
 export type StempelSeiten = keyof typeof STEMPEL_SEITEN;
 
 /** Farben des Stempels (#799); Rot ist die bisherige. Werte als RGB 0…1. */
@@ -31,7 +32,7 @@ export type StempelFarbe = keyof typeof STEMPEL_FARBEN;
 export const farbeCss = (f: StempelFarbe) => `rgb(${STEMPEL_FARBEN[f].map((x) => Math.round(x * 255)).join(' ')})`;
 
 /** Je Mappentyp: Stempel beim Weitergeben nicht, als Vorschlag oder als Pflicht. */
-export const STEMPEL_MODI = { aus: 'Kein Stempel', vorschlag: 'Vorschlagen', pflicht: 'Pflicht' } as const;
+export const STEMPEL_MODI = { aus: t('gemeinsam.stempel.kein-stempel'), vorschlag: 'Vorschlagen', pflicht: 'Pflicht' } as const;
 export type StempelModus = keyof typeof STEMPEL_MODI;
 
 export interface Stempel {
@@ -91,12 +92,12 @@ const GRUND: Omit<Stempel, 'text'> = { lage: 'diagonal', deckkraft: 0.25, seiten
 export const NEUER_STEMPEL: Stempel = { text: '', ...GRUND, deckkraft: 0.7, tinte: true };
 
 export const STANDARD_VORLAGEN: StempelVorlage[] = [
-  { id: 'kopie', name: 'Kopie für …', text: 'Kopie für {empfänger} – {datum}', ...GRUND },
-  { id: 'vorlage', name: 'Nur zur Vorlage bei …', text: 'Nur zur Vorlage bei {empfänger}', ...GRUND, lage: 'kopf', deckkraft: 0.8 },
+  { id: 'kopie', name: t('gemeinsam.stempel.kopie-fuer'), text: 'Kopie für {empfänger} – {datum}', ...GRUND },
+  { id: 'vorlage', name: t('gemeinsam.stempel.nur-zur-vorlage-bei'), text: t('gemeinsam.stempel.nur-zur-vorlage-bei-2'), ...GRUND, lage: 'kopf', deckkraft: 0.8 },
   { id: 'entwurf', name: 'Entwurf', text: 'ENTWURF', ...GRUND, deckkraft: 0.2 },
   { id: 'vertraulich', name: 'Vertraulich', text: 'VERTRAULICH', ...GRUND, lage: 'ecke', deckkraft: 0.9, seiten: 'erste' },
   // WebDAV-Laufwerk (#722): leise Fußzeile auf jeder Seite; bestehende Installationen bekommen sie per Migration 067.
-  { id: 'webdav', name: 'Aus Ablago (Laufwerk)', text: 'Aus Ablago · {datum}', ...GRUND, lage: 'fuss', deckkraft: 0.6 },
+  { id: 'webdav', name: t('gemeinsam.stempel.aus-ablago-laufwerk'), text: 'Aus Ablago · {datum}', ...GRUND, lage: 'fuss', deckkraft: 0.6 },
 ];
 
 /** Id der mitgelieferten Vorlage für das WebDAV-Laufwerk (#722) – Vorgabe für „Stempel beim Lesen“. */
@@ -221,12 +222,12 @@ export function liesStempelTyp(v: unknown): StempelTyp | null {
 /** Prüft eine Vorlage; gibt Fehlertexte je Feld zurück (leer = in Ordnung). */
 export function pruefeVorlage(v: { name: string; text: string }, andereNamen: string[]): Record<string, string> {
   const f: Record<string, string> = {};
-  if (!v.name.trim()) f.name = 'Der Name fehlt.';
-  else if (andereNamen.some((n) => n.trim().toLowerCase() === v.name.trim().toLowerCase())) f.name = 'Diesen Namen hat schon eine andere Vorlage.';
-  if (!v.text.trim()) f.text = 'Der Text fehlt.';
+  if (!v.name.trim()) f.name = t('gemeinsam.stempel.der-name-fehlt');
+  else if (andereNamen.some((n) => n.trim().toLowerCase() === v.name.trim().toLowerCase())) f.name = t('gemeinsam.stempel.diesen-namen-hat-schon');
+  if (!v.text.trim()) f.text = t('gemeinsam.stempel.der-text-fehlt');
   const unbekannt = [...v.text.matchAll(/\{([^{}]+)\}/g)].map((m) => m[1]).filter((k) => !norm(k));
-  if (unbekannt.length) f.text = `Unbekannter Platzhalter: {${unbekannt[0]}}. Möglich sind ${PLATZHALTER.map(platzhalterText).join(', ')}.`;
-  else if (v.text.replace(/\r\n?/g, '\n').split('\n').filter((z) => z.trim()).length > STEMPEL_ZEILEN_MAX) f.text = `Höchstens ${STEMPEL_ZEILEN_MAX} Zeilen.`;
+  if (unbekannt.length) f.text = t('gemeinsam.stempel.unbekannter-platzhalter-moeglich', { unbekannt: unbekannt[0], map: PLATZHALTER.map(platzhalterText).join(', ') });
+  else if (v.text.replace(/\r\n?/g, '\n').split('\n').filter((z) => z.trim()).length > STEMPEL_ZEILEN_MAX) f.text = t('gemeinsam.stempel.hoechstens-zeilen', { STEMPEL_ZEILEN_MAX });
   return f;
 }
 
@@ -270,17 +271,17 @@ export function geltenderStempel(wunsch: StempelWunsch | null | undefined, typ: 
   const id = gewuenscht ? wunsch!.vorlage : pflicht ? typ!.vorlage : undefined;
   if (id) {
     const v = vorlagen.find((x) => x.id === id);
-    if (!v && gewuenscht) throw new StempelFehler(`Die Stempel-Vorlage „${id}“ gibt es nicht.`);
+    if (!v && gewuenscht) throw new StempelFehler(t('gemeinsam.stempel.die-stempel-vorlage-gibt', { id }));
     if (v) { basis = v; vorlage = v.id; }
   }
   // Nur die entfallenen Fußzeilen ohne Text und Vorlage (ältere Skripte): eine Fußzeile wie bisher.
   const nurFuss = gewuenscht && !wunsch!.vorlage && !(typeof wunsch!.text === 'string' && wunsch!.text.trim());
   const s = stempelAus(gewuenscht ? wunsch : {}, nurFuss ? { ...basis, text: '', lage: 'fuss', farbe: 'schwarz', deckkraft: 1 } : basis);
-  if (!s.text && pflicht) throw new StempelFehler('Dieser Mappentyp verlangt beim Weitergeben einen Stempel mit Text.');
-  if (!s.text) throw new StempelFehler('Der Text des Stempels fehlt.');
+  if (!s.text && pflicht) throw new StempelFehler(t('gemeinsam.stempel.dieser-mappentyp-verlangt-beim'));
+  if (!s.text) throw new StempelFehler(t('gemeinsam.stempel.der-text-des-stempels'));
   const empfaenger = (wunsch?.empfaenger ?? '').trim() || empfaengerErsatz.trim();
   if (platzhalterIn(s.text).includes('empfaenger') && !empfaenger) {
-    throw new StempelFehler(pflicht ? 'Dieser Mappentyp verlangt beim Weitergeben einen Stempel. Gib den Empfänger an.' : 'Gib den Empfänger an – der Stempel nennt ihn.');
+    throw new StempelFehler(pflicht ? t('gemeinsam.stempel.dieser-mappentyp-verlangt-beim-2') : t('gemeinsam.stempel.gib-den-empfaenger-an'));
   }
   return { stempel: s, empfaenger, pflicht, vorlage };
 }

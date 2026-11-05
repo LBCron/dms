@@ -28,6 +28,8 @@ import { istUuid } from './repo';
 import { csv, exportDateien, vollexport, type ExportQuelle } from './vollexport';
 import { ZIP_MAX, zipGroesse, zipStrom, type ZipEintrag } from './zip';
 import { zeitzone } from '../../shared/src/region';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 export interface AuskunftDaten {
   start: { id: string; titel: string; typ: string };
@@ -55,15 +57,15 @@ export interface AuskunftDaten {
 
 /** Phasen des Auftrags. */
 export const AUSKUNFT_PHASEN = [
-  { key: 'mappen', name: 'Mappen und Dokumente zusammenstellen', einheit: 'Mappen' },
-  { key: 'abschluss', name: 'Listen und Prüfwerte schreiben', einheit: 'Schritte' },
-  { key: 'zip', name: 'ZIP-Datei packen', einheit: 'Dateien' },
+  { key: 'mappen', name: t('meldungen.auskunft.mappen-und-dokumente-zusammenstellen'), einheit: 'Mappen' },
+  { key: 'abschluss', name: t('meldungen.auskunft.listen-und-pruefwerte-schreiben'), einheit: 'Schritte' },
+  { key: 'zip', name: t('meldungen.auskunft.zip-datei-packen'), einheit: 'Dateien' },
 ];
 
 /** Wo die Auskünfte liegen: im Export-Ordner (#797) unter auskunft/, ohne ihn im temporären Ordner. */
 export const auskunftOrdner = (exportOrdner?: string | null) => (exportOrdner ? join(exportOrdner, 'auskunft') : join(tmpdir(), 'dms-auskunft'));
 
-const zeit = (d: Date) => d.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
+const zeit = (d: Date) => d.toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
 const tag = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(d);
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const mehrzahl = (n: number, eins: string, viele: string) => `${n} ${n === 1 ? eins : viele}`;
@@ -80,64 +82,64 @@ export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date;
   // Plan des Textdokuments; gezeichnet wird in der PDF-Stelle (#541).
   const s = planer();
   // Anrede der Person (#474): alle Sätze an sie aus anrede.ts.
-  const t = (k: Parameters<typeof textDritte>[1], w?: Record<string, string | number>) => textDritte(d.datenschutz.anrede, k, w);
+  const eintrag = (k: Parameters<typeof textDritte>[1], w?: Record<string, string | number>) => textDritte(d.datenschutz.anrede, k, w);
   s.neueSeite();
   const absender = d.datenschutz.verantwortlicher || x.mandant;
   if (absender) s.text(absender, { groesse: 9, farbe: 0.35 });
-  s.text('Auskunft nach Art. 15 DSGVO', { groesse: 18, fett: true, abstand: 14 });
-  s.text(`für ${d.start.titel || 'Ohne Titel'}${d.start.typ ? ` (${d.start.typ})` : ''}`, { groesse: 12, abstand: 2 });
-  s.text(`Erstellt am ${zeit(x.jetzt)}${x.von ? ` von ${x.von}` : ''}`, { groesse: 9, farbe: 0.4, abstand: 2 });
+  s.text(t('meldungen.auskunft.auskunft-nach-art-15'), { groesse: 18, fett: true, abstand: 14 });
+  s.text(t('meldungen.auskunft.fuer', { wert: d.start.titel || t('meldungen.auskunft.ohne-titel'), wert2: d.start.typ ? ` (${d.start.typ})` : '' }), { groesse: 12, abstand: 2 });
+  s.text(t('meldungen.auskunft.erstellt-am', { zeit: zeit(x.jetzt), wert: x.von ? ` von ${x.von}` : '' }), { groesse: 9, farbe: 0.4, abstand: 2 });
   s.linie();
-  s.text(t('auskunft.deckblatt.einleitung'), { groesse: 10, abstand: 4 });
+  s.text(eintrag('auskunft.deckblatt.einleitung'), { groesse: 10, abstand: 4 });
 
   const abschnitt = (x: string) => s.text(x, { groesse: 12, fett: true, abstand: 12 });
   const punkt = (x: string) => s.text(`• ${x}`, { groesse: 10, abstand: 2, x: 60 });
   const n = d.anzahl;
 
-  abschnitt('1. Welche Daten (Kategorien)');
+  abschnitt(t('meldungen.auskunft.1-welche-daten-kategorien'));
   const jeTyp = new Map<string, number>();
   for (const m of d.mappen) jeTyp.set(m.typId, (jeTyp.get(m.typId) ?? 0) + 1);
   for (const ty of d.typen) {
     const felder = ty.felder.filter((fd) => d.mappen.some((m) => m.typId === ty.id && !istLeer(m.werte[fd.key]))).map((fd) => fd.label);
     punkt(`${ty.name}: ${mehrzahl(jeTyp.get(ty.id) ?? 0, 'Eintrag', 'Einträge')}${felder.length ? ` – ${felder.slice(0, 12).join(', ')}${felder.length > 12 ? ' …' : ''}` : ''}`);
   }
-  punkt(`${mehrzahl(n.dokumente, 'Dokument', 'Dokumente')} im Original${n.notizen ? `, ${mehrzahl(n.notizen, 'Notiz', 'Notizen')}` : ''}${n.historie ? `, Änderungshistorie zu ${mehrzahl(n.historie, 'Eintrag', 'Einträgen')}` : ''}`);
+  punkt(t('meldungen.auskunft.im-original', { mehrzahl: mehrzahl(n.dokumente, 'Dokument', 'Dokumente'), wert: n.notizen ? `, ${mehrzahl(n.notizen, 'Notiz', 'Notizen')}` : '', wert2: n.historie ? t('meldungen.auskunft.aenderungshistorie-zu', { mehrzahl: mehrzahl(n.historie, 'Eintrag', 'Einträgen') }) : '' }));
   if (d.erwaehnungen.length) {
-    punkt(t('auskunft.deckblatt.erwaehnungen', { anzahl: mehrzahl(d.erwaehnungen.length, 'weiterem Eintrag', 'weiteren Einträgen') }));
+    punkt(eintrag('auskunft.deckblatt.erwaehnungen', { anzahl: mehrzahl(d.erwaehnungen.length, t('meldungen.auskunft.weiterem-eintrag'), t('meldungen.auskunft.weiteren-eintraegen')) }));
     for (const e of d.erwaehnungen.slice(0, 15)) s.text(`– ${erwaehnungText(e)}`, { groesse: 10, abstand: 1, x: 72 });
-    if (d.erwaehnungen.length > 15) s.text('– … (vollständig in Uebersicht.html)', { groesse: 10, abstand: 1, x: 72 });
+    if (d.erwaehnungen.length > 15) s.text(t('meldungen.auskunft.vollstaendig-in-uebersicht-html'), { groesse: 10, abstand: 1, x: 72 });
   }
 
-  abschnitt('2. Zwecke der Verarbeitung');
+  abschnitt(t('meldungen.auskunft.2-zwecke-der-verarbeitung'));
   const zwecke = d.typen.map((ty) => [ty.name, d.datenschutz.typen[ty.id]?.zweck ?? ''] as const);
-  for (const [name, zweck] of zwecke) punkt(`${name}: ${zweck || 'kein Zweck hinterlegt'}`);
+  for (const [name, zweck] of zwecke) punkt(`${name}: ${zweck || t('meldungen.auskunft.kein-zweck-hinterlegt')}`);
 
-  abschnitt('3. Herkunft der Daten');
+  abschnitt(t('meldungen.auskunft.3-herkunft-der-daten'));
   const k = Object.entries(d.kanaele);
-  if (k.length) punkt(`Post und Schriftverkehr: ${k.map(([kanal, z]) => `${kanal} (${z})`).join(', ')}`);
-  punkt(t(k.length ? 'auskunft.deckblatt.herkunft.uebrige' : 'auskunft.deckblatt.herkunft.alle'));
+  if (k.length) punkt(t('meldungen.auskunft.post-und-schriftverkehr', { map: k.map(([kanal, z]) => `${kanal} (${z})`).join(', ') }));
+  punkt(eintrag(k.length ? 'auskunft.deckblatt.herkunft.uebrige' : 'auskunft.deckblatt.herkunft.alle'));
 
-  abschnitt('4. Empfänger');
-  s.text(d.empfaenger || 'Keine Empfänger außerhalb unseres Hauses.', { groesse: 10, abstand: 2 });
+  abschnitt(t('meldungen.auskunft.4-empfaenger'));
+  s.text(d.empfaenger || t('meldungen.auskunft.keine-empfaenger-ausserhalb-unseres'), { groesse: 10, abstand: 2 });
 
-  abschnitt('5. Speicherdauer');
+  abschnitt(t('meldungen.auskunft.5-speicherdauer'));
   for (const a of d.aufbewahrung) {
     punkt(a.archiv
-      ? `${a.typ}: gesetzliche Aufbewahrung ${mehrzahl(a.archiv.jahre, 'Jahr', 'Jahre')} ab ${a.archiv.stichtag ?? 'Anlage'} (bis zum Jahresende)${a.bis ? `, längstens bis ${datumText(a.bis)}` : ''}`
+      ? `${a.typ}: gesetzliche Aufbewahrung ${mehrzahl(a.archiv.jahre, 'Jahr', 'Jahre')} ab ${a.archiv.stichtag ?? t('meldungen.auskunft.anlage')} (bis zum Jahresende)${a.bis ? t('meldungen.auskunft.laengstens-bis', { datumText: datumText(a.bis) }) : ''}`
       : `${a.typ}: solange für den Zweck nötig; keine feste Frist hinterlegt`);
   }
 
-  abschnitt(t('auskunft.deckblatt.rechte'));
+  abschnitt(eintrag('auskunft.deckblatt.rechte'));
   s.text(d.datenschutz.rechte, { groesse: 10, abstand: 2 });
 
-  if (d.anmerkung) { abschnitt('Anmerkung'); s.text(d.anmerkung, { groesse: 10, abstand: 2 }); }
+  if (d.anmerkung) { abschnitt(t('meldungen.auskunft.anmerkung')); s.text(d.anmerkung, { groesse: 10, abstand: 2 }); }
 
-  abschnitt('Inhalt dieser Datei');
-  punkt('Uebersicht.html – alle Einträge mit ihren Angaben und Links zu den Dokumenten (im Browser öffnen)');
-  punkt('Uebersicht.csv – dasselbe als Tabelle');
-  punkt('ablage/ – je Eintrag ein Ordner mit den Dokumenten im Original und einer PDF-Zusammenfassung');
-  punkt('daten/, struktur/, manifest.json – maschinenlesbar (CSV, JSON) zur Übernahme in andere Systeme (Art. 20 DSGVO)');
-  return textdokumentPdf({ titel: `Auskunft nach Art. 15 DSGVO – ${d.start.titel}`, anweisungen: s.anweisungen });
+  abschnitt(t('meldungen.auskunft.inhalt-dieser-datei'));
+  punkt(t('meldungen.auskunft.uebersicht-html-alle-eintraege'));
+  punkt(t('meldungen.auskunft.uebersicht-csv-dasselbe-als'));
+  punkt(t('meldungen.auskunft.ablage-je-eintrag-ein'));
+  punkt(t('meldungen.auskunft.daten-struktur-manifest-json'));
+  return textdokumentPdf({ titel: t('meldungen.auskunft.auskunft-nach-art-15-2', { titel: d.start.titel }), anweisungen: s.anweisungen });
 }
 
 /* ---------- Übersicht ---------- */
@@ -159,14 +161,14 @@ export function uebersichtHtml(d: AuskunftDaten, x: { jetzt: Date; dokumente: Ar
   for (const dk of x.dokumente) doks.set(dk.mappeId, [...doks.get(dk.mappeId) ?? [], dk]);
   const link = (p: string) => p.split('/').map(encodeURIComponent).join('/');
   const kb = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
-  const abschnitte = d.typen.map((t) => {
-    const ms = d.mappen.filter((m) => m.typId === t.id);
-    return `<h2>${esc(t.name)} <small>(${ms.length})</small></h2>\n${ms.map((m) => {
+  const abschnitte = d.typen.map((mappentyp) => {
+    const ms = d.mappen.filter((m) => m.typId === mappentyp.id);
+    return `<h2>${esc(mappentyp.name)} <small>(${ms.length})</small></h2>\n${ms.map((m) => {
       const f = felderVon(m, typ.get(m.typId), d.titel);
       const ds = doks.get(m.id) ?? [];
       const ordner = x.pfade.mappen.get(m.id);
-      return `<section><h3>${esc(m.titel || 'Ohne Titel')}</h3>
-<dl>${f.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}<dt>Angelegt</dt><dd>${esc(new Date(m.erstellt).toLocaleDateString('de-DE'))}</dd></dl>
+      return `<section><h3>${esc(m.titel || t('meldungen.auskunft.ohne-titel'))}</h3>
+<dl>${f.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}<dt>Angelegt</dt><dd>${esc(new Date(m.erstellt).toLocaleDateString(gebietsschema()))}</dd></dl>
 ${ds.length ? `<ul>${ds.map((dk) => { const p = x.pfade.dokumente.get(dk.id); return `<li>${p ? `<a href="${esc(link(p))}">${esc(dk.name)}</a>` : esc(dk.name)} <small>${kb(dk.groesse)}</small></li>`; }).join('')}</ul>` : ''}
 ${ordner ? `<p><small>Ordner: <a href="${esc(link(ordner))}/">${esc(ordner)}</a></small></p>` : ''}</section>`;
     }).join('\n')}`;
@@ -196,7 +198,7 @@ ${erwaehnt}
 export function liesmichText(d: AuskunftDaten, jetzt: Date): string {
   return `# Auskunft nach Art. 15 DSGVO
 
-Für ${d.start.titel || 'Ohne Titel'}, erstellt am ${zeit(jetzt)}. ${mehrzahl(d.anzahl.mappen, 'Eintrag', 'Einträge')}, ${mehrzahl(d.anzahl.dokumente, 'Dokument', 'Dokumente')}.
+Für ${d.start.titel || t('meldungen.auskunft.ohne-titel')}, erstellt am ${zeit(jetzt)}. ${mehrzahl(d.anzahl.mappen, 'Eintrag', 'Einträge')}, ${mehrzahl(d.anzahl.dokumente, 'Dokument', 'Dokumente')}.
 
 - ${textDritte(d.datenschutz.anrede, 'auskunft.liesmich.deckblatt')}
 - ${textDritte(d.datenschutz.anrede, 'auskunft.liesmich.uebersicht')}
@@ -210,7 +212,7 @@ Format: wie der Vollexport von Ablago (CSV nach RFC 4180 mit BOM, JSON Lines, Da
 
 /* ---------- Erzeugen ---------- */
 
-const zuGross = () => new Fachfehler(422, 'Die Auskunft wäre größer als 4 GB – bitte weniger Dokumente auswählen und auf mehrere Auskünfte verteilen.');
+const zuGross = () => new Fachfehler(422, t('meldungen.auskunft.die-auskunft-waere-groesser'));
 
 export interface AuskunftErgebnis extends AuskunftStand { name: string }
 
@@ -296,7 +298,7 @@ export async function auskuenfteIn(ordner: string, jetzt = new Date()): Promise<
 }
 
 export async function loescheAuskunft(ordner: string, id: string) {
-  if (!istUuid(id)) throw new Fachfehler(404, 'Diese Auskunft gibt es nicht (mehr).');
+  if (!istUuid(id)) throw new Fachfehler(404, t('meldungen.auskunft.diese-auskunft-gibt-es'));
   await rm(join(ordner, `${id}.zip`), { force: true });
   await rm(join(ordner, `${id}.json`), { force: true });
 }
@@ -320,9 +322,9 @@ export async function haltenBis(ordner: string, id: string, bis: string | null, 
 
 /** Eine bereitliegende Auskunft zum Herunterladen; 404, wenn sie abgelaufen oder schon heruntergeladen ist. */
 export async function auskunftDatei(ordner: string, id: string): Promise<{ stand: AuskunftErgebnis; pfad: string; groesse: number }> {
-  if (!istUuid(id)) throw new Fachfehler(404, 'Diese Auskunft gibt es nicht (mehr).');
+  if (!istUuid(id)) throw new Fachfehler(404, t('meldungen.auskunft.diese-auskunft-gibt-es'));
   const stand = (await auskuenfteIn(ordner)).find((s) => s.id === id);
-  if (!stand) throw new Fachfehler(404, `Diese Auskunft gibt es nicht mehr – sie wird nach dem Herunterladen bzw. nach ${AUSKUNFT_TAGE} Tagen gelöscht. Erstelle sie bei Bedarf neu.`);
+  if (!stand) throw new Fachfehler(404, t('meldungen.auskunft.diese-auskunft-gibt-es-2', { AUSKUNFT_TAGE }));
   const pfad = join(ordner, `${id}.zip`);
   return { stand, pfad, groesse: (await stat(pfad)).size };
 }

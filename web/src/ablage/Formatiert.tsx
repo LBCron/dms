@@ -3,6 +3,7 @@ import { Symbol } from '../Symbol';
 import { erwaehnung, zerlege, type Block, type Inline } from '../../../shared/src/markdown';
 import { abwesenheitText, useDaten } from '../daten';
 import { Person } from '../Person';
+import { t } from '../sprache';
 
 /**
  * Formatierter Text (#53): Anzeige und Eingabe.
@@ -10,15 +11,15 @@ import { Person } from '../Person';
  */
 
 function Teile({ teile }: { teile: Inline[] }) {
-  return <>{teile.map((t, i) => {
-    switch (t.art) {
-      case 'text': return <span key={i}>{t.text}</span>;
-      case 'fett': return <strong key={i}><Teile teile={t.kinder} /></strong>;
-      case 'kursiv': return <em key={i}><Teile teile={t.kinder} /></em>;
-      case 'code': return <code key={i}>{t.text}</code>;
-      case 'link': return <a key={i} href={t.ziel} target="_blank" rel="noreferrer noopener">{<Teile teile={t.kinder} />}</a>;
+  return <>{teile.map((inline, i) => {
+    switch (inline.art) {
+      case 'text': return <span key={i}>{inline.text}</span>;
+      case 'fett': return <strong key={i}><Teile teile={inline.kinder} /></strong>;
+      case 'kursiv': return <em key={i}><Teile teile={inline.kinder} /></em>;
+      case 'code': return <code key={i}>{inline.text}</code>;
+      case 'link': return <a key={i} href={inline.ziel} target="_blank" rel="noreferrer noopener">{<Teile teile={inline.kinder} />}</a>;
       case 'erwaehnung': {
-        return <Person key={i} id={t.benutzerId} ersatz={t.name} vor="@" className="erwaehnung" />;
+        return <Person key={i} id={inline.benutzerId} ersatz={inline.name} vor="@" className="erwaehnung" />;
       }
     }
   })}</>;
@@ -48,13 +49,13 @@ export function Formatiert({ text }: { text: string }) {
 
 type Werkzeug = { titel: string; zeichen: ReactNode; vor: string; nach?: string; zeile?: boolean; platzhalter: string };
 const WERKZEUGE: Werkzeug[] = [
-  { titel: 'Fett', zeichen: <strong>F</strong>, vor: '**', nach: '**', platzhalter: 'fett' },
-  { titel: 'Kursiv', zeichen: <em>K</em>, vor: '*', nach: '*', platzhalter: 'kursiv' },
-  { titel: 'Überschrift', zeichen: 'Ü', vor: '## ', zeile: true, platzhalter: 'Überschrift' },
-  { titel: 'Liste', zeichen: '•', vor: '- ', zeile: true, platzhalter: 'Punkt' },
-  { titel: 'Nummerierte Liste', zeichen: '1.', vor: '1. ', zeile: true, platzhalter: 'Punkt' },
-  { titel: 'Zitat', zeichen: '„“', vor: '> ', zeile: true, platzhalter: 'Zitat' },
-  { titel: 'Link', zeichen: <Symbol name="link" />, vor: '[', nach: '](https://)', platzhalter: 'Linktext' },
+  { titel: t('ablage.formatiert.fett'), zeichen: <strong>F</strong>, vor: '**', nach: '**', platzhalter: 'fett' },
+  { titel: t('ablage.formatiert.kursiv'), zeichen: <em>K</em>, vor: '*', nach: '*', platzhalter: 'kursiv' },
+  { titel: t('ablage.formatiert.ueberschrift'), zeichen: 'Ü', vor: '## ', zeile: true, platzhalter: t('ablage.formatiert.ueberschrift') },
+  { titel: t('ablage.formatiert.liste'), zeichen: '•', vor: '- ', zeile: true, platzhalter: t('ablage.formatiert.punkt') },
+  { titel: t('ablage.formatiert.nummerierte-liste'), zeichen: '1.', vor: '1. ', zeile: true, platzhalter: t('ablage.formatiert.punkt') },
+  { titel: t('ablage.formatiert.zitat'), zeichen: '„“', vor: '> ', zeile: true, platzhalter: t('ablage.formatiert.zitat') },
+  { titel: t('ablage.formatiert.link'), zeichen: <Symbol name="link" />, vor: '[', nach: '](https://)', platzhalter: t('ablage.formatiert.linktext') },
 ];
 
 
@@ -133,15 +134,15 @@ export function FormatiertEingabe({ id, wert, setze }: { id: string; wert: strin
 
   return (
     <div className="formateingabe">
-      <div className="formatleiste" role="toolbar" aria-label="Formatierung">
-        <button type="button" className={`textknopf ${vorschau ? '' : 'an'}`} onClick={() => setVorschau(false)}>Schreiben</button>
-        <button type="button" className={`textknopf ${vorschau ? 'an' : ''}`} onClick={() => setVorschau(true)}>Vorschau</button>
+      <div className="formatleiste" role="toolbar" aria-label={t('ablage.formatiert.formatierung')}>
+        <button type="button" className={`textknopf ${vorschau ? '' : 'an'}`} onClick={() => setVorschau(false)}>{t('ablage.formatiert.schreiben')}</button>
+        <button type="button" className={`textknopf ${vorschau ? 'an' : ''}`} onClick={() => setVorschau(true)}>{t('ablage.formatiert.vorschau')}</button>
         {!vorschau && <span className="werkzeuge">{WERKZEUGE.map((w) => (
           <button key={w.titel} type="button" className="symbol" title={w.titel} aria-label={w.titel} onMouseDown={(e) => e.preventDefault()} onClick={() => einfuegen(w)}>{w.zeichen}</button>
         ))}</span>}
       </div>
       {vorschau
-        ? <div className="formatvorschau" onDoubleClick={() => setVorschau(false)}>{wert.trim() ? <Formatiert text={wert} /> : <p className="leise">Noch nichts eingetragen.</p>}</div>
+        ? <div className="formatvorschau" onDoubleClick={() => setVorschau(false)}>{wert.trim() ? <Formatiert text={wert} /> : <p className="leise">{t('ablage.formatiert.noch-nichts-eingetragen')}</p>}</div>
         : <div className="wahl">
             <textarea id={id} ref={feld} rows={6} value={wert}
               onChange={(e) => { setze(e.target.value); pruefeErwaehnung(e.target.value, e.target.selectionStart); }}
@@ -156,9 +157,9 @@ export function FormatiertEingabe({ id, wert, setze }: { id: string; wert: strin
               aria-autocomplete="list" aria-controls={suche ? `${id}-erw` : undefined}
               aria-activedescendant={suche && vorschlaege.length ? `${id}-erw-${Math.min(aktiv, vorschlaege.length - 1)}` : undefined}
               onBlur={() => setTimeout(() => setSuche(null), 150)}
-              placeholder="**fett**, *kursiv*, - Liste, [Link](https://…), @Name erwähnt jemanden" />
+              placeholder={t('ablage.formatiert.fett-kursiv-liste-link')} />
             {vorschlaege.length > 0 && (
-              <div className={`wahlliste am-cursor ${ort?.oben ? 'oben' : ''}`} role="listbox" id={`${id}-erw`} aria-label="Benutzer erwähnen"
+              <div className={`wahlliste am-cursor ${ort?.oben ? 'oben' : ''}`} role="listbox" id={`${id}-erw`} aria-label={t('ablage.formatiert.benutzer-erwaehnen')}
                 style={ort ? { top: ort.top, left: ort.left } : undefined}>
                 {vorschlaege.map((p, i) => <button key={p.id} id={`${id}-erw-${i}`} type="button" role="option" aria-selected={i === aktiv} className={i === aktiv ? 'an' : ''}
                   onMouseEnter={() => setAktiv(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => waehle(p)}>@{p.name}{p.abwesend && <span className="leise klein"> – {abwesenheitText(p)}</span>}</button>)}

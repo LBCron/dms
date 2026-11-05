@@ -3,6 +3,7 @@ import { istLand, istZeitzone, liesRegion, setzeZeitzone, tagIn, type Region } f
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Region der Ablage (#726): Land, Bundesland, Zeitzone – Einstellung „region“ in der Datenbank.
@@ -39,9 +40,9 @@ export class RegionDienst {
   async speichere(e: unknown): Promise<Region> {
     const x = (e ?? {}) as Record<string, unknown>;
     const alt = await this.lies();
-    if (x.land !== undefined && !istLand(x.land)) throw new Fachfehler(422, 'Unbekanntes Land.');
-    if (x.bundesland !== undefined && x.bundesland !== null && x.bundesland !== '' && !istBundesland(x.bundesland)) throw new Fachfehler(422, 'Unbekanntes Bundesland.');
-    if (x.zeitzone !== undefined && !istZeitzone(x.zeitzone)) throw new Fachfehler(422, 'Unbekannte Zeitzone – bitte eine aus der Liste wählen, z. B. Europe/Berlin.');
+    if (x.land !== undefined && !istLand(x.land)) throw new Fachfehler(422, t('meldungen.region.unbekanntes-land'));
+    if (x.bundesland !== undefined && x.bundesland !== null && x.bundesland !== '' && !istBundesland(x.bundesland)) throw new Fachfehler(422, t('meldungen.region.unbekanntes-bundesland'));
+    if (x.zeitzone !== undefined && !istZeitzone(x.zeitzone)) throw new Fachfehler(422, t('meldungen.region.unbekannte-zeitzone-bitte-eine'));
     const neu: Region = {
       land: x.land === undefined ? alt.land : x.land as Region['land'],
       bundesland: x.bundesland === undefined ? alt.bundesland : istBundesland(x.bundesland) ? x.bundesland : null,

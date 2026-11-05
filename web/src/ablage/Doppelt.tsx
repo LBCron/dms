@@ -2,6 +2,8 @@ import { api, type Fundstelle } from '../api';
 import { Link } from '../ort';
 import { pruefwert } from '../pruefwert';
 import { titelOder } from '../seiten';
+import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Doppelte Dateien erkennen (#333): vor dem Hochladen den Prüfwert im Browser rechnen und fragen,
@@ -24,17 +26,16 @@ export async function fundstellenFuer<T extends { datei: File }>(liste: T[], ohn
   return erg;
 }
 
-const tag = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const tag = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** „Diese Datei liegt schon in Stromvertrag Haus (Register Dokumente, hochgeladen am …).“ */
 export function Fundstellen({ f, beiKlick }: { f: Fundstelle[]; beiKlick?: () => void }) {
   return (
     <span className="doppelt klein">
-      Diese Datei liegt schon in{' '}
-      {f.map((x, i) => (
-        <span key={`${x.mappeId}-${i}`} onClick={beiKlick}>{i > 0 && (i === f.length - 1 ? ' und ' : ', ')}
+      {t('ablage.doppelt.diese-datei-liegt-schon')}{' '}{f.map((x, i) => (
+        <span key={`${x.mappeId}-${i}`} onClick={beiKlick}>{i > 0 && (i === f.length - 1 ? ` ${t('ablage.doppelt.und')} ` : ', ')}
           <Link to={`/ablage/${x.typId}/${x.mappeId}`} className="verweis">{titelOder(x.titel)}</Link>
-          {' '}<span className="leise">({x.typ ? `${x.typ}, ` : ''}Register {x.register}, „{x.name}“, hochgeladen am {tag(x.erstellt)})</span>
+          {' '}<span className="leise">{t('ablage.doppelt.register-hochgeladen-am', { wert: x.typ ? `${x.typ}, ` : '', register: x.register, name: x.name, tag: tag(x.erstellt) })}</span>
         </span>
       ))}.
     </span>

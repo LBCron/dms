@@ -1,7 +1,7 @@
 import type { Luecke, Personenbezug, Personenverweis } from '../../../shared/src/loeschkonzept';
 import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /** „über „Inhaber“ auf Person“, mehrere mit „und“ (#664). */
 export function verweiseText(v: Personenverweis[]) {
@@ -32,8 +32,8 @@ function zumZweck(typId: string) {
 export function LoeschkonzeptBlatt({ luecken }: { luecken: Luecke[] }) {
   return (
     <section className="blatt" id="loeschkonzept">
-      <h2 className="h3">Löschkonzept <Hilfe ort="werkbank.loeschkonzept" /></h2>
-      <p className="leise klein">Ablago füllt die Vorlage aus dem Handbuch mit deinen Mappentypen, Zwecken, Aufbewahrungsfristen und Einstellungen (Papierkorb, Sicherungen). Was es nicht wissen kann – Rechtsgrundlage, Zuständige, Begründung der Fristen –, steht in [eckigen Klammern] zum Ergänzen. Aus den Mappen selbst kommt nichts hinein.</p>
+      <h2 className="h3">{tn('werkbank.loeschkonzept.loeschkonzept', { hilfe: <Hilfe ort="werkbank.loeschkonzept" /> })}</h2>
+      <p className="leise klein">{t('werkbank.loeschkonzept.ablago-fuellt-die-vorlage')}</p>
       <p className="leise klein">{t('werkbank.loeschkonzept.wann')}</p>
       {luecken.length > 0 && (
         <div className="hinweis info stapel" role="region" aria-label={t('werkbank.loeschkonzept.ergaenzen')}>
@@ -58,8 +58,8 @@ export function LoeschkonzeptBlatt({ luecken }: { luecken: Luecke[] }) {
         </div>
       )}
       <p className="knoepfe">
-        <a className="knopf primaer" href="/api/werkbank/datenschutz/loeschkonzept?format=pdf">Als PDF erzeugen</a>
-        <a className="knopf" href="/api/werkbank/datenschutz/loeschkonzept?format=docx">Als Word-Datei (.docx)</a>
+        <a className="knopf primaer" href="/api/werkbank/datenschutz/loeschkonzept?format=pdf">{t('werkbank.loeschkonzept.als-pdf-erzeugen')}</a>
+        <a className="knopf" href="/api/werkbank/datenschutz/loeschkonzept?format=docx">{t('werkbank.loeschkonzept.als-word-datei-docx')}</a>
       </p>
     </section>
   );

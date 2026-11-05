@@ -44,15 +44,15 @@ const sichtbar = (s: string) => `${s.slice(0, PRAEFIX.length + 6)}…`;
 function daten(e: unknown): Pick<ApiSchluessel, 'name' | 'recht' | 'ablauf' | 'passwoerter'> {
   const x = (e ?? {}) as Record<string, unknown>;
   const name = String(x.name ?? '').trim().slice(0, 80);
-  if (!name) throw new Fachfehler(422, 'Bitte einen Namen angeben, z. B. „Scanner Büro“.');
+  if (!name) throw new Fachfehler(422, t('meldungen.apischluessel.bitte-einen-namen-angeben'));
   const recht: Recht | null = x.recht === 'schreiben' ? 'schreiben' : x.recht === NUR_ZAEHLER ? NUR_ZAEHLER : x.recht === 'lesen' || x.recht === undefined ? 'lesen' : null;
   if (!recht) throw new Fachfehler(422, t('api.schluessel.recht-ungueltig'));
   let ablauf: string | null = null;
   if (x.ablauf) {
-    const t = Date.parse(String(x.ablauf));
-    if (Number.isNaN(t)) throw new Fachfehler(422, 'Ablaufdatum ist kein gültiges Datum.');
-    if (t < Date.now()) throw new Fachfehler(422, 'Das Ablaufdatum liegt in der Vergangenheit.');
-    ablauf = new Date(t).toISOString();
+    const zahl = Date.parse(String(x.ablauf));
+    if (Number.isNaN(zahl)) throw new Fachfehler(422, t('meldungen.apischluessel.ablaufdatum-ist-kein-gueltiges'));
+    if (zahl < Date.now()) throw new Fachfehler(422, t('meldungen.apischluessel.das-ablaufdatum-liegt-in'));
+    ablauf = new Date(zahl).toISOString();
   }
   // „Nur Zähler“ liest keine Mappen, also auch keine Passwörter.
   return { name, recht, ablauf, passwoerter: recht !== NUR_ZAEHLER && x.passwoerter === true };
@@ -69,7 +69,7 @@ export class ApiSchluesselDienst {
     // #128, #818: Über die API arbeitet die Person immer mit ihren Alltagsrechten – ein Schlüssel bekommt nie
     // Verwaltungsrechte (pruefeZugang), auch wenn sie ihn im Verwaltungsmodus anlegt.
     const d = daten(e);
-    if ((await this.repo.liste(ich.id)).length >= 50) throw new Fachfehler(409, 'Höchstens 50 Schlüssel je Benutzer.');
+    if ((await this.repo.liste(ich.id)).length >= 50) throw new Fachfehler(409, t('meldungen.apischluessel.hoechstens-50-schluessel-je'));
     const schluessel = `${PRAEFIX}${randomBytes(30).toString('base64url')}`;
     const s: ApiSchluessel = { id: randomUUID(), benutzerId: ich.id, ...d, praefix: sichtbar(schluessel), erstellt: new Date().toISOString(), zuletztBenutzt: null };
     await this.repo.lege({ ...s, hash: hasheSchluessel(schluessel) });
@@ -84,13 +84,13 @@ export class ApiSchluesselDienst {
     if (b.art !== 'dienst') throw new Error('Nur für Dienstkonten.');
     for (const s of await this.repo.liste(b.id)) await this.repo.loesche(s.id);
     const schluessel = `${PRAEFIX}${randomBytes(30).toString('base64url')}`;
-    await this.repo.lege({ id: randomUUID(), benutzerId: b.id, name: 'Paket-Läufer', praefix: sichtbar(schluessel), recht, passwoerter: false, ablauf: null, erstellt: new Date().toISOString(), zuletztBenutzt: null, hash: hasheSchluessel(schluessel) });
+    await this.repo.lege({ id: randomUUID(), benutzerId: b.id, name: t('meldungen.apischluessel.paket-laeufer'), praefix: sichtbar(schluessel), recht, passwoerter: false, ablauf: null, erstellt: new Date().toISOString(), zuletztBenutzt: null, hash: hasheSchluessel(schluessel) });
     return schluessel;
   }
 
   private async eigener(ich: Benutzer, id: string) {
     const s = istUuid(id) ? await this.repo.hole(id) : undefined;
-    if (!s || s.benutzerId !== ich.id) throw new Fachfehler(404, 'Diesen Schlüssel gibt es nicht.');
+    if (!s || s.benutzerId !== ich.id) throw new Fachfehler(404, t('meldungen.apischluessel.diesen-schluessel-gibt-es'));
     return s;
   }
 
@@ -108,10 +108,10 @@ export class ApiSchluesselDienst {
   async pruefe(kopf: string | undefined): Promise<ApiSchluessel | undefined> {
     const m = /^Bearer\s+(\S+)$/i.exec(kopf ?? '');
     if (!m) return undefined;
-    if (!m[1].startsWith(PRAEFIX)) throw new Fachfehler(401, 'Unbekanntes Schlüsselformat. Erwartet: Authorization: Bearer dms_…');
+    if (!m[1].startsWith(PRAEFIX)) throw new Fachfehler(401, t('meldungen.apischluessel.unbekanntes-schluesselformat'));
     const s = await this.repo.zuHash(hasheSchluessel(m[1]));
-    if (!s) throw new Fachfehler(401, 'Dieser API-Schlüssel ist ungültig oder wurde gelöscht.');
-    if (s.ablauf && Date.parse(s.ablauf) < Date.now()) throw new Fachfehler(401, `Dieser API-Schlüssel ist am ${s.ablauf.slice(0, 10)} abgelaufen.`);
+    if (!s) throw new Fachfehler(401, t('meldungen.apischluessel.dieser-api-schluessel-ist'));
+    if (s.ablauf && Date.parse(s.ablauf) < Date.now()) throw new Fachfehler(401, t('meldungen.apischluessel.dieser-api-schluessel-ist-2', { ablauf: s.ablauf.slice(0, 10) }));
     // „Zuletzt benutzt“ höchstens einmal je Minute schreiben.
     if (Date.now() - (this.zuletzt.get(s.id) ?? 0) > 60_000) { this.zuletzt.set(s.id, Date.now()); await this.repo.benutzt(s.id); }
     return s;

@@ -8,7 +8,7 @@ import { geheZu, Link } from '../ort';
 import { wartungAktiv } from '../wartung';
 import { istTouch, postFotografieren } from './PostKamera';
 import { Symbol } from '../Symbol';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /**
  * Neue Post von überall (#193): Dateien irgendwo ins Fenster ziehen oder über „+ Neu“ wählen –
@@ -52,7 +52,7 @@ function useAktuellesZiel(): MappenZiel | null {
 }
 
 const nurDateien = (e: DragEvent) => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
-const postTyp = (typen: Mappentyp[]) => typen.find((t) => t.system === 'post');
+const postTyp = (typen: Mappentyp[]) => typen.find((mappentyp) => mappentyp.system === 'post');
 
 /** Fläche beim Ziehen, Fortschritt und Fehler beim Hochladen. Einmal in der App eingebunden. */
 /**
@@ -65,7 +65,7 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
   const register = typ?.register.find((r) => r.art === 'dokumente')?.key;
   const erreichbar = useErreichbarkeit().stufe !== 'weg';
   const darf = darfPostAnlegen(typ) && !!register;
-  const gesperrt = wartungAktiv() ? 'Im Wartungsmodus lassen sich keine Dateien ablegen.' : !erreichbar ? 'Ablago ist gerade nicht erreichbar – Dateien lassen sich nicht ablegen.' : null;
+  const gesperrt = wartungAktiv() ? t('ablage.neuepost.im-wartungsmodus-lassen-sich') : !erreichbar ? t('ablage.neuepost.ablago-ist-gerade-nicht') : null;
   const ziel = useAktuellesZiel();
   const [zieht, setZieht] = useState(false);
   const [ueber, setUeber] = useState<'post' | 'mappe' | null>(null);
@@ -81,7 +81,7 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
   const [rueckfrage, setRueckfrage] = useState<{ dateien: File[]; doppelt: Array<{ datei: File; f: Fundstelle[] }>; trotzdem: Set<File> } | null>(null);
   async function pruefen(alle: File[]) {
     if (!typ || !register) return;
-    setLaeuft('Prüfe, ob es die Dateien schon gibt …');
+    setLaeuft(t('ablage.neuepost.pruefe-ob-es-die'));
     const m = await fundstellenFuer(alle.map((datei) => ({ datei })));
     setLaeuft(undefined);
     if (!m.size) { await anlegen(alle); return; }
@@ -100,14 +100,14 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
     const zuGross = alle.filter((f) => f.size > MAX_DATEIGROESSE);
     const leer = alle.filter((f) => f.size === 0);
     const dateien = alle.filter((f) => f.size > 0 && f.size <= MAX_DATEIGROESSE);
-    const schief = [...zuGross.map((f) => `„${f.name}“: größer als 100 MB`), ...leer.map((f) => `„${f.name}“: leer`)];
+    const schief = [...zuGross.map((f) => t('ablage.neuepost.groesser-als-100-mb', { name: f.name })), ...leer.map((f) => t('ablage.neuepost.leer', { name: f.name }))];
     setFehler([]);
     if (!dateien.length) { setFehler(schief); return; }
-    setLaeuft('Lege Post an …');
+    setLaeuft(t('ablage.neuepost.lege-post-an'));
     try {
       const m = await api.postAnlegen({ betreff: ohneEndung(dateien[0].name).slice(0, 250) });
       for (const [i, f] of dateien.entries()) {
-        setLaeuft(`Lade hoch: ${f.name} (${i + 1} von ${dateien.length}) …`);
+        setLaeuft(t('ablage.neuepost.lade-hoch-von', { name: f.name, wert: i + 1, dateien: dateien.length }));
         try { await api.ladeHoch(m.id, register, f); } catch (e) { schief.push(`„${f.name}“: ${(e as Error).message}`); }
       }
       setFehler(schief);
@@ -126,7 +126,7 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
       zaehler.current++;
       const { darf: ok } = zustand.current;
       if (zustand.current.werkbank) { setInWerkbank(true); return; }
-      const zu = wartungAktiv() ? 'Im Wartungsmodus lassen sich keine Dateien ablegen.' : zustand.current.gesperrt;
+      const zu = wartungAktiv() ? t('ablage.neuepost.im-wartungsmodus-lassen-sich') : zustand.current.gesperrt;
       if (zu) { setHinweis(zu); return; }
       if (ok) setZieht(true);
     };
@@ -154,8 +154,8 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
       removeEventListener('keydown', taste);
     };
   }, []);
-  useEffect(() => { if (!hinweis) return; const t = setTimeout(() => setHinweis(undefined), 5000); return () => clearTimeout(t); }, [hinweis]);
-  useEffect(() => { if (!inWerkbank) return; const t = setTimeout(() => setInWerkbank(false), 8000); return () => clearTimeout(t); }, [inWerkbank]);
+  useEffect(() => { if (!hinweis) return; const timer = setTimeout(() => setHinweis(undefined), 5000); return () => clearTimeout(timer); }, [hinweis]);
+  useEffect(() => { if (!inWerkbank) return; const timer = setTimeout(() => setInWerkbank(false), 8000); return () => clearTimeout(timer); }, [inWerkbank]);
   useEffect(() => { if (!werkbank) setInWerkbank(false); }, [werkbank]);
 
   const ablegen = (wohin: 'post' | 'mappe') => (e: ReactDragEvent) => {
@@ -170,31 +170,31 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
   return (
     <>
       {zieht && (
-        <div className={`ablageflaeche ${ziel ? 'zwei' : ''}`} role="dialog" aria-label="Dateien ablegen">
+        <div className={`ablageflaeche ${ziel ? 'zwei' : ''}`} role="dialog" aria-label={t('ablage.neuepost.dateien-ablegen')}>
           {ziel && (
             <div className={`ablageziel ${ueber === 'mappe' ? 'drauf' : ''}`} onDragOver={(e) => { e.preventDefault(); setUeber('mappe'); }} onDrop={ablegen('mappe')}>
-              <strong>In diese Mappe</strong><span>Register „{ziel.name}“ – übernommen mit „Mappe speichern“</span>
+              <strong>{t('ablage.neuepost.in-diese-mappe')}</strong><span>{t('ablage.neuepost.register-uebernommen-mit-mappe', { name: ziel.name })}</span>
             </div>
           )}
           <div className={`ablageziel ${ueber === 'post' ? 'drauf' : ''}`} onDragOver={(e) => { e.preventDefault(); setUeber('post'); }} onDrop={ablegen('post')}>
-            <strong>{ziel ? 'Als neue Post' : 'Hier neue Dokumente ablegen'}</strong><span>Alle Dateien kommen zusammen in eine neue Post</span>
+            <strong>{ziel ? t('ablage.neuepost.als-neue-post') : t('ablage.neuepost.hier-neue-dokumente-ablegen')}</strong><span>{t('ablage.neuepost.alle-dateien-kommen-zusammen')}</span>
           </div>
         </div>
       )}
       {rueckfrage && (
-        <div className="ablagestatus doppeltfrage" role="dialog" aria-label="Dateien schon vorhanden">
-          <p><strong>{rueckfrage.doppelt.length === 1 ? 'Eine Datei gibt es schon' : `${rueckfrage.doppelt.length} Dateien gibt es schon`}</strong></p>
+        <div className="ablagestatus doppeltfrage" role="dialog" aria-label={t('ablage.neuepost.dateien-schon-vorhanden')}>
+          <p><strong>{t('ablage.neuepost.dateien-gibt-es-schon', { anzahl: rueckfrage.doppelt.length })}</strong></p>
           <ul>{rueckfrage.doppelt.map(({ datei, f }) => (
             <li key={`${datei.name}-${datei.size}-${datei.lastModified}`}>
               <strong>{datei.name}</strong> – <Fundstellen f={f} beiKlick={() => setRueckfrage(null)} />
               <label className="haken klein"><input type="checkbox" checked={rueckfrage.trotzdem.has(datei)}
-                onChange={(e) => { const t = new Set(rueckfrage.trotzdem); if (e.target.checked) t.add(datei); else t.delete(datei); setRueckfrage({ ...rueckfrage, trotzdem: t }); }} /><span>trotzdem ablegen</span></label>
+                onChange={(e) => { const set = new Set(rueckfrage.trotzdem); if (e.target.checked) set.add(datei); else set.delete(datei); setRueckfrage({ ...rueckfrage, trotzdem: set }); }} /><span>{t('ablage.neuepost.trotzdem-ablegen')}</span></label>
             </li>
           ))}</ul>
-          {rueckfrage.dateien.length > rueckfrage.doppelt.length && <p className="leise klein">Die übrigen {rueckfrage.dateien.length - rueckfrage.doppelt.length} Dateien werden normal abgelegt.</p>}
+          {rueckfrage.dateien.length > rueckfrage.doppelt.length && <p className="leise klein">{t('ablage.neuepost.die-uebrigen-dateien-werden', { wert: rueckfrage.dateien.length - rueckfrage.doppelt.length })}</p>}
           <div className="knoepfe">
-            <button type="button" className="knopf primaer klein" onClick={() => void weiter()}>Weiter</button>
-            <button type="button" className="knopf klein" onClick={() => setRueckfrage(null)}>Abbrechen</button>
+            <button type="button" className="knopf primaer klein" onClick={() => void weiter()}>{t('ablage.neuepost.weiter')}</button>
+            <button type="button" className="knopf klein" onClick={() => setRueckfrage(null)}>{t('ablage.neuepost.abbrechen')}</button>
           </div>
         </div>
       )}
@@ -208,9 +208,9 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
           {laeuft && <p>{laeuft}</p>}
           {hinweis && <p>{hinweis}</p>}
           {fehler.length > 0 && <>
-            <p><strong>Nicht abgelegt:</strong></p>
+            <p><strong>{t('ablage.neuepost.nicht-abgelegt')}</strong></p>
             <ul>{fehler.map((x) => <li key={x}>{x}</li>)}</ul>
-            <button type="button" className="knopf klein" onClick={() => setFehler([])}>Schließen</button>
+            <button type="button" className="knopf klein" onClick={() => setFehler([])}>{t('ablage.neuepost.schliessen')}</button>
           </>}
         </div>
       )}
@@ -223,7 +223,7 @@ export function NeuKnopf() {
   const d = useDaten();
   const typ = postTyp(d.typen);
   const post = darfPostAnlegen(typ) && !!typ?.register.some((r) => r.art === 'dokumente');
-  const typen = d.typen.filter((t) => darfErstellen(t)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const typen = d.typen.filter((mappentyp) => darfErstellen(mappentyp)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   const [offen, setOffen] = useState(false);
   const [mappe, setMappe] = useState(false);
   const touch = istTouch();
@@ -240,18 +240,18 @@ export function NeuKnopf() {
   if (!post && !typen.length) return null;
   return (
     <div className="neuknopf" ref={rahmen}>
-      <button type="button" className="knopf gruen klein" aria-haspopup="menu" aria-expanded={offen} onClick={() => { setOffen(!offen); setMappe(false); }}>+ Neu</button>
+      <button type="button" className="knopf gruen klein" aria-haspopup="menu" aria-expanded={offen} onClick={() => { setOffen(!offen); setMappe(false); }}>{t('ablage.neuepost.neu')}</button>
       {offen && <div className="hy-schleier" aria-hidden="true" onClick={() => { setOffen(false); setMappe(false); }} />}
       {offen && (
         <div className="menue" role="menu">
           {!mappe ? <>
             {/* Handy (#490): erster Eintrag öffnet direkt die Kamera; „Datei oder Foto wählen“ bleibt für alles andere. */}
-            {post && touch && <button type="button" className="menuepunkt" role="menuitem" onClick={() => { setOffen(false); postFotografieren(); }}><Symbol name="kamera" /> Post fotografieren</button>}
-            {post && <button type="button" className="menuepunkt" role="menuitem" onClick={() => { setOffen(false); eingabe.current?.click(); }}>{touch ? <>Post <span className="leise klein">– Datei oder Foto wählen</span></> : <>Post <span className="leise klein">– Dateien auswählen{' '}oder fotografieren</span></>}</button>}
-            {typen.length > 0 && <button type="button" className="menuepunkt" role="menuitem" onClick={() => setMappe(true)}>Mappe … <span aria-hidden="true">›</span></button>}
+            {post && touch && <button type="button" className="menuepunkt" role="menuitem" onClick={() => { setOffen(false); postFotografieren(); }}>{tn('ablage.neuepost.post-fotografieren', { symbol: <Symbol name="kamera" /> })}</button>}
+            {post && <button type="button" className="menuepunkt" role="menuitem" onClick={() => { setOffen(false); eingabe.current?.click(); }}>{touch ? <>{tn('ablage.neuepost.post', { span: <span className="leise klein">{t('ablage.neuepost.datei-oder-foto-waehlen')}</span> })}</> : <>{tn('ablage.neuepost.post', { span: <span className="leise klein">{t('ablage.neuepost.dateien-auswaehlen-oder')}</span> })}</>}</button>}
+            {typen.length > 0 && <button type="button" className="menuepunkt" role="menuitem" onClick={() => setMappe(true)}>{tn('ablage.neuepost.mappe', { span: <span aria-hidden="true">›</span> })}</button>}
           </> : <>
-            <p className="leise klein">Neue Mappe vom Mappentyp</p>
-            {typen.map((t) => <button key={t.id} type="button" className="menuepunkt" role="menuitem" onClick={() => { setOffen(false); setMappe(false); geheZu(`/ablage/${t.id}/neu`); }}>{t.name}</button>)}
+            <p className="leise klein">{t('ablage.neuepost.neue-mappe-vom-mappentyp')}</p>
+            {typen.map((mappentyp) => <button key={mappentyp.id} type="button" className="menuepunkt" role="menuitem" onClick={() => { setOffen(false); setMappe(false); geheZu(`/ablage/${mappentyp.id}/neu`); }}>{mappentyp.name}</button>)}
           </>}
         </div>
       )}

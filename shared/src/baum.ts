@@ -19,9 +19,10 @@
  */
 import type { Verweisart } from './model';
 import type { Rechte } from './rechte';
+import { t } from './texte';
 
 export type BaumRichtung = 'verwiesenVon' | 'verweistAuf';
-export const BAUM_RICHTUNGEN: Record<BaumRichtung, string> = { verwiesenVon: 'Mappen, die darauf verweisen', verweistAuf: 'Mappen, auf die sie verweist' };
+export const BAUM_RICHTUNGEN: Record<BaumRichtung, string> = { verwiesenVon: t('gemeinsam.baum.mappen-die-darauf-verweisen'), verweistAuf: t('gemeinsam.baum.mappen-auf-die-sie') };
 
 export const BAUM_TIEFE_MAX = 10;
 /** Obergrenze der Knoten je Baum (Start-Mappe mitgezählt). */

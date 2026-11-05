@@ -1,11 +1,12 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { rueckfrage } from './rueckfrage';
+import { t } from './sprache';
 
 /* Kleiner Router: der Pfad ist der Zustand, Links schieben ihn in die History. */
 
 /** Formulare mit ungespeicherten Änderungen; mehrere auf einer Seite gehen (#370). */
 const wachen = new Set<object>();
-const wache = () => rueckfrage({ titel: 'Änderungen verwerfen?', text: 'Es gibt ungespeicherte Änderungen. Verlässt du die Seite, gehen sie verloren.', ja: 'Verwerfen und verlassen', nein: 'Hierbleiben', gefahr: true });
+const wache = () => rueckfrage({ titel: t('oberflaeche.ort.aenderungen-verwerfen'), text: t('oberflaeche.ort.es-gibt-ungespeicherte-aenderungen'), ja: t('oberflaeche.ort.verwerfen-und-verlassen'), nein: t('oberflaeche.ort.hierbleiben'), gefahr: true });
 
 /** Nach erfolgreichem Speichern: ohne Nachfrage weiter. */
 export function loeseWache() { wachen.clear(); }

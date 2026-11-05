@@ -8,13 +8,14 @@
  */
 import type { Feld, Mappe, Mappentyp } from './model';
 import { verschiebe } from './sichten';
+import { t } from './texte';
 
 export const VORLAUF_EINHEITEN = { tage: 'Tage', wochen: 'Wochen', monate: 'Monate' } as const;
 export type VorlaufEinheit = keyof typeof VORLAUF_EINHEITEN;
 
 /** Wiederkehrend (#130): Abstand in Monaten. */
 export const WIEDERHOLUNGEN: Record<number, string> = { 1: 'monatlich', 3: 'vierteljährlich', 6: 'halbjährlich', 12: 'jährlich' };
-export const wiederholungText = (monate: number) => WIEDERHOLUNGEN[monate] ?? (monate % 12 === 0 ? `alle ${monate / 12} Jahre` : `alle ${monate} Monate`);
+export const wiederholungText = (monate: number) => WIEDERHOLUNGEN[monate] ?? (monate % 12 === 0 ? t('gemeinsam.fristen.alle-jahre', { wert: monate / 12 }) : t('gemeinsam.fristen.alle-monate', { monate }));
 
 export interface FristEinstellung {
   /** Wie lange vor dem Datum die Erinnerung im Eingang erscheint. */

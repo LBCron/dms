@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Fachfehler } from './fehler';
 import type { SeitenWahl } from './pdf';
+import { t } from './sprache';
 
 /**
  * PDF bearbeiten (#335): Seiten drehen, löschen, umsortieren, teilen, zusammenfügen – im Server, ohne
@@ -16,14 +17,14 @@ const DREHUNGEN = [0, 90, 180, 270];
 
 /** Eingabe prüfen: Seiten des Originals, Drehung in 90°-Schritten, Teile als Startpositionen. */
 export function pruefeAuswahl(roh: unknown, anzahl: number): SeitenWahl[] {
-  if (!Array.isArray(roh) || !roh.length) throw new Fachfehler(422, 'Mindestens eine Seite muss bleiben.');
-  if (roh.length > 5000) throw new Fachfehler(422, 'Zu viele Seiten.');
+  if (!Array.isArray(roh) || !roh.length) throw new Fachfehler(422, t('meldungen.pdfseiten.mindestens-eine-seite-muss'));
+  if (roh.length > 5000) throw new Fachfehler(422, t('meldungen.pdfseiten.zu-viele-seiten'));
   return roh.map((x, i) => {
     const o = (x ?? {}) as Record<string, unknown>;
     const nr = Number(o.nr);
-    if (!Number.isInteger(nr) || nr < 1 || nr > anzahl) throw new Fachfehler(422, `Seite ${i + 1}: Die Seite ${String(o.nr)} gibt es nicht (das PDF hat ${anzahl} Seiten).`);
+    if (!Number.isInteger(nr) || nr < 1 || nr > anzahl) throw new Fachfehler(422, t('meldungen.pdfseiten.seite-die-seite-gibt', { wert: i + 1, nr: String(o.nr), zahl: anzahl }));
     const drehung = o.drehung === undefined ? 0 : Number(o.drehung);
-    if (!DREHUNGEN.includes(((drehung % 360) + 360) % 360)) throw new Fachfehler(422, 'Drehen geht nur in Schritten von 90 Grad.');
+    if (!DREHUNGEN.includes(((drehung % 360) + 360) % 360)) throw new Fachfehler(422, t('meldungen.pdfseiten.drehen-geht-nur-in'));
     return { nr, drehung: ((drehung % 360) + 360) % 360 };
   });
 }
@@ -31,11 +32,11 @@ export function pruefeAuswahl(roh: unknown, anzahl: number): SeitenWahl[] {
 /** Teile: aufsteigende Startpositionen in der Seitenauswahl (die erste Seite beginnt immer einen Teil). */
 export function pruefeTeile(roh: unknown, laenge: number): number[] {
   if (roh === undefined || roh === null) return [0];
-  if (!Array.isArray(roh)) throw new Fachfehler(422, 'teile: eine Liste von Seitenpositionen.');
-  const t = [...new Set([0, ...roh.map(Number)])].sort((a, b) => a - b);
-  if (t.some((x) => !Number.isInteger(x) || x < 0 || x >= laenge)) throw new Fachfehler(422, 'teile: Jede Position muss eine Seite der Auswahl sein.');
-  if (t.length > 200) throw new Fachfehler(422, 'Höchstens 200 Teile.');
-  return t;
+  if (!Array.isArray(roh)) throw new Fachfehler(422, t('meldungen.pdfseiten.teile-eine-liste-von'));
+  const eintrag = [...new Set([0, ...roh.map(Number)])].sort((a, b) => a - b);
+  if (eintrag.some((x) => !Number.isInteger(x) || x < 0 || x >= laenge)) throw new Fachfehler(422, t('meldungen.pdfseiten.teile-jede-position-muss'));
+  if (eintrag.length > 200) throw new Fachfehler(422, t('meldungen.pdfseiten.hoechstens-200-teile'));
+  return eintrag;
 }
 
 /** „Rechnung.pdf“ → „Rechnung (Teil 2).pdf“ */

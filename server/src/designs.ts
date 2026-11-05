@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Dateispeicher } from './dateispeicher';
 import type postgres from 'postgres';
 import { Fachfehler } from './fehler';
+import { t } from './sprache';
 
 /**
  * Designs der Weboberfläche (#21). Ein Design besteht aus einer Grundlage
@@ -43,14 +44,14 @@ function bereinige(e: unknown): DesignDaten {
   const css = String(x.css ?? '');
   const schriftzug = x.schriftzug === null || x.schriftzug === undefined ? null : String(x.schriftzug).replace(/\s+/g, ' ').trim();
   const fehler: string[] = [];
-  if (schriftzug !== null && schriftzug.length > SCHRIFTZUG_MAX) fehler.push(`Der Schriftzug darf höchstens ${SCHRIFTZUG_MAX} Zeichen haben.`);
-  if (!name) fehler.push('Bitte einen Namen angeben.');
-  if (!GRUNDLAGEN.includes(grundlage)) fehler.push('Grundlage: automatisch, hell, dunkel oder kontrast.');
-  if (!FARBE.test(primaer)) fehler.push('Primärfarbe als #RRGGBB angeben.');
-  if (!FARBE.test(sekundaer)) fehler.push('Sekundärfarbe als #RRGGBB angeben.');
-  if (css.length > MAX_CSS) fehler.push('Das eigene CSS ist zu lang (höchstens 50.000 Zeichen).');
+  if (schriftzug !== null && schriftzug.length > SCHRIFTZUG_MAX) fehler.push(t('meldungen.designs.der-schriftzug-darf-hoechstens', { SCHRIFTZUG_MAX }));
+  if (!name) fehler.push(t('meldungen.designs.bitte-einen-namen-angeben'));
+  if (!GRUNDLAGEN.includes(grundlage)) fehler.push(t('meldungen.designs.grundlage-automatisch-hell-dunkel'));
+  if (!FARBE.test(primaer)) fehler.push(t('meldungen.designs.primaerfarbe-als-rrggbb-angeben'));
+  if (!FARBE.test(sekundaer)) fehler.push(t('meldungen.designs.sekundaerfarbe-als-rrggbb-angeben'));
+  if (css.length > MAX_CSS) fehler.push(t('meldungen.designs.das-eigene-css-ist'));
   // Kein „<“ (#250): Damit kann eigenes CSS den Style-Block nicht verlassen. In CSS-Texten geht „\3C “.
-  if (css.includes('<')) fehler.push('Das CSS darf kein „<“ enthalten (in Texten stattdessen \\3C schreiben).');
+  if (css.includes('<')) fehler.push(t('meldungen.designs.das-css-darf-kein'));
   if (fehler.length) throw new Fachfehler(422, fehler.join(' '));
   return { name, grundlage, primaer: primaer.toUpperCase(), sekundaer: sekundaer.toUpperCase(), css, schriftzug };
 }
@@ -85,10 +86,10 @@ export function pruefeLogo(b: Buffer): string {
   if (istSvg(text)) {
     const verboten = [/<script/i, /<foreignObject/i, /\son[a-z]+\s*=/i, /javascript:/i, /<!ENTITY/i, /<!DOCTYPE/i, /<(iframe|embed|object|link|meta|style)\b/i,
       /(xlink:)?href\s*=\s*["']\s*(?!#)/i, /url\(\s*["']?\s*(?!#)/i, /@import/i];
-    if (verboten.some((r) => r.test(text))) throw new Fachfehler(422, 'Das SVG enthält Skripte, Ereignisse oder Verweise auf andere Dateien. Bitte ein schlichtes SVG oder PNG verwenden.');
+    if (verboten.some((r) => r.test(text))) throw new Fachfehler(422, t('meldungen.designs.das-svg-enthaelt-skripte'));
     return 'image/svg+xml';
   }
-  throw new Fachfehler(422, 'Das Logo bitte als PNG, JPEG, WebP oder SVG.');
+  throw new Fachfehler(422, t('meldungen.designs.das-logo-bitte-als'));
 }
 
 export class Designs {
@@ -97,10 +98,10 @@ export class Designs {
   /** Logo hochladen bzw. entfernen (#72). */
   async setzeLogo(id: string, inhalt: unknown) {
     const d = (await this.repo.liste()).find((x) => x.id === id);
-    if (!d) throw new Fachfehler(404, 'Dieses Design gibt es nicht.');
-    if (!this.dateien) throw new Fachfehler(404, 'Logos sind nicht eingerichtet.');
-    if (!Buffer.isBuffer(inhalt) || !inhalt.length) throw new Fachfehler(422, 'Die Datei ist leer.');
-    if (inhalt.length > LOGO_MAX) throw new Fachfehler(413, 'Das Logo darf höchstens 1 MB groß sein.');
+    if (!d) throw new Fachfehler(404, t('meldungen.designs.dieses-design-gibt-es'));
+    if (!this.dateien) throw new Fachfehler(404, t('meldungen.designs.logos-sind-nicht-eingerichtet'));
+    if (!Buffer.isBuffer(inhalt) || !inhalt.length) throw new Fachfehler(422, t('meldungen.designs.die-datei-ist-leer'));
+    if (inhalt.length > LOGO_MAX) throw new Fachfehler(413, t('meldungen.designs.das-logo-darf-hoechstens'));
     const mime = pruefeLogo(inhalt);
     const sha256 = createHash('sha256').update(inhalt).digest('hex');
     await this.dateien.schreibe(sha256, inhalt);
@@ -120,7 +121,7 @@ export class Designs {
 
   async entferneLogo(id: string) {
     const d = (await this.repo.liste()).find((x) => x.id === id);
-    if (!d) throw new Fachfehler(404, 'Dieses Design gibt es nicht.');
+    if (!d) throw new Fachfehler(404, t('meldungen.designs.dieses-design-gibt-es'));
     const neu = await this.repo.speichere({ ...d, logo: null }, false);
     if (d.logo) await this.raeumeAuf(d.logo.sha256);
     return neu;
@@ -130,7 +131,7 @@ export class Designs {
     const { designs, standard } = await this.liste();
     const d = designs.find((x) => x.id === id);
     // Ohne Anmeldung (Anmeldeseite) nur das Logo des Standard-Designs.
-    if (!d?.logo || !this.dateien || (!angemeldet && id !== standard)) throw new Fachfehler(404, 'Dieses Logo gibt es nicht.');
+    if (!d?.logo || !this.dateien || (!angemeldet && id !== standard)) throw new Fachfehler(404, t('meldungen.designs.dieses-logo-gibt-es'));
     return { logo: d.logo, inhalt: await this.dateien.lies(d.logo.sha256) };
   }
 
@@ -155,7 +156,7 @@ export class Designs {
 
   private async pruefeName(name: string, ausser?: string) {
     if ((await this.repo.liste()).some((d) => d.id !== ausser && d.name.toLowerCase() === name.toLowerCase())) {
-      throw new Fachfehler(409, `Es gibt bereits ein Design „${name}“.`);
+      throw new Fachfehler(409, t('meldungen.designs.es-gibt-bereits-ein', { name }));
     }
   }
 
@@ -166,7 +167,7 @@ export class Designs {
   }
 
   async aendere(id: string, e: unknown) {
-    if (!(await this.repo.liste()).some((x) => x.id === id)) throw new Fachfehler(404, 'Dieses Design gibt es nicht.');
+    if (!(await this.repo.liste()).some((x) => x.id === id)) throw new Fachfehler(404, t('meldungen.designs.dieses-design-gibt-es'));
     const d = bereinige(e);
     await this.pruefeName(d.name, id);
     const alt = (await this.repo.liste()).find((x) => x.id === id);
@@ -176,15 +177,15 @@ export class Designs {
   /** Benutzer mit diesem Design bekommen danach automatisch das Standard-Design. */
   async loesche(id: string) {
     const { designs, standard } = await this.liste();
-    if (!designs.some((d) => d.id === id)) throw new Fachfehler(404, 'Dieses Design gibt es nicht.');
-    if (id === standard) throw new Fachfehler(409, 'Das Standard-Design kann nicht gelöscht werden. Lege zuerst ein anderes als Standard fest.');
+    if (!designs.some((d) => d.id === id)) throw new Fachfehler(404, t('meldungen.designs.dieses-design-gibt-es'));
+    if (id === standard) throw new Fachfehler(409, t('meldungen.designs.das-standard-design-kann'));
     const logo = designs.find((d) => d.id === id)?.logo;
     await this.repo.loesche(id);
     if (logo) await this.raeumeAuf(logo.sha256);
   }
 
   async setzeStandard(id: string) {
-    if (!(await this.repo.liste()).some((d) => d.id === id)) throw new Fachfehler(404, 'Dieses Design gibt es nicht.');
+    if (!(await this.repo.liste()).some((d) => d.id === id)) throw new Fachfehler(404, t('meldungen.designs.dieses-design-gibt-es'));
     await this.repo.setzeStandard(id);
     return this.liste();
   }

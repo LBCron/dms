@@ -8,6 +8,7 @@ import { t } from '../sprache';
 import { HerkunftZeile } from './Herkunft';
 import { Eingabe } from './PaketEinstellungen';
 import { PaketSymbol } from './PaketSymbol';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Mehrere Pakete in einem Ablauf (#405): Auswahl als Baum (Abhängigkeiten sichtbar, Ergänzungen wie die Zusatzsprachen
@@ -126,7 +127,7 @@ function aufloesen(q: AblaufQuelle, liste: Kandidat[], wahl: string[], versionen
 
 /** Name einer Kategorie aus dem Katalog (#645); unbekannte Kennungen zeigt Ablago, wie sie sind. */
 const kategorieName = (k: string) => { const s = `pakete.kategorie.${k}`; const x = t(s as never); return x === s ? k : x; };
-const groesseText = (b: number) => (b >= 1048576 ? `${(b / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const groesseText = (b: number) => (b >= 1048576 ? `${(b / 1048576).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
 /** Kurzer Name einer Ergänzung unter ihrem Paket: „Texterkennung – Zusatzsprache Französisch“ → „Zusatzsprache Französisch“. */
 const kurz = (name: string) => (name.includes(' – ') ? name.slice(name.lastIndexOf(' – ') + 3) : name);
@@ -555,7 +556,7 @@ export function AblaufErgebnisAnsicht({ e, weiter }: { e: AblaufErgebnis; weiter
           <ul>{e.nichtInstalliert.map((x) => <li key={x.id}><strong>{x.name}</strong> {x.version}{x.grund ? `: ${x.grund}` : ''}</li>)}</ul>
         </div>
       )}
-      {(e.nichtInstalliert.length > 0 || !!e.fehler) && <p className="leise">{t('pakete.ablauf.ergebnis.nachholen')} <Link to="/werkbank/pakete" className="verweis">Werkbank → Pakete</Link></p>}
+      {(e.nichtInstalliert.length > 0 || !!e.fehler) && <p className="leise">{t('pakete.ablauf.ergebnis.nachholen')} <Link to="/werkbank/pakete" className="verweis">{t('werkbank.paketablauf.werkbank-pakete')}</Link></p>}
       {!e.installiert.length && !e.fehler && !e.nichtInstalliert.length && <p className="leise">{t('pakete.ablauf.ergebnis.nichts')}</p>}
       <div className="knoepfe"><button type="button" className="knopf primaer" onClick={weiter}>{t('pakete.ablauf.ergebnis.weiter')}</button></div>
     </div>

@@ -2,6 +2,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { istGeaendert, leistenknoepfe, verwerfenSchritt } from '../../shared/src/entwurf';
 import { geheZu, loeseWache, useUngespeichert } from './ort';
 import { rueckfrage } from './rueckfrage';
+import { t } from './sprache';
 
 /**
  * Werkbank-Formulare (#370): ein Muster für alle Anlege-/Bearbeiten-Formulare.
@@ -34,9 +35,9 @@ export function useEntwurf<T>(gespeichert: T, aktuell: T, o: { neu?: boolean; zu
     const s = verwerfenSchritt({ neu, geaendert }, ausloeser);
     if (s.aktion === 'nichts') return;
     if (s.rueckfrage && !(await rueckfrage({
-      titel: neu ? 'Entwurf verwerfen?' : 'Änderungen verwerfen?',
-      text: neu ? 'Was du eingegeben hast, wird nicht angelegt.' : 'Die Felder gehen auf den gespeicherten Stand zurück.',
-      ja: 'Verwerfen', nein: 'Weiter bearbeiten', gefahr: true,
+      titel: neu ? t('oberflaeche.speicherleiste.entwurf-verwerfen') : t('oberflaeche.speicherleiste.aenderungen-verwerfen'),
+      text: neu ? t('oberflaeche.speicherleiste.was-du-eingegeben-hast') : t('oberflaeche.speicherleiste.die-felder-gehen-auf'),
+      ja: t('oberflaeche.speicherleiste.verwerfen'), nein: t('oberflaeche.speicherleiste.weiter-bearbeiten'), gefahr: true,
     }))) return;
     if (s.aktion === 'schliessen') {
       if (o.liste) { loeseWache(); geheZu(o.liste); } else o.zuruecksetzen();

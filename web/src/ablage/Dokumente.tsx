@@ -9,7 +9,7 @@ import { spracheAusInfo, sprachname } from '../../../shared/src/textsprache';
 import { herkunftText } from '../volltext';
 import { volltextHerkunft } from '../../../shared/src/volltext';
 import { fassungAusInfo } from '../../../shared/src/dateiumwandlung';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { api, archivfassungUrl, dokumentUrl, fassungUrl, versionUrl, type Fundstelle } from '../api';
 import { pdfaName, type ArchivStand } from '../../../shared/src/archivfassung';
 import { namensvorschlag } from '../../../shared/src/entsperren';
@@ -24,6 +24,7 @@ import { PdfVerkleinern } from './PdfVerkleinern';
 import { Schwaerzen } from './Schwaerzen';
 import { kannSchwaerzen } from '../../../shared/src/schwaerzen';
 import { kannStempeln } from '../../../shared/src/stempel';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** „Verkleinern“ (#393) erst ab dieser Größe anbieten – kleinere PDFs lohnen die Mühe kaum. */
 const VERKLEINERN_AB = 500 * 1024;
@@ -37,12 +38,12 @@ const VERKLEINERN_AB = 500 * 1024;
 /** gleicherName (#194): was mit einem Dokument gleichen Namens im Register passiert. */
 export interface NeueDatei { uid: string; datei: File; register: string; gleicherName?: 'zaehler' | 'version' | 'ersetzen' }
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 export const groesse = (b: number) => (b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 
 /** Reihenfolgen der Dokumente (#86); gemerkt je Benutzer für alle Dokumentenregister. */
 export const DOKUMENT_SORTIERUNGEN = {
-  name: 'Name A–Z', name_ab: 'Name Z–A', neu: 'Neueste zuerst', alt: 'Älteste zuerst', gross: 'Größte zuerst',
+  name: t('ablage.dokumente.name-a-z'), name_ab: t('ablage.dokumente.name-z-a'), neu: t('ablage.dokumente.neueste-zuerst'), alt: t('ablage.dokumente.aelteste-zuerst'), gross: t('ablage.dokumente.groesste-zuerst'),
 } as const;
 export type Dokumentsortierung = keyof typeof DOKUMENT_SORTIERUNGEN;
 const natuerlich = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
@@ -110,7 +111,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
     const id = ersetzeId; setErsetzeId(undefined);
     if (!id) return;
     setVersionFehler(undefined);
-    if (datei.size > MAX_DATEIGROESSE) { setVersionFehler(`„${datei.name}“ ist zu groß (über 100 MB).`); return; }
+    if (datei.size > MAX_DATEIGROESSE) { setVersionFehler(t('ablage.dokumente.ist-zu-gross-ueber', { name: datei.name })); return; }
     try { await api.ersetzen(id, datei); await neuLaden?.(); } catch (e) { setVersionFehler((e as Error).message); }
   }
   const d = useDaten();
@@ -142,19 +143,19 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   async function pdfFertig(r: { dokumente: Dokument[]; posten: Mappe[] }) {
     setSeitenOffen(undefined);
     setPdfMeldung(r.posten.length
-      ? <>{r.posten.length} neue Posts angelegt: {r.posten.map((p, i) => <span key={p.id}>{i > 0 && ', '}<Link to={`/ablage/${p.typId}/${p.id}`} className="verweis">{String(p.werte.betreff ?? 'Post')}</Link></span>)}. Diese Post ist erledigt.</>
-      : r.dokumente.length > 1 ? `In ${r.dokumente.length} Dokumente geteilt.` : `„${r.dokumente[0]?.name}“ gespeichert${versioniert ? ` – Version ${r.dokumente[0]?.version ?? 1}` : ''}.`);
+      ? <>{t('ablage.dokumente.neue-posts-angelegt', { posten: r.posten.length })}{' '}{r.posten.map((p, i) => <span key={p.id}>{i > 0 && ', '}<Link to={`/ablage/${p.typId}/${p.id}`} className="verweis">{String(p.werte.betreff ?? t('ablage.dokumente.post'))}</Link></span>)}{t('ablage.dokumente.diese-post-ist-erledigt')}</>
+      : r.dokumente.length > 1 ? t('ablage.dokumente.in-dokumente-geteilt', { dokumente: r.dokumente.length }) : t('ablage.dokumente.gespeichert', { name: r.dokumente[0]?.name, wert: versioniert ? t('ablage.dokumente.version', { wert: r.dokumente[0]?.version ?? 1 }) : '' }));
     await neuLaden?.();
   }
   async function fuegeZusammen() {
     if (!zusammen) return;
     const ohneKorb = !d.zaehler.papierkorbTage;
-    if (zusammen.entfernen && ohneKorb && !(await rueckfrage({ titel: 'Ausgangsdokumente endgültig löschen?', text: `Der Papierkorb ist ausgeschaltet: Die ${pdfAuswahl.length} Ausgangsdokumente sind nach dem Zusammenfügen endgültig weg.`, ja: 'Zusammenfügen und löschen', gefahr: true }))) return;
+    if (zusammen.entfernen && ohneKorb && !(await rueckfrage({ titel: t('ablage.dokumente.ausgangsdokumente-endgueltig'), text: t('ablage.dokumente.der-papierkorb-ist-ausgeschaltet', { pdfAuswahl: pdfAuswahl.length }), ja: t('ablage.dokumente.zusammenfuegen-und-loeschen'), gefahr: true }))) return;
     setZusammen({ ...zusammen, laeuft: true, fehler: undefined });
     try {
       const r = await api.fuegePdfZusammen({ dokumente: pdfAuswahl.map((x) => x.id), name: zusammen.name.trim() || undefined, register: register.key, originaleEntfernen: zusammen.entfernen, bestaetigt: zusammen.entfernen && ohneKorb });
       setZusammen(null); setGewaehlt(new Set());
-      setPdfMeldung(`${pdfAuswahl.length} PDFs zu „${r.dokument.name}“ zusammengefügt.`);
+      setPdfMeldung(t('ablage.dokumente.pdfs-zu-zusammengefuegt', { pdfAuswahl: pdfAuswahl.length, name: r.dokument.name }));
       await neuLaden?.();
     } catch (e) { setZusammen((z) => z && { ...z, laeuft: false, fehler: (e as Error).message }); }
   }
@@ -176,13 +177,13 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const offen = dokumente.some((x) => { const s = standVon(x)?.stand; const h = volltextHerkunft(standVon(x)); return s === 'wartet' || s === 'laeuft' || (h?.art === 'wartet' && !!h.paket) || h?.art === 'umwandlung' || h?.art === 'volltext'; });
   useEffect(() => {
     if (!offen || !dokumente.length) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       void api.mappe(dokumente[0].mappeId).then((m) => {
         setOcr(Object.fromEntries(m.dokumente.map((x) => [x.id, x.ocr])));
         setFrisch(Object.fromEntries(m.dokumente.map((x) => [x.id, { sprache: x.sprache, weitereSprachen: x.weitereSprachen, teilenAb: x.teilenAb }])));
       }, () => {});
     }, 3000);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [offen, ocr, dokumente.length]); // eslint-disable-line react-hooks/exhaustive-deps
   async function erneut(id: string) {
     try { const x = await api.texterkennungErneut(id); setOcr((o) => ({ ...o, [id]: x.ocr })); } catch { /* bleibt */ }
@@ -222,7 +223,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   function alleHerunterladen() {
     let ersterMal = false;
     try { ersterMal = auswahl.length > 1 && !localStorage.getItem(HINWEIS_MEHRFACH); localStorage.setItem(HINWEIS_MEHRFACH, '1'); } catch { /* egal */ }
-    setHinweis(ersterMal ? 'Dein Browser fragt beim ersten Mal womöglich, ob diese Seite mehrere Dateien auf einmal herunterladen darf – bitte erlauben.' : undefined);
+    setHinweis(ersterMal ? t('ablage.dokumente.dein-browser-fragt-beim') : undefined);
     // Nacheinander, mit kleinem Abstand – sonst verwerfen manche Browser einen Teil.
     auswahl.forEach((x, i) => setTimeout(() => {
       const a = document.createElement('a');
@@ -251,32 +252,32 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
     <div className="dokumente">
       {!nurLesen && <div className={`ablagezone ${ziehen ? 'zieht' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setZiehen(true); }} onDragLeave={() => setZiehen(false)} onDrop={fallen}>
-        <p>Dateien hierher ziehen oder <button type="button" className="textknopf" onClick={() => auswahlFeld.current?.click()}>auswählen</button></p>
-        <p className="leise klein">Bis 100 MB je Datei. Übernommen wird mit „Mappe speichern“.</p>
+        <p>{t('ablage.dokumente.dateien-hierher-ziehen-oder')}{' '}<button type="button" className="textknopf" onClick={() => auswahlFeld.current?.click()}>{t('ablage.dokumente.auswaehlen')}</button></p>
+        <p className="leise klein">{t('ablage.dokumente.bis-100-mb-je')}</p>
         <input ref={auswahlFeld} type="file" multiple hidden onChange={(e) => { if (e.target.files) nimm(e.target.files); e.target.value = ''; }} />
       </div>}
-      {zuGross.length > 0 && <div className="hinweis schlecht"><p>Zu groß (über 100 MB): {zuGross.join(', ')}</p></div>}
+      {zuGross.length > 0 && <div className="hinweis schlecht"><p>{t('ablage.dokumente.zu-gross-ueber-100', { zuGross: zuGross.join(', ') })}</p></div>}
       <input ref={ersetzFeld} type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void ersetze(f); else setErsetzeId(undefined); }} />
       {versionFehler && <div className="hinweis schlecht"><p>{versionFehler}</p></div>}
       {dokumente.length + neue.length === 0
-        ? <p className="leise">Noch keine Dokumente in „{register.name}“.</p>
+        ? <p className="leise">{t('ablage.dokumente.noch-keine-dokumente-in', { name: register.name })}</p>
         : <>
             {dokumente.length > 0 && (
               <div className="dokleiste">
                 <label className="haken klein"><input type="checkbox" checked={alleAn} disabled={!waehlbar.length}
                   ref={(el) => { if (el) el.indeterminate = auswahl.length > 0 && !alleAn; }}
                   onChange={() => setGewaehlt(alleAn ? new Set() : new Set(waehlbar.map((x) => x.id)))} />
-                  <span>{auswahl.length ? `${auswahl.length} von ${waehlbar.length} ausgewählt` : 'Alle auswählen'}</span></label>
+                  <span>{auswahl.length ? t('ablage.dokumente.von-ausgewaehlt', { auswahl: auswahl.length, waehlbar: waehlbar.length }) : t('ablage.dokumente.alle-auswaehlen')}</span></label>
                 <Hilfe ort="dokumente.mehrere" />
                 {!mitnehmen && <NichtHerunterladen />}
                 {auswahl.length > 0 && <>
                   {mitnehmen && <button type="button" className="knopf klein" onClick={alleHerunterladen} disabled={stempelPflicht}
-                    title={stempelPflicht ? 'Dieser Mappentyp verlangt beim Weitergeben einen Stempel: lade die Dokumente einzeln mit Stempel herunter.' : undefined}>Herunterladen</button>}
+                    title={stempelPflicht ? t('ablage.dokumente.dieser-mappentyp-verlangt-beim') : undefined}>{t('ablage.dokumente.herunterladen')}</button>}
                   {bearbeitbar && pdfAuswahl.length >= 2 && <button type="button" className="knopf klein" aria-expanded={!!zusammen}
-                    onClick={() => setZusammen(zusammen ? null : { name: pdfAuswahl[0].name, entfernen: false })}>Zusammenfügen</button>}
-                  {!nurLesen && <button type="button" className="knopf klein gefahr-rand" onClick={auswahlLoeschen}>Löschen</button>}
+                    onClick={() => setZusammen(zusammen ? null : { name: pdfAuswahl[0].name, entfernen: false })}>{t('ablage.dokumente.zusammenfuegen')}</button>}
+                  {!nurLesen && <button type="button" className="knopf klein gefahr-rand" onClick={auswahlLoeschen}>{t('ablage.dokumente.loeschen')}</button>}
                 </>}
-                <label className="sortwahl klein"><span className="leise">Sortieren:</span>
+                <label className="sortwahl klein"><span className="leise">{t('ablage.dokumente.sortieren')}</span>
                   <select value={sortierung} onChange={(e) => d.setzeEinstellung('dokumente_sortierung', e.target.value === 'name' ? null : e.target.value)}>
                     {Object.entries(DOKUMENT_SORTIERUNGEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select></label>
@@ -285,13 +286,13 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
             )}
             {hinweis && <div className="hinweis info"><p>{hinweis}</p></div>}
             {zusammen && pdfAuswahl.length >= 2 && (
-              <div className="zusammenfuegen" role="group" aria-label="PDFs zusammenfügen">
-                <span className="klein">{pdfAuswahl.length} PDFs in der Reihenfolge der Liste zu einem:</span>
-                <label className="eigenschaft klein"><span>Name</span><input value={zusammen.name} onChange={(e) => setZusammen({ ...zusammen, name: e.target.value })} /></label>
+              <div className="zusammenfuegen" role="group" aria-label={t('ablage.dokumente.pdfs-zusammenfuegen')}>
+                <span className="klein">{t('ablage.dokumente.pdfs-in-der-reihenfolge', { pdfAuswahl: pdfAuswahl.length })}</span>
+                <label className="eigenschaft klein"><span>{t('ablage.dokumente.name')}</span><input value={zusammen.name} onChange={(e) => setZusammen({ ...zusammen, name: e.target.value })} /></label>
                 <label className="haken klein"><input type="checkbox" checked={zusammen.entfernen} onChange={(e) => setZusammen({ ...zusammen, entfernen: e.target.checked })} />
-                  <span>Ausgangsdokumente {d.zaehler.papierkorbTage ? 'in den Papierkorb legen' : 'löschen (endgültig)'}</span></label>
-                <button type="button" className="knopf primaer klein" disabled={zusammen.laeuft} onClick={() => void fuegeZusammen()}>{zusammen.laeuft ? 'Wird zusammengefügt …' : 'Zusammenfügen'}</button>
-                <button type="button" className="knopf klein" disabled={zusammen.laeuft} onClick={() => setZusammen(null)}>Abbrechen</button>
+                  <span>{t('ablage.dokumente.ausgangsdokumente', { wert: d.zaehler.papierkorbTage ? t('ablage.dokumente.in-den-papierkorb-legen') : t('ablage.dokumente.loeschen-endgueltig') })}</span></label>
+                <button type="button" className="knopf primaer klein" disabled={zusammen.laeuft} onClick={() => void fuegeZusammen()}>{zusammen.laeuft ? t('ablage.dokumente.wird-zusammengefuegt') : t('ablage.dokumente.zusammenfuegen')}</button>
+                <button type="button" className="knopf klein" disabled={zusammen.laeuft} onClick={() => setZusammen(null)}>{t('ablage.dokumente.abbrechen')}</button>
                 <Hilfe ort="dokumente.seiten" />
                 {zusammen.fehler && <div className="hinweis schlecht"><p>{zusammen.fehler}</p></div>}
               </div>
@@ -302,25 +303,25 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                 <li key={n.uid} className="neu">
                   <div className="dokzeile">
                     <div className="dokname">
-                      <span>{n.datei.name} <span className="chip gut">neu</span></span>
-                      <span className="leise klein">{groesse(n.datei.size)} · wird beim Speichern hochgeladen</span>
-                      {doppelt[n.uid] && <span className="hinweis warn doppelthinweis"><Fundstellen f={doppelt[n.uid]} /> Beim Speichern wird sie trotzdem abgelegt – sonst „Nicht hochladen“.</span>}
+                      <span>{n.datei.name} <span className="chip gut">{t('ablage.dokumente.neu')}</span></span>
+                      <span className="leise klein">{t('ablage.dokumente.wird-beim-speichern-hochgeladen', { groesse: groesse(n.datei.size) })}</span>
+                      {doppelt[n.uid] && <span className="hinweis warn doppelthinweis"><Fundstellen f={doppelt[n.uid]} /> {' '}{t('ablage.dokumente.beim-speichern-wird-sie')}</span>}
                       {/* Gleicher Name wie ein vorhandenes Dokument (#194): nachfragen. */}
                       {(() => {
                         const gleich = dokumente.find((x) => !entfernt.includes(x.id) && x.name.toLowerCase() === n.datei.name.toLowerCase());
                         if (!gleich || !setzeNeue) return null;
                         const wahl = n.gleicherName ?? (versioniert ? 'version' : 'zaehler');
                         return (
-                          <label className="eigenschaft klein gleichername"><span>Es gibt schon „{gleich.name}“:</span>
+                          <label className="eigenschaft klein gleichername"><span>{t('ablage.dokumente.es-gibt-schon', { name: gleich.name })}</span>
                             <select value={wahl} onChange={(e) => setzeNeue(n.uid, { gleicherName: e.target.value as NeueDatei['gleicherName'] })}>
-                              {versioniert && <option value="version">als neue Version von „{gleich.name}“ speichern</option>}
-                              <option value="zaehler">als eigenes Dokument mit Zähler, z. B. „{mitZaehler(n.datei.name)}“</option>
-                              {!versioniert && <option value="ersetzen">altes Dokument löschen und neues hochladen (Löschen ist endgültig)</option>}
+                              {versioniert && <option value="version">{t('ablage.dokumente.als-neue-version-von', { name: gleich.name })}</option>}
+                              <option value="zaehler">{t('ablage.dokumente.als-eigenes-dokument-mit', { mitZaehler: mitZaehler(n.datei.name) })}</option>
+                              {!versioniert && <option value="ersetzen">{t('ablage.dokumente.altes-dokument-loeschen-und')}</option>}
                             </select></label>
                         );
                       })()}
                     </div>
-                    <div className="zeilenaktionen"><button type="button" className="textknopf" onClick={() => vergiss(n.uid)}>Nicht hochladen</button></div>
+                    <div className="zeilenaktionen"><button type="button" className="textknopf" onClick={() => vergiss(n.uid)}>{t('ablage.dokumente.nicht-hochladen')}</button></div>
                   </div>
                 </li>
               ))}
@@ -337,84 +338,83 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                   <li key={x.id} ref={auf ? offenRef : undefined} className={`${auf ? 'an' : ''} ${weg ? 'weg' : ''} ${klickbar ? 'klickbar' : ''} ${gewaehlt.has(x.id) && !weg ? 'gewaehlt' : ''}`}
                     onClick={(e) => zeilenKlick(x, e)}>
                     <div className="dokzeile">
-                      <input type="checkbox" className="dokwahl" aria-label={`${x.name} auswählen`} disabled={weg} checked={gewaehlt.has(x.id) && !weg}
+                      <input type="checkbox" className="dokwahl" aria-label={t('ablage.dokumente.auswaehlen-2', { name: x.name })} disabled={weg} checked={gewaehlt.has(x.id) && !weg}
                         onClick={(e) => waehle(x, (e.target as HTMLInputElement).checked, e.shiftKey)} onChange={() => {}} />
                       <Vorschaubild d={x} />
                       <div className="dokname">
                         {klickbar
                           ? <button type="button" className="textknopf" aria-expanded={auf} onClick={() => umschalten(x)}>{x.name}</button>
                           : <span className="dateiname">{x.name}</span>}
-                        <span className="leise klein">{weg ? (d.zaehler.papierkorbTage ? 'kommt beim Speichern in den Papierkorb' : 'wird beim Speichern endgültig gelöscht') : <>{groesse(x.groesse)} · {zeit(x.erstellt)} · <Person id={x.erstelltVon} />
-                          {(versioniert || (x.version ?? 1) > 1) && <> · <button type="button" className="textknopf klein" aria-expanded={versionenOffen === x.id} onClick={() => setVersionenOffen(versionenOffen === x.id ? undefined : x.id)}>Version {x.version ?? 1}</button></>}</>}</span>
+                        <span className="leise klein">{weg ? (d.zaehler.papierkorbTage ? t('ablage.dokumente.kommt-beim-speichern-in') : t('ablage.dokumente.wird-beim-speichern-endgueltig')) : <>{groesse(x.groesse)} · {zeit(x.erstellt)} · <Person id={x.erstelltVon} />
+                          {(versioniert || (x.version ?? 1) > 1) && <> · <button type="button" className="textknopf klein" aria-expanded={versionenOffen === x.id} onClick={() => setVersionenOffen(versionenOffen === x.id ? undefined : x.id)}>{t('ablage.dokumente.version-2', { wert: x.version ?? 1 })}</button></>}</>}</span>
                         {!weg && (x.archivnummer || asn?.id === x.id) && (asn?.id === x.id
                           ? <form className="asnform" onSubmit={(e) => { e.preventDefault(); void speichereAsn(); }}>
-                              <label className="klein"><span className="sr">Archivnummer</span>
+                              <label className="klein"><span className="sr">{t('ablage.dokumente.archivnummer')}</span>
                                 <input autoFocus value={asn.wert} maxLength={40} placeholder="z. B. A-000123" onChange={(e) => setAsn({ ...asn, wert: e.target.value, fehler: undefined })} /></label>
-                              <button className="knopf klein primaer">Übernehmen</button>
-                              <button type="button" className="textknopf klein" onClick={() => setAsn(null)}>Abbrechen</button>
+                              <button className="knopf klein primaer">{t('ablage.dokumente.uebernehmen')}</button>
+                              <button type="button" className="textknopf klein" onClick={() => setAsn(null)}>{t('ablage.dokumente.abbrechen')}</button>
                               <Hilfe ort="dokumente.archivnummer" />
                               {asn.fehler && <span className="fehlertext klein">{asn.fehler}</span>}
                             </form>
-                          : <span className="klein">Archivnummer <strong className="mono">{x.archivnummer}</strong>
-                              {!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>ändern</button></>}</span>)}
+                          : <span className="klein">{tn('ablage.dokumente.archivnummer-2', { b: <strong className="mono">{x.archivnummer}</strong> })}{!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>{t('ablage.dokumente.aendern')}</button></>}</span>)}
                         {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden} mitnehmen={mitnehmen}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
                         {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} weitere={x.weitereSprachen} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && <ArchivAnzeige s={x.archivfassung} />}
                         {!weg && x.pdfSchutz && <PdfSchutzAnzeige x={x} betreff={mappeTitel} fertig={() => void neuLaden?.()} />}
-                        {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
+                        {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? t('ablage.dokumente.kein-volltext-vorhanden')}</pre>}
                       </div>
                       {handy ? (
                         <div className="zeilenaktionen dk-handy">
-                          {klickbar && <a className="knopf primaer dk-gross" href={sicht!.url} aria-label={`${x.name} öffnen`}>Öffnen</a>}
+                          {klickbar && <a className="knopf primaer dk-gross" href={sicht!.url} aria-label={t('ablage.dokumente.oeffnen', { name: x.name })}>{t('ablage.dokumente.oeffnen-2')}</a>}
                           {!weg && !stempelPflicht && mitnehmen && <DokTeilen d={x} />}
-                          <button type="button" className="knopf dk-gross dk-mehr" aria-haspopup="menu" aria-expanded={menue === x.id} aria-label={`Weitere Aktionen für ${x.name}`} onClick={() => setMenue(x.id)}>⋯</button>
+                          <button type="button" className="knopf dk-gross dk-mehr" aria-haspopup="menu" aria-expanded={menue === x.id} aria-label={t('ablage.dokumente.weitere-aktionen-fuer', { name: x.name })} onClick={() => setMenue(x.id)}>⋯</button>
                           {menue === x.id && <>
                             <div className="hy-schleier" aria-hidden="true" onClick={() => setMenue(undefined)} />
-                            <div className="dk-blatt" role="menu" aria-label={`Aktionen für ${x.name}`} onClick={(e) => { if ((e.target as HTMLElement).closest('a, button')) setMenue(undefined); }}>
+                            <div className="dk-blatt" role="menu" aria-label={t('ablage.dokumente.aktionen-fuer', { name: x.name })} onClick={(e) => { if ((e.target as HTMLElement).closest('a, button')) setMenue(undefined); }}>
                               <p className="dk-titel">{x.name}</p>
                         {!weg && !stempelPflicht && mitnehmen && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
                         {!weg && mitnehmen && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
-                          title="Eine Kopie mit Stempel oder Wasserzeichen herunterladen; das Original bleibt unverändert"
-                          onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? 'Herunterladen mit Stempel' : 'Mit Stempel …'}</button>}
+                          title={t('ablage.dokumente.eine-kopie-mit-stempel')}
+                          onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? t('ablage.dokumente.herunterladen-mit-stempel') : t('ablage.dokumente.mit-stempel')}</button>}
                         {bearbeitbar && !weg && x.mime === 'application/pdf' && <button type="button" className="textknopf" aria-expanded={seitenOffen === x.id}
-                          onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setSeitenOffen(seitenOffen === x.id ? undefined : x.id); }} title="Seiten drehen, löschen, umsortieren oder teilen">Seiten</button>}
+                          onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setSeitenOffen(seitenOffen === x.id ? undefined : x.id); }} title={t('ablage.dokumente.seiten-drehen-loeschen-umsortieren')}>{t('ablage.dokumente.seiten')}</button>}
                         {!weg && (mitnehmen || bearbeitbar) && x.mime === 'application/pdf' && x.groesse >= VERKLEINERN_AB && <button type="button" className="textknopf" aria-expanded={kleinOffen === x.id}
-                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setSchwarzOffen(undefined); setKleinOffen(kleinOffen === x.id ? undefined : x.id); }} title="Bilder im PDF herunterrechnen – als neue Version oder als Kopie zum Herunterladen">Verkleinern</button>}
+                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setSchwarzOffen(undefined); setKleinOffen(kleinOffen === x.id ? undefined : x.id); }} title={t('ablage.dokumente.bilder-im-pdf-herunterrechnen')}>{t('ablage.dokumente.verkleinern')}</button>}
                         {bearbeitbar && !weg && kannSchwaerzen(x.mime) && <button type="button" className="textknopf" aria-expanded={schwarzOffen === x.id}
-                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setKleinOffen(undefined); setSchwarzOffen(schwarzOffen === x.id ? undefined : x.id); }} title="Stellen endgültig schwärzen – als Kopie, das Original bleibt">Schwärzen</button>}
-                        {!weg && !nurLesen && neuLaden && !x.archivnummer && asn?.id !== x.id && <button type="button" className="textknopf" title="Nummer vom Aufkleber auf dem Papieroriginal eintragen" onClick={() => setAsn({ id: x.id, wert: '' })}>Archivnummer</button>}
-                        {!nurLesen && versioniert && !weg && <button type="button" className="textknopf" onClick={() => { setErsetzeId(x.id); ersetzFeld.current?.click(); }} title="Neue Version hochladen; die bisherige bleibt erhalten">Ersetzen</button>}
+                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setKleinOffen(undefined); setSchwarzOffen(schwarzOffen === x.id ? undefined : x.id); }} title={t('ablage.dokumente.stellen-endgueltig-schwaerzen-als')}>{t('ablage.dokumente.schwaerzen')}</button>}
+                        {!weg && !nurLesen && neuLaden && !x.archivnummer && asn?.id !== x.id && <button type="button" className="textknopf" title={t('ablage.dokumente.nummer-vom-aufkleber-auf')} onClick={() => setAsn({ id: x.id, wert: '' })}>{t('ablage.dokumente.archivnummer')}</button>}
+                        {!nurLesen && versioniert && !weg && <button type="button" className="textknopf" onClick={() => { setErsetzeId(x.id); ersetzFeld.current?.click(); }} title={t('ablage.dokumente.neue-version-hochladen-die')}>{t('ablage.dokumente.ersetzen')}</button>}
                         {!nurLesen && <button type="button" className={`textknopf ${weg ? '' : 'gefahr'}`} onClick={async () => {
                           // Mit allen Versionen (#194): nachfragen, mit Zahl.
-                          if (!weg && (x.aeltere ?? 0) > 0 && !(await rueckfrage({ titel: `„${x.name}“ mit allen ${(x.aeltere ?? 0) + 1} Versionen löschen?`, text: d.zaehler.papierkorbTage ? 'Sie kommen beim Speichern in den Papierkorb und lassen sich von dort wiederherstellen.' : 'Das ist endgültig.', ja: 'Löschen', gefahr: true }))) return;
+                          if (!weg && (x.aeltere ?? 0) > 0 && !(await rueckfrage({ titel: t('ablage.dokumente.mit-allen-versionen-loeschen', { name: x.name, wert: (x.aeltere ?? 0) + 1 }), text: d.zaehler.papierkorbTage ? t('ablage.dokumente.sie-kommen-beim-speichern') : t('ablage.dokumente.das-ist-endgueltig'), ja: t('ablage.dokumente.loeschen'), gefahr: true }))) return;
                           entferne(x.id);
-                        }}>{weg ? 'Behalten' : 'Löschen'}</button>}
+                        }}>{weg ? t('ablage.dokumente.behalten') : t('ablage.dokumente.loeschen')}</button>}
 
-                              <button type="button" className="textknopf dk-zu">Schließen</button>
+                              <button type="button" className="textknopf dk-zu">{t('ablage.dokumente.schliessen')}</button>
                             </div>
                           </>}
                         </div>
                       ) : (
                       <div className="zeilenaktionen">
-                        {klickbar && <a className="symbolverweis" href={sicht!.url} target="_blank" rel="noreferrer" title="In neuem Tab öffnen" aria-label={`${x.name} in neuem Tab öffnen`}>↗</a>}
+                        {klickbar && <a className="symbolverweis" href={sicht!.url} target="_blank" rel="noreferrer" title={t('ablage.dokumente.in-neuem-tab-oeffnen')} aria-label={t('ablage.dokumente.in-neuem-tab-oeffnen-2', { name: x.name })}>↗</a>}
                         {!weg && !stempelPflicht && mitnehmen && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
                         {!weg && mitnehmen && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
-                          title="Eine Kopie mit Stempel oder Wasserzeichen herunterladen; das Original bleibt unverändert"
-                          onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? 'Herunterladen mit Stempel' : 'Mit Stempel …'}</button>}
+                          title={t('ablage.dokumente.eine-kopie-mit-stempel')}
+                          onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? t('ablage.dokumente.herunterladen-mit-stempel') : t('ablage.dokumente.mit-stempel')}</button>}
                         {bearbeitbar && !weg && x.mime === 'application/pdf' && <button type="button" className="textknopf" aria-expanded={seitenOffen === x.id}
-                          onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setSeitenOffen(seitenOffen === x.id ? undefined : x.id); }} title="Seiten drehen, löschen, umsortieren oder teilen">Seiten</button>}
+                          onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setSeitenOffen(seitenOffen === x.id ? undefined : x.id); }} title={t('ablage.dokumente.seiten-drehen-loeschen-umsortieren')}>{t('ablage.dokumente.seiten')}</button>}
                         {!weg && (mitnehmen || bearbeitbar) && x.mime === 'application/pdf' && x.groesse >= VERKLEINERN_AB && <button type="button" className="textknopf" aria-expanded={kleinOffen === x.id}
-                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setSchwarzOffen(undefined); setKleinOffen(kleinOffen === x.id ? undefined : x.id); }} title="Bilder im PDF herunterrechnen – als neue Version oder als Kopie zum Herunterladen">Verkleinern</button>}
+                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setSchwarzOffen(undefined); setKleinOffen(kleinOffen === x.id ? undefined : x.id); }} title={t('ablage.dokumente.bilder-im-pdf-herunterrechnen')}>{t('ablage.dokumente.verkleinern')}</button>}
                         {bearbeitbar && !weg && kannSchwaerzen(x.mime) && <button type="button" className="textknopf" aria-expanded={schwarzOffen === x.id}
-                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setKleinOffen(undefined); setSchwarzOffen(schwarzOffen === x.id ? undefined : x.id); }} title="Stellen endgültig schwärzen – als Kopie, das Original bleibt">Schwärzen</button>}
-                        {!weg && !nurLesen && neuLaden && !x.archivnummer && asn?.id !== x.id && <button type="button" className="textknopf" title="Nummer vom Aufkleber auf dem Papieroriginal eintragen" onClick={() => setAsn({ id: x.id, wert: '' })}>Archivnummer</button>}
-                        {!nurLesen && versioniert && !weg && <button type="button" className="textknopf" onClick={() => { setErsetzeId(x.id); ersetzFeld.current?.click(); }} title="Neue Version hochladen; die bisherige bleibt erhalten">Ersetzen</button>}
+                          onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setKleinOffen(undefined); setSchwarzOffen(schwarzOffen === x.id ? undefined : x.id); }} title={t('ablage.dokumente.stellen-endgueltig-schwaerzen-als')}>{t('ablage.dokumente.schwaerzen')}</button>}
+                        {!weg && !nurLesen && neuLaden && !x.archivnummer && asn?.id !== x.id && <button type="button" className="textknopf" title={t('ablage.dokumente.nummer-vom-aufkleber-auf')} onClick={() => setAsn({ id: x.id, wert: '' })}>{t('ablage.dokumente.archivnummer')}</button>}
+                        {!nurLesen && versioniert && !weg && <button type="button" className="textknopf" onClick={() => { setErsetzeId(x.id); ersetzFeld.current?.click(); }} title={t('ablage.dokumente.neue-version-hochladen-die')}>{t('ablage.dokumente.ersetzen')}</button>}
                         {!nurLesen && <button type="button" className={`textknopf ${weg ? '' : 'gefahr'}`} onClick={async () => {
                           // Mit allen Versionen (#194): nachfragen, mit Zahl.
-                          if (!weg && (x.aeltere ?? 0) > 0 && !(await rueckfrage({ titel: `„${x.name}“ mit allen ${(x.aeltere ?? 0) + 1} Versionen löschen?`, text: d.zaehler.papierkorbTage ? 'Sie kommen beim Speichern in den Papierkorb und lassen sich von dort wiederherstellen.' : 'Das ist endgültig.', ja: 'Löschen', gefahr: true }))) return;
+                          if (!weg && (x.aeltere ?? 0) > 0 && !(await rueckfrage({ titel: t('ablage.dokumente.mit-allen-versionen-loeschen', { name: x.name, wert: (x.aeltere ?? 0) + 1 }), text: d.zaehler.papierkorbTage ? t('ablage.dokumente.sie-kommen-beim-speichern') : t('ablage.dokumente.das-ist-endgueltig'), ja: t('ablage.dokumente.loeschen'), gefahr: true }))) return;
                           entferne(x.id);
-                        }}>{weg ? 'Behalten' : 'Löschen'}</button>}
+                        }}>{weg ? t('ablage.dokumente.behalten') : t('ablage.dokumente.loeschen')}</button>}
 
                       </div>
                       )}
@@ -493,7 +493,7 @@ function DokTeilen({ d }: { d: Dokument }) {
       if (!f) {
         setLaeuft(true);
         const r = await fetch(dokumentUrl(d.id, true), { credentials: 'same-origin', headers: { 'x-dms': '1' } });
-        if (!r.ok) throw new Error('Das Dokument ließ sich nicht laden.');
+        if (!r.ok) throw new Error(t('ablage.dokumente.das-dokument-liess-sich'));
         f = new File([await r.blob()], d.name, { type: d.mime });
         setDatei(f);
       }
@@ -506,7 +506,7 @@ function DokTeilen({ d }: { d: Dokument }) {
   }
   return (
     <>
-      <button type="button" className="knopf dk-gross" disabled={laeuft} onClick={() => void teile()}>{laeuft ? 'Lade …' : datei ? 'Jetzt teilen' : 'Teilen'}</button>
+      <button type="button" className="knopf dk-gross" disabled={laeuft} onClick={() => void teile()}>{laeuft ? t('ablage.dokumente.lade') : datei ? t('ablage.dokumente.jetzt-teilen') : t('ablage.dokumente.teilen')}</button>
       {fehler && <span className="fehlertext klein">{fehler}</span>}
     </>
   );
@@ -582,10 +582,10 @@ function NichtHerunterladen() {
  */
 function Herunterladen({ x, archiv }: { x: Dokument; archiv: boolean }) {
   const a = x.archivfassung?.stand === 'fertig' ? x.archivfassung.fassung : undefined;
-  if (!a || a.imOriginal) return <a className="textknopf" href={dokumentUrl(x.id, true)}>Herunterladen</a>;
+  if (!a || a.imOriginal) return <a className="textknopf" href={dokumentUrl(x.id, true)}>{t('ablage.dokumente.herunterladen')}</a>;
   const zuerstArchiv = archiv && !a.erechnung;
-  const orig = <a key="o" className="textknopf" href={dokumentUrl(x.id, true)} title={t('volltext.archiv.laden.original.titel')}>{zuerstArchiv ? t('volltext.archiv.laden.original') : 'Herunterladen'}</a>;
-  const arch = <a key="a" className="textknopf" href={archivfassungUrl(x.id, true)} title={t('volltext.archiv.laden.archiv.titel')}>{zuerstArchiv ? 'Herunterladen' : t('volltext.archiv.laden.archiv')}</a>;
+  const orig = <a key="o" className="textknopf" href={dokumentUrl(x.id, true)} title={t('volltext.archiv.laden.original.titel')}>{zuerstArchiv ? t('volltext.archiv.laden.original') : t('ablage.dokumente.herunterladen')}</a>;
+  const arch = <a key="a" className="textknopf" href={archivfassungUrl(x.id, true)} title={t('volltext.archiv.laden.archiv.titel')}>{zuerstArchiv ? t('ablage.dokumente.herunterladen') : t('volltext.archiv.laden.archiv')}</a>;
   return <>{zuerstArchiv ? [arch, orig] : [orig, arch]}</>;
 }
 
@@ -677,12 +677,12 @@ function OcrAnzeige({ id, s, sprache: feld, weitere, erneut, neu, text, textOffe
   const standText = s.stand === 'paket' && (art === 'umwandlung' || art === 'volltext') ? t('volltext.stand.paket') : OCR_STAENDE[s.stand];
   return (
     <span className="ocrstand klein">
-      <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {standText}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachenAnzeige(sprache.sprache, weitere)}` : ''}</span>
+      <span className={`chip ${klasse}`} title={s.info ?? undefined}>{t('ablage.dokumente.volltext', { standText, wert: s.stand === 'fertig' && s.seiten ? t('ablage.dokumente.seiten-2', { anzahl: s.seiten }) : '', wert2: sprache ? ` · ${sprachenAnzeige(sprache.sprache, weitere)}` : '' })}</span>
       {herkunft && <span className="leise">{herkunft}{fortschritt ? ` · ${fortschritt}` : ''}</span>}
       {fassung && <span className="leise">{t('volltext.herkunft.fassung', { paket: fassung })} <a className="textknopf" href={fassungUrl(id)} target="_blank" rel="noreferrer" title={t('volltext.herkunft.fassung.titel')}>{t('volltext.herkunft.fassung.ansehen')}</a></span>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && s.info && <span className="leise">{s.info}</span>}
-      {s.stand === 'fertig' && <button type="button" className="textknopf" onClick={text}>{textOffen ? 'Text ausblenden' : 'Text anzeigen'}</button>}
-      {(s.stand === 'fehler' || s.stand === 'ausgelassen') && <button type="button" className="textknopf" onClick={erneut}>Erneut versuchen</button>}
+      {s.stand === 'fertig' && <button type="button" className="textknopf" onClick={text}>{textOffen ? t('ablage.dokumente.text-ausblenden') : t('ablage.dokumente.text-anzeigen')}</button>}
+      {(s.stand === 'fehler' || s.stand === 'ausgelassen') && <button type="button" className="textknopf" onClick={erneut}>{t('ablage.dokumente.erneut-versuchen')}</button>}
       {neu && (s.stand === 'fertig' || s.stand === 'paket') && <button type="button" className="textknopf" title={t('volltext.dokument.neu.titel')} onClick={neu}>{t('volltext.dokument.neu')}</button>}
     </span>
   );
@@ -715,23 +715,23 @@ function Versionen({ d, zurueck, neuLaden, mitStempel, mitnehmen = true }: { d: 
     <div className="versionen">
       {fehler && <p className="fehlertext">{fehler}</p>}
       <table className="tabelle klein">
-        <thead><tr><th>Version</th><th>Datei</th><th>Gespeichert</th><th>Von</th><th>Herkunft</th><th>Größe</th><th /></tr></thead>
+        <thead><tr><th>{t('ablage.dokumente.version-3')}</th><th>{t('ablage.dokumente.datei')}</th><th>{t('ablage.dokumente.gespeichert-2')}</th><th>{t('ablage.dokumente.von')}</th><th>{t('ablage.dokumente.herkunft')}</th><th>{t('ablage.dokumente.groesse')}</th><th /></tr></thead>
         <tbody>
-          <tr><td><strong>{d.version ?? 1}</strong> (aktuell)</td><td>{d.name}</td><td>{zeit(d.erstellt)}</td><td><Person id={d.erstelltVon} /></td><td>{herkunft(d.herkunft)}</td><td>{groesse(d.groesse)}</td><td /></tr>
-          {liste === null ? <tr><td colSpan={7} className="leise">Lade …</td></tr> : liste.map((v) => (
+          <tr><td>{tn('ablage.dokumente.aktuell', { b: <strong>{d.version ?? 1}</strong> })}</td><td>{d.name}</td><td>{zeit(d.erstellt)}</td><td><Person id={d.erstelltVon} /></td><td>{herkunft(d.herkunft)}</td><td>{groesse(d.groesse)}</td><td /></tr>
+          {liste === null ? <tr><td colSpan={7} className="leise">{t('ablage.dokumente.lade')}</td></tr> : liste.map((v) => (
             <tr key={v.nummer}>
               <td>{v.nummer}</td><td>{v.name}</td><td>{zeit(v.erstellt)}</td><td><Person id={v.erstelltVon} /></td><td>{herkunft(v.herkunft)}</td><td>{groesse(v.groesse)}</td>
               <td className="zeilenaktionen">
-                {v.anzeigbar && <a className="symbolverweis" href={versionUrl(d.id, v.nummer)} target="_blank" rel="noreferrer" title="Ansehen" aria-label={`Version ${v.nummer} ansehen`}>↗</a>}
-                {!mitnehmen ? null : mitStempel ? kannStempeln(v.mime) && <button type="button" className="textknopf" onClick={() => mitStempel(v.nummer)}>Mit Stempel herunterladen</button>
-                  : <a className="textknopf" href={versionUrl(d.id, v.nummer, true)}>Herunterladen</a>}
-                {zurueck && <button type="button" className="textknopf" onClick={async () => { if (await rueckfrage({ titel: `Version ${v.nummer} zurückholen?`, text: `Sie wird zur neuen Version ${(d.version ?? 1) + 1}; nichts geht verloren.`, ja: 'Zurückholen' })) void hole(v.nummer); }}>Zurückholen</button>}
+                {v.anzeigbar && <a className="symbolverweis" href={versionUrl(d.id, v.nummer)} target="_blank" rel="noreferrer" title={t('ablage.dokumente.ansehen')} aria-label={t('ablage.dokumente.version-ansehen', { nummer: v.nummer })}>↗</a>}
+                {!mitnehmen ? null : mitStempel ? kannStempeln(v.mime) && <button type="button" className="textknopf" onClick={() => mitStempel(v.nummer)}>{t('ablage.dokumente.mit-stempel-herunterladen')}</button>
+                  : <a className="textknopf" href={versionUrl(d.id, v.nummer, true)}>{t('ablage.dokumente.herunterladen')}</a>}
+                {zurueck && <button type="button" className="textknopf" onClick={async () => { if (await rueckfrage({ titel: t('ablage.dokumente.version-zurueckholen', { nummer: v.nummer }), text: t('ablage.dokumente.sie-wird-zur-neuen', { wert: (d.version ?? 1) + 1 }), ja: t('ablage.dokumente.zurueckholen') })) void hole(v.nummer); }}>{t('ablage.dokumente.zurueckholen')}</button>}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {liste !== null && !liste.length && <p className="leise klein">Keine älteren Versionen.</p>}
+      {liste !== null && !liste.length && <p className="leise klein">{t('ablage.dokumente.keine-aelteren-versionen')}</p>}
       <p className="leise klein"><Hilfe ort="dokumente.versionen" /></p>
     </div>
   );

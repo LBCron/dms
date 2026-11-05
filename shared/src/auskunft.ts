@@ -6,6 +6,7 @@
 import { liesAnrede, TEXTE_DRITTE, textDritte, type Anrede } from './anrede';
 import type { Baum, BaumRichtung } from './baum';
 import { imHeimnetz, rechnername } from './heimnetz';
+import { t } from './texte';
 
 /** Je Mappentyp: betrifft eine Person? Zweck der Verarbeitung (für das Deckblatt). */
 export interface DatenschutzTyp { person: boolean; zweck: string }
@@ -123,8 +124,8 @@ export interface AuskunftErwaehnung { mappeId: string; typ: string; titel: strin
 
 /** Text einer Erwähnung – ohne Dokumente, Notizen und übrige Feldwerte der Mappe. */
 export function erwaehnungText(e: Pick<AuskunftErwaehnung, 'typ' | 'titel' | 'feld' | 'richtung'>): string {
-  const mappe = `${e.typ ? `${e.typ} ` : ''}„${e.titel || 'Ohne Titel'}“`;
-  return e.richtung === 'verwiesenVon' ? `als „${e.feld}“ eingetragen in ${mappe}` : `verweist über „${e.feld}“ auf ${mappe}`;
+  const mappe = `${e.typ ? `${e.typ} ` : ''}„${e.titel || t('gemeinsam.auskunft.ohne-titel')}“`;
+  return e.richtung === 'verwiesenVon' ? t('gemeinsam.auskunft.als-eingetragen-in', { feld: e.feld, mappe }) : t('gemeinsam.auskunft.verweist-ueber-auf', { feld: e.feld, mappe });
 }
 
 /** Was hinausgeht: nur ausdrücklich Ausgewähltes. */
@@ -160,20 +161,20 @@ export function liesAuswahl(v: unknown): AuskunftAuswahl {
  */
 export function auswahlProbleme(a: AuskunftAuswahl, bekannt: Record<string, AuskunftMappe>, bezug: ReadonlySet<string> = new Set()): string[] {
   const p: string[] = [];
-  if (a.erwaehnungen.some((id) => !bezug.has(id))) p.push('Erwähnungen nur von Mappen, die über einen Bezug verbunden sind – bitte neu sammeln.');
-  if (!a.mappen.length) p.push('Bitte mindestens eine Mappe auswählen.');
+  if (a.erwaehnungen.some((id) => !bezug.has(id))) p.push(t('gemeinsam.auskunft.erwaehnungen-nur-von-mappen'));
+  if (!a.mappen.length) p.push(t('gemeinsam.auskunft.bitte-mindestens-eine-mappe'));
   const fremd = a.mappen.filter((id) => !bekannt[id]);
-  if (fremd.length) p.push(`${fremd.length} ausgewählte Mappen gehören nicht zur Sammlung – bitte neu sammeln.`);
+  if (fremd.length) p.push(t('gemeinsam.auskunft.ausgewaehlte-mappen-gehoeren-nicht', { fremd: fremd.length }));
   const gewaehlt = new Set(a.mappen.filter((id) => bekannt[id]));
   const dok = new Set<string>(); const not = new Set<string>();
   for (const id of gewaehlt) { for (const d of bekannt[id].dokumente) dok.add(d.id); for (const n of bekannt[id].notizen) not.add(n.id); }
-  if (a.dokumente.some((id) => !dok.has(id))) p.push('Dokumente nur aus ausgewählten Mappen.');
-  if (a.notizen.some((id) => !not.has(id))) p.push('Notizen nur aus ausgewählten Mappen.');
-  if (a.historie.some((id) => !gewaehlt.has(id))) p.push('Historie nur von ausgewählten Mappen.');
+  if (a.dokumente.some((id) => !dok.has(id))) p.push(t('gemeinsam.auskunft.dokumente-nur-aus-ausgewaehlten'));
+  if (a.notizen.some((id) => !not.has(id))) p.push(t('gemeinsam.auskunft.notizen-nur-aus-ausgewaehlten'));
+  if (a.historie.some((id) => !gewaehlt.has(id))) p.push(t('gemeinsam.auskunft.historie-nur-von-ausgewaehlten'));
   const drin = new Set(a.notizen);
   const grund = new Map(a.ohneNotizen.map((x) => [x.id, x.grund] as const));
   const ohneGrund = [...not].filter((id) => !drin.has(id) && (grund.get(id) ?? '').length < GRUND_MIN);
-  if (ohneGrund.length) p.push(ohneGrund.length === 1 ? 'Eine abgewählte Notiz hat keine Begründung.' : `${ohneGrund.length} abgewählte Notizen haben keine Begründung.`);
+  if (ohneGrund.length) p.push(t('gemeinsam.auskunft.abgewaehlte-notizen-haben-keine', { anzahl: ohneGrund.length }));
   return p;
 }
 
@@ -198,8 +199,8 @@ export interface AuskunftStand {
 
 /** Ein Dateiname ohne Sonderzeichen für die ZIP-Datei: Auskunft-<Titel>-<Datum>.zip */
 export function auskunftDateiname(titel: string, datum: string): string {
-  const t = titel.normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ß/g, 'ss').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'Person';
-  return `Auskunft-${t}-${datum.slice(0, 10)}`;
+  const text2 = titel.normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ß/g, 'ss').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'Person';
+  return t('gemeinsam.auskunft.auskunft', { t: text2, datum: datum.slice(0, 10) });
 }
 
 /* ---------- Zustellen (#455): per E-Mail oder Abruf-Link mit Abrufcode ---------- */
@@ -226,7 +227,7 @@ export const zeigeCode = (c: string) => c.replace(/(.{4})(?=.)/g, '$1-');
 
 export type LinkStatus = 'aktiv' | 'abgelaufen' | 'verbraucht' | 'gesperrt' | 'widerrufen';
 export const LINK_STATUS: Record<LinkStatus, string> = {
-  aktiv: 'aktiv', abgelaufen: 'abgelaufen', verbraucht: 'alle Abrufe verbraucht', gesperrt: 'gesperrt nach Fehlversuchen', widerrufen: 'zurückgezogen',
+  aktiv: 'aktiv', abgelaufen: 'abgelaufen', verbraucht: t('gemeinsam.auskunft.alle-abrufe-verbraucht'), gesperrt: t('gemeinsam.auskunft.gesperrt-nach-fehlversuchen'), widerrufen: 'zurückgezogen',
 };
 
 /** Ein Abruf-Link, wie ihn die Werkbank sieht – ohne Schlüssel und Code (beide liegen nur als Hash vor). */
@@ -267,10 +268,10 @@ export function liesLinkEingabe(v: unknown): { tage: number; abrufe: number; cod
   const zahl = (x: unknown, std: number) => (x === undefined || x === null || x === '' ? std : Math.round(Number(x)));
   const tage = zahl(o.tage, LINK_TAGE_STANDARD);
   const abrufe = zahl(o.abrufe, LINK_ABRUFE_STANDARD);
-  if (!Number.isInteger(tage) || tage < 1 || tage > LINK_TAGE_MAX) fehler.push(`Gültigkeit: 1 bis ${LINK_TAGE_MAX} Tage.`);
-  if (!Number.isInteger(abrufe) || abrufe < 1 || abrufe > LINK_ABRUFE_MAX) fehler.push(`Abrufe: 1 bis ${LINK_ABRUFE_MAX}.`);
+  if (!Number.isInteger(tage) || tage < 1 || tage > LINK_TAGE_MAX) fehler.push(t('gemeinsam.auskunft.gueltigkeit-1-bis-tage', { LINK_TAGE_MAX }));
+  if (!Number.isInteger(abrufe) || abrufe < 1 || abrufe > LINK_ABRUFE_MAX) fehler.push(t('gemeinsam.auskunft.abrufe-1-bis', { LINK_ABRUFE_MAX }));
   const eigen = o.code === undefined || o.code === null || o.code === '' ? null : normiereCode(o.code);
-  if (eigen !== null && eigen.length < CODE_EIGEN_MIN) fehler.push(`Ein eigener Abrufcode braucht mindestens ${CODE_EIGEN_MIN} Zeichen (ohne Leerzeichen und Bindestriche).`);
+  if (eigen !== null && eigen.length < CODE_EIGEN_MIN) fehler.push(t('gemeinsam.auskunft.ein-eigener-abrufcode-braucht', { CODE_EIGEN_MIN }));
   const an = typeof o.an === 'string' ? o.an.trim().slice(0, 320) : '';
   // Ein eigener Code (z. B. eine Kundennummer) wird so angezeigt, wie er eingegeben wurde (#666); geprüft wird normiert.
   const codeWieEingegeben = eigen === null ? null : String(o.code).trim().slice(0, 64);
@@ -332,7 +333,7 @@ export interface AuskunftEintrag {
 
 /** Woran eine Frist-Aufgabe der Auskunft zu erkennen ist (#396 legt sie als manuelle Aufgabe an). */
 export const FRIST_SCHLUESSEL = 'auskunft.frist';
-export const FRIST_TEXT_ANFANG = 'Auskunft nach Art. 15 DSGVO an ';
+export const FRIST_TEXT_ANFANG = t('gemeinsam.auskunft.auskunft-nach-art-15');
 
 export interface VerzeichnisQuelle {
   /** Historie-Einträge der Art „auskunft“, beliebige Reihenfolge. */

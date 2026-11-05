@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Symbol } from '../Symbol';
 import { BESCHREIBUNG_LAENGE, LIZENZ_SCHLUESSEL, LIZENZEN_ALPHABETISCH, lizenzPasst, LIZENZNAME_LAENGE, naechsteVersionen, paketIdAus, VERSIONSARTEN, type ErstellenStand, type Lizenz, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type VersionsArt } from '../../../shared/src/paketerstellung';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { api, ApiFehler } from '../api';
 import { Hilfe } from '../Hilfe';
 import { geheZu } from '../ort';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Pakete → Paket erstellen (#374): eigene Mappentypen und Ansichten als Paket im Format der
@@ -12,13 +13,13 @@ import { geheZu } from '../ort';
  * Prüfung und Erzeugung macht der Server; hier wird nur ausgewählt, angezeigt und heruntergeladen.
  */
 
-const SCHRITTE = ['Auswählen', 'Prüfen', 'Angaben', 'Erstellen'] as const;
+const SCHRITTE = [t('werkbank.paketerstellen.auswaehlen'), t('werkbank.paketerstellen.pruefen'), t('werkbank.paketerstellen.angaben'), t('werkbank.paketerstellen.erstellen')] as const;
 /** Probleme, die zu den Angaben gehören (Schritt 3), statt zur Auswahl. */
 const istAngabe = (p: string) => /^(Id|Name|Version|Beschreibung|Autor|GitHub|Lizenz|Ablago-Version):/.test(p);
-const groesse = (b: number) => (b < 1024 ? `${b} Bytes` : `${(b / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 })} KB`);
+const groesse = (b: number) => (b < 1024 ? t('werkbank.paketerstellen.bytes', { b }) : `${(b / 1024).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} KB`);
 
 /** Selbst erstelltes Paket in der Paketverwaltung (#652): Kennung in der Adresse. */
-export const SELBST = '~selbst:';
+export const SELBST = t('werkbank.paketerstellen.selbst');
 
 export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {}) {
   const [stand, setStand] = useState<ErstellenStand | null>(null);
@@ -66,15 +67,15 @@ export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {})
     if (!e) return;
     const nr = ++lauf.current;
     setPrueft(true);
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       api.paketErstellenPruefen(e).then((p) => { if (nr === lauf.current) { setPruefung(p); setFehler(undefined); } }, (x) => { if (nr === lauf.current) setFehler((x as Error).message); })
         .finally(() => { if (nr === lauf.current) setPrueft(false); });
     }, 350);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [e]);
 
   if (fehler && !stand) return <div className="leer"><p>{fehler}</p></div>;
-  if (!stand || !e) return <div className="leer"><p>Lade …</p></div>;
+  if (!stand || !e) return <div className="leer"><p>{t('werkbank.paketerstellen.lade')}</p></div>;
 
   const setze = (x: Partial<PaketErstellenEingabe>) => { setFertig(undefined); setE({ ...e, ...x }); };
   const umschalten = (liste: 'typen' | 'sichten' | 'beispiele' | 'wortlisten', id: string, an: boolean) => { const l = e[liste] ?? []; setze({ [liste]: an ? [...l, id] : l.filter((x) => x !== id) }); };
@@ -116,11 +117,11 @@ export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {})
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank · Pakete</p>
-        <h1>Paket erstellen</h1>
-        <p className="leise">Mach aus deinen eigenen Mappentypen und Ansichten ein Paket, das du in einer anderen Ablago-Installation mit „Paket hochladen“ installierst. Mappen, Dokumente, Benutzer und Passwörter kommen nicht mit. <Hilfe ort="werkbank.pakete.erstellen" /></p>
+        <p className="ueber">{t('werkbank.paketerstellen.werkbank-pakete')}</p>
+        <h1>{t('werkbank.paketerstellen.paket-erstellen')}</h1>
+        <p className="leise">{tn('werkbank.paketerstellen.mach-aus-deinen-eigenen', { hilfe: <Hilfe ort="werkbank.pakete.erstellen" /> })}</p>
       </div>
-      <ol className="assistent-schritte" aria-label={`Schritt ${schritt + 1} von ${SCHRITTE.length}: ${SCHRITTE[schritt]}`}>
+      <ol className="assistent-schritte" aria-label={t('werkbank.paketerstellen.schritt-von', { wert: schritt + 1, SCHRITTE: SCHRITTE.length, SCHRITTE2: SCHRITTE[schritt] })}>
         {SCHRITTE.map((s, i) => (
           <li key={s} className={i < schritt ? 'erledigt' : i === schritt ? 'aktiv' : ''} aria-current={i === schritt ? 'step' : undefined}>
             <button type="button" className="textknopf" onClick={() => setSchritt(i)}><span className="nr" aria-hidden="true">{i < schritt ? <Symbol name="haken" /> : i + 1}</span><span className="name">{s}</span></button>
@@ -133,38 +134,38 @@ export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {})
       {schritt === 0 && !frage && <Auswahl stand={stand} e={e} suche={suche} setSuche={setSuche} umschalten={umschalten} pruefung={p} />}
 
       {schritt === 1 && (
-        <section className="blatt" aria-label="Prüfung">
-          <h2 className="h3">Automatische Prüfung</h2>
-          {!p ? <p className="leise">Prüfe …</p> : <>
+        <section className="blatt" aria-label={t('werkbank.paketerstellen.pruefung')}>
+          <h2 className="h3">{t('werkbank.paketerstellen.automatische-pruefung')}</h2>
+          {!p ? <p className="leise">{t('werkbank.paketerstellen.pruefe')}</p> : <>
             {auswahlProbleme.length > 0 && <div className="hinweis schlecht"><ul>{auswahlProbleme.map((x) => <li key={x}>{x}</li>)}</ul></div>}
             {p.fehlend.length > 0 && (
               <div className="hinweis warn">
-                <p>Nicht gewählt, aber gebraucht:</p>
+                <p>{t('werkbank.paketerstellen.nicht-gewaehlt-aber-gebraucht')}</p>
                 <ul>{p.fehlend.map((f) => (
-                  <li key={f.id}>{f.art === 'typ' ? 'Mappentyp' : 'Ansicht'} „{f.name}“ <span className="leise">({f.grund})</span> <button type="button" className="textknopf" onClick={() => umschalten(f.art === 'typ' ? 'typen' : 'sichten', f.id, true)}>Mit aufnehmen</button></li>
+                  <li key={f.id}>{f.art === 'typ' ? t('werkbank.paketerstellen.mappentyp') : t('werkbank.paketerstellen.ansicht')} „{f.name}“ <span className="leise">({f.grund})</span> <button type="button" className="textknopf" onClick={() => umschalten(f.art === 'typ' ? 'typen' : 'sichten', f.id, true)}>{t('werkbank.paketerstellen.mit-aufnehmen')}</button></li>
                 ))}</ul>
               </div>
             )}
             {p.hinweise.length > 0 && <div className="hinweis info"><ul>{p.hinweise.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-            {!auswahlProbleme.length && !p.fehlend.length && <p className="gut">Die Auswahl passt.</p>}
+            {!auswahlProbleme.length && !p.fehlend.length && <p className="gut">{t('werkbank.paketerstellen.die-auswahl-passt')}</p>}
             <Inhalt p={p} />
           </>}
         </section>
       )}
 
       {schritt === 2 && (
-        <section className="blatt" aria-label="Angaben">
-          <h2 className="h3">Angaben</h2>
+        <section className="blatt" aria-label={t('werkbank.paketerstellen.angaben')}>
+          <h2 className="h3">{t('werkbank.paketerstellen.angaben')}</h2>
           <div className="raster">
-          <label className="eigenschaft"><span>Name</span><input value={e.name} maxLength={60} onChange={(x) => setze({ name: x.target.value, ...(idAuto ? { id: paketIdAus(x.target.value) } : {}) })} /></label>
-          <label className="eigenschaft"><span>Id</span><input value={e.id} maxLength={20} onChange={(x) => { setIdAuto(false); setze({ id: x.target.value }); }} />
-            <small className="leise">Kleinbuchstaben, Ziffern und _, z. B. <code>vertraege_familie</code>. Bleibt bei jeder Version gleich.</small></label>
-          <label className="eigenschaft breit"><span>Beschreibung</span><textarea rows={3} value={e.beschreibung} maxLength={BESCHREIBUNG_LAENGE.max} onChange={(x) => setze({ beschreibung: x.target.value })} />
-            <small className="leise">Ein, zwei Sätze: was das Paket bringt und für wen ({BESCHREIBUNG_LAENGE.min}–{BESCHREIBUNG_LAENGE.max} Zeichen). Daraus wird auch die README.</small></label>
-          <label className="eigenschaft"><span>Autor</span><input value={e.autor.name} onChange={(x) => setze({ autor: { ...e.autor, name: x.target.value } })} /></label>
-          <label className="eigenschaft"><span>GitHub-Name (optional)</span><input value={e.autor.github} onChange={(x) => setze({ autor: { ...e.autor, github: x.target.value } })} /></label>
-          <label className="eigenschaft breit"><span>Was ist neu in dieser Version?</span><textarea rows={2} value={e.aenderungen} onChange={(x) => setze({ aenderungen: x.target.value })} placeholder="z. B. Feld Kundennummer am Vertrag" />
-            <small className="leise">Steht im CHANGELOG; leer: „Erste Fassung.“ bzw. „Neue Version …“.</small></label>
+          <label className="eigenschaft"><span>{t('werkbank.paketerstellen.name')}</span><input value={e.name} maxLength={60} onChange={(x) => setze({ name: x.target.value, ...(idAuto ? { id: paketIdAus(x.target.value) } : {}) })} /></label>
+          <label className="eigenschaft"><span>{t('werkbank.paketerstellen.id')}</span><input value={e.id} maxLength={20} onChange={(x) => { setIdAuto(false); setze({ id: x.target.value }); }} />
+            <small className="leise">{tn('werkbank.paketerstellen.kleinbuchstaben-ziffern-und-z', { code: <code>{t('werkbank.paketerstellen.vertraege-familie')}</code> })}</small></label>
+          <label className="eigenschaft breit"><span>{t('werkbank.paketerstellen.beschreibung')}</span><textarea rows={3} value={e.beschreibung} maxLength={BESCHREIBUNG_LAENGE.max} onChange={(x) => setze({ beschreibung: x.target.value })} />
+            <small className="leise">{t('werkbank.paketerstellen.ein-zwei-saetze-was', { min: BESCHREIBUNG_LAENGE.min, max: BESCHREIBUNG_LAENGE.max })}</small></label>
+          <label className="eigenschaft"><span>{t('werkbank.paketerstellen.autor')}</span><input value={e.autor.name} onChange={(x) => setze({ autor: { ...e.autor, name: x.target.value } })} /></label>
+          <label className="eigenschaft"><span>{t('werkbank.paketerstellen.github-name-optional')}</span><input value={e.autor.github} onChange={(x) => setze({ autor: { ...e.autor, github: x.target.value } })} /></label>
+          <label className="eigenschaft breit"><span>{t('werkbank.paketerstellen.was-ist-neu-in')}</span><textarea rows={2} value={e.aenderungen} onChange={(x) => setze({ aenderungen: x.target.value })} placeholder={t('werkbank.paketerstellen.z-b-feld-kundennummer')} />
+            <small className="leise">{t('werkbank.paketerstellen.steht-im-changelog-leer')}</small></label>
           </div>
           <VersionWahl e={e} setze={setze} lage={lage ?? null} experte={experte} hochgeladen={hochgeladen} hochladen={(d) => void letzteHochladen(d)} />
           <LizenzWahl e={e} setze={setze} />
@@ -173,13 +174,13 @@ export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {})
       )}
 
       {schritt === 3 && (
-        <section className="blatt" aria-label="Erstellen">
-          <h2 className="h3">Erstellen</h2>
-          {!p ? <p className="leise">Prüfe …</p> : p.einspielbar ? <>
-            <div className="hinweis gut"><p>Das Paket hat dieselbe Prüfung bestanden wie beim Hochladen – es lässt sich so in einer anderen Ablago-Installation installieren{Object.keys(p.abhaengigkeiten).length ? ', wenn dort die Abhängigkeiten installiert sind' : ''}.</p></div>
+        <section className="blatt" aria-label={t('werkbank.paketerstellen.erstellen')}>
+          <h2 className="h3">{t('werkbank.paketerstellen.erstellen')}</h2>
+          {!p ? <p className="leise">{t('werkbank.paketerstellen.pruefe')}</p> : p.einspielbar ? <>
+            <div className="hinweis gut"><p>{t('werkbank.paketerstellen.das-paket-hat-dieselbe', { wert: Object.keys(p.abhaengigkeiten).length ? t('werkbank.paketerstellen.wenn-dort-die-abhaengigkeiten') : '' })}</p></div>
             <dl className="eigenschaften">
-              <dt>Paket</dt><dd>{e.name} ({e.id}) · Version {e.version} · {e.lizenzArt === 'eigen' ? e.lizenzName : e.lizenzArt === 'keine' ? t('pakete.erstellen.lizenz.keine') : e.lizenz} · Ablago {e.dms}</dd>
-              <dt>Datei</dt><dd>{p.datei?.name} · {groesse(p.datei?.bytes ?? 0)}</dd>
+              <dt>{t('werkbank.paketerstellen.paket')}</dt><dd>{tn('werkbank.paketerstellen.version-ablago', { name: e.name, id: e.id, version: e.version, wert: e.lizenzArt === 'eigen' ? e.lizenzName : e.lizenzArt === 'keine' ? t('pakete.erstellen.lizenz.keine') : e.lizenz, dms: e.dms })}</dd>
+              <dt>{t('werkbank.paketerstellen.datei')}</dt><dd>{p.datei?.name} · {groesse(p.datei?.bytes ?? 0)}</dd>
             </dl>
             <Inhalt p={p} />
             {e.lizenzArt && e.lizenzArt !== 'frei' && <div className="hinweis warn"><p>{t('pakete.erstellen.lizenz.nichtKatalog')}</p></div>}
@@ -191,15 +192,15 @@ export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {})
       {fehler && <div className="hinweis schlecht" role="alert"><p>{fehler}</p></div>}
 
       <div className="speicherleiste">
-        <button type="button" className="textknopf" onClick={() => geheZu('/werkbank/pakete')}>Abbrechen</button>
-        <span className="status" role="status">{prueft ? 'Prüfe …' : p ? (p.einspielbar ? 'Bereit zum Erstellen' : `${p.probleme.length} ${p.probleme.length === 1 ? 'Punkt' : 'Punkte'} offen`) : ''}</span>
+        <button type="button" className="textknopf" onClick={() => geheZu('/werkbank/pakete')}>{t('werkbank.paketerstellen.abbrechen')}</button>
+        <span className="status" role="status">{prueft ? t('werkbank.paketerstellen.pruefe') : p ? (p.einspielbar ? t('werkbank.paketerstellen.bereit-zum-erstellen') : t('werkbank.paketerstellen.punkte-offen', { anzahl: p.probleme.length })) : ''}</span>
         <div className="knoepfe">
-          {schritt > 0 && <button type="button" className="knopf" onClick={() => setSchritt(schritt - 1)}>Zurück</button>}
+          {schritt > 0 && <button type="button" className="knopf" onClick={() => setSchritt(schritt - 1)}>{t('werkbank.paketerstellen.zurueck')}</button>}
           {schritt < SCHRITTE.length - 1
-            ? <button type="button" className="knopf primaer" disabled={schritt === 0 && frage} onClick={() => setSchritt(schritt + 1)}>Weiter</button>
+            ? <button type="button" className="knopf primaer" disabled={schritt === 0 && frage} onClick={() => setSchritt(schritt + 1)}>{t('werkbank.paketerstellen.weiter')}</button>
             : <>
               <button type="button" className="knopf" disabled={sendet || prueft || !p?.einspielbar} onClick={() => void erstellen(true)}>{t('pakete.erstellen.mitZip')}</button>
-              <button type="button" className="knopf primaer" disabled={sendet || prueft || !p?.einspielbar} onClick={() => void erstellen(false)}>{sendet ? 'Erstelle …' : t('pakete.erstellen.knopf')}</button>
+              <button type="button" className="knopf primaer" disabled={sendet || prueft || !p?.einspielbar} onClick={() => void erstellen(false)}>{sendet ? t('werkbank.paketerstellen.erstelle') : t('pakete.erstellen.knopf')}</button>
             </>}
         </div>
       </div>
@@ -238,7 +239,7 @@ function NeuOderVersion({ stand, neu, version }: { stand: ErstellenStand; neu():
       <ul className="stapel">
         {liste.map((w) => (
           <li key={w.id}><button type="button" className="textknopf" onClick={() => version(w)}>{t('pakete.erstellen.frage.versionVon', { name: w.name })}</button>
-            <small className="leise"> {w.id} · {t('pakete.erstellen.frage.zuletzt', { version: w.version, datum: new Date(w.exportiert).toLocaleDateString('de-DE') })}</small></li>
+            <small className="leise"> {w.id} · {t('pakete.erstellen.frage.zuletzt', { version: w.version, datum: new Date(w.exportiert).toLocaleDateString(gebietsschema()) })}</small></li>
         ))}
       </ul>
       <p className="leise klein">{t('pakete.erstellen.frage.versionText')}</p>
@@ -267,52 +268,52 @@ function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
   }, [stand.sichten]);
   return (
     <>
-      <div className="zeile"><input type="search" placeholder="Suchen …" aria-label="Mappentypen, Ansichten und Wortlisten durchsuchen" value={suche} onChange={(x) => setSuche(x.target.value)} /></div>
-      <section className="blatt" aria-label="Mappentypen">
-        <h2 className="h3">Mappentypen</h2>
+      <div className="zeile"><input type="search" placeholder={t('werkbank.paketerstellen.suchen')} aria-label={t('werkbank.paketerstellen.mappentypen-ansichten-und-wortlisten')} value={suche} onChange={(x) => setSuche(x.target.value)} /></div>
+      <section className="blatt" aria-label={t('werkbank.paketerstellen.mappentypen')}>
+        <h2 className="h3">{t('werkbank.paketerstellen.mappentypen')}</h2>
         <ul className="stapel">
-          {stand.typen.filter((t) => passt(t.name)).map((t) => (
-            <li key={t.id}><label className="haken"><input type="checkbox" checked={e.typen.includes(t.id)} onChange={(x) => umschalten('typen', t.id, x.target.checked)} />
-              <span>{t.name}{t.paket && <> <span className="chip" title="Kommt beim Export als Abhängigkeit mit, nicht als Kopie">aus {t.paket.name} {t.paket.version}</span></>}{t.geaendert && (t.unterschiede
-                ? <details className="unterschiede"><summary><span className="chip warn">geändert: {t.unterschiede.kurz}</span></summary><ul className="klein">{t.unterschiede.liste.map((x) => <li key={x}>{x}</li>)}</ul></details>
-                : <> <span className="chip warn" title="Nach der Installation des Pakets geändert – Einzelheiten kennt Ablago erst nach dem nächsten Update des Pakets">geändert</span></>)}
-                {t.beschreibung && <small className="leise">{t.beschreibung}</small>}</span></label></li>
+          {stand.typen.filter((eintrag) => passt(eintrag.name)).map((eintrag) => (
+            <li key={eintrag.id}><label className="haken"><input type="checkbox" checked={e.typen.includes(eintrag.id)} onChange={(x) => umschalten('typen', eintrag.id, x.target.checked)} />
+              <span>{eintrag.name}{eintrag.paket && <> <span className="chip" title={t('werkbank.paketerstellen.kommt-beim-export-als')}>{t('werkbank.paketerstellen.aus', { name: eintrag.paket.name, version: eintrag.paket.version })}</span></>}{eintrag.geaendert && (eintrag.unterschiede
+                ? <details className="unterschiede"><summary><span className="chip warn">{t('werkbank.paketerstellen.geaendert', { kurz: eintrag.unterschiede.kurz })}</span></summary><ul className="klein">{eintrag.unterschiede.liste.map((x) => <li key={x}>{x}</li>)}</ul></details>
+                : <> <span className="chip warn" title={t('werkbank.paketerstellen.nach-der-installation-des')}>{t('werkbank.paketerstellen.geaendert-2')}</span></>)}
+                {eintrag.beschreibung && <small className="leise">{eintrag.beschreibung}</small>}</span></label></li>
           ))}
-          {!stand.typen.length && <li className="leise">Keine Mappentypen.</li>}
+          {!stand.typen.length && <li className="leise">{t('werkbank.paketerstellen.keine-mappentypen')}</li>}
         </ul>
       </section>
-      <section className="blatt" aria-label="Ansichten">
-        <h2 className="h3">Ansichten</h2>
+      <section className="blatt" aria-label={t('werkbank.paketerstellen.ansichten')}>
+        <h2 className="h3">{t('werkbank.paketerstellen.ansichten')}</h2>
         <ul className="stapel">
           {baum.filter(({ s: x }) => passt(x.name)).map(({ s: x, tiefe }) => (
             <li key={x.id} style={{ paddingLeft: `${s ? 0 : tiefe * 1.4}em` }}><label className="haken"><input type="checkbox" checked={e.sichten.includes(x.id)} onChange={(y) => umschalten('sichten', x.id, y.target.checked)} />
-              <span>{x.name}{x.paket && <> <span className="chip">aus {x.paket.name}</span></>}</span></label></li>
+              <span>{x.name}{x.paket && <> <span className="chip">{t('werkbank.paketerstellen.aus-2', { name: x.paket.name })}</span></>}</span></label></li>
           ))}
-          {!stand.sichten.length && <li className="leise">Keine Ansichten.</li>}
+          {!stand.sichten.length && <li className="leise">{t('werkbank.paketerstellen.keine-ansichten')}</li>}
         </ul>
       </section>
-      <section className="blatt" aria-label="Wortlisten">
-        <h2 className="h3">Wortlisten</h2>
-        <p className="leise klein">Gleichbedeutende Wörter für die Suche (Werkbank → Suche). Beim Empfänger stehen sie unter „aus Paketen“; Gruppen aus installierten Paketen kommen nicht mit.</p>
+      <section className="blatt" aria-label={t('werkbank.paketerstellen.wortlisten')}>
+        <h2 className="h3">{t('werkbank.paketerstellen.wortlisten')}</h2>
+        <p className="leise klein">{t('werkbank.paketerstellen.gleichbedeutende-woerter-fuer-die')}</p>
         <ul className="stapel">
           {(stand.wortlisten ?? []).filter((g) => passt(g.woerter.join(' '))).map((g) => (
             <li key={g.id}><label className={`haken${g.paket ? ' grau' : ''}`}><input type="checkbox" disabled={!!g.paket} checked={!g.paket && (e.wortlisten ?? []).includes(g.id)} onChange={(x) => umschalten('wortlisten', g.id, x.target.checked)} />
-              <span>{g.woerter.join(', ')}{g.paket && <> <span className="chip">aus {g.paket.name}</span></>}</span></label></li>
+              <span>{g.woerter.join(', ')}{g.paket && <> <span className="chip">{t('werkbank.paketerstellen.aus-2', { name: g.paket.name })}</span></>}</span></label></li>
           ))}
-          {!(stand.wortlisten ?? []).length && <li className="leise">Keine Wortlisten.</li>}
+          {!(stand.wortlisten ?? []).length && <li className="leise">{t('werkbank.paketerstellen.keine-wortlisten')}</li>}
         </ul>
       </section>
-      <section className="blatt" aria-label="Beispiel-Mappen">
-        <h2 className="h3">Beispiel-Mappen (optional)</h2>
-        <p className="leise klein">Ohne Auswahl enthält das Paket keine Mappen. Wählst du Mappen, kommen ihre Feldwerte als Beispiele ins Paket – nimm nur Mappen mit erfundenen Daten, z. B. Demo-Mappen. Passwörter, Dokumente, Notizen und Verweise auf nicht gewählte Mappen bleiben draußen.</p>
-        {!pruefung ? <p className="leise klein">Lade …</p> : !pruefung.beispielMappen.length ? <p className="leise klein">Wähle zuerst eigene Mappentypen.</p> : pruefung.beispielMappen.map((b) => (
+      <section className="blatt" aria-label={t('werkbank.paketerstellen.beispiel-mappen')}>
+        <h2 className="h3">{t('werkbank.paketerstellen.beispiel-mappen-optional')}</h2>
+        <p className="leise klein">{t('werkbank.paketerstellen.ohne-auswahl-enthaelt-das')}</p>
+        {!pruefung ? <p className="leise klein">{t('werkbank.paketerstellen.lade')}</p> : !pruefung.beispielMappen.length ? <p className="leise klein">{t('werkbank.paketerstellen.waehle-zuerst-eigene-mappentypen')}</p> : pruefung.beispielMappen.map((b) => (
           <details key={b.typId} open={b.mappen.some((m) => e.beispiele.includes(m.id))}>
-            <summary>{b.typ} <span className="leise klein">({b.mappen.filter((m) => e.beispiele.includes(m.id)).length} von {b.mappen.length}{b.mehr ? '+' : ''} gewählt)</span></summary>
+            <summary>{b.typ} <span className="leise klein">({b.mappen.filter((m) => e.beispiele.includes(m.id)).length} {' '}{t('werkbank.paketerstellen.von-gewaehlt', { mappen: b.mappen.length, wert: b.mehr ? '+' : '' })}</span></summary>
             <ul className="stapel">
               {b.mappen.filter((m) => passt(m.titel)).map((m) => (
-                <li key={m.id}><label className="haken"><input type="checkbox" checked={e.beispiele.includes(m.id)} onChange={(x) => umschalten('beispiele', m.id, x.target.checked)} /><span>{m.titel}{m.demo && <> <span className="chip gut">Demo</span></>}</span></label></li>
+                <li key={m.id}><label className="haken"><input type="checkbox" checked={e.beispiele.includes(m.id)} onChange={(x) => umschalten('beispiele', m.id, x.target.checked)} /><span>{m.titel}{m.demo && <> <span className="chip gut">{t('werkbank.paketerstellen.demo')}</span></>}</span></label></li>
               ))}
-              {!b.mappen.length && <li className="leise klein">Keine Mappen.</li>}
+              {!b.mappen.length && <li className="leise klein">{t('werkbank.paketerstellen.keine-mappen')}</li>}
             </ul>
           </details>
         ))}
@@ -326,11 +327,11 @@ function Inhalt({ p }: { p: PaketPruefung }) {
   const abh = Object.entries(p.abhaengigkeiten);
   return (
     <dl className="eigenschaften">
-      <dt>Mappentypen</dt><dd>{p.inhalt.typen.map((t) => t.name).join(', ') || '–'}</dd>
-      <dt>Ansichten</dt><dd>{p.inhalt.sichten.map((s) => (s.eltern ? `${p.inhalt.sichten.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ') || '–'}</dd>
-      <dt>Beispiele</dt><dd>{p.inhalt.beispiele || 'keine'}</dd>
-      <dt>Wortlisten</dt><dd>{p.inhalt.wortlisten || 'keine'}</dd>
-      <dt>Abhängigkeiten</dt><dd>{abh.length ? abh.map(([k, v]) => `${k} ${v}`).join(', ') : 'keine'}</dd>
+      <dt>{t('werkbank.paketerstellen.mappentypen')}</dt><dd>{p.inhalt.typen.map((eintrag) => eintrag.name).join(', ') || '–'}</dd>
+      <dt>{t('werkbank.paketerstellen.ansichten')}</dt><dd>{p.inhalt.sichten.map((s) => (s.eltern ? `${p.inhalt.sichten.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ') || '–'}</dd>
+      <dt>{t('werkbank.paketerstellen.beispiele')}</dt><dd>{p.inhalt.beispiele || t('werkbank.paketerstellen.keine')}</dd>
+      <dt>{t('werkbank.paketerstellen.wortlisten')}</dt><dd>{p.inhalt.wortlisten || t('werkbank.paketerstellen.keine')}</dd>
+      <dt>{t('werkbank.paketerstellen.abhaengigkeiten')}</dt><dd>{abh.length ? abh.map(([k, v]) => `${k} ${v}`).join(', ') : t('werkbank.paketerstellen.keine')}</dd>
     </dl>
   );
 }

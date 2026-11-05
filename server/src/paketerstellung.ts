@@ -28,6 +28,7 @@ import { ARCHIV_MAX, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, lie
 import { protokoll } from './protokoll';
 import { typBild, typUnterschiede, type TypUnterschiede } from '../../shared/src/typvergleich';
 import { zipPuffer } from './zip';
+import { gebietsschema } from '../../shared/src/sprache';
 
 const log = protokoll.modul('werkbank');
 
@@ -39,12 +40,12 @@ const BEISPIELVERWEISE_AB = '0.79.0';
  */
 export const MINDEST_GRUNDLAGE = '0.86.0';
 export const MINDEST_FUNKTIONEN = {
-  dmsVerweise: { ab: DMS_VERWEISE_AB, grund: 'Verweise auf Mappentypen von Ablago' },
-  beispielVerweise: { ab: BEISPIELVERWEISE_AB, grund: 'Verweise zwischen Beispielen' },
-  erkennung: { ab: '0.113.0', grund: 'Erkennung an Feldern („Aus Dokument ausfüllen“)' },
-  feldformate: { ab: '0.121.0', grund: 'Feldformate und Datumsgrenzen' },
-  wortlisten: { ab: DMS_WORTLISTEN_AB, grund: 'Wortlisten' },
-  fremdeTypen: { ab: FREMDE_TYPEN_AB, grund: 'Ansichten mit Mappentypen, die nicht im Paket sind' },
+  dmsVerweise: { ab: DMS_VERWEISE_AB, grund: t('meldungen.paketerstellung.verweise-auf-mappentypen-von') },
+  beispielVerweise: { ab: BEISPIELVERWEISE_AB, grund: t('meldungen.paketerstellung.verweise-zwischen-beispielen') },
+  erkennung: { ab: '0.113.0', grund: t('meldungen.paketerstellung.erkennung-an-feldern-aus') },
+  feldformate: { ab: '0.121.0', grund: t('meldungen.paketerstellung.feldformate-und-datumsgrenzen') },
+  wortlisten: { ab: DMS_WORTLISTEN_AB, grund: t('meldungen.paketerstellung.wortlisten') },
+  fremdeTypen: { ab: FREMDE_TYPEN_AB, grund: t('meldungen.paketerstellung.ansichten-mit-mappentypen-die') },
 } as const;
 export type MindestFunktion = keyof typeof MINDEST_FUNKTIONEN;
 /** Minor-Versionen, die es nie gab (übersprungen); erscheinen nicht in der Auswahl. */
@@ -81,24 +82,24 @@ export function erkenneArt(e: PaketErstellenEingabe, entwurf: PaketEntwurf | nul
   if (!entwurf) return { art: null, grund: null };
   const weg = (alt: string[], neu: string[]) => alt.filter((x) => !neu.includes(x));
   const typWeg = weg(entwurf.typen, e.typen), sichtWeg = weg(entwurf.sichten, e.sichten);
-  const name = (id: string) => namen.get(id) ?? 'ein Mappentyp';
-  if (typWeg.length) return { art: 'gross', grund: `Mappentyp „${name(typWeg[0])}“ nicht mehr dabei` };
-  if (sichtWeg.length) return { art: 'gross', grund: `Ansicht „${name(sichtWeg[0])}“ nicht mehr dabei` };
+  const name = (id: string) => namen.get(id) ?? t('meldungen.paketerstellung.ein-mappentyp');
+  if (typWeg.length) return { art: 'gross', grund: t('meldungen.paketerstellung.mappentyp-nicht-mehr-dabei', { name: name(typWeg[0]) }) };
+  if (sichtWeg.length) return { art: 'gross', grund: t('meldungen.paketerstellung.ansicht-nicht-mehr-dabei', { name: name(sichtWeg[0]) }) };
   const alt = entwurf.felder;
   if (alt) for (const [tid, keys] of Object.entries(alt)) {
     if (!e.typen.includes(tid) || !felderJetzt[tid]) continue;
     const f = weg(keys, felderJetzt[tid]);
-    if (f.length) return { art: 'gross', grund: `Feld „${f[0]}“ in „${name(tid)}“ entfernt` };
+    if (f.length) return { art: 'gross', grund: t('meldungen.paketerstellung.feld-in-entfernt', { f: f[0], name: name(tid) }) };
   }
   const typNeu = weg(e.typen, entwurf.typen), sichtNeu = weg(e.sichten, entwurf.sichten);
-  if (typNeu.length) return { art: 'inhalt', grund: `Mappentyp „${name(typNeu[0])}“ neu dabei` };
-  if (sichtNeu.length) return { art: 'inhalt', grund: `Ansicht „${name(sichtNeu[0])}“ neu dabei` };
+  if (typNeu.length) return { art: 'inhalt', grund: t('meldungen.paketerstellung.mappentyp-neu-dabei', { name: name(typNeu[0]) }) };
+  if (sichtNeu.length) return { art: 'inhalt', grund: t('meldungen.paketerstellung.ansicht-neu-dabei', { name: name(sichtNeu[0]) }) };
   if (alt) {
     for (const tid of e.typen) {
       const f = felderJetzt[tid] ? weg(felderJetzt[tid], alt[tid] ?? []) : [];
-      if (f.length) return { art: 'inhalt', grund: `Feld „${f[0]}“ in „${name(tid)}“ neu` };
+      if (f.length) return { art: 'inhalt', grund: t('meldungen.paketerstellung.feld-in-neu', { f: f[0], name: name(tid) }) };
     }
-    return { art: 'korrektur', grund: 'Keine Felder, Mappentypen oder Ansichten hinzugekommen oder entfernt' };
+    return { art: 'korrektur', grund: t('meldungen.paketerstellung.keine-felder-mappentypen-oder') };
   }
   return { art: null, grund: null };
 }
@@ -204,57 +205,57 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     const b = `>=${p.version}`;
     if (!abh[p.id] || vergleicheVersion(p.version, untergrenze(abh[p.id]) ?? '0.0.0') > 0) abh[p.id] = b;
   };
-  const ausPaket = (art: string, name: string, p: InstalliertesPaket, t?: Mappentyp) => {
+  const ausPaket = (art: string, name: string, p: InstalliertesPaket, eintrag?: Mappentyp) => {
     abhaengig(p);
-    hinweis(`${art} „${name}“ kommt aus dem Paket „${p.name}“ – wird als Abhängigkeit eingetragen (${p.id} >=${p.version}), nicht kopiert.`);
-    if (t && geaendert(t)) hinweis(`Änderungen an „${t.name}“ (${p.name}) gehören nicht zu deinem Paket – beim Empfänger gilt der Typ, wie das Paket „${p.name}“ ihn bringt. Brauchst du die Änderungen, lege dafür einen eigenen Typ an.`);
+    hinweis(t('meldungen.paketerstellung.kommt-aus-dem-paket', { art, name, name2: p.name, id: p.id, version: p.version }));
+    if (eintrag && geaendert(eintrag)) hinweis(t('meldungen.paketerstellung.aenderungen-an-gehoeren-nicht', { name: eintrag.name, name2: p.name }));
   };
 
   // 1. Angaben
-  if (!PAKET_ID.test(id)) probleme.push('Id: nur Kleinbuchstaben, Ziffern und _, beginnt mit einem Buchstaben, 2 bis 20 Zeichen (z. B. vertraege_familie).');
-  else if (id === 'dms') probleme.push('Id: „dms“ ist für Verweise auf Mappentypen von Ablago reserviert.');
-  else if (d.pakete.some((p) => p.id === id)) probleme.push(`Id: Das Paket „${id}“ ist in dieser Installation installiert. Wähle eine andere Id – ein eigenes Paket darf kein installiertes überdecken.`);
+  if (!PAKET_ID.test(id)) probleme.push(t('meldungen.paketerstellung.id-nur-kleinbuchstaben-ziffern'));
+  else if (id === 'dms') probleme.push(t('meldungen.paketerstellung.id-dms-ist-fuer'));
+  else if (d.pakete.some((p) => p.id === id)) probleme.push(t('meldungen.paketerstellung.id-das-paket-ist', { id }));
   const name = e.name.trim();
-  if (name.length < NAME_LAENGE.min || name.length > NAME_LAENGE.max) probleme.push(`Name: ${NAME_LAENGE.min} bis ${NAME_LAENGE.max} Zeichen.`);
-  if (!VERSION.test(e.version.trim())) probleme.push('Version: drei Zahlen, z. B. 1.0.0.');
+  if (name.length < NAME_LAENGE.min || name.length > NAME_LAENGE.max) probleme.push(t('meldungen.paketerstellung.name-bis-zeichen', { min: NAME_LAENGE.min, max: NAME_LAENGE.max }));
+  if (!VERSION.test(e.version.trim())) probleme.push(t('meldungen.paketerstellung.version-drei-zahlen-z'));
   const beschreibung = e.beschreibung.trim().replace(/\s+/g, ' ');
-  if (beschreibung.length < BESCHREIBUNG_LAENGE.min || beschreibung.length > BESCHREIBUNG_LAENGE.max) probleme.push(`Beschreibung: ${BESCHREIBUNG_LAENGE.min} bis ${BESCHREIBUNG_LAENGE.max} Zeichen, ein, zwei Sätze.`);
+  if (beschreibung.length < BESCHREIBUNG_LAENGE.min || beschreibung.length > BESCHREIBUNG_LAENGE.max) probleme.push(t('meldungen.paketerstellung.beschreibung-bis-zeichen-ein', { min: BESCHREIBUNG_LAENGE.min, max: BESCHREIBUNG_LAENGE.max }));
   const autor = { name: e.autor.name.trim(), github: e.autor.github.trim().replace(/^@/, '') };
-  if (!autor.name) probleme.push('Autor: Bitte deinen Namen angeben (steht auch in LICENSE).');
-  if (autor.github && !GITHUB.test(autor.github)) probleme.push('GitHub: nur Buchstaben, Ziffern und Bindestrich.');
-  if (!autor.github) hinweis('Ohne GitHub-Namen lässt sich das Paket installieren, aber nicht in die Registry einreichen (dort ist er Pflicht).');
+  if (!autor.name) probleme.push(t('meldungen.paketerstellung.autor-bitte-deinen-namen'));
+  if (autor.github && !GITHUB.test(autor.github)) probleme.push(t('meldungen.paketerstellung.github-nur-buchstaben-ziffern'));
+  if (!autor.github) hinweis(t('meldungen.paketerstellung.ohne-github-namen-laesst'));
   // Lizenz (#651): freie aus der Liste, eigene (Name + Text → LICENSE) oder keine.
   const art = e.lizenzArt ?? 'frei';
   let lizenz = '';
   if (art === 'frei') {
-    if (!istFreieLizenz(e.lizenz)) probleme.push(`Lizenz: bitte eine freie Lizenz aus der Liste wählen (${LIZENZEN.join(', ')}), eine eigene angeben oder „Keine Lizenz“.`);
+    if (!istFreieLizenz(e.lizenz)) probleme.push(t('meldungen.paketerstellung.lizenz-bitte-eine-freie', { LIZENZEN: LIZENZEN.join(', ') }));
     else lizenz = e.lizenz;
   } else if (art === 'eigen') {
     const n = (e.lizenzName ?? '').trim();
-    if (n.length < LIZENZNAME_LAENGE.min || n.length > LIZENZNAME_LAENGE.max) probleme.push(`Lizenz: Name der eigenen Lizenz mit ${LIZENZNAME_LAENGE.min} bis ${LIZENZNAME_LAENGE.max} Zeichen.`);
-    if (!(e.lizenzText ?? '').trim()) probleme.push('Lizenz: Bitte den Text der eigenen Lizenz eingeben oder eine Datei wählen – er kommt als LICENSE ins Paket.');
-    else if ((e.lizenzText ?? '').length > LIZENZTEXT_MAX) probleme.push(`Lizenz: Der Lizenztext ist zu lang (höchstens ${LIZENZTEXT_MAX.toLocaleString('de-DE')} Zeichen).`);
+    if (n.length < LIZENZNAME_LAENGE.min || n.length > LIZENZNAME_LAENGE.max) probleme.push(t('meldungen.paketerstellung.lizenz-name-der-eigenen', { min: LIZENZNAME_LAENGE.min, max: LIZENZNAME_LAENGE.max }));
+    if (!(e.lizenzText ?? '').trim()) probleme.push(t('meldungen.paketerstellung.lizenz-bitte-den-text'));
+    else if ((e.lizenzText ?? '').length > LIZENZTEXT_MAX) probleme.push(t('meldungen.paketerstellung.lizenz-der-lizenztext-ist', { LIZENZTEXT_MAX: LIZENZTEXT_MAX.toLocaleString(gebietsschema()) }));
     lizenz = lizenzVerweis(n);
   } else lizenz = KEINE_LIZENZ;
-  if (art !== 'frei') hinweis(`${art === 'eigen' ? 'Mit einer eigenen Lizenz' : 'Ohne Lizenz'} lässt sich das Paket in jeder Ablago-Installation installieren, kommt so aber nicht in den offiziellen Katalog – dort gelten nur freie Lizenzen (${LIZENZEN.join(', ')}).`);
+  if (art !== 'frei') hinweis(t('meldungen.paketerstellung.laesst-sich-das-paket', { wert: art === 'eigen' ? t('meldungen.paketerstellung.mit-einer-eigenen-lizenz') : t('meldungen.paketerstellung.ohne-lizenz'), LIZENZEN: LIZENZEN.join(', ') }));
   // Version (#651): ausgewählt, immer höher als die zuletzt bekannte.
   const version = e.version.trim();
   const bekannt = bekannteVersion(e, d.entwurf);
-  if (!VERSION.test(version)) probleme.push('Version: drei Zahlen, z. B. 1.0.0.');
-  else if (bekannt && vergleicheVersion(version, bekannt) <= 0) probleme.push(`Version: ${bekannt} ${d.entwurf && d.entwurf.version === bekannt ? 'hast du schon erstellt' : 'gibt es schon'}. Damit der Empfänger aktualisieren kann, braucht es eine höhere Version (z. B. ${naechsteVersion(bekannt)}).`);
-  else if (!e.vonHand && bekannt && !Object.values(naechsteVersionen(bekannt)).includes(version)) probleme.push(`Version: bitte eine der Möglichkeiten wählen (${Object.values(naechsteVersionen(bekannt)).join(', ')}) – andere nur im Expertenmodus von Hand.`);
-  else if (!e.vonHand && !bekannt && version !== '1.0.0' && version !== '0.1.0') probleme.push('Version: Ein neues Paket beginnt mit 1.0.0 (im Expertenmodus auch 0.1.0 für „noch nicht fertig“).');
+  if (!VERSION.test(version)) probleme.push(t('meldungen.paketerstellung.version-drei-zahlen-z'));
+  else if (bekannt && vergleicheVersion(version, bekannt) <= 0) probleme.push(t('meldungen.paketerstellung.version-damit-der-empfaenger', { bekannt, wert: d.entwurf && d.entwurf.version === bekannt ? t('meldungen.paketerstellung.hast-du-schon-erstellt') : t('meldungen.paketerstellung.gibt-es-schon'), naechsteVersion: naechsteVersion(bekannt) }));
+  else if (!e.vonHand && bekannt && !Object.values(naechsteVersionen(bekannt)).includes(version)) probleme.push(t('meldungen.paketerstellung.version-bitte-eine-der', { values: Object.values(naechsteVersionen(bekannt)).join(', ') }));
+  else if (!e.vonHand && !bekannt && version !== '1.0.0' && version !== '0.1.0') probleme.push(t('meldungen.paketerstellung.version-ein-neues-paket'));
   const dms = e.dms.trim();
 
   // 2. Auswahl: eigene Typen werden exportiert, Paket- und Systemtypen nicht.
   const eigene: Mappentyp[] = [];
   for (const tid of new Set(e.typen)) {
-    const t = typById.get(tid);
-    if (!t) { probleme.push('Ein gewählter Mappentyp existiert nicht mehr. Bitte die Auswahl prüfen.'); continue; }
-    const h = typPaket.get(t.id);
-    if (d.dmsTypen.has(t.id) || t.system) hinweis(`„${t.name}“ bringt jede Installation von Ablago selbst mit und kommt nicht ins Paket.`);
-    else if (h) ausPaket('Der Mappentyp', t.name, h.p, t);
-    else eigene.push(t);
+    const eintrag = typById.get(tid);
+    if (!eintrag) { probleme.push(t('meldungen.paketerstellung.ein-gewaehlter-mappentyp-existiert')); continue; }
+    const h = typPaket.get(eintrag.id);
+    if (d.dmsTypen.has(eintrag.id) || eintrag.system) hinweis(t('meldungen.paketerstellung.bringt-jede-installation-von', { name: eintrag.name }));
+    else if (h) ausPaket(t('meldungen.paketerstellung.der-mappentyp'), eintrag.name, h.p, eintrag);
+    else eigene.push(eintrag);
   }
   const schluessel: Record<string, string> = {};
   const max = 40 - (PAKET_ID.test(id) ? id.length : 20) - 1;
@@ -273,19 +274,19 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     if (schluessel[typId]) return schluessel[typId];
     const k = d.dmsTypen.get(typId);
     if (k && DMS_TYPEN[k]) { dmsVerweise = true; return `dms:${k}`; }
-    const t = typById.get(typId);
+    const eintrag = typById.get(typId);
     const h = typPaket.get(typId);
-    if (h && t) { ausPaket('Der Mappentyp', t.name, h.p, t); return `${h.p.id}:${h.s}`; }
-    if (!t) { probleme.push(`${wo}: Den Ziel-Mappentyp gibt es nicht mehr.`); return null; }
-    if (t.system) { probleme.push(`${wo}: verweist auf „${t.name}“. Darauf kann ein Paket nicht verweisen (erlaubt: ${Object.values(DMS_TYPEN).join(', ')}).`); return null; }
-    if (!fehlend.some((f) => f.id === t.id)) fehlend.push({ art: 'typ', id: t.id, name: t.name, grund: wo, noetig: true });
+    if (h && eintrag) { ausPaket(t('meldungen.paketerstellung.der-mappentyp'), eintrag.name, h.p, eintrag); return `${h.p.id}:${h.s}`; }
+    if (!eintrag) { probleme.push(`${wo}: Den Ziel-Mappentyp gibt es nicht mehr.`); return null; }
+    if (eintrag.system) { probleme.push(`${wo}: verweist auf „${eintrag.name}“. Darauf kann ein Paket nicht verweisen (erlaubt: ${Object.values(DMS_TYPEN).join(', ')}).`); return null; }
+    if (!fehlend.some((f) => f.id === eintrag.id)) fehlend.push({ art: 'typ', id: eintrag.id, name: eintrag.name, grund: wo, noetig: true });
     return null;
   };
 
   // 3. Mappentypen
-  const paketTypen = eigene.map((t) => {
-    const wo = (was: string) => `„${t.name}“ → ${was}`;
-    const felder = t.felder.filter((f) => !f.system).map((f) => {
+  const paketTypen = eigene.map((mappentyp) => {
+    const wo = (was: string) => `„${mappentyp.name}“ → ${was}`;
+    const felder = mappentyp.felder.filter((f) => !f.system).map((f) => {
       // ausText (#534) gehört zu einem Update aus der Registry, nicht in ein selbst erstelltes Paket.
       const { zielTyp, system: _s, auswahlFilter, frist, standard, ausText: _a, ...rest } = f as Feld;
       const x: Record<string, unknown> = ohneLeere(rest as Record<string, unknown>);
@@ -304,20 +305,20 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
       if (x.ziel === undefined) delete x.ziel;
       return x;
     });
-    const register = t.register.map((r: Register) => {
+    const register = mappentyp.register.map((r: Register) => {
       const quellen = r.quellen?.map((q) => ({ typ: ziel(q.typId, wo(`Register „${r.name}“`)), feld: q.feldKey })).filter((q): q is { typ: string; feld: string } => !!q.typ);
       return ohneLeere({ key: r.key, name: r.name, art: r.art, felder: r.art === 'felder' ? (r.felder ?? []).filter((k) => felder.some((f) => f.key === k)) : undefined, quellen, versionierung: r.versionierung, versionenBehalten: r.versionenBehalten });
     });
     // volltext: false ausdrücklich behalten (Standard ist ja); ohneLeere ließe es weg.
-    t.register.forEach((r, i) => { if (r.volltext === false) (register[i] as Record<string, unknown>).volltext = false; });
-    const liste = standardliste(t);
-    if (trefferlistenVon(t).length > 1) hinweis(`„${t.name}“: Nur die Standard-Trefferliste „${liste.name}“ kommt ins Paket; weitere Trefferlisten kennt das Paketformat nicht.`);
-    const weg = [t.berechtigungen ? 'Berechtigungen' : '', t.archiv ? 'Archivmodus' : '', t.erstellenErlaubt === false || t.loeschenErlaubt === false ? 'Anlegen/Löschen gesperrt' : ''].filter(Boolean);
-    if (weg.length) hinweis(`„${t.name}“: ${weg.join(', ')} gehören nicht zum Paketformat und kommen nicht mit.`);
+    mappentyp.register.forEach((r, i) => { if (r.volltext === false) (register[i] as Record<string, unknown>).volltext = false; });
+    const liste = standardliste(mappentyp);
+    if (trefferlistenVon(mappentyp).length > 1) hinweis(t('meldungen.paketerstellung.nur-die-standard-trefferliste', { name: mappentyp.name, name2: liste.name }));
+    const weg = [mappentyp.berechtigungen ? 'Berechtigungen' : '', mappentyp.archiv ? 'Archivmodus' : '', mappentyp.erstellenErlaubt === false || mappentyp.loeschenErlaubt === false ? t('meldungen.paketerstellung.anlegen-loeschen-gesperrt') : ''].filter(Boolean);
+    if (weg.length) hinweis(t('meldungen.paketerstellung.gehoeren-nicht-zum-paketformat', { name: mappentyp.name, weg: weg.join(', ') }));
     // Das Schema verlangt beschreibung und felder auch leer.
     return {
-      schluessel: schluessel[t.id], name: t.name, beschreibung: t.beschreibung ?? '',
-      ...ohneLeere({ titelVorlage: t.titelVorlage || undefined }), felder, register, ...ohneLeere({ trefferliste: liste.spalten.length ? liste.spalten : undefined }),
+      schluessel: schluessel[mappentyp.id], name: mappentyp.name, beschreibung: mappentyp.beschreibung ?? '',
+      ...ohneLeere({ titelVorlage: mappentyp.titelVorlage || undefined }), felder, register, ...ohneLeere({ trefferliste: liste.spalten.length ? liste.spalten : undefined }),
     };
   });
 
@@ -325,9 +326,9 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   const eigeneSichten: Sicht[] = [];
   for (const sid of new Set(e.sichten)) {
     const s = sichtById.get(sid);
-    if (!s) { probleme.push('Eine gewählte Ansicht existiert nicht mehr. Bitte die Auswahl prüfen.'); continue; }
+    if (!s) { probleme.push(t('meldungen.paketerstellung.eine-gewaehlte-ansicht-existiert')); continue; }
     const h = sichtPaket.get(s.id);
-    if (h) ausPaket('Die Ansicht', s.name, h.p);
+    if (h) ausPaket(t('meldungen.paketerstellung.die-ansicht'), s.name, h.p);
     else eigeneSichten.push(s);
   }
   const belegtS = new Set<string>();
@@ -343,35 +344,35 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     if (s.elternId) {
       const ep = sichtById.get(s.elternId);
       if (ep && schluessel[ep.id] && eigeneSichten.includes(ep)) eltern = schluessel[ep.id];
-      else if (ep && sichtPaket.has(ep.id)) hinweis(`Ansicht „${s.name}“ steht unter „${ep.name}“ aus einem Paket – im Paket steht sie auf der obersten Ebene.`);
+      else if (ep && sichtPaket.has(ep.id)) hinweis(t('meldungen.paketerstellung.ansicht-steht-unter-aus', { name: s.name, name2: ep.name }));
       else if (ep) {
-        hinweis(`Ansicht „${s.name}“ steht unter „${ep.name}“, die nicht gewählt ist – im Paket steht sie auf der obersten Ebene.`);
-        if (!fehlend.some((f) => f.id === ep.id)) fehlend.push({ art: 'sicht', id: ep.id, name: ep.name, grund: `Elternansicht von „${s.name}“`, noetig: false });
+        hinweis(t('meldungen.paketerstellung.ansicht-steht-unter-die', { name: s.name, name2: ep.name }));
+        if (!fehlend.some((f) => f.id === ep.id)) fehlend.push({ art: 'sicht', id: ep.id, name: ep.name, grund: t('meldungen.paketerstellung.elternansicht-von', { name: s.name }), noetig: false });
       }
     }
     // Eigene, nicht gewählte Typen (#656): nur ein Hinweis – der Typ bleibt über seine Kennung in der Ansicht.
     const fremd: FremderTyp[] = [];
     const typen = s.typen.map((tid) => {
       if (tid === ALLE_TYPEN) return ALLE_TYPEN; // „*“ (#725): alle Mappentypen
-      const t = typById.get(tid);
-      if (t && !schluessel[tid] && !d.dmsTypen.has(tid) && !t.system && !typPaket.has(tid)) {
+      const eintrag = typById.get(tid);
+      if (eintrag && !schluessel[tid] && !d.dmsTypen.has(tid) && !eintrag.system && !typPaket.has(tid)) {
         const frueher = (d.entwuerfe ?? []).find((x) => x.id !== id && x.schluessel[tid]);
-        fremd.push({ kennung: frueher ? `${frueher.id}_${frueher.schluessel[tid]}` : t.schluessel || frei(t.name, 40, new Set()), name: t.name });
-        hinweis(`Ansicht „${s.name}“ zeigt Mappen vom Typ „${t.name}“. „${t.name}“ kommt nicht ins Paket – beim Empfänger muss es „${t.name}“ schon geben, sonst bleibt die Ansicht leer oder wird nicht installiert.`);
-        if (!fehlend.some((f) => f.id === t.id)) fehlend.push({ art: 'typ', id: t.id, name: t.name, grund: `Vorsicht: steckt in der Ansicht „${s.name}“ – muss beim Empfänger vorhanden sein`, noetig: false });
+        fremd.push({ kennung: frueher ? `${frueher.id}_${frueher.schluessel[tid]}` : eintrag.schluessel || frei(eintrag.name, 40, new Set()), name: eintrag.name });
+        hinweis(t('meldungen.paketerstellung.ansicht-zeigt-mappen-vom', { name: s.name, name2: eintrag.name }));
+        if (!fehlend.some((f) => f.id === eintrag.id)) fehlend.push({ art: 'typ', id: eintrag.id, name: eintrag.name, grund: t('meldungen.paketerstellung.vorsicht-steckt-in-der', { name: s.name }), noetig: false });
         return null;
       }
       return ziel(tid, `Ansicht „${s.name}“`);
     }).filter((t): t is string => !!t);
     if (fremd.length) fremdeTypen = true;
     const bedingungen = s.bedingungen.flatMap((b: Bedingung) => {
-      if (b.art !== 'feld') { hinweis(`Ansicht „${s.name}“: Bedingungen auf Anzahlen, Favoriten oder Fristen kennt das Paketformat nicht; sie fehlen im Paket.`); return []; }
+      if (b.art !== 'feld') { hinweis(t('meldungen.paketerstellung.ansicht-bedingungen-auf-anzahlen', { name: s.name })); return []; }
       const w = (b.op === 'zwischen' || b.op === 'ausserhalb') && b.bis ? [fest(b.wert), fest(b.bis)] : fest(b.wert);
-      if (mitId(w)) { hinweis(`Ansicht „${s.name}“: Eine Bedingung nennt Mappen oder Benutzer dieser Installation und kommt nicht ins Paket.`); return []; }
+      if (mitId(w)) { hinweis(t('meldungen.paketerstellung.ansicht-eine-bedingung-nennt', { name: s.name })); return []; }
       return [w === undefined ? { feld: b.feld, operator: b.op } : { feld: b.feld, operator: b.op, wert: w }];
     });
-    if (s.trefferliste && s.trefferliste !== 'standard') hinweis(`Ansicht „${s.name}“: zeigt im Paket die Standard-Trefferliste.`);
-    if (s.berechtigungen) hinweis(`Ansicht „${s.name}“: Berechtigungen an der Ansicht kommen nicht ins Paket.`);
+    if (s.trefferliste && s.trefferliste !== 'standard') hinweis(t('meldungen.paketerstellung.ansicht-zeigt-im-paket', { name: s.name }));
+    if (s.berechtigungen) hinweis(t('meldungen.paketerstellung.ansicht-berechtigungen-an-der', { name: s.name }));
     return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, eltern, typen, fremde_typen: fremd, bedingungen, symbol: s.symbol || undefined });
   });
   // Elternansichten zuerst (liest sich besser; das DMS sortiert ohnehin).
@@ -385,7 +386,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   // 5. Beispiele: nur ausdrücklich gewählte Mappen der eigenen Typen, ohne Passwörter und ohne Ids.
   const exportiert = new Map(eigene.map((t) => [t.id, t] as const));
   const bsp = d.mappen.filter((m) => exportiert.has(m.typId) && !m.systemKennung);
-  if (d.mappen.length > bsp.length) hinweis('Beispiel-Mappen gehen nur aus gewählten eigenen Mappentypen; die übrigen sind weggelassen.');
+  if (d.mappen.length > bsp.length) hinweis(t('meldungen.paketerstellung.beispiel-mappen-gehen-nur'));
   const bspKey = new Map(bsp.map((m, i) => [m.id, `beispiel_${i + 1}`] as const));
   let beispielVerweise = false;
   let ohneZiel = 0;
@@ -412,27 +413,27 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     }
     return { typ: schluessel[t.id], schluessel: bspKey.get(m.id)!, werte };
   });
-  if (ohneZiel) hinweis(`Beispiel-Mappen: ${ohneZiel === 1 ? 'Ein Verweis zeigt' : `${ohneZiel} Verweise zeigen`} auf Mappen, die keine gewählten Beispiele sind, und ${ohneZiel === 1 ? 'bleibt' : 'bleiben'} leer.`);
-  if (bsp.length) hinweis(`${bsp.length} Beispiel-Mappen aus deiner Auswahl kommen ins Paket – nimm nur Mappen mit erfundenen Daten. Dokumente, Notizen und Aufgaben kommen nicht mit.`);
+  if (ohneZiel) hinweis(t('meldungen.paketerstellung.beispiel-mappen-verweise-zeigen', { anzahl: ohneZiel }));
+  if (bsp.length) hinweis(t('meldungen.paketerstellung.beispiel-mappen-aus-deiner', { bsp: bsp.length }));
 
   // 6. Wortlisten (#661): nur eigene Gruppen; aus Paketen nicht kopiert. Doppelte Wörter in einer Gruppe zusammengefasst.
   const wortlisten: Array<{ woerter: string[] }> = [];
   for (const wid of new Set(e.wortlisten ?? [])) {
     const g = (d.wortlisten ?? []).find((x) => x.id === wid);
-    if (!g) { probleme.push('Eine gewählte Wortliste gibt es nicht mehr. Bitte die Auswahl prüfen.'); continue; }
+    if (!g) { probleme.push(t('meldungen.paketerstellung.eine-gewaehlte-wortliste-gibt')); continue; }
     if (g.quelle !== 'werkbank') {
       const p = d.pakete.find((x) => x.id === g.quelle);
-      if (p && abh[p.id]) hinweis(`Die Wortliste „${g.woerter.join(', ')}“ kommt über das Paket „${p.name}“ als Abhängigkeit mit, nicht kopiert.`);
-      else hinweis(`Die Wortliste „${g.woerter.join(', ')}“ gehört zum Paket „${p?.name ?? g.quelle}“ und kommt nicht ins Paket.`);
+      if (p && abh[p.id]) hinweis(t('meldungen.paketerstellung.die-wortliste-kommt-ueber', { woerter: g.woerter.join(', '), name: p.name }));
+      else hinweis(t('meldungen.paketerstellung.die-wortliste-gehoert-zum', { woerter: g.woerter.join(', '), wert: p?.name ?? g.quelle }));
       continue;
     }
     const w = liesWortgruppe(g.woerter).woerter;
     if (w.length >= 2) wortlisten.push({ woerter: w });
   }
-  if (wortlisten.length > WORTLISTEN_MAX) probleme.push(`Wortlisten: höchstens ${WORTLISTEN_MAX} Gruppen.`);
-  if (wortlisten.length) hinweis(`${wortlisten.length === 1 ? 'Eine Gruppe' : `${wortlisten.length} Gruppen`} gleichbedeutender Wörter kommen ins Paket – beim Empfänger stehen sie unter Werkbank → Suche bei „aus Paketen“.`);
+  if (wortlisten.length > WORTLISTEN_MAX) probleme.push(t('meldungen.paketerstellung.wortlisten-hoechstens-gruppen', { WORTLISTEN_MAX }));
+  if (wortlisten.length) hinweis(t('meldungen.paketerstellung.gruppen-gleichbedeutender-woerter', { anzahl: wortlisten.length }));
 
-  if (!paketTypen.length && !paketSichten.length && !wortlisten.length) probleme.push('Wähle mindestens einen eigenen Mappentyp, eine eigene Ansicht oder eine eigene Wortliste – was aus Paketen kommt, kommt nur als Abhängigkeit mit.');
+  if (!paketTypen.length && !paketSichten.length && !wortlisten.length) probleme.push(t('meldungen.paketerstellung.waehle-mindestens-einen-eigenen'));
   // Nötige Ablago-Version (#651): Mindestversion aus den benutzten Funktionen, Angabe aus der Auswahl.
   const genutzt: MindestFunktion[] = [];
   if (dmsVerweise) genutzt.push('dmsVerweise');
@@ -444,17 +445,17 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   const mindest = mindestversion(genutzt);
   const optionen = dmsOptionen(mindest.version, d.dmsVersion);
   const unten = untergrenze(dms);
-  if (!dms) probleme.push('Ablago-Version: bitte auswählen, ab welcher Version das Paket läuft.');
-  else if (!BEREICH.test(dms) || !unten) probleme.push('Ablago-Version: z. B. >=0.121.0.');
-  else if (vergleicheVersion(unten, mindest.version) < 0) probleme.push(`Ablago-Version: Das Paket nutzt ${mindest.gruende.join(', ') || 'Funktionen'} und braucht mindestens >=${mindest.version}.`);
-  else if (!e.vonHand && !DMS_ANGABE.test(dms)) probleme.push('Ablago-Version: bitte eine Version aus der Auswahl (>=X.Y.0) – andere Schreibweisen nur im Expertenmodus.');
-  else if (!e.vonHand && !optionen.includes(dms)) probleme.push(`Ablago-Version: ${dms} gibt es nicht zur Auswahl (von >=${mindest.version} bis zu dieser Installation).`);
+  if (!dms) probleme.push(t('meldungen.paketerstellung.ablago-version-bitte-auswaehlen'));
+  else if (!BEREICH.test(dms) || !unten) probleme.push(t('meldungen.paketerstellung.ablago-version-z-b'));
+  else if (vergleicheVersion(unten, mindest.version) < 0) probleme.push(t('meldungen.paketerstellung.ablago-version-das-paket', { wert: mindest.gruende.join(', ') || t('meldungen.paketerstellung.funktionen'), version: mindest.version }));
+  else if (!e.vonHand && !DMS_ANGABE.test(dms)) probleme.push(t('meldungen.paketerstellung.ablago-version-bitte-eine'));
+  else if (!e.vonHand && !optionen.includes(dms)) probleme.push(t('meldungen.paketerstellung.ablago-version-gibt-es', { dms, version: mindest.version }));
   const felderJetzt: Record<string, string[]> = Object.fromEntries(eigene.map((t) => [t.id, t.felder.filter((f) => !f.system).map((f) => f.key)]));
   const namen = new Map<string, string>([...d.typen.map((t) => [t.id, t.name] as const), ...d.sichten.map((s) => [s.id, s.name] as const)]);
   const ea = erkenneArt(e, d.entwurf, felderJetzt, namen);
   const versionLage: VersionsLage = { bekannt, art: ea.art, artGrund: ea.grund, mindest: mindest.version, gruende: mindest.gruende, dmsOptionen: optionen };
   const fehlt = fehlend.filter((f) => f.noetig);
-  if (fehlt.length) probleme.push(`Es wird auf Mappentypen verwiesen, die nicht gewählt sind: ${fehlt.map((f) => `„${f.name}“`).join(', ')}. Nimm sie mit auf oder entferne den Verweis.`);
+  if (fehlt.length) probleme.push(t('meldungen.paketerstellung.es-wird-auf-mappentypen', { map: fehlt.map((f) => `„${f.name}“`).join(', ') }));
 
   const inhalt: Bau['inhalt'] = {
     typen: paketTypen.map((t) => ({ schluessel: String(t.schluessel), name: String(t.name) })),
@@ -472,7 +473,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   };
   const datum = d.jetzt.toISOString().slice(0, 10);
   const text = aenderungsText(e, d.entwurf);
-  const verlauf = (d.entwurf ? [{ version: d.entwurf.version, datum: d.entwurf.exportiert.slice(0, 10), text: d.entwurf.aenderungen || 'Aus Ablago exportiert.' }, ...d.entwurf.verlauf] : [])
+  const verlauf = (d.entwurf ? [{ version: d.entwurf.version, datum: d.entwurf.exportiert.slice(0, 10), text: d.entwurf.aenderungen || t('meldungen.paketerstellung.aus-ablago-exportiert') }, ...d.entwurf.verlauf] : [])
     .filter((v) => vergleicheVersion(v.version, version) < 0);
   const changelog = ['# Änderungen', '', `## ${version}`, '', ...text.split('\n').map((z) => (z.trim().startsWith('-') ? z : `- ${z}`)).filter((z) => z.trim() !== '-'),
     ...verlauf.flatMap((v) => ['', `## ${v.version}`, '', ...v.text.split('\n').map((z) => (z.trim().startsWith('-') ? z : `- ${z}`)).filter((z) => z.trim() !== '-')]), ''].join('\n');
@@ -481,18 +482,18 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     `# ${name}`, '', beschreibung, '', '## Inhalt', '',
     ...(paketTypen.length ? ['| Mappentyp | Felder |', '| --- | --- |', ...paketTypen.map((t) => `| ${zelle(String(t.name))} | ${zelle((t.felder as Array<{ label: string }>).map((f) => f.label).join(', ') || '–')} |`), ''] : []),
     ...(sortiert.length ? [`**Ansichten:** ${sortiert.map((s) => (s.eltern ? `${sortiert.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ')}`, ''] : []),
-    ...(wortlisten.length ? [`**Wortlisten:** ${wortlisten.length === 1 ? 'eine Gruppe' : `${wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche`, ''] : []),
+    ...(wortlisten.length ? [`**Wortlisten:** ${t('meldungen.paketerstellung.gruppen', { anzahl: wortlisten.length })} gleichbedeutender Wörter für die Suche`, ''] : []),
     ...(beispiele.length ? [`**Beispiele:** ${beispiele.length} Beispiel-Mappen (${[...new Set(beispiele.map((b) => typName.get(b.typ)))].join(', ')}), auf Wunsch bei der Installation.`, ''] : []),
     '## Voraussetzungen', '', `- Ablago ${dms}`,
-    ...(Object.keys(abh).length ? Object.entries(abh).map(([k, v]) => `- Paket \`${k}\` ${v}`) : ['- keine weiteren Pakete']), '',
-    '## Rechte und Netzwerkzugriff', '', 'Dieses Paket enthält keinen Code. Es legt nur Mappentypen und Ansichten an.', '',
-    '## Lizenz', '', art === 'frei' ? `${lizenz} – der volle Text steht in LICENSE.` : art === 'eigen' ? `${(e.lizenzName ?? '').trim()} – der volle Text steht in LICENSE. Keine freie Lizenz.` : 'Keine Lizenz angegeben – alle Rechte beim Urheber.', '',
-    '## Herkunft', '', `Erstellt mit „Paket erstellen“ in Ablago (Werkbank → Pakete) am ${datum}${autor.name ? ` von ${autor.name}` : ''}.`, '',
+    ...(Object.keys(abh).length ? Object.entries(abh).map(([k, v]) => `- Paket \`${k}\` ${v}`) : [t('meldungen.paketerstellung.keine-weiteren-pakete')]), '',
+    '## Rechte und Netzwerkzugriff', '', t('meldungen.paketerstellung.dieses-paket-enthaelt-keinen'), '',
+    '## Lizenz', '', art === 'frei' ? t('meldungen.paketerstellung.der-volle-text-steht', { lizenz }) : art === 'eigen' ? t('meldungen.paketerstellung.der-volle-text-steht-2', { wert: (e.lizenzName ?? '').trim() }) : t('meldungen.paketerstellung.keine-lizenz-angegeben-alle'), '',
+    '## Herkunft', '', t('meldungen.paketerstellung.erstellt-mit-paket-erstellen', { datum, wert: autor.name ? ` von ${autor.name}` : '' }), '',
   ].join('\n');
   const jahr = String(d.jetzt.getFullYear());
   const lizenzDatei = art === 'frei' ? (LIZENZTEXTE[lizenz] ?? '').replace('{jahr}', jahr).replace('{name}', autor.name)
     : art === 'eigen' ? `${(e.lizenzText ?? '').replace(/\r\n/g, '\n').trim()}\n`
-    : `Copyright (c) ${jahr} ${autor.name}\n\nFür dieses Paket ist keine Lizenz angegeben. Ohne Lizenz bleiben alle Rechte beim Urheber: Empfänger dürfen das Paket nutzen, wie es ihnen erlaubt wurde, es aber nicht ohne Weiteres weitergeben oder verändern.\n`;
+    : t('meldungen.paketerstellung.copyright-c-fuer-dieses', { jahr, name: autor.name });
   const erwartung = { mappentypen: inhalt.typen.map((t) => t.schluessel), sichten: inhalt.sichten.map((s) => s.schluessel), beispiele: beispiele.length, ...(wortlisten.length ? { wortlisten: wortlisten.length } : {}) };
   const dateien = [
     { name: 'manifest.yaml', daten: Buffer.from(`# Erstellt mit „Paket erstellen“ in Ablago. Format: https://github.com/motom001/dms-registry\n${stringify(manifest, { version: '1.1', lineWidth: 0 })}`) },
@@ -509,7 +510,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
 }
 
 /** Eintrag im CHANGELOG für diese Version; ohne Angabe ein Standardtext. */
-const aenderungsText = (e: PaketErstellenEingabe, entwurf: PaketEntwurf | null) => e.aenderungen.trim() || (entwurf ? 'Neue Version aus Ablago exportiert.' : 'Erste Fassung.');
+const aenderungsText = (e: PaketErstellenEingabe, entwurf: PaketEntwurf | null) => e.aenderungen.trim() || (entwurf ? t('meldungen.paketerstellung.neue-version-aus-ablago') : t('meldungen.paketerstellung.erste-fassung'));
 
 /** Eingabe aus der Anfrage vereinheitlichen. */
 export function liesEingabe(x: unknown): PaketErstellenEingabe {
@@ -605,7 +606,7 @@ export class Paketerstellung {
       if (p.manifest.id !== id || p.typen.length !== bau.inhalt.typen.length || p.sichten.length !== bau.inhalt.sichten.length) throw new Error('Inhalt weicht ab.');
     } catch (x) {
       const g = (x as Fachfehler).details as { gruende?: string[] } | undefined;
-      bau.probleme.push(`Die Prüfung wie beim Hochladen schlägt fehl: ${(x as Error).message}${g?.gruende ? ` ${g.gruende.join(' ')}` : ''}`);
+      bau.probleme.push(t('meldungen.paketerstellung.die-pruefung-wie-beim', { message: (x as Error).message, wert: g?.gruende ? ` ${g.gruende.join(' ')}` : '' }));
       return { bau, zip: null, daten };
     }
     return { bau, zip, daten };
@@ -616,9 +617,9 @@ export class Paketerstellung {
     const e = liesEingabe(eingabe);
     const { bau, zip, daten } = await this.baueUndPruefe(e);
     const eigene = daten.typen.filter((t) => e.typen.includes(t.id) && !t.system && !daten.dmsTypen.has(t.id) && !daten.pakete.some((p) => Object.values(p.typen).includes(t.id)));
-    const beispielMappen = await Promise.all(eigene.map(async (t) => {
-      const alle = (await this.d.listeMappen(t.id)).filter((m) => !m.systemKennung).sort((a, b) => (a.titel ?? '').localeCompare(b.titel ?? '', 'de'));
-      return { typId: t.id, typ: t.name, mappen: alle.slice(0, BEISPIELMAPPEN_MAX).map((m) => ({ id: m.id, titel: m.titel || '(ohne Titel)', demo: !!m.demo })), mehr: alle.length > BEISPIELMAPPEN_MAX };
+    const beispielMappen = await Promise.all(eigene.map(async (mappentyp) => {
+      const alle = (await this.d.listeMappen(mappentyp.id)).filter((m) => !m.systemKennung).sort((a, b) => (a.titel ?? '').localeCompare(b.titel ?? '', 'de'));
+      return { typId: mappentyp.id, typ: mappentyp.name, mappen: alle.slice(0, BEISPIELMAPPEN_MAX).map((m) => ({ id: m.id, titel: m.titel || t('meldungen.paketerstellung.ohne-titel'), demo: !!m.demo })), mehr: alle.length > BEISPIELMAPPEN_MAX };
     }));
     return {
       probleme: bau.probleme, fehlend: bau.fehlend.map(({ noetig: _n, ...f }) => f), hinweise: bau.hinweise, abhaengigkeiten: bau.abhaengigkeiten,
@@ -632,7 +633,7 @@ export class Paketerstellung {
    * (z. B. auf einem anderen Gerät erstellt). Liest nur Id, Name und Version aus dem Archiv; installiert nichts.
    */
   liesLetzteVersion(daten: unknown): { id: string; name: string; version: string } {
-    if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, 'Bitte die .zip-Datei des Pakets wählen.');
+    if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, t('meldungen.paketerstellung.bitte-die-zip-datei'));
     if (daten.length > ARCHIV_MAX) throw new Fachfehler(422, t('pakete.groesse.erstellenZuGross', { groesse: inMB(daten.length), max: inMB(ARCHIV_MAX) }));
     const m = liesPaket(liesZip(daten)).manifest;
     return { id: m.id, name: m.name, version: m.version };
@@ -658,7 +659,7 @@ export class Paketerstellung {
   /** Was damals erstellt wurde und was sich seitdem geändert hat (#652). */
   async selbstErstelltDetail(id: string): Promise<SelbstErstelltDetail> {
     const e = (await this.d.paketEntwuerfe()).find((x) => x.id === id);
-    if (!e) throw new Fachfehler(404, 'Dieses selbst erstellte Paket gibt es nicht (mehr).');
+    if (!e) throw new Fachfehler(404, t('meldungen.paketerstellung.dieses-selbst-erstellte-paket'));
     const [typen, sichten] = [await this.d.listeTypen(), await this.d.listeSichten()];
     return {
       ...this.kurz(e, await this.archive(id)), beschreibung: e.beschreibung, dms: e.dms, autor: e.autor, aenderungen: e.aenderungen, verlauf: e.verlauf,
@@ -671,14 +672,14 @@ export class Paketerstellung {
   /** Eine erstellte Version noch einmal als ZIP (#652) – genau so, wie sie erstellt wurde. */
   async archiv(id: string, version: string): Promise<{ name: string; daten: Buffer }> {
     const a = (await this.archive(id)).find((x) => x.version === version);
-    if (!a) throw new Fachfehler(404, `Version ${version} von „${id}“ ist nicht mehr gespeichert. Erstelle eine neue Version.`);
+    if (!a) throw new Fachfehler(404, t('meldungen.paketerstellung.version-von-ist-nicht', { version, id }));
     return { name: `${id}-${version}.zip`, daten: Buffer.from(a.zip, 'base64') };
   }
 
   /** „Aus der Liste nehmen“ (#652): vergisst Entwurf und gemerkte Archive – Mappentypen und Ansichten bleiben. */
   async ausListeNehmen(id: string, von: Handelnder): Promise<SelbstErstellt[]> {
     const alle = await this.d.paketEntwuerfe();
-    if (!alle.some((x) => x.id === id)) throw new Fachfehler(404, 'Dieses selbst erstellte Paket gibt es nicht (mehr).');
+    if (!alle.some((x) => x.id === id)) throw new Fachfehler(404, t('meldungen.paketerstellung.dieses-selbst-erstellte-paket'));
     await this.d.setzePaketEntwuerfe(alle.filter((x) => x.id !== id));
     await this.d.setzePaketArchive(id, null);
     log.info('Selbst erstelltes Paket aus der Liste genommen', { von: von.email, paket: id });
@@ -699,12 +700,12 @@ export class Paketerstellung {
   async exportiere(eingabe: unknown, von: Handelnder): Promise<{ name: string; daten: Buffer }> {
     const e = liesEingabe(eingabe);
     const { bau, zip, daten } = await this.baueUndPruefe(e);
-    if (!zip) throw new Fachfehler(422, 'Das Paket lässt sich so nicht exportieren.', { gruende: bau.probleme });
+    if (!zip) throw new Fachfehler(422, t('meldungen.paketerstellung.das-paket-laesst-sich'), { gruende: bau.probleme });
     const id = e.id.trim();
     const entwurf: PaketEntwurf = {
       ...e, id, version: e.version.trim(), aenderungen: aenderungsText(e, daten.entwurf), felder: { ...(daten.entwurf?.felder ?? {}), ...bau.felder },
       schluessel: { ...(daten.entwurf?.schluessel ?? {}), ...bau.schluessel },
-      verlauf: daten.entwurf ? [{ version: daten.entwurf.version, datum: daten.entwurf.exportiert.slice(0, 10), text: daten.entwurf.aenderungen || 'Aus Ablago exportiert.' }, ...daten.entwurf.verlauf].filter((v) => vergleicheVersion(v.version, e.version.trim()) < 0).slice(0, 50) : [],
+      verlauf: daten.entwurf ? [{ version: daten.entwurf.version, datum: daten.entwurf.exportiert.slice(0, 10), text: daten.entwurf.aenderungen || t('meldungen.paketerstellung.aus-ablago-exportiert') }, ...daten.entwurf.verlauf].filter((v) => vergleicheVersion(v.version, e.version.trim()) < 0).slice(0, 50) : [],
       exportiert: daten.jetzt.toISOString(), von: von.email,
     };
     const rest = (await this.d.paketEntwuerfe()).filter((x) => x.id !== id);

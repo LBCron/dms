@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from 'react';
 import { useHandbuch } from './Hilfe';
 import { useKonto } from './konto';
 import { Marke } from './Marke';
+import { t, tn } from './sprache';
 
 /** Offizielles Repository; mit Version zeigt der Quellcode-Link auf genau diesen Stand (Tag vX.Y.Z). */
 export const REPOSITORY = 'https://github.com/motom001/dms';
@@ -32,23 +33,23 @@ export function UeberDms({ schliessen }: { schliessen: () => void }) {
       // Klick auf den abgedunkelten Rand (das <dialog> selbst, nicht sein Inhalt) schließt.
       onClick={(e) => { if (e.target === ref.current) schliessen(); }}>
       <div className="ueber-dms-inhalt">
-        <h2 id={`${id}-t`} className="marke ueber-dms-marke"><Marke logo={null} schriftzug="Ablago" gross /><span className="sr-only"> – Über Ablago</span></h2>
-        <p>Ablago ist die Dokumentenablage für zu Hause und kleine Betriebe. Es läuft auf eurem eigenen Rechner, NAS oder Server – deine Daten bleiben bei dir und gehen an keinen Cloud-Anbieter. Nutzungsdaten sendet es keine.</p>
+        <h2 id={`${id}-t`} className="marke ueber-dms-marke"><Marke logo={null} schriftzug="Ablago" gross /><span className="sr-only"> {' '}{t('oberflaeche.ueberdms.ueber-ablago')}</span></h2>
+        <p>{t('oberflaeche.ueberdms.ablago-ist-die-dokumentenablage')}</p>
         <dl className="ueber-dms-angaben">
-          <dt>Version</dt>
-          <dd>{version ?? 'unbekannt'}</dd>
-          <dt>Lizenz</dt>
-          <dd><a href={LIZENZ} {...extern}>Apache License 2.0</a> – freie Software: Du darfst Ablago kostenlos nutzen, verändern und weitergeben; der Quellcode ist für jeden einsehbar.</dd>
-          <dt>Quellcode</dt>
-          <dd><a href={quellcodeUrl(version)} {...extern}>{version ? `Quellcode der Version ${version}` : 'Quellcode auf GitHub'}</a></dd>
+          <dt>{t('oberflaeche.ueberdms.version')}</dt>
+          <dd>{version ?? t('oberflaeche.ueberdms.unbekannt')}</dd>
+          <dt>{t('oberflaeche.ueberdms.lizenz')}</dt>
+          <dd>{tn('oberflaeche.ueberdms.freie-software-du-darfst', { link: <a href={LIZENZ} {...extern}>{t('oberflaeche.ueberdms.apache-license-2-0')}</a> })}</dd>
+          <dt>{t('oberflaeche.ueberdms.quellcode')}</dt>
+          <dd><a href={quellcodeUrl(version)} {...extern}>{version ? t('oberflaeche.ueberdms.quellcode-der-version', { version }) : t('oberflaeche.ueberdms.quellcode-auf-github')}</a></dd>
         </dl>
         <ul className="ueber-dms-links">
-          <li><a href={handbuch('benutzer')} {...extern}>Benutzerhandbuch</a></li>
-          <li><a href={handbuch('benutzer', 'neu/')} {...extern}>Neu in dieser Version</a>{version && <> · <a href={`${REPOSITORY}/releases/tag/v${version}`} {...extern}>Release-Notizen</a></>}</li>
-          <li><a href={WER_NUTZT} {...extern}>Nutzt du Ablago? Erzähl uns davon</a> – freiwillig, Ablago selbst meldet nichts.</li>
+          <li><a href={handbuch('benutzer')} {...extern}>{t('oberflaeche.ueberdms.benutzerhandbuch')}</a></li>
+          <li><a href={handbuch('benutzer', 'neu/')} {...extern}>{t('oberflaeche.ueberdms.neu-in-dieser-version')}</a>{version && <> · <a href={`${REPOSITORY}/releases/tag/v${version}`} {...extern}>{t('oberflaeche.ueberdms.release-notizen')}</a></>}</li>
+          <li>{tn('oberflaeche.ueberdms.freiwillig-ablago-selbst-meldet', { link: <a href={WER_NUTZT} {...extern}>{t('oberflaeche.ueberdms.nutzt-du-ablago-erzaehl')}</a> })}</li>
         </ul>
         <div className="ueber-dms-knoepfe">
-          <button ref={knopf} type="button" className="knopf primaer" onClick={schliessen}>Schließen</button>
+          <button ref={knopf} type="button" className="knopf primaer" onClick={schliessen}>{t('oberflaeche.ueberdms.schliessen')}</button>
         </div>
       </div>
     </dialog>

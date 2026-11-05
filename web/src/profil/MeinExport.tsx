@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Profil → Meine Daten exportieren (#255): eigene Daten im Format des Vollexports. */
 export function MeinExport() {
@@ -13,23 +14,21 @@ export function MeinExport() {
   const [fehler, setFehler] = useState<string>();
   const laden = useCallback(async () => { try { setS(await api.meinExport()); } catch (e) { setFehler((e as Error).message); } }, []);
   useEffect(() => { void laden(); }, [laden]);
-  useEffect(() => { if (!s?.laeuft) return; const t = setInterval(() => void laden(), 2000); return () => clearInterval(t); }, [s?.laeuft, laden]);
+  useEffect(() => { if (!s?.laeuft) return; const timer = setInterval(() => void laden(), 2000); return () => clearInterval(timer); }, [s?.laeuft, laden]);
   if (!s) return null;
   return (
     <div className="blatt" id="export">
-      <h2 className="h3">Meine Daten exportieren <Hilfe ort="profil.export" /></h2>
-      {!s.erlaubt ? <p className="leise">Der persönliche Export ist in der Werkbank abgeschaltet.</p> : <>
-        <p className="leise">Alle Mappen, die du lesen darfst, mit ihren Dokumenten, dazu deine Aufgaben, Erinnerungen, Favoriten und dein Profil – in offenen Formaten (CSV, JSON, Excel, PDF), lesbar ohne Ablago. Der Export ist unverschlüsselt.</p>
-        <label className="haken"><input type="checkbox" checked={pw} onChange={(e) => { setPw(e.target.checked); if (!e.target.checked) setPwOk(false); }} /><span>Passwortfelder, die ich sehen darf, im Klartext mitnehmen<small className="hilfe">als passwoerter.csv für einen Passwortmanager</small></span></label>
-        {pw && <label className="haken einzug"><input type="checkbox" checked={pwOk} onChange={(e) => setPwOk(e.target.checked)} /><span className="fehlertext">Mir ist klar: Die Passwörter stehen unverschlüsselt in der Datei.</span></label>}
-        {s.laeuft && <p className="leise">Export läuft …</p>}
+      <h2 className="h3">{tn('profil.meinexport.meine-daten-exportieren', { hilfe: <Hilfe ort="profil.export" /> })}</h2>
+      {!s.erlaubt ? <p className="leise">{t('profil.meinexport.der-persoenliche-export-ist')}</p> : <>
+        <p className="leise">{t('profil.meinexport.alle-mappen-die-du')}</p>
+        <label className="haken"><input type="checkbox" checked={pw} onChange={(e) => { setPw(e.target.checked); if (!e.target.checked) setPwOk(false); }} /><span>{tn('profil.meinexport.passwortfelder-die-ich-sehen', { klein: <small className="hilfe">{t('profil.meinexport.als-passwoerter-csv-fuer')}</small> })}</span></label>
+        {pw && <label className="haken einzug"><input type="checkbox" checked={pwOk} onChange={(e) => setPwOk(e.target.checked)} /><span className="fehlertext">{t('profil.meinexport.mir-ist-klar-die')}</span></label>}
+        {s.laeuft && <p className="leise">{t('profil.meinexport.export-laeuft')}</p>}
         {s.fehler && <p className="fehlertext">{s.fehler}</p>}
         {fehler && <p className="fehlertext">{fehler}</p>}
-        {s.fertig && !s.laeuft && <p>Fertig am {s.fertig.erstellt ? new Date(s.fertig.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–'}: <a className="knopf klein" href="/api/konto/export/zip">Herunterladen (ZIP)</a>
-          {/* #797: nach dem Herunterladen bzw. nach 7 Tagen gelöscht. */}
-          <small className="hilfe">{t('profil.export.bereit', { datum: new Date(s.fertig.bis).toLocaleDateString('de-DE', { dateStyle: 'medium' }) })}</small></p>}
+        {s.fertig && !s.laeuft && <p>{tn('profil.meinexport.fertig-am', { wert: s.fertig.erstellt ? new Date(s.fertig.erstellt).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–', link: <a className="knopf klein" href="/api/konto/export/zip">{t('profil.meinexport.herunterladen-zip')}</a>, klein: <small className="hilfe">{t('profil.export.bereit', { datum: new Date(s.fertig.bis).toLocaleDateString(gebietsschema(), { dateStyle: 'medium' }) })}</small> })}</p>}
         <div className="knoepfe"><button type="button" className="knopf" disabled={s.laeuft || (pw && !pwOk) || !!vertretung}
-          onClick={() => { setFehler(undefined); void api.meinExportStarten(pw, pwOk).then(laden).catch((e) => setFehler((e as Error).message)); }}>{s.fertig ? 'Neu exportieren' : 'Export erstellen'}</button></div>
+          onClick={() => { setFehler(undefined); void api.meinExportStarten(pw, pwOk).then(laden).catch((e) => setFehler((e as Error).message)); }}>{s.fertig ? t('profil.meinexport.neu-exportieren') : t('profil.meinexport.export-erstellen')}</button></div>
       </>}
     </div>
   );

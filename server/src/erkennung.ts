@@ -16,6 +16,7 @@ import type { Dienst, Zugriff } from './dienst';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import type { Repo } from './repo';
+import { t } from './sprache';
 
 const log = protokoll.modul('ablage');
 
@@ -39,12 +40,12 @@ export interface AutoZuordnung {
  */
 export function sichereZuordnung(e: Pick<PostErkennung, 'absender' | 'eindeutig' | 'ziele'>, autoTypen: Set<string>): { ziel: Zielvorschlag; grund: string } | { ziel: null; grund: string } {
   const abs = e.absender.find((x) => x.mappeId === e.eindeutig);
-  if (!abs || !abs.stark) return { ziel: null, grund: 'Absender nicht eindeutig erkannt' };
+  if (!abs || !abs.stark) return { ziel: null, grund: t('meldungen.erkennung.absender-nicht-eindeutig-erkannt') };
   const kandidaten = e.ziele.filter((z) => autoTypen.has(z.typId));
   const direkt = kandidaten.filter((z) => z.direkt);
   const ziel = direkt.length === 1 ? direkt[0] : !direkt.length && kandidaten.length === 1 ? kandidaten[0] : null;
-  if (!ziel) return { ziel: null, grund: kandidaten.length ? `${kandidaten.length} passende Mappen – nicht eindeutig` : 'keine passende Mappe eines Typs mit automatischer Zuordnung' };
-  return { ziel, grund: `Absender eindeutig erkannt (${abs.gruende.join(', ')}), einzige passende Mappe (${ziel.gruende.join(', ')})` };
+  if (!ziel) return { ziel: null, grund: kandidaten.length ? t('meldungen.erkennung.passende-mappen-nicht-eindeutig', { kandidaten: kandidaten.length }) : t('meldungen.erkennung.keine-passende-mappe-eines') };
+  return { ziel, grund: t('meldungen.erkennung.absender-eindeutig-erkannt-einzige', { gruende: abs.gruende.join(', '), gruende2: ziel.gruende.join(', ') }) };
 }
 
 /** Was an einer Post gespeichert ist. */
@@ -147,15 +148,15 @@ export class Erkennung {
    */
   private async pruefeWahl(paket: string, abfluss: boolean | undefined) {
     const p = (await this.erkennPakete()).find((x) => x.id === paket);
-    if (!p) throw new Fachfehler(422, `„${paket}“ ist kein installiertes Paket mit dem Recht „Felder aus Dokumenten vorschlagen“.`);
+    if (!p) throw new Fachfehler(422, t('meldungen.erkennung.ist-kein-installiertes-paket', { paket }));
     if (p.netz && abfluss !== true) {
-      throw new Fachfehler(409, `„${p.name}“ schickt den Text der Dokumente über das Netz an einen Dienst außerhalb von Ablago. Bitte den Datenabfluss bestätigen.`, { abfluss: true, paket: p.name });
+      throw new Fachfehler(409, t('meldungen.erkennung.schickt-den-text-der', { name: p.name }), { abfluss: true, paket: p.name });
     }
   }
 
   async setzeStandard(e: unknown): Promise<ReturnType<Erkennung['engineStand']>> {
     const s = this.einst();
-    if (!s) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    if (!s) throw new Fachfehler(404, t('meldungen.erkennung.einstellungen-sind-nicht'));
     const x = (e ?? {}) as { paket?: unknown; abfluss?: unknown };
     const paket = typeof x.paket === 'string' && x.paket && x.paket !== ENGINE_EINGEBAUT ? x.paket : null;
     if (paket) await this.pruefeWahl(paket, x.abfluss === true);
@@ -269,7 +270,7 @@ export class Erkennung {
       for (const r of (await repo.rueckverweise(haupt.mappeId)).slice(0, 200)) {
         const qt = alleTypen.get(r.quelleTypId);
         if (!qt || qt.system || istAbsenderTyp(qt)) continue;
-        dazu(r.quelleId, r.quelleTypId, 2, `verweist über „${qt.felder.find((f) => f.key === r.feldKey)?.label ?? r.feldKey}“ auf den Absender`);
+        dazu(r.quelleId, r.quelleTypId, 2, t('meldungen.erkennung.verweist-ueber-auf-den', { wert: qt.felder.find((f) => f.key === r.feldKey)?.label ?? r.feldKey }));
       }
       const frueher = (await repo.erkennungenMitAbsender(haupt.mappeId, 50)).filter((id) => id !== post.id);
       const zaehler = new Map<string, number>();
@@ -278,10 +279,10 @@ export class Erkennung {
       for (const m of ziel) {
         const n = zaehler.get(m.id)!;
         if (alleTypen.get(m.typId)?.system) continue;
-        dazu(m.id, m.typId, 2 + Math.min(n, 5), `frühere Post dieses Absenders ging hierher${n > 1 ? ` (${n}-mal)` : ''}`);
+        dazu(m.id, m.typId, 2 + Math.min(n, 5), t('meldungen.erkennung.fruehere-post-dieses-absenders', { wert: n > 1 ? ` (${n}-mal)` : '' }));
       }
       const at = alleTypen.get(haupt.typId);
-      if (at?.register.some((r) => r.art === 'dokumente')) dazu(haupt.mappeId, haupt.typId, 1, 'der Absender selbst');
+      if (at?.register.some((r) => r.art === 'dokumente')) dazu(haupt.mappeId, haupt.typId, 1, t('meldungen.erkennung.der-absender-selbst'));
     }
     const vorher = await repo.erkennungLies(post.id);
     const auto = (vorher?.ergebnis as PostErkennung | undefined)?.auto;
@@ -310,9 +311,9 @@ export class Erkennung {
   async fuerBenutzer(postId: string, z?: Zugriff): Promise<ErkennungAntwort> {
     const post = await this.d.pruefeRecht(z, postId, 'R');
     const typ = await this.repo().holeTyp(post.typId);
-    if (typ?.system !== 'post') throw new Fachfehler(422, 'Vorschläge beim Zuordnen gibt es nur für Post.');
+    if (typ?.system !== 'post') throw new Fachfehler(422, t('meldungen.erkennung.vorschlaege-beim-zuordnen-gibt'));
     const e = await this.ergebnis(postId);
-    if (!e) throw new Fachfehler(404, 'Diese Post gibt es nicht.');
+    if (!e) throw new Fachfehler(404, t('meldungen.erkennung.diese-post-gibt-es'));
     const ids = [...e.absender.map((x) => x.mappeId), ...e.ziele.map((x) => x.mappeId), ...(e.auto ? [e.auto.ziel] : [])];
     const lesbar = await this.d.lesbare(z, ids);
     const bezuege = await this.repo().bezuege(ids.filter((id) => lesbar.has(id)));
@@ -339,21 +340,21 @@ export class Erkennung {
   /** Typ und Zugriff prüfen: bestehende Mappe braucht Bearbeiten, eine neue das Anlegen. */
   private async typFuer(typId: string, mappeId: string | undefined, z?: Zugriff): Promise<{ typ: Mappentyp; mappe?: Mappe }> {
     const typ = z ? z.typen.get(typId) : await this.repo().holeTyp(typId);
-    if (!typ) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
-    if (typ.system) throw new Fachfehler(422, `„${typ.name}“ ist ein Systemmappentyp – dort gibt es „Aus Dokument ausfüllen“ nicht.`);
+    if (!typ) throw new Fachfehler(404, t('meldungen.erkennung.diesen-mappentyp-gibt-es'));
+    if (typ.system) throw new Fachfehler(422, t('meldungen.erkennung.ist-ein-systemmappentyp-dort', { name: typ.name }));
     if (mappeId) {
       const mappe = await this.d.pruefeRecht(z, mappeId, 'U');
-      if (mappe.typId !== typ.id) throw new Fachfehler(422, 'Die Mappe hat einen anderen Mappentyp.');
+      if (mappe.typId !== typ.id) throw new Fachfehler(422, t('meldungen.erkennung.die-mappe-hat-einen'));
       return { typ, mappe };
     }
-    if (z && !(await this.d.rechteAn(z, { id: '', typId: typ.id, werte: {}, titel: '', erstellt: '', geaendert: '' } as Mappe, true)).C) throw new Fachfehler(403, 'Mappen dieses Typs darfst du nicht anlegen.');
+    if (z && !(await this.d.rechteAn(z, { id: '', typId: typ.id, werte: {}, titel: '', erstellt: '', geaendert: '' } as Mappe, true)).C) throw new Fachfehler(403, t('meldungen.erkennung.mappen-dieses-typs-darfst'));
     return { typ };
   }
 
   /** JSON Schema der Felder, die die Erkennung füllen darf (#391; für Clients und künftige Engines aus Paketen). */
   async schema(typId: string, z?: Zugriff): Promise<Record<string, unknown>> {
     const typ = z ? z.typen.get(typId) : await this.repo().holeTyp(typId);
-    if (!typ) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
+    if (!typ) throw new Fachfehler(404, t('meldungen.erkennung.diesen-mappentyp-gibt-es'));
     return schemaFuer(typ, this.erlaubteFelder(typ));
   }
 
@@ -370,11 +371,11 @@ export class Erkennung {
     if (typeof e.text === 'string' && e.text.trim()) teile.push(e.text.slice(0, TEXT_MAX));
     for (const id of (Array.isArray(e.dokumente) ? e.dokumente : []).filter((x): x is string => typeof x === 'string').slice(0, 10)) {
       const d = await this.repo().holeDokument(id);
-      if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+      if (!d) throw new Fachfehler(404, t('meldungen.erkennung.dieses-dokument-gibt-es'));
       await this.d.pruefeRecht(z, d.mappeId, 'R');
-      const t = await this.repo().volltext(id);
-      if (!t?.trim()) throw new Fachfehler(409, `„${d.name}“ hat noch keinen Volltext. Warte, bis die Texterkennung fertig ist, oder wähle ein Foto.`);
-      teile.push(t);
+      const eintrag = await this.repo().volltext(id);
+      if (!eintrag?.trim()) throw new Fachfehler(409, t('meldungen.erkennung.hat-noch-keinen-volltext', { name: d.name }));
+      teile.push(eintrag);
     }
     const text = teile.join('\n\n').slice(0, TEXT_MAX);
     const erlaubt = this.erlaubteFelder(typ, mappe);
@@ -388,19 +389,19 @@ export class Erkennung {
     const wahl = text.trim() ? await this.wahlFuer(typ.id) : { engine: ENGINE_EINGEBAUT, abfluss: false };
     if (wahl.engine !== ENGINE_EINGEBAUT) {
       const p = this.anbieter?.pakete().find((x) => x.id === wahl.engine);
-      if (!p) hinweis = `Das Paket „${wahl.engine}“ für die Erkennung läuft gerade nicht – die eingebaute Erkennung hat übernommen.`;
-      else if (p.netz && !wahl.abfluss) hinweis = `Für „${p.name}“ ist der Datenabfluss nicht bestätigt – die eingebaute Erkennung hat übernommen.`;
+      if (!p) hinweis = t('meldungen.erkennung.das-paket-fuer-die', { engine: wahl.engine });
+      else if (p.netz && !wahl.abfluss) hinweis = t('meldungen.erkennung.fuer-ist-der-datenabfluss', { name: p.name });
       else {
         try {
           const r = await this.perPaket(p, typ, text, dokIds, erlaubt);
           // Geantwortet, aber nichts, was die Prüfung übersteht (#564): wie bei einem Fehler die eingebaute Erkennung.
           if (r.ohneFelder || Object.keys(pruefeVorschlaege(typ, r.vorschlaege, erlaubt).vorschlaege).length) { ausPaket = r.vorschlaege; gekuerzt = r.gekuerzt; engine = { art: 'paket', id: p.id, name: p.name }; }
           else {
-            hinweis = `„${p.name}“ hat nichts Brauchbares geliefert – die eingebaute Erkennung hat übernommen.`;
+            hinweis = t('meldungen.erkennung.hat-nichts-brauchbares-geliefert', { name: p.name });
             log.info('Erkennung per Paket ohne brauchbare Vorschläge', { typ: typ.name, paket: p.id, felder: Object.keys(r.vorschlaege).length });
           }
         } catch (x) {
-          hinweis = `„${p.name}“ hat nicht geantwortet (${(x as Error).message}) – die eingebaute Erkennung hat übernommen.`;
+          hinweis = t('meldungen.erkennung.hat-nicht-geantwortet-die', { name: p.name, message: (x as Error).message });
           log.warn('Erkennung per Paket fehlgeschlagen', { typ: typ.name, paket: p.id, fehler: (x as Error).message.slice(0, 300) });
         }
       }
@@ -430,7 +431,7 @@ export class Erkennung {
     const mappen = alle.filter((m) => lesbar.has(m.id));
     // Ohne markierte Felder zählt der Titel als Name.
     const markiert = merkmalsfelder(ziel).length > 0;
-    const vergleich = markiert ? ziel : { id: ziel.id, felder: [{ key: '_titel', label: 'Name', typ: 'text' as const, erkennung: { art: 'name' as const } }] };
+    const vergleich = markiert ? ziel : { id: ziel.id, felder: [{ key: '_titel', label: t('meldungen.erkennung.name'), typ: 'text' as const, erkennung: { art: 'name' as const } }] };
     const treffer = findeMappen(text, [vergleich], mappen.map((m) => ({ id: m.id, typId: m.typId, werte: markiert ? m.werte : { _titel: m.titel ?? '' } })));
     const best = eindeutigerTreffer(treffer) ?? (treffer.length === 1 ? treffer[0] : null);
     if (best) return { mappe: mappen.find((m) => m.id === best.mappeId), sicherheit: best.stark ? 'hoch' : 'mittel', fundstelle: `gefunden: ${best.gruende.join(', ')}` };

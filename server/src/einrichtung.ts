@@ -87,7 +87,7 @@ export class Einrichtung {
 
   /** Solange niemand eingerichtet ist: Code nötig (falls ein Code bereitsteht). */
   async pruefeCode(code: unknown) {
-    if (!(await this.d.konten.einrichtungNoetig())) throw new Fachfehler(409, 'Die Einrichtung ist bereits abgeschlossen.');
+    if (!(await this.d.konten.einrichtungNoetig())) throw new Fachfehler(409, t('meldungen.einrichtung.die-einrichtung-ist-bereits'));
     this.d.code?.pruefe(code);
   }
   get codeNoetig() { return !!this.d.code?.aktiv; }
@@ -105,8 +105,8 @@ export class Einrichtung {
   async einrichten(e: Record<string, unknown>, code: unknown, info: { ip: string; geraet: string }) {
     await this.pruefeCode(code);
     const mandant = typeof e.mandant === 'string' ? e.mandant.replace(/\s+/g, ' ').trim() : '';
-    if (!mandant) throw new Fachfehler(422, 'Bitte einen Namen angeben, z. B. „Familie Mustermann“.');
-    if (mandant.length > MANDANT_MAX) throw new Fachfehler(422, `Der Name darf höchstens ${MANDANT_MAX} Zeichen haben.`);
+    if (!mandant) throw new Fachfehler(422, t('meldungen.einrichtung.bitte-einen-namen-angeben'));
+    if (mandant.length > MANDANT_MAX) throw new Fachfehler(422, t('meldungen.einrichtung.der-name-darf-hoechstens', { MANDANT_MAX }));
     const r = await this.d.konten.einrichten(e, info);
     await this.d.mandant.umbenennen(mandant);
     try { await this.d.schriftzug?.(mandant); } catch (x) { log.warn('Schriftzug nicht gesetzt', { fehler: (x as Error).message }); }
@@ -125,7 +125,7 @@ export class Einrichtung {
 
   /** Einen Schritt als erledigt oder übersprungen merken; „fertig“ schließt den Assistenten – erst mit Notfallblatt. */
   async merke(schritt: unknown, uebersprungen: boolean, von: string): Promise<EinrichtungStand> {
-    if (!SCHRITTE.includes(schritt as Schritt)) throw new Fachfehler(422, 'Unbekannter Schritt.');
+    if (!SCHRITTE.includes(schritt as Schritt)) throw new Fachfehler(422, t('meldungen.einrichtung.unbekannter-schritt'));
     const x = schritt as Schritt;
     if (x === 'fertig' && this.d.notfallblattAktuell && !(await this.d.notfallblattAktuell())) throw new Fachfehler(409, t('einrichtung.abschluss.fehlt'));
     const s = await this.stand();

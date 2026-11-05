@@ -217,43 +217,77 @@ server/src/arbeit/nachricht.ts    Nachrichten, Buffer und Fehler über die Grenz
 
 ## Texte und Sprachdateien { #texte-und-sprachdateien }
 
-Texte für Benutzer stehen nicht im Code, sondern in **Sprachdateien** (#473, Teil von #357). Sichtbar ist bisher nur Deutsch mit **du**; die Technik für weitere Sprachen ist da.
+Texte für Benutzer stehen nicht im Code, sondern in **Sprachdateien** (#473, #727, Teil von #357). Sichtbar ist bisher nur Deutsch mit **du** – Ablago duzt überall, auch in jeder späteren Sprache gilt die vertraute Anrede. Seit #727 sind alle Bereiche umgestellt: Oberfläche, Fehlermeldungen und Hinweise des Servers, E-Mails, Historie und Notfallblatt.
 
-**Regel:** Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang), die Texte für Dritte und die Leiste der Werkbank (Gruppen, Bereiche, Vorlagen; `werkbank.json`, auch für `werkbank_bereiche.py`).
+**Regel:** Ein Text, den Menschen lesen, gehört in die Sprachdatei – nie als Wort im Code. Die CI lässt neue feste Texte in der Oberfläche nicht durch (siehe unten).
 
 ```
 shared/src/sprachen/de/<bereich>.json         Ausgangssprache Deutsch (du), immer vollständig
 shared/src/sprachen/de-formal/dritte.json     Texte für Dritte mit „Sie“ (siehe unten)
-shared/src/sprache.ts                         uebersetzer(), Platzhalter, Mehrzahl
-web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfläche bzw. Server brauchen
+shared/src/sprache.ts                         uebersetzer(), Platzhalter, Mehrzahl, gebietsschema()
+web/src/sprache.ts                            t() und tn() mit den Bereichen der Oberfläche
+server/src/sprache.ts                         t() mit den Bereichen des Servers
+shared/src/texte.ts                           t() für gemeinsamen Code (Bereich gemeinsam)
 ```
+
+**Bereiche** folgen den Ordnern:
+
+| Code | Bereich |
+|---|---|
+| `web/src/ablage/*` | `ablage` |
+| `web/src/werkbank/*` | `werkbank` (dazu ältere Schlüssel der Werkbank) |
+| `web/src/profil/*` (Mein Konto) | `profil` |
+| `web/src/einrichtung/*` (Mappentyp-Editor) | `mappentypen` |
+| `web/src/einrichtung.tsx`, `web/src/assistent/*` | `einrichtung` |
+| übrige Dateien in `web/src` | `oberflaeche` |
+| `server/src/**` (Fehler, Hinweise, Historie) | `meldungen` |
+| E-Mails | `mail` |
+| Notfallblatt und Notfallzugang | `notfall` |
+| `shared/src/*` | `gemeinsam` |
+
+Daneben gibt es Fachbereiche aus früheren Issues (`anmeldung`, `automatisierung`, `pakete`, `suche` …); dort bleiben ihre Texte.
 
 **Text anlegen**
 
-1. Passenden Bereich wählen oder einen neuen anlegen (`anmeldung`, `mail`, `werkbank` …; Dateiname = Bereich, klein, ohne Punkt). Ein neuer Bereich wird in `web/src/sprache.ts` bzw. `server/src/sprache.ts` eingetragen.
-2. Schlüssel in die JSON-Datei schreiben – flach, Teile mit Punkt, klein beginnend: `"vergessen.knopf": "Link anfordern"`.
+1. Passenden Bereich wählen (Tabelle oben). Ein neuer Bereich wird in `web/src/sprache.ts` bzw. `server/src/sprache.ts` eingetragen; Dateiname = Bereich, klein, ohne Punkt.
+2. Schlüssel in die JSON-Datei schreiben – flach, Teile mit Punkt oder Bindestrich, klein beginnend: `"vergessen.knopf": "Link anfordern"`.
 3. Im Code abrufen: `t('anmeldung.vergessen.knopf')`. Die Typprüfung kennt alle Schlüssel und meldet Tippfehler.
 
-**Benennung:** vom Allgemeinen zum Besonderen, nach Ort und Zweck statt nach Wortlaut – `vergessen.titel`, `vergessen.knopf`, `fehler.link.abgelaufen`. Fehlermeldungen unter `fehler.*`, Rückfragen als `….frage`, `….frage.text`, `….frage.ja`. Wiederkehrende Wörter („Speichern“, „Abbrechen“) bekommen keinen gemeinsamen Schlüssel, solange der Bereich sie nicht braucht – so bleibt jede Übersetzung im Zusammenhang.
+**Benennung:** vorne die Komponente bzw. Datei, dann Ort und Zweck – `vergessen.titel`, `vergessen.knopf`, `fehler.link.abgelaufen`. Beim Umzug in #727 entstanden die Schlüssel aus Datei und Textanfang (`wartungsmodus.alle-jetzt-abmelden`); wer einen Text ändert, darf den Schlüssel passend umbenennen. Wiederkehrende Wörter („Speichern“, „Abbrechen“) bekommen keinen gemeinsamen Schlüssel – so bleibt jede Übersetzung im Zusammenhang.
 
-**Platzhalter** stehen in einfachen geschweiften Klammern: `"passwort.zugang": "Für den Zugang {email}"` → `t('anmeldung.passwort.zugang', { email })`. Namen nur aus Buchstaben, Ziffern und `_`. Fehlt ein Wert, bleibt `{email}` stehen und fällt auf.
+**Platzhalter** stehen in einfachen geschweiften Klammern: `"passwort.zugang": "Für den Zugang {email}"` → `t('anmeldung.passwort.zugang', { email })`. Namen nur aus Buchstaben, Ziffern und `_`. Immer den **ganzen Satz** mit Platzhaltern ablegen, nie Satzteile aneinanderhängen – sonst kann eine Übersetzung die Reihenfolge nicht ändern. Fehlt ein Wert, bleibt `{email}` stehen und fällt auf.
 
-**Mehrzahl** über zwei Schlüssel mit `_one` und `_other` und den Wert `anzahl`:
+**Bausteine im Satz** (Link, fett, Hilfe-Knopf) gehen mit `tn()` aus `web/src/sprache.ts`: Der Platzhalter bekommt ein Element als Wert.
+
+```tsx
+// "hinweis": "Mehr dazu im {link}.", "hinweis.link": "Administratorhandbuch"
+<p>{tn('werkbank.uebersicht.hinweis', { link: <a href={url}>{t('werkbank.uebersicht.hinweis.link')}</a> })}</p>
+```
+
+**Mehrzahl** über Schlüssel mit `_one` und `_other` und den Wert `anzahl` – statt `n === 1 ? … : …` im Code:
 
 ```json
 "dauer.stunden_one": "{anzahl} Stunde",
 "dauer.stunden_other": "{anzahl} Stunden"
 ```
 
-`t('mail.dauer.stunden', { anzahl: 2 })` ergibt „2 Stunden“. Die Formen richten sich nach `Intl.PluralRules`; fehlt eine, gilt `_other`.
+`t('mail.dauer.stunden', { anzahl: 2 })` ergibt „2 Stunden“. Die Formen richten sich nach `Intl.PluralRules` der Sprache (Englisch braucht `one`/`other`, andere Sprachen auch `few`, `many` …); fehlt eine, gilt `_other`. Ein Text für genau eins darf ohne Zahl auskommen („Eine Mappe“).
+
+**Datum, Zahlen, Beträge** nie mit festem `'de-DE'` formatieren, sondern mit `gebietsschema()` aus `shared/src/sprache.ts` (heute `de-DE`, später die Sprache des Benutzers), z. B. `n.toLocaleString(gebietsschema())`. Feste Formate bleiben nur dort, wo eine Datei ein Format verlangt (ISO-Datum, CSV für Tabellen).
 
 **Zusammengesetzte Schlüssel** (`werkbank.gruppe.${g}`) gehen mit `t.frei(…)` statt `t(…)`. Sie entgehen der Typprüfung; die Prüfung in der CI zählt alle Schlüssel mit dem festen Anfang (`werkbank.gruppe.`) als benutzt. Wo es geht, ganze Schlüssel ausschreiben.
 
-**Prüfung in der CI** (`server/test/sprachdateien.test.ts`, läuft mit `npm test`): Sie schlägt fehl, wenn der Code einen Schlüssel abruft, den es nicht gibt, wenn ein Schlüssel nirgends benutzt wird, wenn eine andere Sprache Schlüssel auslässt oder zusätzliche hat, wenn die Platzhalter zwischen den Sprachen abweichen, bei Mehrzahl ohne `_other` und bei leeren Texten. Die Symbol-Prüfung (keine bunten Emoji, keine Textzeichen als Symbol) gilt auch für die Sprachdateien. Lokal: `node --import tsx --test test/sprachdateien.test.ts` im Ordner `server`.
+**Prüfungen in der CI** (laufen mit `npm test`, lokal im Ordner `server` mit `node --import tsx --test test/<datei>`):
+
+- `sprachdateien.test.ts`: Schlüssel, die der Code abruft, aber nicht gibt; Schlüssel, die niemand benutzt; Sprachen, die Schlüssel auslassen oder zusätzliche haben; Platzhalter, die zwischen den Sprachen abweichen; **Platzhalter, die ein Aufruf nicht liefert** (`t('…', { nam })` für `{name}`); Mehrzahl ohne `_other`; leere Texte.
+- `sprachdateien-fest.test.ts`: **feste Texte in der Oberfläche** – Text zwischen Tags, in sichtbaren Attributen (`title`, `aria-label`, `placeholder`, `titel` …) und als Wert in geschweiften Klammern. Was in jeder Sprache gleich bleibt (Produktnamen, Befehle in `<code>`, Beispieladressen), ist erlaubt; weitere Ausnahmen stehen mit Grund in `AUSNAHMEN` in der Testdatei.
+- `symbole.test.ts`: keine bunten Emoji und keine Textzeichen als Symbol – auch in den Sprachdateien.
+
+**Bewusst noch im Code** (#727): Protokollzeilen (`log.*`, Werkbank → Protokoll) bleiben Deutsch, damit Fehlermeldungen vergleichbar und durchsuchbar sind; die Beschreibung der Schnittstelle (OpenAPI in `server/src/api-v1.ts`) ist Entwicklerdoku wie dieses Handbuch; Lizenztexte; Beispieldaten und Demo-Inhalte; die Titel der Handbuch-Abschnitte in `shared/src/hilfe.ts` (sie folgen den Überschriften im Handbuch und kommen mit dessen Übersetzung, #730); Namen und Felder der Systemmappentypen (`shared/src/model.ts`) – sie sind gespeicherte Daten und bekommen Beschriftungen je Sprache mit #728.
+
+**Übersetzen:** Eine neue Sprache bekommt einen Ordner `shared/src/sprachen/<sprache>/` mit denselben Dateien und Schlüsseln wie `de`, z. B. `en/ablage.json`. Platzhalter bleiben gleich (die CI vergleicht sie), Mehrzahlformen richten sich nach der Sprache. Fehlt ein Text, erscheint vorerst Deutsch. Sprachwahl (#729) und Sprachpakete (#731) bauen darauf auf.
 
 **Bibliothek:** eine eigene, kleine Umsetzung in `shared/src/sprache.ts` statt i18next – keine neue Abhängigkeit, offline, dieselben Regeln in Oberfläche und Server. Das Format (flaches JSON, `_one`/`_other`) entspricht i18next; ein späterer Wechsel bleibt möglich.
-
-Nicht Teil von Stufe 1: weitere Sprachen, „Sie“ in der Oberfläche, Sprachwahl unter Mein Konto (#357, spätere Stufen).
 
 ## Unterlagen für Dritte: Anrede du oder Sie { #unterlagen-fur-dritte }
 

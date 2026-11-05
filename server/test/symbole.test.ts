@@ -38,6 +38,14 @@ const ERSATZ_ERLAUBT: Record<string, string> = {
   'wiederherstellen.tsx': 'Statuszeichen ○ ◐ ✓ ✕ der Wiederherstellung (Textseite ohne React-Symbole)',
 };
 
+/** Seit #727 stehen die Texte dieser Dateien in den Sprachdateien: dort gilt dieselbe Ausnahme je Schlüsselanfang. */
+const ERSATZ_ERLAUBT_SCHLUESSEL: Record<string, string[]> = {
+  '../../shared/src/sprachen/de/werkbank.json': ['berechtigungen.', 'sichtrechte.', 'sichten.'],
+  '../../shared/src/sprachen/de/oberflaeche.json': ['wiederherstellen.'],
+  '../../shared/src/sprachen/de/gemeinsam.json': ['sichtrechte.'],
+};
+const erlaubterSchluessel = (rel: string, zeile: string) => (ERSATZ_ERLAUBT_SCHLUESSEL[rel] ?? []).some((a) => zeile.trimStart().startsWith(`"${a}`));
+
 export function ersatzZeichen(text: string): string[] {
   const t = text.trim();
   if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) return [];
@@ -70,6 +78,7 @@ describe('Einheitliche Symbole (#425)', () => {
       const rel = relative(WEB, p);
       if (ERSATZ_ERLAUBT[rel]) continue;
       readFileSync(p, 'utf8').split('\n').forEach((z, i) => {
+        if (erlaubterSchluessel(rel, z)) return;
         const b = ersatzZeichen(z);
         if (b.length) funde.push(`${rel}:${i + 1}: ${b.join(' ')}`);
       });

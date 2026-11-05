@@ -1,7 +1,7 @@
 import { darfVerwalten } from '../../../shared/src/verwaltungsrecht';
 import { useEffect, useRef, useState } from 'react';
 import { datumDe, type Termin } from '../../../shared/src/fristen';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { api } from '../api';
 import { useDaten } from '../daten';
 import { useHandbuch } from '../Hilfe';
@@ -15,6 +15,7 @@ import { FragAblage } from './FragAblage';
 import { istTouch, postFotografieren } from './PostKamera';
 import { AnsichtSymbol, Symbol } from '../Symbol';
 import { darfPostAnlegen } from '../../../shared/src/model';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Startseite der Ablage (#334): wenige Kacheln mit je einer Zahl und einer Handlung.
@@ -26,7 +27,7 @@ import { darfPostAnlegen } from '../../../shared/src/model';
  * in dem jede Kachel einen festen Schlüssel (`data-kachel`) hat – Grundlage dafür, sie später
  * frei anzuordnen (#421). Mit geöffneter Mappe steht sie wie jede Liste in der Mitte.
  */
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 
 function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null }) {
   const nichts = anzahl === 0;
@@ -84,49 +85,49 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
   const z = (n: number) => (d.zahlenDa ? n : null);
   const wahl = typeof d.einstellungen.startseite_kachel === 'string' ? d.einstellungen.startseite_kachel : 'favoriten';
   const lieblings = wahl !== 'favoriten' ? d.sicht(wahl) : undefined;
-  const postTyp = d.typen.find((t) => t.system === 'post');
+  const postTyp = d.typen.find((mappentyp) => mappentyp.system === 'post');
   const kamera = istTouch() && darfPostAnlegen(postTyp) && !!postTyp?.register.some((r) => r.art === 'dokumente');
 
   return (
     <>
-      <Listenkopf titel="Start" hilfe="ablage.start" beschreibung={<>Hallo {ich.name?.split(/\s+/)[0] || ich.email}! Hier fängst du an.</>} />
+      <Listenkopf titel={t('ablage.startseite.start')} hilfe="ablage.start" beschreibung={<>{t('ablage.startseite.hallo-hier-faengst-du', { wert: ich.name?.split(/\s+/)[0] || ich.email })}</>} />
       <div className={`listenrumpf startseite${breit ? ' start-breit' : ''}`}>
         {/* Schnell finden (#497) ganz oben; darunter (ohne Suchbegriff) die Kamera, Kacheln und „zuletzt geöffnet“. */}
         <StartSuche ohneSuche={!!daten?.leer} sonst={<>
         {/* Frag deine Ablage (#444): eigenes Feld, nur mit einem Antwort-Paket. */}
         {!daten?.leer && <FragAblage />}
         {/* Handy (#490): mit einem Tipp in die Kamera – mehrseitig, ein PDF, eine Post. */}
-        {kamera && <button type="button" className="knopf gruen pk-start" onClick={() => postFotografieren()}><Symbol name="kamera" /> Post fotografieren</button>}
+        {kamera && <button type="button" className="knopf gruen pk-start" onClick={() => postFotografieren()}>{tn('ablage.startseite.post-fotografieren', { symbol: <Symbol name="kamera" /> })}</button>}
         {daten?.leer ? (
           <div className="einstiege">
-            <p>Noch ist die Ablage leer. So geht es los:</p>
+            <p>{t('ablage.startseite.noch-ist-die-ablage')}</p>
             <button type="button" className="kachel post" onClick={() => datei.current?.click()}>
-              <span className="kacheltitel">Erste Post ablegen</span><span className="kachelunter">Brief scannen oder fotografieren, Datei wählen – daraus wird eine Post</span>
+              <span className="kacheltitel">{t('ablage.startseite.erste-post-ablegen')}</span><span className="kachelunter">{t('ablage.startseite.brief-scannen-oder-fotografieren')}</span>
             </button>
             <input ref={datei} type="file" multiple hidden accept="application/pdf,image/*" onChange={(e) => { neuePost([...(e.target.files ?? [])]); e.target.value = ''; }} />
             {/* #818: Wer verwalten darf, kommt darüber in den Verwaltungsmodus. */}
             {(ich.rolle === 'admin' || darfVerwalten(ich)) && (
               <Link to="/werkbank/pakete" className="kachel ruhig">
-                <span className="kacheltitel">Paket Haushalt installieren</span><span className="kachelunter">Fertige Mappentypen für Konten, Verträge, Versicherungen und mehr – mit Beispielen</span>
+                <span className="kacheltitel">{t('ablage.startseite.paket-haushalt-installieren')}</span><span className="kachelunter">{t('ablage.startseite.fertige-mappentypen-fuer-konten')}</span>
               </Link>
             )}
             <a href={handbuch('benutzer', 'erste-schritte/')} target="_blank" rel="noreferrer" className="kachel ruhig">
-              <span className="kacheltitel">Hilfe: so fängst du an</span><span className="kachelunter">Die ersten Schritte im Benutzerhandbuch</span>
+              <span className="kacheltitel">{t('ablage.startseite.hilfe-so-faengst-du')}</span><span className="kachelunter">{t('ablage.startseite.die-ersten-schritte-im')}</span>
             </a>
           </div>
         ) : (
           <div className="kacheln start-raster">
-            <Kachel name="eingang" to="/ablage/eingang" art="auffaellig" titel="Zu erledigen" anzahl={z(d.zaehler.eingang)} leer="Nichts zu erledigen" unter="Aufgaben und Mappen, an denen du etwas tun sollst" />
-            {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={postSicht.name} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer="Keine neue Post" unter="Noch nicht zugeordnet" />}
+            <Kachel name="eingang" to="/ablage/eingang" art="auffaellig" titel={t('ablage.startseite.zu-erledigen')} anzahl={z(d.zaehler.eingang)} leer={t('ablage.startseite.nichts-zu-erledigen')} unter={t('ablage.startseite.aufgaben-und-mappen-an')} />
+            {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={postSicht.name} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer={t('ablage.startseite.keine-neue-post')} unter={t('ablage.startseite.noch-nicht-zugeordnet')} />}
             <TerminKachel z={termin} />
             {lieblings
-              ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} symbol={lieblings.symbol} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer="Leer" />
-              : <Kachel name="wahl" to="/ablage/favoriten" art="ruhig" titel="Favoriten" anzahl={z(d.zaehler.favoriten ?? 0)} leer="Noch keine – der Stern an einer Mappe merkt sie dir" />}
+              ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} symbol={lieblings.symbol} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer={t('ablage.startseite.leer')} />
+              : <Kachel name="wahl" to="/ablage/favoriten" art="ruhig" titel={t('ablage.startseite.favoriten')} anzahl={z(d.zaehler.favoriten ?? 0)} leer={t('ablage.startseite.noch-keine-der-stern')} />}
           </div>
         )}
         {daten && daten.zuletzt.length > 0 && (
           <section className="zuletzt" data-kachel="zuletzt">
-            <h2 className="h3">Zuletzt geöffnet</h2>
+            <h2 className="h3">{t('ablage.startseite.zuletzt-geoeffnet')}</h2>
             <ul className="mappenliste">
               {daten.zuletzt.map((m) => (
                 <li key={m.id}>

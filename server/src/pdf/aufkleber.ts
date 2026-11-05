@@ -3,6 +3,7 @@
  * berechnet `aufkleber.ts`; hier werden sie mit der lesbaren Nummer auf die Felder des Bogens gesetzt.
  */
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { t } from '../sprache';
 
 export interface Aufkleberbogen {
   /** Etikett in mm: Breite × Höhe, Spalten × Zeilen je A4-Bogen (Ränder ergeben sich zentriert). */
@@ -49,6 +50,6 @@ export async function aufkleberbogenPdf(b: Aufkleberbogen): Promise<Buffer> {
     feld++;
   }
   // Hinweis klein am Rand der ersten Seite: Drucker auf 100 % (nicht „an Seite anpassen“).
-  if (randY >= 6) doc.getPages()[0].drawText('Drucken mit 100 % (nicht „an Seite anpassen“).', { x: 6 * MM, y: 3 * MM, size: 6, font: schrift, color: rgb(0.5, 0.5, 0.5) });
+  if (randY >= 6) doc.getPages()[0].drawText(t('meldungen.aufkleber.drucken-mit-100-nicht'), { x: 6 * MM, y: 3 * MM, size: 6, font: schrift, color: rgb(0.5, 0.5, 0.5) });
   return Buffer.from(await doc.save());
 }

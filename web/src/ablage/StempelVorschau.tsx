@@ -24,7 +24,7 @@ let messer: CanvasRenderingContext2D | null | undefined;
 export function zeilenbreite(z: string, g: number): number {
   if (messer === undefined) { try { messer = document.createElement('canvas').getContext('2d'); } catch { messer = null; } }
   if (!messer) return z.length * g * 0.6;
-  messer.font = `bold ${g}px Helvetica, Arial, sans-serif`;
+  messer.font = t('ablage.stempelvorschau.bold-px-helvetica-arial', { g });
   return messer.measureText(z).width;
 }
 
@@ -59,12 +59,12 @@ const TINTE = '#20242b';
 function Beleg({ art }: { art: Beispiel }): ReactNode {
   const b = `werkbank.stempel.beispiel.${art}`;
   if (art === 'rechnung') {
-    return <g fontFamily="Helvetica, Arial, sans-serif" fill={TINTE}>
+    return <g fontFamily={t('ablage.stempelvorschau.helvetica-arial-sans-serif')} fill={TINTE}>
       <rect width={W} height={H} fill="#fff" />
       <rect x={56} y={52} width={46} height={46} rx={6} fill="#e3a33b" />
       <text x={112} y={82} fontSize={20} fontWeight="bold">{t.frei(`${b}.kopf`).split(' · ')[0]}</text>
       <text x={56} y={140} fontSize={8} fill="#666">{t.frei(`${b}.kopf`)}</text>
-      {teile(`${b}.an`).map((z, i) => <text key={i} x={56} y={162 + i * 15} fontSize={12}>{z}</text>)}
+      {teile(t('ablage.stempelvorschau.an', { b })).map((z, i) => <text key={i} x={56} y={162 + i * 15} fontSize={12}>{z}</text>)}
       <text x={56} y={270} fontSize={22} fontWeight="bold">{t.frei(`${b}.titel`)}</text>
       {teile(`${b}.text`).map((z, i) => <text key={i} x={56} y={310 + i * 17} fontSize={12}>{z}</text>)}
       <line x1={56} x2={539} y1={386} y2={386} stroke="#999" />
@@ -77,7 +77,7 @@ function Beleg({ art }: { art: Beispiel }): ReactNode {
   }
   if (art === 'tabelle') {
     const z = spalten(`${b}.zeilen`);
-    return <g fontFamily="Helvetica, Arial, sans-serif" fill={TINTE}>
+    return <g fontFamily={t('ablage.stempelvorschau.helvetica-arial-sans-serif')} fill={TINTE}>
       <rect width={W} height={H} fill="#fff" />
       <text x={56} y={80} fontSize={20} fontWeight="bold">{t.frei(`${b}.titel`)}</text>
       <rect x={56} y={110} width={483} height={26} fill="#2f4a6d" />
@@ -93,7 +93,7 @@ function Beleg({ art }: { art: Beispiel }): ReactNode {
     </g>;
   }
   if (art === 'formular') {
-    return <g fontFamily="Helvetica, Arial, sans-serif" fill={TINTE}>
+    return <g fontFamily={t('ablage.stempelvorschau.helvetica-arial-sans-serif')} fill={TINTE}>
       <rect width={W} height={H} fill="#fff" />
       <rect width={W} height={96} fill="#1f6fb2" />
       <text x={56} y={60} fontSize={24} fontWeight="bold" fill="#fff">{t.frei(`${b}.titel`)}</text>
@@ -110,9 +110,9 @@ function Beleg({ art }: { art: Beispiel }): ReactNode {
   }
   // Grauer Scan eines Kassenbons: graues Blatt, darauf der Bon etwas schief.
   const posten = spalten(`${b}.posten`);
-  return <g fontFamily="'Courier New', Courier, monospace" fill="#2a2a2a">
+  return <g fontFamily={t('ablage.stempelvorschau.courier-new-courier-monospace')} fill="#2a2a2a">
     <rect width={W} height={H} fill="#b9b9b3" />
-    <g transform="rotate(-2 297 420)">
+    <g transform={t('ablage.stempelvorschau.rotate-2-297-420')}>
       <rect x={170} y={70} width={255} height={640} fill="#e8e8e3" />
       {teile(`${b}.kopf`).map((z, i) => <text key={i} x={297} y={120 + i * 22} fontSize={i ? 13 : 17} fontWeight="bold" textAnchor="middle">{z}</text>)}
       <line x1={190} x2={405} y1={180} y2={180} stroke="#555" strokeDasharray="4 3" />
@@ -195,7 +195,7 @@ export function StempelVorschau({ stempel, werte, setze, beispiele = BEISPIELE }
           <figure key={b} className="stempelbeleg">
             <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t.frei(`werkbank.stempel.beispiel.${b}`)} onPointerMove={bewegen} onPointerUp={loslassen} onPointerCancel={loslassen}>
               <Beleg art={b} />
-              <g transform={`translate(${L.cx} ${L.cy}) rotate(${L.winkel})`}
+              <g transform={t('ablage.stempelvorschau.translate-rotate', { cx: L.cx, cy: L.cy, winkel: L.winkel })}
                 className={setze ? `stempelgriff${fest ? ' fest' : ''}` : undefined}
                 {...(setze ? {
                   tabIndex: 0, role: 'button', 'aria-label': `${t('werkbank.stempel.vorschau.stempel')}: ${text.replace(/\n/g, ' / ')}`,
@@ -204,7 +204,7 @@ export function StempelVorschau({ stempel, werte, setze, beispiele = BEISPIELE }
                 <g opacity={stempel.deckkraft} style={{ mixBlendMode: stempel.tinte ? 'multiply' : 'normal' }}>
                   {L.rahmen && <rect x={-L.rahmen.b / 2} y={-L.rahmen.h / 2} width={L.rahmen.b} height={L.rahmen.h} fill="none" stroke={farbe} strokeWidth={L.rahmen.doppelt ? 2 : 1.5} />}
                   {L.rahmen?.doppelt && (() => { const e = L.groesse * 0.22; return <rect x={-L.rahmen.b / 2 + e} y={-L.rahmen.h / 2 + e} width={L.rahmen.b - 2 * e} height={L.rahmen.h - 2 * e} fill="none" stroke={farbe} strokeWidth={0.75} />; })()}
-                  {L.zeilen.map((z, i) => <text key={i} x={z.x} y={z.y} fontSize={L.groesse} fontWeight="bold" fontFamily="Helvetica, Arial, sans-serif" fill={farbe} style={{ whiteSpace: 'pre' }}>{z.text}</text>)}
+                  {L.zeilen.map((z, i) => <text key={i} x={z.x} y={z.y} fontSize={L.groesse} fontWeight="bold" fontFamily={t('ablage.stempelvorschau.helvetica-arial-sans-serif')} fill={farbe} style={{ whiteSpace: 'pre' }}>{z.text}</text>)}
                 </g>
                 {setze && <>
                   <rect className="stempelflaeche" x={-breite / 2} y={-hoehe / 2} width={breite} height={hoehe} rx={6} />

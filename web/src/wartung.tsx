@@ -1,8 +1,9 @@
-import { t } from './sprache';
+import { t, tn } from './sprache';
 import { useEffect, useState } from 'react';
 import { api, type WartungOeffentlich } from './api';
 import { Link } from './ort';
 import { istWeg, WIEDER_ERREICHBAR } from './erreichbar';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Wartungsmodus (#102) in der Oberfläche: Stand regelmäßig abfragen (auch ohne Neuladen der Seite)
@@ -25,17 +26,17 @@ export function useWartung(start?: WartungOeffentlich | null) {
     const hole = () => api.wartung().then((w) => { zuletzt = w; if (!aus) { setStand(w); setGeholt(Date.now()); } }, () => {});
     void hole();
     // Solange das DMS nicht erreichbar ist (#122), pausiert die Abfrage.
-    const t = setInterval(() => { if (!istWeg()) void hole(); }, ABFRAGE_MS);
+    const timer = setInterval(() => { if (!istWeg()) void hole(); }, ABFRAGE_MS);
     const sofort = () => void hole();
     addEventListener(WARTUNG_GEAENDERT, sofort);
     addEventListener(WIEDER_ERREICHBAR, sofort);
     addEventListener('focus', sofort);
-    return () => { aus = true; clearInterval(t); removeEventListener(WARTUNG_GEAENDERT, sofort); removeEventListener(WIEDER_ERREICHBAR, sofort); removeEventListener('focus', sofort); };
+    return () => { aus = true; clearInterval(timer); removeEventListener(WARTUNG_GEAENDERT, sofort); removeEventListener(WIEDER_ERREICHBAR, sofort); removeEventListener('focus', sofort); };
   }, []);
   useEffect(() => {
     if (stand?.stufe !== 'angekuendigt') return;
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
   }, [stand?.stufe]);
   const rest = stand?.sekunden === null || stand?.sekunden === undefined ? null : Math.max(0, stand.sekunden - Math.floor((Date.now() - geholt) / 1000));
   return { stand, rest };
@@ -43,14 +44,14 @@ export function useWartung(start?: WartungOeffentlich | null) {
 
 /** „29 Minuten“, „45 Sekunden“, „1 Stunde 5 Minuten“. */
 export function dauerText(s: number): string {
-  if (s < 60) return `${s} Sekunde${s === 1 ? '' : 'n'}`;
+  if (s < 60) return t('oberflaeche.wartung.sekunden', { anzahl: s });
   const m = Math.ceil(s / 60);
-  if (m < 60) return `${m} Minute${m === 1 ? '' : 'n'}`;
+  if (m < 60) return t('oberflaeche.wartung.minuten', { anzahl: m });
   const h = Math.floor(m / 60); const r = m % 60;
-  return `${h} Stunde${h === 1 ? '' : 'n'}${r ? ` ${r} Minute${r === 1 ? '' : 'n'}` : ''}`;
+  return t('oberflaeche.wartung.stunden', { anzahl: h, wert: r ? t('oberflaeche.wartung.minuten-2', { anzahl: r }) : '' });
 }
 
-export const zeitpunkt = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+export const zeitpunkt = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 
 /** Banner für alle Angemeldeten; Administratoren sehen zusätzlich den Weg zur Werkbank. */
 export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeldet: () => void }) {
@@ -58,22 +59,22 @@ export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeld
   // Aktiv und kein Admin: Die Sitzung ist beendet – gleich zur Anmeldeseite mit dem Hinweis.
   useEffect(() => { if (stand?.stufe === 'aktiv' && !admin) abgemeldet(); }, [stand?.stufe, admin]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!stand || stand.stufe === 'aus') return null;
-  const zusatz = <>{stand.text && <> {stand.text}.</>}{stand.ende && <> Voraussichtlich bis {zeitpunkt(stand.ende)} Uhr.</>}</>;
+  const zusatz = <>{stand.text && <> {stand.text}.</>}{stand.ende && <> {' '}{t('oberflaeche.wartung.voraussichtlich-bis-uhr', { zeitpunkt: zeitpunkt(stand.ende) })}</>}</>;
   if (stand.stufe === 'angekuendigt') {
     return (
       <div className="vertretungsbanner wartungsbanner" role="alert">
         <p>
-          <strong>Wartung – {admin ? 'alle anderen werden' : 'du wirst'} in {dauerText(rest ?? 0)} abgemeldet.</strong>{' '}
-          {admin ? t('konten.verwaltende.wartung.neu') : 'Bitte speichere deine Arbeit.'}{zusatz}
+          <strong>{t('oberflaeche.wartung.wartung-in-abgemeldet', { wert: admin ? t('oberflaeche.wartung.alle-anderen-werden') : t('oberflaeche.wartung.du-wirst'), dauerText: dauerText(rest ?? 0) })}</strong>{' '}
+          {admin ? t('konten.verwaltende.wartung.neu') : t('oberflaeche.wartung.bitte-speichere-deine-arbeit')}{zusatz}
         </p>
-        {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
+        {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">{t('oberflaeche.wartung.zum-wartungsmodus')}</Link>}
       </div>
     );
   }
   return (
     <div className="vertretungsbanner wartungsbanner" role="status">
-      <p><strong>Wartungsmodus aktiv.</strong> Nur Personen, die verwalten dürfen, sind angemeldet; Schnittstelle und Hintergrundarbeiten pausieren.{zusatz}</p>
-      {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
+      <p>{tn('oberflaeche.wartung.nur-personen-die-verwalten', { b: <strong>{t('oberflaeche.wartung.wartungsmodus-aktiv')}</strong>, zusatz })}</p>
+      {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">{t('oberflaeche.wartung.zum-wartungsmodus')}</Link>}
     </div>
   );
 }
@@ -84,8 +85,8 @@ export function WartungsHinweis({ start }: { start?: WartungOeffentlich | null }
   if (!stand || stand.stufe === 'aus') return null;
   return (
     <div className="hinweis warn stapel" role="status">
-      <p><strong>{stand.stufe === 'aktiv' ? 'Ablago wird gerade gewartet.' : 'Gleich beginnt eine Wartung.'}</strong> Anmelden können sich {stand.stufe === 'aktiv' ? 'nur' : 'bis dahin nur noch'} Personen, die Ablago verwalten dürfen.</p>
-      {(stand.text || stand.ende) && <p>{stand.text}{stand.text && stand.ende ? ' – ' : ''}{stand.ende && <>voraussichtlich bis {zeitpunkt(stand.ende)} Uhr</>}</p>}
+      <p>{tn('oberflaeche.wartung.anmelden-koennen-sich-personen', { b: <strong>{stand.stufe === 'aktiv' ? t('oberflaeche.wartung.ablago-wird-gerade-gewartet') : t('oberflaeche.wartung.gleich-beginnt-eine-wartung')}</strong>, wert: stand.stufe === 'aktiv' ? t('oberflaeche.wartung.nur') : t('oberflaeche.wartung.bis-dahin-nur-noch') })}</p>
+      {(stand.text || stand.ende) && <p>{stand.text}{stand.text && stand.ende ? ' – ' : ''}{stand.ende && <>{t('oberflaeche.wartung.voraussichtlich-bis-uhr-2', { zeitpunkt: zeitpunkt(stand.ende) })}</>}</p>}
     </div>
   );
 }

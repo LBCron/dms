@@ -27,13 +27,13 @@ function useLesbareTypen(): Mappentyp[] | null {
   const [ids, setIds] = useState<Set<string> | null>(null);
   useEffect(() => {
     let aktuell = true;
-    api.meineRechte().then((r) => { if (aktuell) setIds(new Set(r.filter((x) => x.rechte.R !== 'nie').map((x) => x.typId))); }).catch(() => aktuell && setIds(new Set(d.typen.map((t) => t.id))));
+    api.meineRechte().then((r) => { if (aktuell) setIds(new Set(r.filter((x) => x.rechte.R !== 'nie').map((x) => x.typId))); }).catch(() => aktuell && setIds(new Set(d.typen.map((mappentyp) => mappentyp.id))));
     return () => { aktuell = false; };
   }, [d.typen]);
-  return ids ? d.typen.filter((t) => ids.has(t.id)) : null;
+  return ids ? d.typen.filter((mappentyp) => ids.has(mappentyp.id)) : null;
 }
 
-const typSchluessel = (t: Mappentyp) => t.schluessel ?? t.id;
+const typSchluessel = (mappentyp: Mappentyp) => mappentyp.schluessel ?? mappentyp.id;
 
 /**
  * Kopf der erweiterten Suche (#426): oben in der Mitte, über den Treffern. Offen das Formular, zugeklappt die
@@ -171,12 +171,12 @@ function Feldsuche({ feld, e, setze, merke, weg }: { feld: Bedingungsfeld; e: Fe
     const typ = art === 'datum' ? 'date' : 'text';
     eingabe = (
       <div className="vonbis">
-        <input id={id} type={typ} inputMode={art === 'zahl' ? 'decimal' : undefined} aria-label={`${feld.label} von`} placeholder="von" value={e.von ?? ''} onChange={(x) => setze({ ...e, von: x.target.value })} />
+        <input id={id} type={typ} inputMode={art === 'zahl' ? 'decimal' : undefined} aria-label={t('ablage.suche.von', { label: feld.label })} placeholder={t('ablage.suche.von-2')} value={e.von ?? ''} onChange={(x) => setze({ ...e, von: x.target.value })} />
         <span aria-hidden="true">–</span>
-        <input type={typ} inputMode={art === 'zahl' ? 'decimal' : undefined} aria-label={`${feld.label} bis`} placeholder="bis" value={e.bis ?? ''} onChange={(x) => setze({ ...e, bis: x.target.value })} />
+        <input type={typ} inputMode={art === 'zahl' ? 'decimal' : undefined} aria-label={t('ablage.suche.bis', { label: feld.label })} placeholder={t('ablage.suche.bis-2')} value={e.bis ?? ''} onChange={(x) => setze({ ...e, bis: x.target.value })} />
         {art === 'datum' && (
-          <select aria-label={`${feld.label}: Zeitraum wählen`} value="" onChange={(x) => { if (!x.target.value) return; const [von, bis] = zeitraumVon(x.target.value as Zeitraum, heuteIn()); setze({ ...e, von, bis }); }}>
-            <option value="">Zeitraum …</option>
+          <select aria-label={t('ablage.suche.zeitraum-waehlen', { label: feld.label })} value="" onChange={(x) => { if (!x.target.value) return; const [von, bis] = zeitraumVon(x.target.value as Zeitraum, heuteIn()); setze({ ...e, von, bis }); }}>
+            <option value="">{t('ablage.suche.zeitraum')}</option>
             {(Object.keys(ZEITRAEUME) as Zeitraum[]).map((z) => <option key={z} value={z}>{ZEITRAEUME[z]}</option>)}
           </select>
         )}
@@ -186,7 +186,7 @@ function Feldsuche({ feld, e, setze, merke, weg }: { feld: Bedingungsfeld; e: Fe
     const ziel = d.typ(feld.feld?.zielTyp ?? '');
     eingabe = ziel
       ? <MappenWahl id={id} ziel={ziel} mehrfach wert={werte} bekannt={titelCache} merke={merke} setze={(v) => setze({ ...e, werte: Array.isArray(v) ? v.map(String) : v ? [String(v)] : [] })} />
-      : <p className="leise klein">Der Zieltyp fehlt.</p>;
+      : <p className="leise klein">{t('ablage.suche.der-zieltyp-fehlt')}</p>;
   } else if (art === 'person') {
     eingabe = (
       <select id={id} multiple size={Math.min(4, Math.max(2, d.personen.length))} value={werte} onChange={(x) => setze({ ...e, werte: [...x.target.selectedOptions].map((o) => o.value) })}>
@@ -204,22 +204,22 @@ function Feldsuche({ feld, e, setze, merke, weg }: { feld: Bedingungsfeld; e: Fe
   } else if (art === 'janein') {
     eingabe = (
       <div className="zeile" role="radiogroup" aria-label={feld.label}>
-        {[['', 'egal'], ['ja', 'ja'], ['nein', 'nein']].map(([w, t]) => (
-          <label key={w} className="haken klein"><input type="radio" name={id} checked={(werte[0] ?? '') === w} onChange={() => setze({ ...e, werte: w ? [w] : [] })} /><span>{t}</span></label>
+        {[['', t('ablage.suche.egal')], ['ja', t('ablage.suche.ja')], ['nein', t('ablage.suche.nein')]].map(([w, text]) => (
+          <label key={w} className="haken klein"><input type="radio" name={id} checked={(werte[0] ?? '') === w} onChange={() => setze({ ...e, werte: w ? [w] : [] })} /><span>{text}</span></label>
         ))}
       </div>
     );
   } else if (art === 'text') {
-    eingabe = <input id={id} type="text" placeholder="enthält …" value={werte[0] ?? ''} onChange={(x) => setze({ ...e, werte: x.target.value ? [x.target.value] : [] })} />;
+    eingabe = <input id={id} type="text" placeholder={t('ablage.suche.enthaelt')} value={werte[0] ?? ''} onChange={(x) => setze({ ...e, werte: x.target.value ? [x.target.value] : [] })} />;
   }
   return (
     <div className={`feldsuche${istGesetzt(e) ? ' gesetzt' : ''}`} data-feld={feld.key}>
       <div className="feldsuchkopf">
         <label htmlFor={id} className="klein">{feld.label}</label>
         {leerArten.length > 0 && (
-          <select className="klein" aria-label={`${feld.label}: leer`} value={e.leer ?? ''} onChange={(x) => setze(x.target.value ? { leer: x.target.value as 'leer' | 'nichtLeer' } : {})}>
-            <option value="">Wert</option>
-            {leerArten.map((o) => <option key={o} value={o}>{o === 'leer' ? 'ist leer' : 'ist nicht leer'}</option>)}
+          <select className="klein" aria-label={t('ablage.suche.leer', { label: feld.label })} value={e.leer ?? ''} onChange={(x) => setze(x.target.value ? { leer: x.target.value as 'leer' | 'nichtLeer' } : {})}>
+            <option value="">{t('ablage.suche.wert')}</option>
+            {leerArten.map((o) => <option key={o} value={o}>{o === 'leer' ? t('ablage.suche.ist-leer') : t('ablage.suche.ist-nicht-leer')}</option>)}
           </select>
         )}
         <button type="button" className="chipweg" aria-label={t('suche.bedingung.entfernen', { feld: feld.label })} title={t('suche.bedingung.entfernen', { feld: feld.label })} onClick={weg}><Symbol name="schliessen" /></button>
@@ -242,7 +242,7 @@ export function Suchchips({ suche, offen, aendern }: { suche: URLSearchParams; o
   useEffect(() => {
     let aktuell = true;
     for (const x of fehlend ? fehlend.split(',') : []) {
-      api.mappe(x).then((r) => { titelCache[x] = { titel: r.mappe.titel ?? '', typId: r.mappe.typId }; }).catch(() => { titelCache[x] = { titel: 'nicht sichtbare Mappe', typId: '' }; })
+      api.mappe(x).then((r) => { titelCache[x] = { titel: r.mappe.titel ?? '', typId: r.mappe.typId }; }).catch(() => { titelCache[x] = { titel: t('ablage.suche.nicht-sichtbare-mappe'), typId: '' }; })
         .finally(() => aktuell && neu((n) => n + 1));
     }
     return () => { aktuell = false; };

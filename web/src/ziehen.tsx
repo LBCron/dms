@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { t } from './sprache';
 
 /**
  * Drag & Drop für Listen und Bäume (#73, #74) – mit Maus, Touch (langes Antippen des Griffs)
@@ -99,9 +100,9 @@ export function useZiehen(o: Optionen) {
       }
       ev.preventDefault();
       letztesY = ev.clientY;
-      const t = zielBei(id, ev.clientX, ev.clientY);
+      const eintrag = zielBei(id, ev.clientX, ev.clientY);
       const alt = zugRef.current;
-      if (alt?.ziel !== t?.ziel || alt?.ort !== t?.ort) setze({ quelle: id, ...(t ?? {}) });
+      if (alt?.ziel !== eintrag?.ziel || alt?.ort !== eintrag?.ort) setze({ quelle: id, ...(eintrag ?? {}) });
     };
     const loslassen = () => {
       const z = zugRef.current;
@@ -134,7 +135,7 @@ export function useZiehen(o: Optionen) {
       type: 'button' as const,
       className: 'ziehgriff',
       'aria-label': `${name} verschieben`,
-      title: 'Ziehen zum Verschieben (Touch: lange drücken) – per Tastatur mit Alt+Pfeiltasten',
+      title: t('oberflaeche.ziehen.ziehen-zum-verschieben-touch'),
       onPointerDown: (e: ReactPointerEvent<HTMLElement>) => onPointerDown(id, e),
       onClick: (e: React.MouseEvent) => e.preventDefault(),
     }),

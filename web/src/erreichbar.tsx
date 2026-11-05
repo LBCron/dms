@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Erreichbarkeit } from '../../shared/src/erreichbarkeit';
+import { t, tn } from './sprache';
 
 /**
  * Erreichbarkeit (#122): Leiste, wenn das DMS weg ist (Update, Neustart), wenn es wieder da ist
@@ -8,7 +9,7 @@ import { Erreichbarkeit } from '../../shared/src/erreichbarkeit';
 
 /** Wird ausgelöst, sobald das DMS nach einem Ausfall wieder antwortet. */
 export const WIEDER_ERREICHBAR = 'dms:wieder-erreichbar';
-export const NICHT_ERREICHBAR = 'Ablago ist gerade nicht erreichbar.';
+export const NICHT_ERREICHBAR = t('oberflaeche.erreichbar.ablago-ist-gerade-nicht');
 
 export const erreichbarkeit = new Erreichbarkeit({
   gesundheit: async () => {
@@ -17,7 +18,7 @@ export const erreichbarkeit = new Erreichbarkeit({
   },
   jetzt: () => Date.now(),
   spaeter: (f, ms) => setTimeout(f, ms),
-  abbrechen: (t) => clearTimeout(t as ReturnType<typeof setTimeout>),
+  abbrechen: (eintrag) => clearTimeout(eintrag as ReturnType<typeof setTimeout>),
 }, () => dispatchEvent(new Event(WIEDER_ERREICHBAR)));
 
 /** Beim Start: Stand merken, beim Zurückkehren ins Fenster nachsehen. */
@@ -58,34 +59,34 @@ export function ErreichbarkeitsBanner({ version, ansichtNeuLaden }: { version?: 
   const [, setTick] = useState(0);
   useEffect(() => {
     if (z.stufe !== 'weg') return;
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
   }, [z.stufe]);
 
   if (z.stufe === 'weg') {
     const s = z.naechsterVersuch === null ? null : Math.max(0, Math.ceil((z.naechsterVersuch - Date.now()) / 1000));
     return (
       <div className="vertretungsbanner erreichbarkeit weg" role="alert">
-        <p><strong>{NICHT_ERREICHBAR}</strong> Vermutlich läuft ein Update oder Neustart. Ich versuche es weiter{s ? ` – nächster Versuch in ${s} s` : ' …'}. Deine Eingaben bleiben stehen; speichere danach noch einmal.</p>
-        <button className="knopf klein" onClick={() => void erreichbarkeit.pruefe()}>Jetzt prüfen</button>
+        <p>{tn('oberflaeche.erreichbar.vermutlich-laeuft-ein-update', { b: <strong>{NICHT_ERREICHBAR}</strong>, wert: s ? t('oberflaeche.erreichbar.naechster-versuch-in-s', { s }) : ' …' })}</p>
+        <button className="knopf klein" onClick={() => void erreichbarkeit.pruefe()}>{t('oberflaeche.erreichbar.jetzt-pruefen')}</button>
       </div>
     );
   }
   if (z.neueVersion) {
     return (
       <div className="vertretungsbanner erreichbarkeit neu" role="alert">
-        <p><strong>{version ? `Neue Version ${version} ist da.` : 'Eine neue Version ist da.'}</strong> Lade die Seite neu, damit Oberfläche und Server zusammenpassen. Ungespeicherte Eingaben vorher sichern.</p>
-        <button className="knopf klein" onClick={() => location.reload()}>Seite neu laden</button>
+        <p>{tn('oberflaeche.erreichbar.lade-die-seite-neu', { b: <strong>{version ? t('oberflaeche.erreichbar.neue-version-ist-da', { version }) : t('oberflaeche.erreichbar.eine-neue-version-ist')}</strong> })}</p>
+        <button className="knopf klein" onClick={() => location.reload()}>{t('oberflaeche.erreichbar.seite-neu-laden')}</button>
       </div>
     );
   }
   if (z.stufe === 'zurueck') {
     return (
       <div className="vertretungsbanner erreichbarkeit zurueck" role="status">
-        <p><strong>Ablago ist wieder erreichbar.</strong> Zeigt die Seite noch Fehler, lade sie neu.</p>
+        <p>{tn('oberflaeche.erreichbar.zeigt-die-seite-noch', { b: <strong>{t('oberflaeche.erreichbar.ablago-ist-wieder-erreichbar')}</strong> })}</p>
         <span className="knoepfe">
-          <button className="knopf klein" onClick={() => { erreichbarkeit.schliessen(); ansichtNeuLaden(); }}>Seite neu laden</button>
-          <button className="knopf klein" onClick={() => erreichbarkeit.schliessen()} aria-label="Hinweis schließen">OK</button>
+          <button className="knopf klein" onClick={() => { erreichbarkeit.schliessen(); ansichtNeuLaden(); }}>{t('oberflaeche.erreichbar.seite-neu-laden')}</button>
+          <button className="knopf klein" onClick={() => erreichbarkeit.schliessen()} aria-label={t('oberflaeche.erreichbar.hinweis-schliessen')}>{t('oberflaeche.erreichbar.ok')}</button>
         </span>
       </div>
     );

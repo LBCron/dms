@@ -3,7 +3,12 @@
  * `shared/src/sprachen/de/<bereich>.json` und werden mit `t('<bereich>.<schluessel>', { platzhalter })`
  * abgerufen; ein neuer Bereich wird unten ergänzt. Anleitung: Entwicklerhandbuch → Aufbau → Texte.
  */
-import { uebersetzer } from '../../shared/src/sprache';
+import { createElement, Fragment, type ReactNode } from 'react';
+import { uebersetzer, type Schluessel } from '../../shared/src/sprache';
+import ablage from '../../shared/src/sprachen/de/ablage.json';
+import mappentypen from '../../shared/src/sprachen/de/mappentypen.json';
+import notfall from '../../shared/src/sprachen/de/notfall.json';
+import oberflaeche from '../../shared/src/sprachen/de/oberflaeche.json';
 import aehnlich from '../../shared/src/sprachen/de/aehnlich.json';
 import api from '../../shared/src/sprachen/de/api.json';
 import einrichtung from '../../shared/src/sprachen/de/einrichtung.json';
@@ -26,4 +31,25 @@ import volltext from '../../shared/src/sprachen/de/volltext.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ aehnlich, api, anmeldung, automatisierung, einrichtung, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, termine, volltext, webhook, werkbank });
+const bereiche = { ablage, aehnlich, api, anmeldung, automatisierung, einrichtung, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, mappentypen, notfall, oberflaeche, pakete, profil, spalten, suche, systemzustand, termine, volltext, webhook, werkbank };
+export const t = uebersetzer(bereiche);
+
+/**
+ * Text mit Bausteinen der Oberfläche (#727): wie `t`, aber Platzhalter dürfen Elemente sein, z. B. ein fett
+ * gesetzter Knopfname als Wert für `{knopf}` in „Klicke auf {knopf}“. So bleibt der
+ * ganze Satz in der Sprachdatei, und eine Übersetzung kann die Reihenfolge ändern. `anzahl` wählt wie bei `t`
+ * die Mehrzahlform; leere Werte (`null`, `undefined`, `false`) erscheinen wie in JSX gar nicht.
+ */
+export function tn(schluessel: Schluessel<typeof bereiche>, werte: Readonly<Record<string, ReactNode>> = {}): ReactNode {
+  const text = t.frei(schluessel, typeof werte.anzahl === 'number' ? { anzahl: werte.anzahl } : {});
+  const teile: ReactNode[] = [];
+  let rest = 0;
+  for (const m of text.matchAll(/\{([A-Za-z0-9_]+)\}/g)) {
+    if (!Object.hasOwn(werte, m[1])) continue;
+    if (m.index > rest) teile.push(text.slice(rest, m.index));
+    teile.push(werte[m[1]]);
+    rest = m.index + m[0].length;
+  }
+  if (rest < text.length) teile.push(text.slice(rest));
+  return createElement(Fragment, null, ...teile);
+}

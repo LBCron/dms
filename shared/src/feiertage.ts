@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Gesetzliche Feiertage in Deutschland (#94), lokal berechnet – ohne externe Schnittstelle.
  *
@@ -7,9 +8,9 @@
  * fehlen bewusst. Ostern nach der Gaußschen Osterformel (gregorianisch).
  */
 export const BUNDESLAENDER = {
-  BW: 'Baden-Württemberg', BY: 'Bayern', BE: 'Berlin', BB: 'Brandenburg', HB: 'Bremen', HH: 'Hamburg',
-  HE: 'Hessen', MV: 'Mecklenburg-Vorpommern', NI: 'Niedersachsen', NW: 'Nordrhein-Westfalen',
-  RP: 'Rheinland-Pfalz', SL: 'Saarland', SN: 'Sachsen', ST: 'Sachsen-Anhalt', SH: 'Schleswig-Holstein', TH: 'Thüringen',
+  BW: t('gemeinsam.feiertage.baden-wuerttemberg'), BY: 'Bayern', BE: 'Berlin', BB: 'Brandenburg', HB: 'Bremen', HH: 'Hamburg',
+  HE: 'Hessen', MV: t('gemeinsam.feiertage.mecklenburg-vorpommern'), NI: 'Niedersachsen', NW: t('gemeinsam.feiertage.nordrhein-westfalen'),
+  RP: t('gemeinsam.feiertage.rheinland-pfalz'), SL: 'Saarland', SN: 'Sachsen', ST: t('gemeinsam.feiertage.sachsen-anhalt'), SH: t('gemeinsam.feiertage.schleswig-holstein'), TH: 'Thüringen',
 } as const;
 export type Bundesland = keyof typeof BUNDESLAENDER;
 export const istBundesland = (v: unknown): v is Bundesland => typeof v === 'string' && v in BUNDESLAENDER;
@@ -45,22 +46,22 @@ export function feiertage(jahr: number, land: Bundesland): Map<string, string> {
   const in_ = (...l: Bundesland[]) => l.includes(land);
   const ostern = ostersonntag(jahr);
   setze(tag(jahr, 1, 1), 'Neujahr');
-  setze(tag(jahr, 1, 6), 'Heilige Drei Könige', in_('BW', 'BY', 'ST'));
-  setze(tag(jahr, 3, 8), 'Internationaler Frauentag', (land === 'BE' && jahr >= 2019) || (land === 'MV' && jahr >= 2023));
+  setze(tag(jahr, 1, 6), t('gemeinsam.feiertage.heilige-drei-koenige'), in_('BW', 'BY', 'ST'));
+  setze(tag(jahr, 3, 8), t('gemeinsam.feiertage.internationaler-frauentag'), (land === 'BE' && jahr >= 2019) || (land === 'MV' && jahr >= 2023));
   setze(plus(ostern, -2), 'Karfreitag');
   setze(ostern, 'Ostersonntag', in_('BB'));
   setze(plus(ostern, 1), 'Ostermontag');
-  setze(tag(jahr, 5, 1), 'Tag der Arbeit');
-  setze(plus(ostern, 39), 'Christi Himmelfahrt');
+  setze(tag(jahr, 5, 1), t('gemeinsam.feiertage.tag-der-arbeit'));
+  setze(plus(ostern, 39), t('gemeinsam.feiertage.christi-himmelfahrt'));
   setze(plus(ostern, 49), 'Pfingstsonntag', in_('BB'));
   setze(plus(ostern, 50), 'Pfingstmontag');
   setze(plus(ostern, 60), 'Fronleichnam', in_('BW', 'BY', 'HE', 'NW', 'RP', 'SL'));
-  setze(tag(jahr, 8, 15), 'Mariä Himmelfahrt', in_('SL'));
+  setze(tag(jahr, 8, 15), t('gemeinsam.feiertage.mariae-himmelfahrt'), in_('SL'));
   setze(tag(jahr, 9, 20), 'Weltkindertag', land === 'TH' && jahr >= 2019);
-  setze(tag(jahr, 10, 3), 'Tag der Deutschen Einheit');
+  setze(tag(jahr, 10, 3), t('gemeinsam.feiertage.tag-der-deutschen-einheit'));
   setze(tag(jahr, 10, 31), 'Reformationstag', jahr === 2017 || in_('BB', 'MV', 'SN', 'ST', 'TH') || (in_('HB', 'HH', 'NI', 'SH') && jahr >= 2018));
   setze(tag(jahr, 11, 1), 'Allerheiligen', in_('BW', 'BY', 'NW', 'RP', 'SL'));
-  setze(bussUndBettag(jahr), 'Buß- und Bettag', in_('SN'));
+  setze(bussUndBettag(jahr), t('gemeinsam.feiertage.buss-und-bettag'), in_('SN'));
   setze(tag(jahr, 12, 25), '1. Weihnachtstag');
   setze(tag(jahr, 12, 26), '2. Weihnachtstag');
   return f;
