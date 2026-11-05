@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
 import { after, describe, it } from 'node:test';
-import { bereinigeGeraet, fuelleErgebnis, PLATZHALTER, restMinuten, type LasttestStand } from '../../shared/src/lasttest';
+import { bereinigeGeraet, fuelleErgebnis, PLATZHALTER, restMinuten, stufenVon, type LasttestStand } from '../../shared/src/lasttest';
 import { Lasttestmodus, lasttestAus } from '../src/lasttestmodus';
 import { erkenneSpeicherart, geraeteNummer } from '../src/speicherart';
 
@@ -24,18 +24,31 @@ async function freierPort(): Promise<number> {
 }
 
 describe('Lasttest-Modus (#612): Variable', () => {
-  it('klein, mittel, gross, groß, alle – sonst aus mit Hinweis', () => {
-    assert.deepEqual(lasttestAus({}), { wahl: null, dauer: null, fehler: null });
+  it('klein, mittel, gross, groß, extrem, alle – sonst aus mit Hinweis', () => {
+    const aus = { wahl: null, dauer: null, mappen: null, speichern: true, fehler: null };
+    assert.deepEqual(lasttestAus({}), aus);
     assert.equal(lasttestAus({ DMS_LASTTEST: 'klein' }).wahl, 'klein');
     assert.equal(lasttestAus({ DMS_LASTTEST: ' Mittel ' }).wahl, 'mittel');
     assert.equal(lasttestAus({ DMS_LASTTEST: 'groß' }).wahl, 'gross');
     assert.equal(lasttestAus({ DMS_LASTTEST: 'alle' }).wahl, 'alle');
-    for (const aus of ['', 'aus', '0', 'nein']) assert.deepEqual(lasttestAus({ DMS_LASTTEST: aus }), { wahl: null, dauer: null, fehler: null });
+    for (const a of ['', 'aus', '0', 'nein']) assert.deepEqual(lasttestAus({ DMS_LASTTEST: a }), aus);
     const falsch = lasttestAus({ DMS_LASTTEST: 'riesig' });
     assert.equal(falsch.wahl, null);
     assert.match(falsch.fehler!, /keine Stufe.*startet normal/);
     assert.equal(lasttestAus({ DMS_LASTTEST: 'klein', DMS_LASTTEST_DAUER: '10' }).dauer, 10);
     assert.match(lasttestAus({ DMS_LASTTEST: 'klein', DMS_LASTTEST_DAUER: 'kurz' }).fehler!, /DMS_LASTTEST_DAUER/);
+  });
+
+  it('extrem (#739): 500.000 oder 1 Mio. Mappen; „mit Speichern“ an, mit DMS_LASTTEST_SPEICHERN=nein aus', () => {
+    assert.deepEqual(lasttestAus({ DMS_LASTTEST: 'extrem' }), { wahl: 'extrem', dauer: null, mappen: 500_000, speichern: true, fehler: null });
+    assert.equal(lasttestAus({ DMS_LASTTEST: 'extrem', DMS_LASTTEST_MAPPEN: '1.000.000' }).mappen, 1_000_000);
+    assert.equal(lasttestAus({ DMS_LASTTEST: 'extrem', DMS_LASTTEST_MAPPEN: '1000000' }).mappen, 1_000_000);
+    const falsch = lasttestAus({ DMS_LASTTEST: 'extrem', DMS_LASTTEST_MAPPEN: '20' });
+    assert.equal(falsch.mappen, 500_000);
+    assert.match(falsch.fehler!, /DMS_LASTTEST_MAPPEN/);
+    assert.equal(lasttestAus({ DMS_LASTTEST: 'klein', DMS_LASTTEST_MAPPEN: '1000000' }).mappen, null, 'nur für extrem');
+    assert.equal(lasttestAus({ DMS_LASTTEST: 'klein', DMS_LASTTEST_SPEICHERN: 'nein' }).speichern, false);
+    assert.equal(lasttestAus({ DMS_LASTTEST: 'klein', DMS_LASTTEST_SPEICHERN: 'ja' }).speichern, true);
   });
 
   it('steht in keiner Vorlage für App-Stores und NAS (nur in der Anleitung)', () => {
@@ -106,6 +119,7 @@ interface Skript {
   PLATZHALTER: typeof PLATZHALTER;
   ergebnisblock(e: unknown[], x: unknown, u: unknown, a?: { geraet?: string; speicher?: string }): string;
   containerZeile(laeufe: unknown[]): string;
+  speichernZeile(d: unknown): string;
 }
 const skript = (await import(new URL('./lasttest.mjs', import.meta.url).href)) as Skript;
 const umgebung = { version: '0.144.0', image: 'dms-komplett', datenbank: 'im Container', architektur: 'x64', cpu: 'Beispiel-CPU', kerne: 4, kerneBegrenzt: false, rechnerKerne: 4, ramGb: 15.5, ramBegrenzt: false, grenzen: null };
@@ -139,6 +153,26 @@ describe('Lasttest-Modus (#612): Ergebnisblock', () => {
     assert.equal(skript.containerZeile([{ container: { mb: 800, programmeMb: null, zwischenspeicherMb: null, datenbankMb: null } }]), 'Arbeitsspeicher Container höchstens: 800 MB');
   });
 
+  it('mit Speichern und extrem (#739): bisherige Zeilen bleiben genau so, neue kommen darunter', () => {
+    const alt = skript.ergebnisblock(ergebnisse, x, umgebung, {});
+    const speichern = { name: 'klein + Speichern', n: 25, median: 45, p95: 110, p99: 150, fehlerquote: 0, speichern: true, schreiben: { anfragen: 300, median: 80, p95: 160 }, speicherMbMax: 900, schleifeP99: 30 };
+    const mit = [{ ...ergebnisse[0], speichern }];
+    const neu = skript.ergebnisblock(mit, { ...x, laeufe: [...x.laeufe, speichern] }, umgebung, {});
+    // Jede bisherige Zeile steht unverändert im neuen Block (auch Arbeitsspeicher: nur über die bisherigen Durchgänge).
+    for (const z of alt.split('\n').filter((l) => !l.startsWith('Gemessen'))) assert.ok(neu.split('\n').includes(z), `fehlt: ${z}`);
+    assert.match(neu, /\nklein    25 gleichzeitig: p50 40 ms[^\n]*\nklein \+ Speichern   25 gleichzeitig: p50 45 ms, p95 110 ms, p99 150 ms, Fehler 0,00 % – Messung ohne Ziel \(Speichern p50 80 ms, p95 160 ms\)\n/);
+    assert.match(neu, /\nArbeitsspeicher Ablago höchstens: 300 MB[^\n]*\n[^\n]*\nMit Speichern: Arbeitsspeicher Ablago höchstens: 900 MB · Ereignisschleife p99 höchstens: 30 ms\n/);
+    const extrem = {
+      stufe: 'extrem', art: 'messung', verfehlt: [], grenze: { gleichzeitig: 10, jeSekunde: 20, p95: 2500 }, grund: 'p95 3500 ms > 3 s', erholung: { ms: 2000, p95: 400 },
+      daten: { anlegen: { mappen: 1_000_000, laeufe: 20, sekunden: 2700, hintergrundSekunden: 360 }, datenbankBytes: 5 * 1024 ** 3, dokumenteBytes: 300 * 1024 ** 2 },
+    };
+    const b = skript.ergebnisblock([extrem], { ...x, bestand: { gesamt: 1_000_013, demo: 1_000_000 } }, umgebung, {});
+    assert.match(b, /\nextrem Grenze: 10 gleichzeitig \(20\/s, p95 2500 ms\), Abbruch: p95 3500 ms > 3 s; Erholung 2,0 s\n/);
+    assert.match(b, /\nextrem Demo-Daten: 1\.000\.000 Demo-Mappen in 45 min angelegt \(20 Läufe\), danach 6 min Arbeit im Hintergrund; Datenbank 5,0 GB, Dokumente 300 MB\.\n/);
+    // groß wie bisher.
+    assert.match(skript.ergebnisblock([{ ...extrem, stufe: 'gross', daten: undefined }], x, umgebung, {}), /\ngroß   Grenze: 10 gleichzeitig/);
+  });
+
   it('Gerät: eine Zeile, ohne Backticks, höchstens 120 Zeichen', () => {
     assert.equal(bereinigeGeraet('NAS\n```\nmehr'), "NAS ''' mehr");
     assert.equal(bereinigeGeraet('x'.repeat(300)).length, 120);
@@ -147,10 +181,16 @@ describe('Lasttest-Modus (#612): Ergebnisblock', () => {
 
   it('Restdauer: Schätzung der Stufe minus vergangene Zeit, mindestens der laufende Durchgang', () => {
     const s = { wahl: 'alle' as const, stufe: 'klein' as const, fertigeStufen: [], stufeBegonnen: 0, jetzt: 60_000, durchgang: null, zustand: 'laeuft' as const };
-    assert.deepEqual(restMinuten(s), [2 + 15 + 30, 4 + 30 + 60]);
-    assert.deepEqual(restMinuten({ ...s, wahl: 'klein' }), [2, 4]);
+    // Mit dem Durchgang „mit Speichern“ (#739): klein 5–8, mittel 18–35, groß 35–70 Minuten.
+    assert.deepEqual(restMinuten(s), [4 + 18 + 35, 7 + 35 + 70]);
+    assert.deepEqual(restMinuten({ ...s, wahl: 'klein' }), [4, 7]);
     assert.equal(restMinuten({ ...s, wahl: 'klein', jetzt: 10 * 60_000 }), null, 'gleich fertig');
     assert.deepEqual(restMinuten({ ...s, wahl: 'klein', jetzt: 10 * 60_000, durchgang: { name: 'klein', n: 25, ende: 12 * 60_000 } }), [2, 2]);
+    // extrem: 500.000 Mappen 60–150 Minuten, 1 Mio. doppelt so lang; „alle“ ohne extrem.
+    const e = { ...s, wahl: 'extrem' as const, stufe: 'extrem' as const, jetzt: 0 };
+    assert.deepEqual(restMinuten({ ...e, mappen: 500_000 }), [60, 150]);
+    assert.deepEqual(restMinuten({ ...e, mappen: 1_000_000 }), [120, 300]);
+    assert.deepEqual(stufenVon('alle'), ['klein', 'mittel', 'gross']);
     assert.equal(restMinuten({ ...s, zustand: 'fertig' }), null);
   });
 });
@@ -168,11 +208,11 @@ describe('Lasttest-Modus (#612): Seite', () => {
   let aufrufe: string[][] = [];
   let beendet = 0;
   let port = 0;
-  const neu = async () => {
+  const neu = async (extra: Partial<ConstructorParameters<typeof Lasttestmodus>[0]> = {}) => {
     port = await freierPort();
     const m = new Lasttestmodus({
       wahl: 'klein', dauer: 5, skript: '/x/lasttest.mjs', ziel: 'http://127.0.0.1:1', ergebnisOrdner: ordner, env: {}, speicherart: 'SSD',
-      port, host: '127.0.0.1', beenden: () => { beendet++; },
+      port, host: '127.0.0.1', beenden: () => { beendet++; }, ...extra,
       starte: (_s, args) => { aufrufe.push(args); kind = new FalschesKind(); return kind as unknown as ChildProcess; },
     });
     await m.start();
@@ -245,6 +285,22 @@ describe('Lasttest-Modus (#612): Seite', () => {
       assert.match(s.ergebnis!.vorlage, /\{\{geraet\}\}/);
       assert.equal(s.angaben.geraet, 'Beispiel-NAS 16 GB');
     } finally { await m.stop(); }
+  });
+
+  it('extrem mit 1 Mio. Mappen und ohne „mit Speichern“ (#739): Optionen gehen an das Skript', async () => {
+    aufrufe = [];
+    const m = await neu({ wahl: 'extrem', dauer: null, mappen: 1_000_000, speichern: false, ergebnisOrdner: join(tmp, 'ergebnis-extrem') });
+    try {
+      assert.deepEqual(aufrufe[0], ['extrem', '--ziel', 'http://127.0.0.1:1', '--mappen', '1000000', '--ohne-speichern']);
+      const s = await stand();
+      assert.deepEqual([s.wahl, s.mappen, s.speichern, s.von], ['extrem', 1_000_000, false, 1]);
+      kind!.sende({ art: 'stufe', stufe: 'extrem', nr: 1, von: 1 });
+      kind!.sende({ art: 'schritt', schritt: 'aufraeumen' });
+      assert.equal((await stand()).schritt, 'aufraeumen');
+    } finally { await m.stop(); }
+    aufrufe = [];
+    const k = await neu({ ergebnisOrdner: join(tmp, 'ergebnis-klein2'), mappen: 1_000_000 });
+    try { assert.deepEqual(aufrufe[0], ['klein', '--ziel', 'http://127.0.0.1:1', '--dauer', '5'], 'mappen nur für extrem, Speichern an'); } finally { await k.stop(); }
   });
 
   it('Abbruch des Skripts (Schutz der echten Ablage) und unerwartetes Ende', async () => {

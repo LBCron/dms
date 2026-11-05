@@ -96,7 +96,7 @@ const version = env.DMS_VERSION ?? 'Entwicklung';
 log.info(`Ablago startet (Version ${version})`, { node: process.version, port: cfg.port, protokoll: protokoll.stufe, proxy: cfg.proxy.text });
 if (cfg.proxy.fehler) log.warn(cfg.proxy.fehler);
 if (cfg.einbetten.fehler) log.warn(cfg.einbetten.fehler);
-// Lasttest-Modus (#612): DMS_LASTTEST=klein|mittel|gross|alle – nur in einer eigenen Test-Installation (unten geprüft).
+// Lasttest-Modus (#612): DMS_LASTTEST=klein|mittel|gross|extrem|alle – nur in einer eigenen Test-Installation (unten geprüft).
 const lasttest = lasttestAus(env);
 if (lasttest.fehler) log.warn(lasttest.fehler);
 /** Grund, warum der Lasttest trotz DMS_LASTTEST nicht läuft (echte Ablage) – für die Werkbank-Übersicht. */
@@ -623,7 +623,7 @@ if (lasttest.wahl) {
     if (p.ok) {
       const daten = dirname(ordner.geheim);
       lasttestSeite = new Lasttestmodus({
-        wahl: lasttest.wahl, dauer: lasttest.dauer, skript, ziel, ergebnisOrdner: join(daten, 'ergebnis'), env: skriptEnv,
+        wahl: lasttest.wahl, dauer: lasttest.dauer, mappen: lasttest.mappen, speichern: lasttest.speichern, skript, ziel, ergebnisOrdner: join(daten, 'ergebnis'), env: skriptEnv,
         speicherart: erkenneSpeicherart(daten), port: cfg.port, host: cfg.host, webDir: cfg.web, proxy: cfg.proxy.trust, einbetten: cfg.einbetten,
         beenden: () => beenden(),
       });

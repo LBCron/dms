@@ -61,13 +61,14 @@ body:
         - klein (25 gleichzeitig, 5.000 Mappen) · small
         - mittel (100 gleichzeitig mit Export, 50.000 Mappen) · medium
         - groß (Belastungsgrenze, 200.000 Mappen) · large
+        - extrem (Belastungsgrenze, 500.000 oder 1 Mio. Mappen) · extreme
     validations:
       required: true
   - type: textarea
     id: ergebnis
     attributes:
       label: Ergebnisblock · Result block
-      description: Der Block „Messergebnis Lasttest“ aus der Ausgabe des Lasttests, unverändert. · The block "Messergebnis Lasttest" from the output of the load test, unchanged.
+      description: Der Block „Messergebnis Lasttest“ aus der Ausgabe des Lasttests, unverändert – mit den Zeilen „… + Speichern“, falls vorhanden. · The block "Messergebnis Lasttest" from the output of the load test, unchanged – including the lines "… + Speichern" (with saving), if present.
       render: text
     validations:
       required: true

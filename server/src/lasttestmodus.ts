@@ -4,7 +4,7 @@ import { fork, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { bereinigeGeraet, fuelleErgebnis, LASTTEST_WAHL, stufenVon, type LasttestStand, type LasttestStufe, type LasttestWahl, type Speicherwahl } from '../../shared/src/lasttest';
+import { bereinigeGeraet, EXTREM_MAPPEN, fuelleErgebnis, LASTTEST_WAHL, stufenVon, type LasttestStand, type LasttestStufe, type LasttestWahl, type Speicherwahl } from '../../shared/src/lasttest';
 import { Fachfehler } from './fehler';
 import { hilfeAntwort, hilfeSenden } from './hilfe';
 import { einbettenAus, sicherheitsKoepfe, type Einbetten } from './koepfe';
@@ -14,7 +14,7 @@ import type { Speicherart } from './speicherart';
 import { standKennung } from './system';
 
 /**
- * Lasttest-Modus (#612): Mit DMS_LASTTEST=klein|mittel|gross|alle startet das DMS wie immer, aber nur intern
+ * Lasttest-Modus (#612): Mit DMS_LASTTEST=klein|mittel|gross|extrem|alle startet das DMS wie immer, aber nur intern
  * (127.0.0.1, zufälliger Port). Unter dem Port des Containers gibt es dann nur diese Seite: Fortschritt, Restdauer,
  * Feld für das Gerät, Speicherart, am Ende Bericht und Ergebnisblock zum Kopieren und der Knopf zum Herunterfahren.
  * Gemessen wird mit dem vorhandenen Skript (server/test/lasttest.mjs, im Image `dms-lasttest`) als Kindprozess –
@@ -31,18 +31,37 @@ export interface LasttestEinstellung {
   wahl: LasttestWahl | null;
   /** Sekunden je Durchgang (DMS_LASTTEST_DAUER), sonst die Vorgabe des Skripts. */
   dauer: number | null;
+  /** Nur extrem (#739): 500.000 oder 1.000.000 Mappen (DMS_LASTTEST_MAPPEN), sonst null. */
+  mappen: number | null;
+  /** Durchgang „mit Speichern“ je Stufe (#739); DMS_LASTTEST_SPEICHERN=nein schaltet ihn ab. */
+  speichern: boolean;
   fehler: string | null;
 }
 
-/** DMS_LASTTEST (und für Fortgeschrittene DMS_LASTTEST_DAUER) lesen. Leer, „aus“, „0“, „nein“: aus. */
+const AUS = ['aus', '0', 'nein', 'false', 'off'];
+
+/**
+ * DMS_LASTTEST lesen (und für Fortgeschrittene DMS_LASTTEST_DAUER, DMS_LASTTEST_MAPPEN für extrem,
+ * DMS_LASTTEST_SPEICHERN=nein ohne den Durchgang „mit Speichern“). Leer, „aus“, „0“, „nein“: aus.
+ */
 export function lasttestAus(env: Record<string, string | undefined>): LasttestEinstellung {
   const roh = (env.DMS_LASTTEST ?? '').trim().toLowerCase().replace('groß', 'gross');
   const d = env.DMS_LASTTEST_DAUER?.trim();
   const dauer = d && /^\d+$/.test(d) && Number(d) >= 1 ? Number(d) : null;
-  const dauerFehler = d && dauer === null ? `DMS_LASTTEST_DAUER „${d}“ ist keine Zahl von Sekunden und wird ignoriert.` : null;
-  if (!roh || ['aus', '0', 'nein', 'false', 'off'].includes(roh)) return { wahl: null, dauer: null, fehler: null };
-  if (!(LASTTEST_WAHL as readonly string[]).includes(roh)) return { wahl: null, dauer: null, fehler: `DMS_LASTTEST „${env.DMS_LASTTEST}“ ist keine Stufe (klein, mittel, gross oder alle) – Ablago startet normal.` };
-  return { wahl: roh as LasttestWahl, dauer, fehler: dauerFehler };
+  const fehler: string[] = [];
+  if (d && dauer === null) fehler.push(`DMS_LASTTEST_DAUER „${d}“ ist keine Zahl von Sekunden und wird ignoriert.`);
+  const speichern = !AUS.includes((env.DMS_LASTTEST_SPEICHERN ?? '').trim().toLowerCase());
+  if (!roh || AUS.includes(roh)) return { wahl: null, dauer: null, mappen: null, speichern: true, fehler: null };
+  if (!(LASTTEST_WAHL as readonly string[]).includes(roh)) return { wahl: null, dauer: null, mappen: null, speichern: true, fehler: `DMS_LASTTEST „${env.DMS_LASTTEST}“ ist keine Stufe (klein, mittel, gross, extrem oder alle) – Ablago startet normal.` };
+  // extrem: 500.000 (Vorgabe) oder 1.000.000 Mappen; Punkte und Unterstriche als Tausendertrennzeichen erlaubt.
+  const m = env.DMS_LASTTEST_MAPPEN?.trim();
+  let mappen: number | null = roh === 'extrem' ? EXTREM_MAPPEN[0] : null;
+  if (m && roh === 'extrem') {
+    const n = Number(m.replace(/[._]/g, ''));
+    if (EXTREM_MAPPEN.includes(n)) mappen = n;
+    else fehler.push(`DMS_LASTTEST_MAPPEN „${m}“ ist weder 500000 noch 1000000 – extrem misst mit ${EXTREM_MAPPEN[0]}.`);
+  }
+  return { wahl: roh as LasttestWahl, dauer, mappen, speichern, fehler: fehler.length ? fehler.join(' ') : null };
 }
 
 /** Wo das Skript liegt: im Image /app/lasttest/lasttest.mjs, in der Entwicklung server/test/lasttest.mjs. */
@@ -77,6 +96,10 @@ export function pruefeZiel(skript: string, ziel: string, env: NodeJS.ProcessEnv)
 export interface LasttestOptionen {
   wahl: LasttestWahl;
   dauer: number | null;
+  /** extrem (#739): Bestand; sonst nicht gesetzt. */
+  mappen?: number | null;
+  /** Durchgang „mit Speichern“ (#739); Vorgabe an. */
+  speichern?: boolean;
   skript: string;
   /** Adresse des internen DMS (127.0.0.1). */
   ziel: string;
@@ -121,7 +144,7 @@ export class Lasttestmodus {
     this.jetzt = o.jetzt ?? Date.now;
     const t = this.jetzt();
     this.stand = {
-      wahl: o.wahl, zustand: 'laeuft', stufe: null, nr: 0, von: stufenVon(o.wahl).length, schritt: 'start', demo: null, durchgang: null,
+      wahl: o.wahl, mappen: o.mappen ?? null, speichern: o.speichern !== false, zustand: 'laeuft', stufe: null, nr: 0, von: stufenVon(o.wahl).length, schritt: 'start', demo: null, durchgang: null,
       durchgaenge: [], begonnen: t, stufeBegonnen: t, jetzt: t, fertigeStufen: [], ergebnis: null, meldung: null,
       angaben: { geraet: '', speicher: o.speicherart }, speicherErkannt: o.speicherart, datei: null,
     };
@@ -186,7 +209,8 @@ export class Lasttestmodus {
   }
 
   private starteSkript(): void {
-    const args = [this.o.wahl, '--ziel', this.o.ziel, ...(this.o.dauer ? ['--dauer', String(this.o.dauer)] : [])];
+    const args = [this.o.wahl, '--ziel', this.o.ziel, ...(this.o.dauer ? ['--dauer', String(this.o.dauer)] : []),
+      ...(this.o.wahl === 'extrem' && this.o.mappen ? ['--mappen', String(this.o.mappen)] : []), ...(this.o.speichern === false ? ['--ohne-speichern'] : [])];
     const starte = this.o.starte ?? ((skript, a, env) => fork(skript, a, { env, stdio: ['ignore', 'inherit', 'pipe', 'ipc'] }));
     log.warn(`Lasttest-Modus: Stufe ${this.o.wahl} startet. Ablago ist keine Ablage – Fortschritt und Ergebnis im Browser (Port ${this.o.port}).`);
     const k = starte(this.o.skript, args, this.o.env);

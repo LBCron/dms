@@ -10,6 +10,15 @@
  * | klein  | Haushalt (2–5 Personen)       | 25 gleichzeitig                              | 5.000 Mappen   | p95 < 0,3 s (0,3 s), keine Fehler   |
  * | mittel | Kleinbetrieb (10–15 Personen) | 100 gleichzeitig, großer Export nebenher     | 50.000 Mappen  | p95 < 1 s (2,86 s), Fehler < 0,1 %  |
  * | gross  | Belastungsgrenze              | +25 alle 2 Minuten bis p95 > 3 s, Fehler > 1 % oder Überlastschutz greift; danach 1000 gleichzeitig | 200.000 Mappen | gemessen wird die Grenze; Pflicht: kein Absturz, Erholung |
+ * | extrem | sehr großer Bestand (#739)    | wie gross                                    | 500.000 oder 1.000.000 Mappen (--mappen) | wie gross; nur von Hand, nicht in „alle“ und nicht im Zeitplan |
+ *
+ * Mit Speichern (#739): Nach dem bisherigen Durchgang jeder Stufe folgt ein zweiter mit gleicher Gleichzeitigkeit,
+ * in dem rund 10 % der Anfragen schreiben (Mappe ändern, Stern, Notiz, Aufgabe anlegen und erledigen; PROFIL_SPEICHERN).
+ * Bei gross und extrem läuft er nach der Erholung mit so vielen gleichzeitig, wie die Grenze war. Er ist eine Messung
+ * ohne Ziel und ohne CI-Grenze und steht als eigene Zeile im Ergebnis („klein + Speichern“). Die bisherigen
+ * Durchgänge, ihre Reihenfolge und ihre Grenzen bleiben unverändert; Arbeitsspeicher und Ereignisschleife der alten
+ * Zeilen zählen nur die bisherigen Durchgänge. Danach räumt der Test auf (Werte zurück, Sterne und Notizen weg, Aufgaben
+ * erledigt), damit die nächste Stufe dieselben Daten misst. `--ohne-speichern` lässt den Durchgang weg.
  *
  * klein und mittel sind eine Qualitätszusage mit Ziel und CI-Grenze: Das Ziel (p95) steht im Bericht; verfehlt heißt
  * „beschleunigen“ (Folge-Issue), nicht rot. Mit `--grenzen` richtet sich der Exit-Code (1) nach der CI-Grenze, die
@@ -32,7 +41,8 @@
  * --schritt-dauer <s je Schritt von groß> (120), --bis <n> (groß: höchstens so viele gleichzeitig),
  * --code <Einrichtungscode> (sonst aus /data/geheim/EINRICHTUNGSCODE), --geraet <Text>, --speicher <HDD|SSD|NVMe>,
  * --bericht <Datei> (Markdown), --json <Datei>, --vorher <Datei> (JSON eines früheren Laufs), --grenzen,
- * --gleichzeitig <n> [--ohne-export] (ein einzelner Durchgang), --einrichten [--mappen <n>] (nur einrichten).
+ * --gleichzeitig <n> [--ohne-export] [--mit-speichern] (ein einzelner Durchgang), --einrichten [--mappen <n>] (nur
+ * einrichten), --mappen <n> (extrem: 500000 oder 1000000; kleinere Zahlen nur zum Ausprobieren), --ohne-speichern.
  *
  * Gemischtes Profil wie im Alltag: Startseite, Liste einer Ansicht, Mappe öffnen, Suche, Vorschaubild,
  * Dokument herunterladen – Administrator und Mitglieder gemischt. Jede „Person“ des Tests schickt eine
@@ -84,7 +94,11 @@ export const STUFEN = {
   klein: { bildet: 'Haushalt (2–5 Personen)', gleichzeitig: 25, mappen: 5_000, export: false, ziel: { p95Ms: 300, fehlerquote: 0 }, ciGrenze: { p95Ms: 300 } },
   mittel: { bildet: 'Kleinbetrieb (10–15 Personen)', gleichzeitig: 100, mappen: 50_000, export: true, ziel: { p95Ms: 1000, fehlerquote: 0.001 }, ciGrenze: { p95Ms: 1000 } },
   gross: { bildet: 'Belastungsgrenze', mappen: 200_000, vorstufen: [5, 10], start: 25, schritt: 25, schrittSekunden: 120, hoechstens: 2000, abbruch: { p95Ms: 3000, fehlerquote: 0.01 }, ueberlast: 1000, verschlechterung: 0.2 },
+  // #739: Ablauf wie gross (Grenze suchen), nur mit sehr viel mehr Mappen. Nur von Hand – nicht in „alle“.
+  extrem: { bildet: 'sehr großer Bestand', mappen: 500_000, mappenWahl: [500_000, 1_000_000], vorstufen: [5, 10], start: 25, schritt: 25, schrittSekunden: 120, hoechstens: 2000, abbruch: { p95Ms: 3000, fehlerquote: 0.01 }, ueberlast: 1000, verschlechterung: 0.2 },
 };
+/** Stufen, die die Grenze suchen (Ablauf von gross). */
+const GRENZSTUFEN = new Set(['gross', 'extrem']);
 /** Pflichten der großen Stufe (wie „Überlast“ in #544): kein Absturz, begrenzter Speicher, Erholung, Anmeldeschutz. */
 export const PFLICHT = { ohneAntwort: 0, speicherMb: 1536, erholungMs: 30_000, erholungP95Ms: 1000 };
 /** Anteil der Demo-Mappen mit einem Brief als PDF (Vorschaubild, Herunterladen, Export). */
@@ -214,17 +228,27 @@ async function sicherstellen(mappen) {
   const c = { cookie: admin };
   let z = p.frisch ? await zaehle(c) : p.bestand;
   let neu = false;
+  // Wie lange das Anlegen dauert (#739: steht bei extrem im Ergebnis).
+  const t0 = Date.now(); const anfang = z.demo; let laeufe = 0;
   for (let nr = 1; z.demo < mappen; nr++) {
     const n = Math.min(DEMO_JE_LAUF, mappen - z.demo);
     console.log(`Lege ${n} Demo-Mappen an (für ${mappen} insgesamt) …`);
     melde({ art: 'schritt', schritt: 'demo', anzahl: n, mappen });
-    const vorher = z.demo; neu = true;
+    const vorher = z.demo; neu = true; laeufe++;
     await demo(c, n, `${mappen}-${nr}`);
     z = await zaehle(c);
     if (z.demo <= vorher) throw new Error('Es sind keine Demo-Mappen dazugekommen – Werkbank → Demo-Daten prüfen.');
   }
+  const t1 = Date.now();
   if (neu) await ruhe(c);
-  return z;
+  return { ...z, anlegen: neu ? { mappen: z.demo - anfang, laeufe, sekunden: Math.round((t1 - t0) / 1000), hintergrundSekunden: Math.round((Date.now() - t1) / 1000) } : null };
+}
+
+/** Größe der Datenbank und der Dokumente (Werkbank → System); null, wenn nicht lesbar. */
+async function datenStand(cookie) {
+  const { daten: s } = await json('GET', '/api/werkbank/system', { cookie, zeit: 120_000 }).catch(() => ({ daten: null }));
+  const d = s?.datenbank;
+  return { datenbankBytes: typeof d?.groesseBytes === 'number' ? d.groesseBytes : null, dokumenteBytes: typeof d?.dokumenteBytes === 'number' ? d.dokumenteBytes : null };
 }
 
 /**
@@ -287,13 +311,27 @@ export const PROFIL = [
   ['Startseite', 15], ['Liste', 25], ['Mappe öffnen', 25], ['Suche', 15], ['Vorschaubild', 10], ['Herunterladen', 10],
 ];
 
-function naechsteAnfrage(v) {
+/**
+ * Schreibanteil des Durchgangs „mit Speichern“ (#739): zusammen 10 % – Mappe ändern, Stern setzen oder entfernen,
+ * Notiz anlegen oder löschen, Aufgabe anlegen oder erledigen. Die Leseanfragen behalten ihr Verhältnis aus PROFIL.
+ */
+export const SCHREIBEN = [['Mappe ändern', 4], ['Stern', 2], ['Notiz', 2], ['Aufgabe', 2]];
+export const PROFIL_SPEICHERN = [...PROFIL.map(([a, g]) => [a, g * 0.9]), ...SCHREIBEN];
+const SCHREIBARTEN = new Set(SCHREIBEN.map(([a]) => a));
+
+/**
+ * Nächste Anfrage einer Person. Ohne `p` genau wie bisher (nur lesen); mit `p` (Zustand der Person im Durchgang
+ * „mit Speichern“) nach PROFIL_SPEICHERN.
+ */
+function naechsteAnfrage(v, p = null) {
   // Administrator und Mitglieder gemischt: ein Drittel Administrator.
   const wer = zufall(['admin', 'mitRolle', 'ohneRolle']);
   const cookie = v.sitzungen[wer];
+  const profil = p ? PROFIL_SPEICHERN : PROFIL;
   let x = Math.random() * 100;
-  let art = PROFIL[0][0];
-  for (const [a, g] of PROFIL) { if ((x -= g) < 0) { art = a; break; } }
+  let art = profil[0][0];
+  for (const [a, g] of profil) { if ((x -= g) < 0) { art = a; break; } }
+  if (p && SCHREIBARTEN.has(art)) return schreibAnfrage(v, p, art, wer);
   const doc = v.dokumente.length ? zufall(v.dokumente) : null;
   switch (art) {
     case 'Startseite': return { art, cookie, pfad: zufall(['/api/startseite', '/api/sichten', '/api/termine/naechster', '/api/typen']) };
@@ -304,6 +342,131 @@ function naechsteAnfrage(v) {
     case 'Vorschaubild': return doc ? { art, cookie: v.sitzungen.admin, pfad: `/api/dokumente/${doc.id}/vorschau` } : { art: 'Liste', cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=0&anzahl=50` };
     default: return doc ? { art, cookie: v.sitzungen.admin, pfad: `/api/dokumente/${doc.id}/inhalt` } : { art: 'Mappe öffnen', cookie, pfad: `/api/mappen/${zufall(v.mappen)}` };
   }
+}
+
+/* ---------- Speichern (#739) ---------- */
+
+/** Ein Wert, der sich vom ursprünglichen unterscheidet und in das Feld passt (maxLen). */
+function geaendert(z, nr) {
+  const zusatz = ` (L${nr % 1000})`;
+  const basis = String(z.wert ?? 'Lasttest');
+  return `${basis.slice(0, Math.max(1, (z.maxLen ?? 1000) - zusatz.length))}${zusatz}`;
+}
+
+/**
+ * Schreibende Anfrage. Ziele sind Mappen, die alle drei Konten lesen und ändern dürfen. Was angelegt oder geändert
+ * wird, merkt sich `s.spur`, damit `aufraeumen` es danach zurücknimmt. `danach` bekommt die Antwort (nur bei 2xx).
+ */
+function schreibAnfrage(v, p, art, wer) {
+  const s = p.s;
+  const cookie = v.sitzungen[wer];
+  switch (art) {
+    case 'Mappe ändern': {
+      const z = zufall(s.aendern);
+      s.spur.geaendert.set(z.id, z);
+      return { art, cookie, methode: 'PUT', pfad: `/api/mappen/${z.id}`, body: { werte: { [z.feld]: geaendert(z, ++s.zaehler) } } };
+    }
+    case 'Stern': {
+      const z = zufall(s.ziele);
+      const an = Math.random() < 0.5;
+      if (an) s.spur.sterne.add(`${wer} ${z.id}`);
+      return { art, cookie, methode: an ? 'PUT' : 'DELETE', pfad: `/api/mappen/${z.id}/favorit` };
+    }
+    case 'Notiz': {
+      if (p.notizen.length && Math.random() < 0.5) {
+        const n = p.notizen.shift();
+        return { art, cookie: v.sitzungen[n.wer], methode: 'DELETE', pfad: `/api/notizen/${n.id}`, danach: () => s.spur.notizen.delete(n.id) };
+      }
+      const z = zufall(s.ziele);
+      return {
+        art, cookie, methode: 'POST', pfad: `/api/mappen/${z.id}/notizen`, body: { text: 'Lasttest: kurze Notiz beim Speichern' },
+        danach: (d) => { if (d?.id) { const n = { id: d.id, wer }; p.notizen.push(n); s.spur.notizen.set(d.id, n); } },
+      };
+    }
+    default: {
+      // Aufgabe: eine eigene anlegen, beim nächsten Mal erledigen.
+      if (p.aufgabe) {
+        const a = p.aufgabe; p.aufgabe = null;
+        return { art, cookie: v.sitzungen[a.wer], methode: 'POST', pfad: `/api/aufgaben/${a.id}/erledigt`, danach: () => s.spur.aufgaben.delete(a.id) };
+      }
+      const z = zufall(s.ziele);
+      return {
+        art, cookie, methode: 'POST', pfad: `/api/mappen/${z.id}/aufgaben`, body: { text: 'Lasttest: bitte prüfen', empfaengerId: s.benutzerIds[wer] },
+        danach: (d) => { if (d?.id) { p.aufgabe = { id: d.id, wer }; s.spur.aufgaben.set(d.id, p.aufgabe); } },
+      };
+    }
+  }
+}
+
+/** Feld, das „Mappe ändern“ ändert: Text oder langer Text, nicht eindeutig, ohne Muster und Format. */
+const aenderbaresFeld = (t) => t.felder.find((f) => f.typ === 'langtext' && !f.eindeutig && !f.muster && !f.format)
+  ?? t.felder.find((f) => f.typ === 'text' && !f.eindeutig && !f.muster && !f.format);
+
+/**
+ * Ziele für den Durchgang „mit Speichern“: je Ansicht bis zu 50 Mappen aus den ersten 200, die das Mitglied ohne Rolle
+ * sieht (dann dürfen alle drei Konten sie lesen und ändern), mit dem ursprünglichen Wert des Felds, das sich ändert.
+ */
+async function vorbereitenSpeichern(v) {
+  const benutzerIds = {};
+  for (const [k, cookie] of Object.entries(v.sitzungen)) benutzerIds[k] = (await json('GET', '/api/konto/status', { cookie })).daten.benutzer.id;
+  const { daten: typen } = await json('GET', '/api/typen', { cookie: v.sitzungen.admin });
+  const felder = new Map(typen.filter((t) => !t.system).map((t) => [t.id, aenderbaresFeld(t) ?? null]));
+  const ziele = [];
+  for (const id of v.ansichten) {
+    const { daten } = await json('GET', `/api/mappen?sicht=${id}&von=0&anzahl=200`, { cookie: v.sitzungen.ohneRolle });
+    const liste = [...daten.mappen];
+    for (let i = 0; i < 50 && liste.length; i++) {
+      const m = liste.splice(Math.floor(Math.random() * liste.length), 1)[0];
+      const f = felder.get(m.typId);
+      ziele.push({ id: m.id, feld: f?.key ?? null, maxLen: f?.maxLen ?? null, wert: f ? m.werte?.[f.key] ?? null : null });
+    }
+  }
+  if (!ziele.length) throw new Error('Für den Durchgang „mit Speichern“ gibt es keine Mappen, die alle Konten sehen.');
+  return { benutzerIds, ziele, aendern: ziele.filter((z) => z.feld) };
+}
+
+/** Frischer Zustand für einen Durchgang „mit Speichern“. */
+const schreibrunde = (vorlage) => ({ ...vorlage, zaehler: 0, spur: { geaendert: new Map(), sterne: new Set(), notizen: new Map(), aufgaben: new Map() } });
+
+/** `n` Aufgaben gleichzeitig abarbeiten; Fehler zählen, nicht abbrechen. */
+async function nebenher(jobs, n) {
+  let i = 0; let fehler = 0;
+  await Promise.all(Array.from({ length: n }, async () => {
+    while (i < jobs.length) {
+      const j = jobs[i++];
+      try { const r = await j(); if (r && r.status >= 400 && r.status !== 404) fehler++; } catch { fehler++; }
+    }
+  }));
+  return fehler;
+}
+const ohneInhalt = async (r) => { await r.arrayBuffer(); return r; };
+
+/**
+ * Nach dem Durchgang „mit Speichern“: Sterne weg, Notizen weg, geänderte Werte zurück, offene Aufgaben aus dem Durchgang
+ * erledigt (eigene und „Geändert“ zu Favoriten). Übrig bleiben nur Einträge in der Historie und erledigte Aufgaben.
+ */
+async function aufraeumen(v, s) {
+  melde({ art: 'schritt', schritt: 'aufraeumen' });
+  const t0 = Date.now();
+  const admin = v.sitzungen.admin;
+  let fehler = await nebenher([
+    ...[...s.spur.sterne].map((k) => { const [wer, id] = k.split(' '); return () => anfrage('DELETE', `/api/mappen/${id}/favorit`, { cookie: v.sitzungen[wer] }).then(ohneInhalt); }),
+    ...[...s.spur.notizen.values()].map((n) => () => anfrage('DELETE', `/api/notizen/${n.id}`, { cookie: v.sitzungen[n.wer] }).then(ohneInhalt)),
+  ], 8);
+  fehler += await nebenher([...s.spur.geaendert.values()].map((z) => () => anfrage('PUT', `/api/mappen/${z.id}`, { cookie: admin, body: { werte: { [z.feld]: z.wert } } }).then(ohneInhalt)), 8);
+  const ziele = new Set(s.ziele.map((z) => z.id));
+  let aufgaben = 0;
+  for (const cookie of Object.values(v.sitzungen)) {
+    const { daten } = await json('GET', '/api/aufgaben', { cookie, zeit: 120_000 }).catch(() => ({ daten: [] }));
+    const ids = (daten ?? []).filter((a) => ziele.has(a.mappeId) && (a.art === 'aenderung' || (a.art === 'manuell' && String(a.text ?? '').startsWith('Lasttest:')))).map((a) => a.id);
+    for (let i = 0; i < ids.length; i += 500) {
+      const r = await json('POST', '/api/aufgaben/erledigt', { cookie, body: { ids: ids.slice(i, i + 500) }, zeit: 300_000 }).catch(() => null);
+      if (!r) fehler++; else aufgaben += r.daten?.erledigt?.length ?? 0;
+    }
+  }
+  const e = { sekunden: Math.round((Date.now() - t0) / 1000), werte: s.spur.geaendert.size, sterne: s.spur.sterne.size, notizen: s.spur.notizen.size, aufgaben, fehler };
+  console.log(`  aufgeräumt in ${e.sekunden} s: ${e.werte} Werte zurück, ${e.sterne} Sterne, ${e.notizen} Notizen, ${e.aufgaben} Aufgaben${fehler ? `, ${fehler} Fehler` : ''}`);
+  return e;
 }
 
 /* ---------- Messung ---------- */
@@ -331,22 +494,31 @@ async function serverStand(cookie) {
  * Ein Durchgang: `n` Personen schicken `dauer` Sekunden lang Anfragen; optional läuft nebenher ein großer
  * Export nach dem anderen (als Administrator).
  */
-async function durchgang(v, { name, n, dauer, mitExport }) {
+async function durchgang(v, { name, n, dauer, mitExport, speichern = null }) {
   const ende = Date.now() + dauer * 1000;
   const zeiten = []; const jeArt = {};
   const z = { anfragen: 0, ok: 0, abgewiesen: 0, client: 0, fehler: 0, ohneAntwort: 0, retryAfter: 0, status: {} };
   const server = [];
   const exporte = [];
+  /** Nur „mit Speichern“: Zeiten der schreibenden Anfragen und abgelehnte (4xx) je Art und Status. */
+  const schreibZeiten = []; const abgelehnt = {};
   let laeuft = true;
 
   async function person() {
+    // Zustand der Person im Durchgang „mit Speichern“ (eigene Notizen, offene Aufgabe); sonst nur lesen wie bisher.
+    const p = speichern ? { s: speichern, notizen: [], aufgabe: null } : null;
     while (Date.now() < ende) {
-      const a = naechsteAnfrage(v);
+      const a = naechsteAnfrage(v, p);
       const t0 = performance.now();
       try {
-        const r = await anfrage('GET', a.pfad, { cookie: a.cookie });
-        await r.arrayBuffer();
+        const r = await anfrage(a.methode ?? 'GET', a.pfad, { cookie: a.cookie, body: a.body });
+        if (a.methode) {
+          const t = await r.text();
+          if (r.ok && a.danach) { try { a.danach(t ? JSON.parse(t) : null); } catch { /* Antwort ohne JSON */ } }
+          if (r.status >= 400 && r.status < 500) abgelehnt[`${a.art} ${r.status}`] = (abgelehnt[`${a.art} ${r.status}`] ?? 0) + 1;
+        } else await r.arrayBuffer();
         const ms = performance.now() - t0;
+        if (a.methode && r.status !== 503) schreibZeiten.push(ms);
         z.anfragen++; z.status[r.status] = (z.status[r.status] ?? 0) + 1;
         if (r.status === 503) {
           // Wie ein ordentliches Programm: so lange warten, wie Retry-After sagt (höchstens 10 s).
@@ -404,6 +576,8 @@ async function durchgang(v, { name, n, dauer, mitExport }) {
   const max = (k) => { const w = sv.map(k).filter((x) => typeof x === 'number'); return w.length ? Math.max(...w) : null; };
   const ergebnis = {
     name, n, dauer: Math.round(sek), mitExport,
+    // #739: Durchgang mit Schreibanteil – eigene Zeile, ohne Ziel und ohne CI-Grenze.
+    ...(speichern ? { speichern: true, schreiben: { anfragen: schreibZeiten.length, median: rund(quantil(schreibZeiten, 0.5)), p95: rund(quantil(schreibZeiten, 0.95)) }, abgelehnt } : {}),
     anfragen: z.anfragen, jeSekunde: Math.round(z.anfragen / sek), ok: z.ok, client: z.client, fehler: z.fehler, abgewiesen: z.abgewiesen, retryAfter: z.retryAfter, ohneAntwort: z.ohneAntwort, status: z.status,
     ohneAntwortJe: z.ohneAntwortJe ?? {}, fehlerJe: z.fehlerJe ?? {},
     fehlerquote: z.anfragen ? (z.fehler + z.ohneAntwort) / z.anfragen : 0,
@@ -493,7 +667,19 @@ export function pruefeFesteStufe(name, e) {
 
 async function festeStufe(v, name, dauer, lauf) {
   const s = STUFEN[name];
-  return pruefeFesteStufe(name, await lauf({ name, n: s.gleichzeitig, dauer, mitExport: s.export && !hat('--ohne-export') }));
+  const mitExport = s.export && !hat('--ohne-export');
+  const e = pruefeFesteStufe(name, await lauf({ name, n: s.gleichzeitig, dauer, mitExport }));
+  // #739: danach derselbe Durchgang mit Schreibanteil – zählt nicht für Ziel, CI-Grenze und Exit-Code.
+  if (v.speichern) Object.assign(e, await mitSpeichern(v, lauf, { name: `${name} + Speichern`, n: s.gleichzeitig, dauer, mitExport }));
+  return e;
+}
+
+/** Durchgang „mit Speichern“ und Aufräumen danach (#739). */
+async function mitSpeichern(v, lauf, o) {
+  v.speichernZiele ??= await vorbereitenSpeichern(v);
+  const runde = schreibrunde(v.speichernZiele);
+  const speichern = await lauf({ ...o, speichern: runde });
+  return { speichern, aufgeraeumt: await aufraeumen(v, runde) };
 }
 
 /** Ziel und CI-Grenze in einem Satz, z. B. „Ziel p95 < 1000 ms, CI-Grenze 1000 ms, Fehler < 0,10 %“. */
@@ -510,8 +696,10 @@ const urteil = (e) => (e.verfehlt.length ? 'CI-Grenze verfehlt' : e.zielVerfehlt
  * höchste Zahl gleichzeitiger Anfragen, bei der das noch nicht passiert ist. Danach 1000 gleichzeitig (wie
  * „Überlast“ in #544) mit Anmeldeschutz nebenher, dann Erholung.
  */
-async function grosseStufe(v, lauf, dauer) {
-  const s = STUFEN.gross;
+async function grosseStufe(v, lauf, dauer, stufe = 'gross') {
+  const s = STUFEN[stufe];
+  // Namen der Durchgänge wie bisher („groß 25“, „Überlast 1000“); extrem mit eigenem Namen.
+  const kurz = stufe === 'gross' ? 'groß' : stufe;
   const schrittDauer = Number(arg('--schritt-dauer', s.schrittSekunden));
   const bis = Number(arg('--bis', s.hoechstens));
   const start = Number(arg('--start', s.start));
@@ -523,7 +711,7 @@ async function grosseStufe(v, lauf, dauer) {
   const schritte = [];
   let grenze = null; let grund = null;
   for (const n of stufenfolge) {
-    const e = await lauf({ name: `groß ${n}`, n, dauer: schrittDauer, mitExport: false });
+    const e = await lauf({ name: `${kurz} ${n}`, n, dauer: schrittDauer, mitExport: false });
     schritte.push(e);
     grund = e.serverAusfaelle > 2 ? 'Server nicht erreichbar'
       : e.abgewiesen > 0 ? 'Überlastschutz greift (503)'
@@ -534,7 +722,7 @@ async function grosseStufe(v, lauf, dauer) {
   }
   if (!grund) grund = `höchste geprüfte Last (${bis} gleichzeitig) ohne Abbruch`;
   const schutz = anmeldeschutz();
-  const ueberlast = await lauf({ name: `Überlast ${s.ueberlast}`, n: s.ueberlast, dauer: Math.min(dauer, 60), mitExport: false });
+  const ueberlast = await lauf({ name: `Überlast ${s.ueberlast}${stufe === 'gross' ? '' : ` (${kurz})`}`, n: s.ueberlast, dauer: Math.min(dauer, 60), mitExport: false });
   const anmelde = await schutz;
   const erholt = await erholung(v);
   const verfehlt = [];
@@ -545,11 +733,15 @@ async function grosseStufe(v, lauf, dauer) {
   if (ueberlast.serverAusfaelle > 2) verfehlt.push(`${ueberlast.name}: Server ${ueberlast.serverAusfaelle}-mal nicht erreichbar`);
   if (erholt.ms === null || erholt.ms > PFLICHT.erholungMs) verfehlt.push(`Erholung nach der Überlast: ${erholt.ms === null ? 'keine' : `${erholt.ms} ms`} > ${PFLICHT.erholungMs} ms`);
   if (!anmelde.wirkt) verfehlt.push('Anmeldeschutz wirkt unter Last nicht');
+  // #739: nach der Erholung so viele gleichzeitig wie an der Grenze (sonst wie der erste Schritt), mit Schreibanteil.
+  // Erst nach allem Bisherigen, damit Schritte, Überlast und Erholung genau so laufen wie vorher.
+  const nSpeichern = grenze?.n ?? stufenfolge[0] ?? start;
+  const extra = v.speichern ? await mitSpeichern(v, lauf, { name: `${kurz} + Speichern`, n: nSpeichern, dauer: schrittDauer, mitExport: false }) : {};
   return {
-    stufe: 'gross', art: 'messung', schritte, ueberlast, erholung: erholt, anmeldeschutz: anmelde, verfehlt,
+    stufe, art: 'messung', schritte, ueberlast, erholung: erholt, anmeldeschutz: anmelde, verfehlt,
     // Schon der erste Schritt zu viel: Grenze 0 heißt „unter dem ersten Schritt“.
     grenze: grenze ? { gleichzeitig: grenze.n, jeSekunde: grenze.jeSekunde, p95: grenze.p95 } : { gleichzeitig: 0, jeSekunde: 0, p95: null, unter: stufenfolge[0] ?? start },
-    grund,
+    grund, ...extra,
   };
 }
 
@@ -567,6 +759,32 @@ async function vergleiche(gross) {
 }
 
 /* ---------- Bericht und Ergebnisblock ---------- */
+
+const zahl = (n) => Number(n).toLocaleString('de-DE');
+const gb = (b) => (b < 1024 ** 3 ? `${Math.round(b / 1024 ** 2)} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
+const dauerText = (s) => (s < 120 ? `${s} s` : `${Math.round(s / 60)} min`);
+/** Bisherige Durchgänge – ohne „mit Speichern“; nur sie zählen für die alten Zeilen (Speicher, Schleife). */
+const bisherige = (laeufe) => laeufe.filter((l) => !l.speichern);
+
+/** Durchgang „mit Speichern“ im Bericht (#739). */
+function speichernBericht(e) {
+  const d = e.speichern;
+  const abgelehnt = Object.entries(d.abgelehnt ?? {});
+  const a = e.aufgeraeumt;
+  return [
+    `**${d.name}** (${d.n} gleichzeitig, rund 10 % schreibend: Mappe ändern, Stern, Notiz, Aufgabe): p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehlerquote ${prozent(d.fehlerquote)}; schreibende Anfragen: ${d.schreiben.anfragen}, p50 ${f(d.schreiben.median)} ms, p95 ${f(d.schreiben.p95)} ms – Messung ohne Ziel und ohne CI-Grenze.`,
+    '', `Median und p95 je Art (${d.name}):`, '', ...Object.entries(d.jeArt).map(([k, w]) => `- ${k}: ${w.anzahl} Anfragen, Median ${w.median} ms, p95 ${w.p95} ms`),
+    ...(abgelehnt.length ? ['', `Abgelehnt (4xx): ${abgelehnt.map(([k, n]) => `${k} × ${n}`).join(', ')}.`] : []),
+    ...(a ? ['', `Aufgeräumt in ${a.sekunden} s: ${a.werte} Werte zurück, ${a.sterne} Sterne und ${a.notizen} Notizen entfernt, ${a.aufgaben} Aufgaben erledigt${a.fehler ? ` – ${a.fehler} Fehler` : ''}.`] : []),
+  ];
+}
+
+/** Demo-Daten der Stufe: wie lange das Anlegen dauerte, wie groß Datenbank und Dokumente sind (#739). */
+function datenText(e) {
+  const { anlegen: a, datenbankBytes: db, dokumenteBytes: dok } = e.daten;
+  const angelegt = a ? `${zahl(a.mappen)} Demo-Mappen in ${dauerText(a.sekunden)} angelegt (${a.laeufe} ${a.laeufe === 1 ? 'Lauf' : 'Läufe'}), danach ${dauerText(a.hintergrundSekunden)} Arbeit im Hintergrund` : 'keine neuen Demo-Mappen nötig';
+  return `Demo-Daten (${e.stufe}): ${angelegt}; Datenbank ${db === null ? 'nicht lesbar' : gb(db)}, Dokumente ${dok === null ? 'nicht lesbar' : gb(dok)}.`;
+}
 
 function bericht(ergebnisse, x) {
   const z = [];
@@ -587,14 +805,18 @@ function bericht(ergebnisse, x) {
       z.push('', `**${e.stufe}** (${s.bildet}, ${s.gleichzeitig} gleichzeitig${s.export ? ', Export nebenher' : ''}): ${zielText(e.stufe)} – p95 ${f(e.durchgang.p95)} ms: ${e.verfehlt.length ? 'CI-Grenze VERFEHLT' : urteil(e)}.`);
       z.push('', `Median und p95 je Art (${e.stufe}):`, '', ...Object.entries(e.durchgang.jeArt).map(([k, w]) => `- ${k}: ${w.anzahl} Anfragen, Median ${w.median} ms, p95 ${w.p95} ms`));
     } else {
+      // gross wie bisher; extrem mit eigener Überschrift (#739).
+      const titel = e.stufe === 'gross' ? '**groß** (Belastungsgrenze)' : `**${e.stufe}** (${STUFEN[e.stufe].bildet}, Belastungsgrenze)`;
       z.push('', e.grenze.unter
-        ? `**groß** (Belastungsgrenze): schon **${e.grenze.unter} gleichzeitige Anfragen** sind zu viel: ${e.grund}.`
-        : `**groß** (Belastungsgrenze): Grenze bei **${e.grenze.gleichzeitig} gleichzeitigen Anfragen** (${e.grenze.jeSekunde} Anfragen je Sekunde, p95 ${f(e.grenze.p95)} ms); danach: ${e.grund}.`);
+        ? `${titel}: schon **${e.grenze.unter} gleichzeitige Anfragen** sind zu viel: ${e.grund}.`
+        : `${titel}: Grenze bei **${e.grenze.gleichzeitig} gleichzeitigen Anfragen** (${e.grenze.jeSekunde} Anfragen je Sekunde, p95 ${f(e.grenze.p95)} ms); danach: ${e.grund}.`);
       z.push(`Schritte: ${e.schritte.map((d) => `${d.n} → p95 ${f(d.p95)} ms`).join(' · ')}.`);
-      if (x.vergleich) z.push(`Letzter Lauf: ${x.vergleich.vorher} gleichzeitig – ${x.vergleich.warnung ? `**WARNUNG: ${Math.round(x.vergleich.schlechter * 100)} % schlechter**` : `Abweichung ${Math.round(-x.vergleich.schlechter * 100)} %`}.`);
-      z.push(`Erholung nach ${STUFEN.gross.ueberlast} gleichzeitig: ${e.erholung.ms === null ? 'nicht innerhalb von 120 s' : `nach ${sek(e.erholung.ms)} s`} (p95 ${f(e.erholung.p95)} ms).`);
+      if (x.vergleich && e.stufe === 'gross') z.push(`Letzter Lauf: ${x.vergleich.vorher} gleichzeitig – ${x.vergleich.warnung ? `**WARNUNG: ${Math.round(x.vergleich.schlechter * 100)} % schlechter**` : `Abweichung ${Math.round(-x.vergleich.schlechter * 100)} %`}.`);
+      z.push(`Erholung nach ${STUFEN[e.stufe].ueberlast} gleichzeitig: ${e.erholung.ms === null ? 'nicht innerhalb von 120 s' : `nach ${sek(e.erholung.ms)} s`} (p95 ${f(e.erholung.p95)} ms).`);
       z.push(`Anmeldeschutz unter Last: falsche Passwörter → ${e.anmeldeschutz.falsch.join(', ')}; danach richtiges Passwort → ${e.anmeldeschutz.richtig} – ${e.anmeldeschutz.wirkt ? 'wirkt' : 'WIRKT NICHT'}.`);
     }
+    if (e.speichern) z.push('', ...speichernBericht(e));
+    if (e.daten) z.push('', datenText(e));
   }
   const verfehlt = ergebnisse.flatMap((e) => e.verfehlt);
   const ziel = ergebnisse.flatMap((e) => e.zielVerfehlt ?? []);
@@ -648,16 +870,27 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
       const d = e.durchgang;
       kz.push(`${e.stufe.padEnd(6)} ${String(d.n).padStart(4)} gleichzeitig: p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehler ${prozent(d.fehlerquote)} – ${urteil(e)} (Ziel < ${STUFEN[e.stufe].ziel.p95Ms} ms, CI-Grenze ${STUFEN[e.stufe].ciGrenze.p95Ms} ms)`);
     } else {
-      kz.push(`groß   Grenze: ${e.grenze.unter ? `unter ${e.grenze.unter}` : e.grenze.gleichzeitig} gleichzeitig (${e.grenze.jeSekunde}/s, p95 ${f(e.grenze.p95)} ms), Abbruch: ${e.grund}; Erholung ${e.erholung.ms === null ? 'keine' : `${sek(e.erholung.ms)} s`}`);
+      kz.push(`${(e.stufe === 'gross' ? 'groß' : e.stufe).padEnd(6)} Grenze: ${e.grenze.unter ? `unter ${e.grenze.unter}` : e.grenze.gleichzeitig} gleichzeitig (${e.grenze.jeSekunde}/s, p95 ${f(e.grenze.p95)} ms), Abbruch: ${e.grund}; Erholung ${e.erholung.ms === null ? 'keine' : `${sek(e.erholung.ms)} s`}`);
     }
+    // #739: neue Zeilen unter der bisherigen – die bisherige bleibt genau so.
+    if (e.speichern) kz.push(speichernZeile(e.speichern));
+    if (e.stufe === 'extrem' && e.daten) kz.push(`extrem Demo-Daten: ${datenText(e).replace(/^Demo-Daten \(extrem\): /, '')}`);
   }
-  const alle = x.laeufe;
+  // Wie bisher nur über die bisherigen Durchgänge; „mit Speichern“ in einer eigenen Zeile (#739).
+  const alle = bisherige(x.laeufe);
   const spitze = Math.max(0, ...alle.map((l) => l.speicherMbMax ?? 0));
   const schleife = Math.max(0, ...alle.map((l) => l.schleifeP99 ?? 0));
   kz.push(`Arbeitsspeicher Ablago höchstens: ${spitze} MB · Ereignisschleife p99 höchstens: ${Math.round(schleife)} ms`);
   kz.push(containerZeile(alle));
+  const mit = x.laeufe.filter((l) => l.speichern);
+  if (mit.length) kz.push(`Mit Speichern: Arbeitsspeicher Ablago höchstens: ${Math.max(0, ...mit.map((l) => l.speicherMbMax ?? 0))} MB · Ereignisschleife p99 höchstens: ${Math.round(Math.max(0, ...mit.map((l) => l.schleifeP99 ?? 0)))} ms`);
   kz.push(`Gemessen: ${new Date().toISOString().slice(0, 10)}`, '```');
   return kz.join('\n');
+}
+
+/** „mittel + Speichern  100 gleichzeitig: p50 …, p95 …, p99 …, Fehler … – Messung ohne Ziel (Speichern p95 … ms)“ (#739). */
+export function speichernZeile(d) {
+  return `${d.name} ${String(d.n).padStart(4)} gleichzeitig: p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehler ${prozent(d.fehlerquote)} – Messung ohne Ziel (Speichern p50 ${f(d.schreiben?.median)} ms, p95 ${f(d.schreiben?.p95)} ms)`;
 }
 
 /**
@@ -690,11 +923,16 @@ async function messen(stufen) {
   let v = null; let bestand = null; let x = null;
   for (const s of stufen) {
     melde({ art: 'stufe', stufe: s, nr: stufen.indexOf(s) + 1, von: stufen.length });
-    bestand = await sicherstellen(STUFEN[s].mappen);
+    bestand = await sicherstellen(mappenFuer(s));
     v = await vorbereiten();
+    // „mit Speichern“ (#739): Die Ziele holt erst der Durchgang selbst – der bisherige startet genau wie vorher.
+    v.speichern = !hat('--ohne-speichern');
     console.log(`Stufe ${s}: ${bestand.gesamt} Mappen; vorbereitet: ${v.mappen.length} Mappen, ${v.dokumente.length} Dokumente, ${v.ansichten.length} Ansichten.`);
     x = { ...(x ?? {}), mappen: v.mappen.length, dokumente: v.dokumente.length, ...(STUFEN[s].export ? { exportPdf: v.exportPdf.length, exportDok: v.dokMappen.length, exportZip: v.exportSicht.n } : {}) };
-    ergebnisse.push(s === 'gross' ? await grosseStufe(v, lauf, dauer) : await festeStufe(v, s, dauer, lauf));
+    const e = GRENZSTUFEN.has(s) ? await grosseStufe(v, lauf, dauer, s) : await festeStufe(v, s, dauer, lauf);
+    // Dauer des Anlegens und Größe von Datenbank und Dokumenten (#739) – erst nach der Messung gefragt.
+    e.daten = { anlegen: bestand.anlegen, ...await datenStand(v.sitzungen.admin) };
+    ergebnisse.push(e);
   }
   x = { ...x, bestand, laeufe, geprueft: hat('--grenzen') };
   x.vergleich = await vergleiche(ergebnisse.find((e) => e.stufe === 'gross'));
@@ -708,7 +946,7 @@ async function messen(stufen) {
   }
   for (const z of ergebnisse.flatMap((e) => e.zielVerfehlt ?? [])) console.log(process.env.GITHUB_ACTIONS ? `::notice title=Lasttest Ziel verfehlt::${z}` : `HINWEIS: Ziel verfehlt – ${z}`);
   if (arg('--bericht')) await writeFile(arg('--bericht'), `${text}\n`);
-  if (arg('--json')) await writeFile(arg('--json'), JSON.stringify({ stufen: ergebnisse.map(({ durchgang: _d, schritte: _s, ueberlast: _u, ...r }) => r), laeufe, umgebung: u, bestand, vergleich: x.vergleich }, null, 2));
+  if (arg('--json')) await writeFile(arg('--json'), JSON.stringify({ stufen: ergebnisse.map(({ durchgang: _d, schritte: _s, ueberlast: _u, speichern: _sp, ...r }) => r), laeufe, umgebung: u, bestand, vergleich: x.vergleich }, null, 2));
   if (x.geprueft && ergebnisse.some((e) => e.verfehlt.length)) process.exitCode = 1;
 }
 
@@ -716,8 +954,23 @@ async function messen(stufen) {
 async function einzeln(n) {
   const bestand = await sicherstellen(Number(arg('--mappen', STUFEN.mittel.mappen)));
   const v = await vorbereiten();
-  const e = await durchgang(v, { name: `${n} gleichzeitig`, n, dauer: Number(arg('--dauer', 120)), mitExport: !hat('--ohne-export') });
-  console.log(JSON.stringify({ bestand, ...e, exporte: e.exporte.length }, null, 2));
+  // --mit-speichern: derselbe Durchgang mit Schreibanteil (#739), danach aufräumen.
+  const runde = hat('--mit-speichern') ? schreibrunde(await vorbereitenSpeichern(v)) : null;
+  const e = await durchgang(v, { name: `${n} gleichzeitig${runde ? ' + Speichern' : ''}`, n, dauer: Number(arg('--dauer', 120)), mitExport: !hat('--ohne-export'), speichern: runde });
+  const aufgeraeumt = runde ? await aufraeumen(v, runde) : undefined;
+  console.log(JSON.stringify({ bestand, ...e, exporte: e.exporte.length, aufgeraeumt }, null, 2));
+}
+
+/**
+ * Mappen der Stufe; extrem mit --mappen 500000 oder 1000000 (#739). Kleinere Zahlen gehen zum Ausprobieren (der Bericht
+ * nennt den Bestand); für die übrigen Stufen bleibt der Bestand fest.
+ */
+export function mappenFuer(stufe, wert = arg('--mappen')) {
+  if (stufe !== 'extrem' || wert === undefined) return STUFEN[stufe].mappen;
+  const n = Number(String(wert).replace(/[._]/g, ''));
+  if (!Number.isInteger(n) || n < 1) throw new Abbruch(`--mappen „${wert}“ ist keine Anzahl. Für extrem: ${STUFEN.extrem.mappenWahl.join(' oder ')}.`);
+  if (!STUFEN.extrem.mappenWahl.includes(n)) console.log(`Hinweis: extrem mit ${n} Mappen – zum Ausprobieren; gemessen wird mit ${STUFEN.extrem.mappenWahl.map(zahl).join(' oder ')}.`);
+  return n;
 }
 
 const ALT = { normal: 'mittel', ueberlast: 'gross' };
@@ -734,7 +987,7 @@ if (direkt) {
     else {
       const stufe = ALT[wahl] ?? wahl;
       const stufen = stufe === 'alle' ? ['klein', 'mittel', 'gross'] : [stufe];
-      if (!stufen.every((s) => s in STUFEN)) throw new Abbruch(`Unbekannte Stufe „${wahl}“. Möglich: klein, mittel, gross, alle.`);
+      if (!stufen.every((s) => s in STUFEN)) throw new Abbruch(`Unbekannte Stufe „${wahl}“. Möglich: klein, mittel, gross, extrem, alle.`);
       await messen(stufen);
     }
   } catch (e) {

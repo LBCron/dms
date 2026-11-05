@@ -4,21 +4,37 @@
  * damit die Datei unter /data/ergebnis genau das enthält, was man auf der Seite kopiert.
  */
 
-export type LasttestStufe = 'klein' | 'mittel' | 'gross';
+export type LasttestStufe = 'klein' | 'mittel' | 'gross' | 'extrem';
 export type LasttestWahl = LasttestStufe | 'alle';
-export const LASTTEST_WAHL: readonly LasttestWahl[] = ['klein', 'mittel', 'gross', 'alle'];
+/** „alle“ heißt weiter klein, mittel, gross; extrem (#739) nur, wenn man es ausdrücklich wählt. */
+export const LASTTEST_WAHL: readonly LasttestWahl[] = ['klein', 'mittel', 'gross', 'extrem', 'alle'];
 export type Speicherwahl = 'HDD' | 'SSD' | 'NVMe' | 'unbekannt';
+/** Bestand der Stufe extrem (#739): DMS_LASTTEST_MAPPEN, Vorgabe 500.000. */
+export const EXTREM_MAPPEN: readonly number[] = [500_000, 1_000_000];
 
-/** Geschätzte Dauer je Stufe in Minuten (von–bis), wie im Administratorhandbuch. */
-export const LASTTEST_DAUER: Record<LasttestStufe, [number, number]> = { klein: [3, 5], mittel: [15, 30], gross: [30, 60] };
+/**
+ * Geschätzte Dauer je Stufe in Minuten (von–bis), wie im Administratorhandbuch – mit dem Durchgang „mit Speichern“
+ * (#739, je Stufe gut 2 Minuten mehr). extrem: 500.000 Mappen; mit 1 Mio. etwa doppelt so lange (`dauerVon`).
+ */
+export const LASTTEST_DAUER: Record<LasttestStufe, [number, number]> = { klein: [5, 8], mittel: [18, 35], gross: [35, 70], extrem: [60, 150] };
+
+/** Dauer einer Stufe; extrem mit 1 Mio. Mappen etwa doppelt so lang wie mit 500.000. */
+export const dauerVon = (stufe: LasttestStufe, mappen: number | null = null): [number, number] => {
+  const [a, b] = LASTTEST_DAUER[stufe];
+  return stufe === 'extrem' && mappen && mappen > EXTREM_MAPPEN[0] ? [Math.round(a * mappen / EXTREM_MAPPEN[0]), Math.round(b * mappen / EXTREM_MAPPEN[0])] : [a, b];
+};
 
 export const stufenVon = (w: LasttestWahl): LasttestStufe[] => (w === 'alle' ? ['klein', 'mittel', 'gross'] : [w]);
 
 /** Was das Skript gerade tut (Meldungen von server/test/lasttest.mjs). */
-export type LasttestSchritt = 'start' | 'pruefen' | 'einrichten' | 'demo' | 'hintergrund' | 'vorbereiten' | 'messen' | 'auswerten';
+export type LasttestSchritt = 'start' | 'pruefen' | 'einrichten' | 'demo' | 'hintergrund' | 'vorbereiten' | 'messen' | 'aufraeumen' | 'auswerten';
 
 export interface LasttestStand {
   wahl: LasttestWahl;
+  /** Nur extrem (#739): gewählter Bestand (500.000 oder 1.000.000), sonst null. */
+  mappen?: number | null;
+  /** Durchgang „mit Speichern“ (#739) je Stufe; aus mit DMS_LASTTEST_SPEICHERN=nein. */
+  speichern?: boolean;
   /** laeuft → fertig; abbruch: Schutz der echten Ablage; fehler: Skript unerwartet beendet; beendet: Knopf gedrückt. */
   zustand: 'laeuft' | 'fertig' | 'abbruch' | 'fehler' | 'beendet';
   stufe: LasttestStufe | null;
@@ -69,12 +85,12 @@ export function fuelleErgebnis(vorlage: string, a: LasttestStand['angaben'], erk
 }
 
 /** Restdauer in Minuten (von–bis); null: gleich fertig. */
-export function restMinuten(s: Pick<LasttestStand, 'wahl' | 'stufe' | 'fertigeStufen' | 'stufeBegonnen' | 'jetzt' | 'durchgang' | 'zustand'>): [number, number] | null {
+export function restMinuten(s: Pick<LasttestStand, 'wahl' | 'stufe' | 'fertigeStufen' | 'stufeBegonnen' | 'jetzt' | 'durchgang' | 'zustand'> & { mappen?: number | null }): [number, number] | null {
   if (s.zustand !== 'laeuft') return null;
   const offen = stufenVon(s.wahl).filter((x) => !s.fertigeStufen.includes(x) && x !== s.stufe);
-  const spaeter = offen.reduce(([a, b], x) => [a + LASTTEST_DAUER[x][0], b + LASTTEST_DAUER[x][1]], [0, 0]);
+  const spaeter = offen.reduce(([a, b], x) => { const [c, d] = dauerVon(x, s.mappen); return [a + c, b + d]; }, [0, 0]);
   const vergangen = (s.jetzt - s.stufeBegonnen) / 60_000;
-  const [lo, hi] = s.stufe ? LASTTEST_DAUER[s.stufe] : [0, 0];
+  const [lo, hi] = s.stufe ? dauerVon(s.stufe, s.mappen) : [0, 0];
   const von = Math.max(0, lo - vergangen) + spaeter[0];
   const bis = Math.max(0, hi - vergangen) + spaeter[1];
   const rest = s.durchgang ? Math.max(0, (s.durchgang.ende - s.jetzt) / 60_000) : 0;
