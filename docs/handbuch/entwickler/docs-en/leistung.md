@@ -1,0 +1,303 @@
+# Performance {#leistung}
+
+Ablago should stay fluent even after years with many folders. For this there is a benchmark, a test that checks it in CI, and a measuring script for more precise measurements (#367).
+
+## Benchmark { #messlatte }
+
+With **10,000 folders and 20,000–30,000 documents** (full text 5–50 KB per document), the median must stay within:
+
+| Operation | Limit |
+|---|---:|
+| Opening a folder (`Dienst.holeMappe`) | 200 ms |
+| A folder's document list (`listeDokumente`) | 200 ms |
+
+That also applies **while** demo data with documents is being created and text recognition is running in the same process. Measured on an ordinary computer, the values today are in the single-digit millisecond range; the limit leaves room for a slow NAS.
+
+**Small hardware:** Ablago promises to be quick even on small hardware. The yardstick for this are the devices under [Tested platforms](https://help.ablago.app/installieren/aktuell/en/plattformen/) and the values under [What Ablago copes with](https://help.ablago.app/admin/aktuell/en/verkraftet/): the target is p95 below 0.3 s at the load-test level "klein" and below 1 s at "mittel" – also on a NAS such as the UGREEN DXP4800 Plus tested by the project. Measurements on a Raspberry Pi 5 will follow ([#578](https://github.com/motom001/dms/issues/578)).
+
+The values are in `MESSLATTE_MS` in `server/test/leistung-messen.ts`.
+
+## Test in CI { #test-in-der-ci }
+
+`server/test/leistung.test.ts` runs with `TEST_DATABASE_URL` (automatically in GitHub Actions, otherwise skipped). It creates a database of its own with 1,200 demo folders and their documents and
+
+- measures "opening a folder" and the document list – exceeding the benchmark is only a **warning** (`t.diagnostic` and `console.warn`), because run times vary between computers;
+- checks **strictly** that document lists don't read the full text (`DOKUMENT_SPALTEN` in `repo-pg.ts` without `volltext`, but with every other column of the table – a new column must be added there);
+- checks **strictly** that the export reads in bundles: no accesses per folder or document (no N+1 queries).
+
+The test takes about 20 seconds.
+
+## Measuring script { #mess-skript }
+
+For measurements with the full data stock and before/after comparisons (from `server/`):
+
+```bash
+MESS_DATABASE_URL=postgres://postgres:dms@127.0.0.1:5432/dmsmessung \
+  node --import tsx test/leistungsmessung.ts --neu --mappen 10000 --export 2000 --explain --last
+```
+
+- `--neu` creates the database **anew** (an existing one of the same name is deleted) and generates the data with a fixed seed – the same data on every run. That takes a few minutes (the full-text search indexes).
+- Without `--neu`, the existing stock is measured, e.g. before and after a change.
+- `--export N` measures the export (like "Export my data") over the first N folders: total time, time in the database and accesses per method.
+- `--explain` outputs the plans (`EXPLAIN (ANALYZE, BUFFERS)`) of the most important queries.
+- `--last` measures the same accesses again **while** demo data with documents is being created and text recognition is running in the same process (on a copy of the database), plus the event loop delay.
+
+## Timing a request { #zeitmessung-einer-anfrage }
+
+Every route's answer carries the header `Server-Timing` (#11, #477):
+
+```
+vor;dur=0.1, app;dur=211.5, db;dur=154.7;desc="8", rechte;dur=2.6, json;dur=0.7, gesamt;dur=212.4
+```
+
+| Part | Measured |
+|---|---|
+| `vor` | arrival of the request (hook `onRequest`) until the handler starts |
+| `app` | handler, contains `db` and `rechte` |
+| `db` | sum of database accesses (`Messung.umhuelle`), in `desc` their number |
+| `rechte` | evaluating permissions (`Dienst.zugriff`, `rechteAn`, `rechteAnVielen`, `lesbare`), overlapping calls once, without the database accesses in them (`rechteMessen` in `messung.ts`) |
+| `json` | `reply.send` until the hook `onSend` – converting the answer into text |
+| `gesamt` | arrival until `onSend` |
+| `zs` | only for requests that need the views' numbers (#512): duration and in `desc` `treffer` (cache) or `neu` (counted) |
+
+If a request waits because Node.js's one thread is computing for another one, the server only accepts it afterwards – that is then not in `vor` but in the "line" part of the browser's timing. For this, `Auslastung` (`perf_hooks.monitorEventLoopDelay`) measures the event loop delay; Workbench → Database shows it. Whole requests over the threshold for long accesses land with their breakdown among the long-running accesses (`zugriff` begins with `Anfrage:`).
+
+In the browser, `shared/src/zeitmessung.ts` splits up the time further with Resource Timing: "Waiting (browser)" (`startTime` to `requestStart` without connection set-up – the browser sends at most about 6 requests at once) and "Line" (round trip minus `gesamt`).
+
+## Loading times of the interface { #ladezeiten-der-oberflache }
+
+`server/test/ladezeiten.mjs` loads start page, a list and a folder in Chromium as an administrator, as a member with a role and as a member without a role (with rules that produce a read filter in SQL) and summarises Server-Timing per page. Against a running Ablago with a fresh database:
+
+```bash
+DMS_URL=http://localhost:3100 CODE=<setup code> node server/test/ladezeiten.mjs --einrichten --mappen 50000
+DMS_URL=http://localhost:3100 N=5 node server/test/ladezeiten.mjs
+```
+
+**Measurement for #477** (50,000 demo folders without documents, local computer, median of 5 loads, mean of two alternating runs; server = sum of all requests of the page, which partly run at the same time):
+
+| Page | Who | Load before ms | Load after ms | Server before ms | Server after ms | of which permissions ms |
+|---|---|---:|---:|---:|---:|---:|
+| Start page | Administrator | 562 | 360 | 659 | 464 | 2 |
+| Start page | Member with role | 452 | 306 | 585 | 393 | 4 |
+| Start page | Member without role | 492 | 288 | 583 | 339 | 4 |
+| List (4,120 invoices) | Administrator | 636 | 401 | 770 | 520 | 2 |
+| List (4,120 invoices) | Member with role | 504 | 328 | 687 | 385 | 4 |
+| List (4,120 invoices) | Member without role | 450 | 332 | 617 | 379 | 3 |
+| Opening a folder | Administrator | 570 | 414 | 717 | 527 | 6 |
+| Opening a folder | Member with role | 584 | 362 | 890 | 470 | 5 |
+| Opening a folder | Member without role | 441 | 325 | 650 | 443 | 4 |
+
+Finding: evaluating permissions in memory only costs a few milliseconds per page (below 1 %); the suspicion from the issue wasn't confirmed. The time was in the database, in two requests that every page of the Library makes:
+
+- `/api/anstehend` (today `/api/termine`) loaded **all** folders of every type with deadline fields and filtered the date in memory. Now `mappenMitDatum` only fetches folders with a date in the period (measured individually about 250 → 30 ms).
+- `/api/sichten` counted the inbox with an `EXISTS` per folder; for members with a read filter the whole counter ran **a second time** without the filter for this. Now one query over the open tasks counts the inbox, once for everyone.
+
+Target value: with the same data, a member loads start page and Library at most 10 % more slowly than the administrator – met (even faster, because for the administrator deadlines without a recipient are also pending). The event loop delay stayed below 16 ms at 99 %. The biggest item now is `/api/sichten` (counters per type and view, 150–230 ms with 50,000 folders, the same for all users). #512 fixes this (next section).
+
+## The views' numbers (#512) { #zahlen-der-ansichten-512 }
+
+The numbers next to the views (`GET /api/sichten` → `Dienst.zaehler`) count all visible views with **one** query per `count(*) FILTER (WHERE …)` over all folders of the household, plus types, inbox, favourites and bin – 120–150 ms alone with 50,000 folders, 150–260 ms under the page's load. Two remedies:
+
+1. **Don't block.** The interface (`web/src/daten.tsx`) loads types, people, views and the frame (`GET /api/sichten/rahmen`: bin days, view "New post" – without counting) and shows the Library; the numbers come afterwards (`zahlenDa`). Until then "…" stands in their place (`ZahlWarte`, likewise the start page's tiles); nothing jumps. When reloading, the old numbers stay until the new ones are there. What derives something from the numbers (the list's search field, usage when removing a field) doesn't wait for them.
+2. **Cache** (`server/src/zaehlerspeicher.ts`). The **household state** (`Haushaltsstand`) counts up as soon as a changing method of the repo has finished – the `Dienst` wraps its repo with this (`transaktion` counts as a whole). Reading and inconsequential methods (history, events, text recognition, "seen" …) are in `OHNE_FOLGEN`; a new method counts until it is listed there. The key per entry: user, role and a fingerprint of read filter, hidden views and own roles (since #742 a fingerprint of the permissions without the person, see [below](#sparsam-gemerkt)); valid with the same state and the same `heute`, so at most until midnight. Views with a date reference (`heute`, month, year, deadline) are valid for at most 5 minutes (`ZEITABHAENGIG_MS`), all others for at most 30 minutes (`HOECHSTENS_MS`, safety net for changes bypassing Ablago in the database, for instance by hand). Simultaneous requests with the same key wait for the same count. A hit costs about 7 ms (session, permissions, loading views), counting anew 110–150 ms.
+
+**Measurement for #512** (the same data as #477, `server/test/ladezeiten.mjs`, median of 5 loads, of which the median of three alternating runs; within the run, the cache hits for all loads after the first):
+
+| Page | Who | Visible before | Visible after | Numbers there before | Numbers there after | `/api/sichten` before | `/api/sichten` after | Load before | Load after |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Start page | Administrator | 388 | 273 | 337 | 176 | 213 | 56 | 460 | 312 |
+| Start page | Member with role | 381 | 269 | 310 | 182 | 185 | 60 | 388 | 255 |
+| Start page | Member without role | 344 | 247 | 263 | 165 | 144 | 54 | 335 | 219 |
+| List of invoices | Administrator | 392 | 277 | 303 | 237 | 201 | 80 | 427 | 396 |
+| List of invoices | Member with role | 385 | 263 | 302 | 141 | 189 | 36 | 405 | 226 |
+| List of invoices | Member without role | 312 | 271 | 264 | 155 | 146 | 36 | 374 | 261 |
+| Opening a folder | Administrator | 875 | 284 | 305 | 134 | 201 | 30 | 445 | 282 |
+| Opening a folder | Member with role | 882 | 324 | 302 | 165 | 179 | 43 | 409 | 282 |
+| Opening a folder | Member without role | 487 | 283 | 293 | 153 | 173 | 33 | 439 | 268 |
+
+*Visible* = until tiles, the list's first line or the folder's header can be seen; *Numbers there* = until the answer of `/api/sichten` is in the browser; `/api/sichten` = server time of this request (under the page's load; alone 6–9 ms with a hit); *Load* = until no request is running any more. All values in ms, local computer. "Visible" varies a lot for "Opening a folder" (individual runs around 870 ms in both versions).
+
+Not implemented: **only counting what can be seen** (collapsed groups, closed view selection on the phone) – with 1 and 2 the Library no longer waits for the numbers, and a hit costs single-digit milliseconds; partial counting would only split up the cache. An **index** for individual conditions isn't worth it either: the one query reads all of the household's folders once anyway (seq scan), and it only runs after changes now.
+
+## Fewer queries per request, remembered sparingly (#741, #742) { #sparsam-gemerkt }
+
+With many simultaneous users, the round trips to the database are the real queue (10 connections). So first **ask less**, then only **remember what is rare and the same for everyone** – the brief: "don't overdo it and don't write too much into the cache".
+
+**Household state in the database** (migration 077, part of #744): two numbers.
+
+- `lesen` (table `haushaltsstand`, per household) counts up via trigger with every change to `mappentypen`, `sichten`, `pakete` and `einstellungen` – in the same transaction, at commit (`DEFERRABLE INITIALLY DEFERRED`). Whoever sees the new state also sees the new data; that also applies to changes bypassing Ablago. A new entry starts at the time in microseconds so that no remembered old state hits after a new schema. The backup takes the table along without content (`OHNE_INHALT`).
+- `zahlen` (sequence `haushaltsstand_zahlen`) is counted up by the server after every changing method of the repo (`Haushaltsstand` in `zaehlerspeicher.ts`, `OHNE_FOLGEN` as before) – after the change has been committed, simultaneous changes together, without the request waiting for it. A sequence instead of a row: with a row, the simultaneous changes in the load test "with saving" waited for their lock.
+- Sign-in reads **session, person and both states in one query** (`KontoRepo.holeAnmeldung`): validity of the session, household, "active" and kind of person are in the same `WHERE`. A second process or server is thus at most slower, never wrong.
+
+**What is remembered** (`server/src/lesespeicher.ts`):
+
+| What | Where | Why | Expiry |
+|---|---|---|---|
+| Folder types (`listeTypen`) | `pgRepo`, `Lesespeicher` | every request needs them for access; large JSONB fields; rarely change | state `lesen` different |
+| Views (`listeSichten`) | likewise | several times per request (numbers, list, permissions) | state `lesen` different |
+| Packages (`listePakete`) | likewise | with every notice and every event | state `lesen` different |
+| Settings from `GEMERKTE_EINSTELLUNGEN` (among others two-factor requirement, post, bin, favourites, stamps, storage location, data protection) | `pgEinstellungen` | the same for everyone, without secrets; the two-factor requirement with every request | state `lesen` different |
+| The Library's numbers per type and view | `Dienst.bestand` (`Zaehlerspeicher`) | one count over all folders, 100–200 ms with 50,000 | state `zahlen` different, after the minimum validity; time-dependent ones after 5 minutes, otherwise 30 minutes, at midnight |
+| The person's numbers (inbox, favourites, bin, views with "me") | `Dienst.persoenlich` | small counts, but with every load of the Library | as above |
+
+Every retrieval from the `Lesespeicher` gets a copy of its own (`structuredClone`); within a transaction the repo never reads from it (`imTx`). The keys are fixed – the store doesn't grow with the number of people (at most 64 entries per connection; the numbers at most 500 per store). **Never remembered beyond the request:** sessions, people, roles, access and read filters. Access, roles and the everyday recipient for tasks (#719) are formed by `jeAnfrage` once per request (before, twice in 16 handlers); anew after a change in the same request, in a transaction and after 10 seconds (background work from a request). A request likewise only uses the state from the sign-in until its first own change.
+
+**Numbers by permission fingerprint** (#742): the key of the shared numbers is a hash of exactly the count's inputs – read filter (permissions including roles and temporary read permission), clauses of the visible views and administration mode. The same inputs give the same query and the same number; whoever may read something else has a different key – also in and after administration mode. Views whose conditions mean the person themselves ("is my favourite", "For me") count among the person's numbers. Types and views are counted by **one** run (`zaehleBestand`, before two). **Minimum validity** `MINDESTENS_MS` (3 s): after other people's changes, the previous value briefly stays for requests; one's own changes (`Kontext.benutzerId`) show immediately, background work (webhooks, summary) always counts afresh. Only the process that saved them knows about one's own changes. In Server-Timing, `zs` shows the shared count.
+
+**"Opening a folder"** reads independent things at the same time (folder and tasks; after checking read permission back-links, references, documents, notes, reminders, unfitting links) and only writes "last opened" and "seen" after the answer (`Antwort.danach`, `Nachlauf` in `http.ts`). Nobody waits for it: waiting per person lined up the requests of the same session one after another in the load test (three sessions, 100 requests at once). `danach` is therefore only for memos that may arrive a moment later.
+
+**Measurement for #741 and #742** (local, 2 cores, PostgreSQL 16, load-test data mittel: 50,000 folders; before = `main` with #740, #743 and #746, after = this state). *Queries per request* = SQL statements of a request after the first load (counted via postgres.js's `debug`, only for the measurement); the number `db` in Server-Timing counts accesses to the repo and therefore also hits in the read cache.
+
+| Request | Administrator in the mode | Member with role | Member without role |
+|---|---:|---:|---:|
+| Start page (`/api/startseite`) | 10 → 5 | 10 → 5 | 12 → 7 |
+| Numbers (`/api/sichten`) | 12 → 2 | 15 → 4 | 16 → 5 |
+| Next date (`/api/termine/naechster`) | 5 → 2 | 8 → 4 | 9 → 5 |
+| Folder types (`/api/typen`) | 7 → 2 | 7 → 2 | 8 → 3 |
+| List of a view | 9 → 5 | 9 → 5 | 10 → 6 |
+| Opening a folder | 20 → 12 | 17 → 11 | 20 → 14 |
+| Numbers after a change by the administrator | 16 queries, 421 ms → 4, 128 ms (own change: counted anew) | 21, 364 ms → 4, 3 ms | 22, 126 ms → 5, 4 ms |
+
+Load test mittel (`server/test/lasttest.mjs mittel --dauer 30`, three runs each, alternating before and after):
+
+| Run | p50 before | p50 after | p95 before | p95 after | Requests/s before | Requests/s after | Memory at most before | after |
+|---|---|---|---|---|---|---|---|---|
+| mittel (read only) | 510 / 462 / 508 | 469 / 463 / 485 | 1,002 / 889 / 995 | 790 / 812 / 819 | 167 / 178 / 169 | 195 / 197 / 189 | 629 / 692 / 646 MB | 789 / 832 / 838 MB |
+| mittel + saving | 1,540 / 1,276 / 1,445 | 1,239 / 1,059 / 1,254 | 3,258 / 3,062 / 3,051 | 2,679 / 2,270 / 2,598 | 55 / 63 / 61 | 71 / 79 / 72 | 1,136 / 1,228 / 1,224 MB | 1,138 / 1,264 / 1,236 MB |
+| of which writing | 1,957 / 2,061 / 1,787 | 2,065 / 1,696 / 1,867 | 4,399 / 4,766 / 4,316 | 4,662 / 4,319 / 5,117 | | | | |
+
+Times in ms. Reading gets faster (p95 −18 %, 15 % more requests per second), and so does saving; saving itself stays the same. Memory rises higher in the first run (more requests, copies from the read cache); at the end of both runs it is the same – the caches don't grow with the load (fixed keys, at most 64 or 500 entries). Waiting for a free connection increases (p95 50–110 ms → 75–255 ms, with saving up to 590 ms): "Opening a folder" now asks at the same time, and more requests get through.
+
+## Calendar in "To do" (#528, #725) { #kalender-in-zu-erledigen-528-725 }
+
+Month and year in "To do" load their period with **one** request: `GET /api/termine?von=…&bis=…` (optionally `&favoriten=1`) (at most 400 days, `zeitraumProblem` in `shared/src/kalender.ts`). The server only fetches folders with a date in the period (`mappenMitDatum`, #477); for fields with a **recurring** deadline additionally all folders with a date until the end of the period, because their future dates (`folgetermine` in `shared/src/fristen.ts`, date + k · interval) can fall into it. These dates are never stored. Like the views' numbers, the answer is in the cache (`Zaehlerspeicher`), per user, permissions and period; the `Haushaltsstand` also counts with changed reminders (`ZAEHLT_FUER_TERMINE`), because they are otherwise in `OHNE_FOLGEN` (since #742 a shared state in the database instead of a `fristenstand` of its own).
+
+**Measurement for #528** (the same data as #477: 50,000 demo folders, local computer; median of 5 requests; *cold* = a new period per request, *hit* = the same period from the cache; time until the complete answer):
+
+| Query | Who | Entries | of which future dates | cold ms | hit ms |
+|---|---|---:|---:|---:|---:|
+| List 30 days | Administrator | 545 | – | 32 | 9 |
+| Month | Administrator | 934 | 377 | 160 | 9 |
+| Year | Administrator | 11,863 | 11,863 | 381 | 81 |
+| Month | Member with role | 0 | 0 | 74 | 6 |
+| Year | Member with role | 0 | 0 | 141 | 6 |
+| Month | Member without role | 0 | 0 | 81 | 6 |
+| Year | Member without role | 0 | 0 | 120 | 7 |
+
+The administrator is the worst case: all deadlines without a recipient belong to them, in the demo data almost all contracts with a yearly notice period. The year is then 3.2 MB of JSON (without compression); in the browser the year view still stands after about 0.1–0.2 s, the month after 0.1–0.3 s. The members have no deadlines of their own in the demo data; their time is spent searching for candidates. In a household with a few dozen deadlines everything is in the range of the list.
+
+## Load test { #lasttest }
+
+`server/test/lasttest.mjs` (#544, #563) sends many **simultaneous HTTP requests** to a running Ablago – the counterpart to the measuring script, which measures individual database accesses. Without dependencies, only with Node.js's `fetch`. In the image it is the command `dms-lasttest` (operators: Administrator manual → [Running the load test yourself](https://help.ablago.app/admin/aktuell/en/lasttest/)).
+
+**Load-test mode** (#612): with `DMS_LASTTEST=klein|mittel|gross|extrem|alle`, Ablago only listens on 127.0.0.1 (free port) and starts the script as a child process (`fork`, IPC) against this address; under the actual port there is only the page with progress and result (`server/src/lasttestmodus.ts`, `web/src/lasttest.tsx`, shared types in `shared/src/lasttest.ts`). The script reports its steps with `process.send` (only with an IPC channel; nothing changes on the console) and at the end sends report and result block with the placeholders `{{geraet}}` and `{{speicher}}`, which the page fills in. Beforehand, `lasttest.mjs --pruefen` checks the lock protecting the real Library without creating anything; if it triggers, Ablago starts normally and reports the reason in the Workbench overview (`lasttestAbbruch`). `DMS_LASTTEST_DAUER` corresponds to `--dauer`, `DMS_LASTTEST_MAPPEN` (only extrem, 500000 or 1000000) to `--mappen`, `DMS_LASTTEST_SPEICHERN=nein` to `--ohne-speichern` (#739). Tests: `lasttestmodus.test.ts`, with PostgreSQL `lasttestmodus-e2e.test.ts` (level klein with 3 s measuring time, about one minute).
+
+```bash
+# start a fresh DMS (own, empty database), then one level or all – the script sets up by itself
+# and adds the demo folders per level (5,000, 50,000, 200,000; 2 % with a letter as PDF)
+node server/test/lasttest.mjs klein --ziel http://127.0.0.1:3100 --grenzen
+node server/test/lasttest.mjs alle --ziel http://127.0.0.1:3100 --dauer 120 --bericht bericht.md --json lasttest.json --grenzen
+# extrem (#739) only by hand; locally for trying out with fewer folders (the report names the stock)
+node server/test/lasttest.mjs extrem --mappen 1000000 --ziel http://127.0.0.1:3100 --bericht bericht.md
+node server/test/lasttest.mjs extrem --mappen 60000 --ziel http://127.0.0.1:3100 --dauer 10 --schritt-dauer 10 --bis 50
+```
+
+You start a matching Ablago from `server/` with an own, empty database (e.g. `dmslast`): `NODE_ENV=production DMS_DATENWURZEL=/tmp/dmslast DMS_EINRICHTUNGSCODE=aus DATABASE_URL=postgres://…/dmslast PORT=3100 node dist/index.js` after `npm run build -w server`. Delete the database again afterwards.
+
+**Protecting the real Library:** if Ablago is fresh, the test sets it up (household "Lasttest", accounts with persona names under `example.org`, examples, a role, rules as in a household). If it is already set up, it only measures if it can sign in with its administrator account and at most 200 folders aren't demo folders – otherwise it stops with exit code 2 without creating anything. After new demo folders it waits until the background work (text recognition, thumbnails) is over.
+
+**Profile:** every "person" sends one request after another, mixed as in everyday life – start page (`/api/startseite`, `/api/sichten`, `/api/termine/naechster`, `/api/typen`) 15 %, list of a view 25 %, opening a folder 25 %, search 15 %, thumbnail 10 %, downloading a document 10 %; one third as an administrator, the rest as a member (with read filter). "100 at once" means: 100 requests are constantly under way. If a person gets 503, they wait as `Retry-After` says.
+
+**With saving** (#739): after the previous run of each level follows a second one with the same concurrency (and with mittel with an export alongside) according to `PROFIL_SPEICHERN`: the read shares × 0.9, plus 10 % writing (`SCHREIBEN`) – changing a folder 4 % (`PUT /api/mappen/:id` on a text or long text field, not unique, without pattern), star 2 % (`PUT`/`DELETE …/favorit`), note 2 % (create or delete one's own), task 2 % (create for oneself, complete it next time). Targets are, per view, up to 50 of the first 200 folders that the member without a role sees – all three accounts may read and change them; the run fetches the targets itself, so the previous one starts unchanged. With gross and extrem it runs after recovery with as many at once as the limit (otherwise like the first step). Afterwards `aufraeumen`: stars and notes gone, values back, open tasks from the run completed (own ones and "Changed" for favourites, #422); what remains are entries in the history and completed tasks. Measurement without target and without CI limit; writing requests with 4xx are in the report ("Rejected") – then the test isn't right. The old lines of the result block (also memory and event loop) only count the previous runs; new are `… + Speichern` per level and `Mit Speichern: Arbeitsspeicher …`.
+
+**Levels** (#563; the levels "normal" and "Überlast" from #544 are merged into them; `--stufe normal` and `ueberlast` run as `mittel` and `gross` respectively)
+
+| Level | What | Data | Checked (`--grenzen`) |
+| --- | --- | --- | --- |
+| klein | 25 at once, `--dauer` seconds | 5,000 folders | **Target:** p95 < 300 ms. **CI limit:** p95 300 ms, no errors (no 5xx, no request without an answer), no 503 |
+| mittel | 100 at once, alongside one large export after another: PDF of up to 1000 folders with overview, PDF of the folders with documents, ZIP of the largest view | 50,000 folders | **Target:** p95 < 1 s. **CI limit:** p95 1,000 ms (equal to the target), error rate < 0.1 %, no 503, every export succeeds |
+| klein/mittel/gross + saving (#739) | like the level (gross: limit), 10 % writing, tidying up afterwards | like the level | **Measurement**, no target, no CI limit, no influence on the exit code |
+| gross | 5, 10, then from 25 at once 25 more every `--schritt-dauer` (120) seconds (`--start` begins exactly there), until p95 > 3 s, error rate > 1 % or the overload protection kicks in (503); then 1000 at once (at most 60 s) with a sign-in protection probe, then recovery | 200,000 folders | **Measurement:** limit = highest level without stopping; with `--vorher` a warning if it is more than 20 % below that of the last run. **Required:** no request without an answer after 60 s, Ablago's memory ≤ 1.5 GB, server stays reachable, recovery (20 requests in a row with p95 ≤ 1 s) within 30 s, sign-in protection blocks even the right password after wrong ones (429) |
+| extrem (#739) | like gross; only by hand, not in `alle` and not in the schedule | 500,000 (default) or 1,000,000 folders (`--mappen`) | **Measurement** like gross; in the workflow without `--grenzen`. In report and result block additionally: duration of creating the demo data (runs of 50,000 each via the Workbench, then background work) and size of database and documents (`GET /api/werkbank/system`) |
+
+Output per run: requests, per second, median, p95, p99, error rate (5xx and without an answer), rejected (503, with `Retry-After`), event loop delay (p99 and maximum), waiting for a database connection, Ablago's memory (start, maximum, end), plus duration and size of every export and median/p95 per kind. The test reads the server's values every 2 seconds via `GET /api/werkbank/last`. At the end is the **result block** to copy – without the target's address, without names; the CPU model only if the test runs on the same computer. With `--json` everything as a file (also input for `--vorher`); with `--gleichzeitig <n>` (and `--ohne-export`) a single run.
+
+**Why these limits:** klein and mittel are a **quality promise** (Thomas, #563): a household should experience Ablago as fluent, a small business also with an export alongside. The **targets** (p95 < 0.3 s and < 1 s respectively) are clearly stricter than the generous limits from #544 (p95 ≤ 5 s and 6 s respectively, error rate ≤ 1 %). Because the very first run on GitHub's computers missed the target of mittel, a **CI limit** of its own applies to the exit code (Thomas's decision, #563): first GitHub run + 20 % (run 41448183378, Ablago 0.139.0: klein p95 95 ms → stays at the target 300 ms; mittel p95 2384 ms → 2860 ms). It only gets stricter, never looser, until it reaches the target – after the speed-up (#615; run 41549943703, Ablago 0.146.0: mittel p95 586 ms) that has happened: CI limit = target for klein and mittel. A missed target is in the report (section "Target missed", in the workflow as a notice) and leads to a follow-up issue "Speed up"; the run only turns red above the CI limit. Both are in `STUFEN` (`ziel`, `ciGrenze`) in `server/test/lasttest.mjs`, checked by `server/test/lasttest-grenzen.test.ts`. Gross, on the other hand, is a **measurement**: where the limit lies depends on the hardware; the run reports it and warns on clear deterioration instead of turning red. Locally, on a loaded computer with 2 cores, klein was at p95 525 ms and mittel at p95 4.7 s – not meaningful, but a hint that a computer with 2 cores doesn't meet the promise for mittel.
+
+**Overload protection** (`server/src/ueberlast.ts`): more than `DMS_MAX_ANFRAGEN` (250) simultaneous requests to `/api/` and `/webdav` are answered immediately with 503 and `Retry-After: 5` by a hook before anything else. Counting runs from arrival until the answer is finished or the connection is closed (`close`). Exempt: `/api/gesundheit` and `/api/werkbank/last`. In addition the server accepts new connections with a longer queue (`backlog: 2048` instead of 511). Programs that don't respect `Retry-After` and ask again immediately also immediately get their 503; on the test computer with 2 cores, with 1000 at once, about 1–2 % of requests then stayed without an answer after 60 s, although the server didn't process any request longer than 15 s – the load test itself (on the same computer) could no longer keep up with setting up connections.
+
+**Database connections** (`server/src/db.ts`): default 10, configurable with `DMS_DB_VERBINDUNGEN` (2–100). Measured with 100 at once without export, two rounds each: 5 connections 3,894–4,117 requests per minute (p95 2.7–2.9 s), 10 connections 3,516–3,726 (p95 2.9–3.1 s), 20 connections 3,512–3,517 (p95 2.9 s) – level within the variation. `Verbindungswarten` measures every 5 seconds with `SELECT 1` how long a query waits for a free connection (including round trip and event loop waiting time); Workbench → Database connection shows median and maximum of the last minute.
+
+**Workflow** `.github/workflows/lasttest.yml`: weekly (Wednesday nights) and by hand ("Run workflow", optionally level, duration and for extrem the number of folders) – not on every pull request, because GitHub's computers vary and a run takes a good hour. It starts PostgreSQL 17 as a service, builds the server, measures all three levels with `--grenzen` (CI limit of klein or mittel or a requirement missed → run red; target missed → notice) and attaches the report to the run (summary; report, JSON and Ablago's log as an artefact). It remembers the limit of gross in the cache (`lasttest-gross-…`) for the warning on the next run. After gross (so also with `alle`) and extrem it restarts Ablago with the whole stock: `server/test/startzeit.mjs` measures the time until **reachable** (start page "Ablago is starting …") and until **ready** (`/api/gesundheit` 200) and attaches it to the report (#802; `startzeit.json` in the artefact). Start it by hand before a bigger release.
+
+**extrem in CI** (#739): level `extrem` only via "Run workflow"; the job's time limit is then 350 instead of 180 minutes (GitHub allows 6 hours). The demo data arises as with gross via the Workbench (`POST /api/werkbank/demo`, 50,000 per run) – no separate route directly into SQL, so that the same checks apply and the load-test mode in the browser measures the same. On GitHub's computers, 50,000 folders with 50,000–200,000 existing took 54–72 s; for 1 million about 20 runs of 1–3 minutes are therefore to be expected (roughly 30–60 minutes), plus the background work (waited for at most 15 minutes) and the steps of the limit. Space: locally 60,000 folders occupied 125 MB in the database and 3 MB of documents (about 2 KB per folder); 1 million folders thus need roughly 2–3 GB plus WAL – far below the computers' 14 GB. The run's summary names the free space afterwards.
+
+**Sped up in #615** (search and "opening a folder" under load): measured with samples from `pg_stat_activity` during the run, `EXPLAIN ANALYZE`, Server-Timing and a CPU profile of the server (`--cpu-prof`). The causes, in order of their weight:
+
+1. **Search folded every folder anew.** Title and every value went through `dms_falte` (unaccent) and `jsonb_each_text` with every search – roughly 200 ms of database computing time per query with 20,000 folders, and a search needs two to five queries (counting, page, without hits once more with similar words). Now the folded text is in `mappen.suchtext` (migration 055, trigger); the search pre-filters with it and afterwards compares exactly per title and value as before – the same hits, 10–15 ms per query. With a search, PostgreSQL only sorts after filtering (sub-query with `OFFSET 0`): otherwise the generic plan of a prepared query went through the whole title index for rare terms (over 100 ms).
+2. **Writing under load.** Every long-running access was an INSERT of its own with its own commit – under load almost every second request; that slowed the database down exactly then (waiting for `WALWrite`/`WALSync`). Now collected. "Opening a folder" writes "last opened" and "seen": both are now one statement each without waiting for the disk (`ohneWarten` in `repo-pg.ts`); before, the commits kept the user's row locked so long that simultaneous requests of the same user waited for each other (`Lock:transactionid`).
+3. **Lists sorted all folders of a view.** With `typ_id = ANY(…)`, PostgreSQL 16 doesn't use the index `(haushalt_id, typ_id, lower(titel))` for the order; a single type is therefore an equality in the query (`typIn`): one page of the largest view 1 ms instead of 45 ms.
+4. **Duplicate accesses per request.** The access already reads folder types and the user's roles (`z.typen`, `z.a`); list and "opening a folder" don't read them again. "Opening a folder" reads the folder's tasks once (for the rule "with task", the answer and "seen") and checks back-links and references in one access: 15 instead of 19 accesses (member 18 instead of 24), the list 10 instead of 12. The start page only asks whether there is a folder of one's own instead of counting all folders per type; `heuteIn` only creates its `Intl.DateTimeFormat` once (before, a good 3 % of the server's computing time).
+
+Load test mittel on the test computer (2 cores, load test on the same computer, PostgreSQL 16): p95 before 3.9 s, after 0.75 s (120 s per run); numbers per action in the release notes of #615. Afterwards Node.js's one thread is the bottleneck (converting answers into JSON, masks for passwords, socket writing by postgres.js), no longer the database.
+
+**Sped up in #740 and #743** (search, lists, saving; migration 075):
+
+1. **Search via indexes.** `mappen.suchtext` is never empty (NOT NULL) and has a trigram index. The hits come as one set of ids (`UNION` of folder, notes and documents, each via its index); only afterwards does the query check type, conditions and read filter; total and page in one query (`count(*) OVER ()`). Whether "Did you mean …?" finds something is asked by `gibtTreffer` (`EXISTS … LIMIT 1`).
+2. **Sorting via indexes.** `(haushalt_id, lower(titel), id)` for views over several types, `(haushalt_id, typ_id, erstellt|geaendert)` and `(haushalt_id, erstellt|geaendert)`. Descending, PostgreSQL reads the same index backwards; for this there is no `NULLS LAST` in the query for title, created and changed (the columns are NOT NULL; a title is only missing briefly before it is first calculated). Without a search only the first page counts; when paging, the interface sends the number along (`gesamt`).
+3. **Duplicate check via an index.** `dms_gleichwerte(werte)` returns a fingerprint of field key and `lower(trim(value))` (md5 as uuid) per text and number value; the GIN index over it finds equal values, afterwards they are compared exactly. `findeDoppelte` checks many folders in one query (fit after saving).
+4. **Saving in one go.** Creating and changing run in one transaction (starting over on deadlock); the title is in the same UPDATE as the values. The event distributor sets "distributed" per fetch in one statement.
+
+Measured with 50,000 demo folders and 25,000 documents (measuring script, median of 7 runs, `Dienst.seite` and `aendereMappe` respectively, 2 cores, PostgreSQL 16):
+
+| Case | before | after |
+|---|---:|---:|
+| All types, title ↑ | 98 ms | 14 ms |
+| All types, created ↓ | 141 ms | 9 ms |
+| Invoice, title ↓ | 61 ms | 8 ms |
+| Invoice, created ↓ | 50 ms | 7 ms |
+| Search "Strom" across all types | 88 ms | 14 ms |
+| Search "Strom" with notes and full text | 381 ms | 164 ms |
+| Search without hits | 56 ms | 2 ms |
+| Saving a contract (unique field) | 33 ms | 12 ms |
+
+Individual queries (`EXPLAIN ANALYZE`): page over all types by title 49 → 0.6 ms, by created descending 54 → 0.5 ms, invoice by created descending 33 → 0.3 ms, duplicate contract number 17 → 0.2 ms. Load test mittel (30 s per run, load test on the same computer): p95 1274 → 693 ms; with saving p95 3.8 → 3.2 s, writing requests p50 2.3 → 1.7 s. With the indexes, the table `mappen` grows from 46 to 76 MB; the migration took 4 s.
+
+**Measurement for #542** (worker pool, measured alternately before/after): with 10 simultaneous requests with export, p95 fell from 2,172 to 786 ms and the event loop delay (p99) from 1,373 to 135 ms; details in the release notes of #542.
+
+## Several processes (#745) { #mehrere-prozesse }
+
+`DMS_PROZESSE` (default 1, `auto` = cores − 1, at most 4, below 2 GB of memory 1) distributes the requests in turn to several processes with `node:cluster`; process 1 leads and does the background work (architecture: [Several processes](aufbau.md#mehrere-prozesse)). `GET /api/werkbank/last` then reports the memory of **all** processes together (Pss, so that shared code doesn't count several times; the sum of the RSS is under `rssMb`), the event loop waiting time of the slowest process and one line per process under `prozesse`; the database connections together. That way the requirement "Ablago's memory ≤ 1.5 GB" stays one for the whole of Ablago. The result block names `DMS_PROZESSE` among the settings.
+
+**Measurement for #745** (local, 2 cores, PostgreSQL 16, load test on the same computer, server from `dist/`; 30 s per run or 20 s per step of gross; alternating 1 and 2 processes):
+
+| Run | 1 process | 2 processes |
+|---|---|---|
+| mittel (50,000 folders), p95 | 963 / 1,049 ms | 1,338 / 1,320 ms |
+| mittel, requests per s | 178 / 160 | 152 / 150 |
+| mittel + saving, p95 | 3,568 / 3,237 ms | 4,592 / 5,502 ms |
+| mittel + saving, requests per s | 56 / 55 | 50 / 39 |
+| mittel, event loop p99 at most | 156 / 161 ms | 303 / 274 ms |
+| mittel, memory at most (2 processes: sum of RSS) | 944 / 953 MB | 1,217 / 1,229 MB |
+| mittel + saving, memory at most | 1,219 / 1,156 MB | 1,819 / 1,874 MB |
+| mittel on 200,000 folders, p95 (saving) | 4,741 ms (11,208 ms) | 6,023 ms (19,362 ms) |
+| mittel on 200,000 folders, memory Pss (saving) | 908 MB (1,573 MB) | 1,324 MB (2,300 MB) |
+| gross (200,000 folders): limit | 100 at once, 67/s, p95 2,476 ms | 150 at once, 88/s, p95 2,564 ms |
+| gross: memory at most (2 processes: Pss) | 1,010 MB | 1,134 MB |
+| gross: recovery after 1000 at once | 0.3 s | 0.3 s |
+
+**Result:** with 2 cores, on which PostgreSQL and the load test also compute, there is no free core for a second process: at level mittel it gets slower (more switching between processes, two event loops fight for the same core); only the limit of level gross rises (100 → 150 at once). Memory rises by 30–50 %: every process has its own caches, buffers and heap. Hence the recommendation cores − 1 and `auto` = 1 with 2 cores; a meaningful measurement with 3 and 4 processes needs a computer with at least 4–6 cores (to be added for #576 from the maintainer's NAS or by the workflow). The overload probe with 1000 at once left requests without an answer locally (1 process 211, 2 processes 551) – as described under "Overload protection", the load test on the same computer can't keep up with setting up connections.
+
+## Rules { #regeln }
+
+- **No `SELECT *` on tables with large columns.** Documents always with `DOKUMENT_SPALTEN`, folders with `MAPPEN_SPALTEN` (without `suchtext`, #615); read the full text only via `volltext(id)` or in bundles via `volltexte(ids)`. EXPLAIN doesn't show this: the full text is stored out of line (TOAST) and only unpacked when it is sent to the server.
+- **Don't load all folders to filter in memory.** What can be narrowed down in SQL (date in the period, open tasks), the query narrows down (#477: `mappenMitDatum`, inbox in the counter).
+- **No accesses in loops over folders or documents.** For bulk work there are bundled methods (`dokumenteVon`, `volltexte`, `versionenVonDokumenten`, `notizenVon`, `aufgabenVonMappen`, `historieVon`). Even locally, one access costs about half a millisecond – with 10,000 folders that is seconds.
+- **Refresh the statistics after bulk runs:** `Dienst.aktualisiereStatistik()` (creating and removing demo data; restoring does it itself). For `dokumente` only via the columns in `STATISTIK_SPALTEN`: without a column list, PostgreSQL also calculates the statistics of the index `to_tsvector('german', volltext)` – over a minute with 20,000 documents instead of 0.1 seconds.
+- **Long computing work yields.** Server and interface share one Node process: whatever blocks the event loop delays every request – and appears in the measurement of database accesses as a "long access" although the database was fast. Loops over many elements yield with `takt()` (`server/src/demo.ts`) or `setImmediate`; large data is compressed with the asynchronous `zlib` instead of in the main thread.
+- **Large files as a stream** (#746): uploads up to 100 MB go into a temporary file; the checksum arises while reading (`strom: true` on the route, `nimmAuf`). The full export writes long lists (CSV, JSON Lines) line by line with back-pressure and pauses by computing time (`Zeilen` in `vollexport.ts`) instead of building them as one text. Large tables don't go to the worker as a message (the copy holds the main thread) but as a file the worker reads itself (`exportTabelleAusDatei`).
+- **Heavy work into the worker.** What computes for seconds (PDF, large tables) belongs in the [worker pool](aufbau.md#arbeiter-pool) (#542), not in the main thread – not even with pauses.
+- **Don't read again what the access already knows** (#615): folder types (`z.typen`, except for service accounts – they only see theirs) and the resolution with roles and date (`z.a`).
+- **Only remember with a state from the database** (#741): a new cache beyond the request depends on the household state (`lesespeicher.ts`), applies to everyone alike and goes into the table above. Never for sessions, people, roles or permissions – they exist at most once per request (`jeAnfrage`).
+- **Memos without waiting for the disk** (#615): what may get lost in a crash ("last opened", "seen") a single statement writes with `ohneWarten(sql)` in `FROM`. Never for data the user entered, and not in a transaction (it has no effect there).
+- **No `indexOf` in sorts over many elements.** `liste.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))` is quadratic: with 20,000 folders that is seconds up to over half a minute in the main thread (#542). Build an index first (`inReihenfolge` in `dienst.ts`).
