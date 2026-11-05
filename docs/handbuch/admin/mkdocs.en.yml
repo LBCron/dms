@@ -1,0 +1,141 @@
+# Englische Fassung (#730): erbt alles von mkdocs.yml, eigene Seiten in docs-en/, gebaut nach …/admin/en/.
+# Alles außer Seiten (Stile, Logo, Bilder) holt werkzeuge/sprache_hook.py aus docs/; Grafiken mit Text als *.en.svg.
+INHERIT: mkdocs.yml
+site_name: Ablago – Administrator manual
+site_description: Setting up, running and extending Ablago
+site_url: !ENV [SITE_URL, 'https://help.ablago.app/admin/aktuell/en/']
+edit_uri: edit/main/docs/handbuch/admin/docs-en/
+docs_dir: docs-en
+copyright: Ablago's source code is licensed under Apache-2.0; the name and logo are not covered · <a href="https://github.com/sponsors/motom001">Support the project</a> · This manual loads nothing from third parties (<a href="https://help.ablago.app/admin/aktuell/en/datenschutz/#keine-telemetrie">privacy</a>)
+
+theme:
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-sunny, name: Light mode }
+
+plugins:
+  - search:
+      lang: en
+
+hooks:
+  - ../werkzeuge/sprache_hook.py
+
+# Die Anker sind dieselben wie im Deutschen (werkzeuge/anker.py) – ein falscher fällt beim Bauen auf.
+validation:
+  anchors: warn
+
+extra_css:
+  - stylesheets/ablago.css
+  - stylesheets/sprache.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  # Wiederkehrende Hinweise (#296): erst die englische Fassung aus snippets/en/, sonst die deutsche.
+  - pymdownx.snippets:
+      base_path: [docs/handbuch/snippets/en, ../snippets/en, docs/handbuch/snippets, ../snippets]
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.keys
+
+extra:
+  alternate:
+    - { name: Deutsch, link: ../, lang: de }
+    - { name: English, link: ./, lang: en }
+  # Hinweis oben auf jeder Seite (#730, overrides/main.html). Entfällt, sobald jemand die Übersetzung durchgesehen hat.
+  maschinell:
+    text: Machine translated – improvements welcome.
+    verweis: Suggest an improvement
+    link: https://github.com/motom001/dms/issues/new
+  social:
+    - icon: fontawesome/solid/heart
+      link: https://github.com/sponsors/motom001
+      name: Support the project (GitHub Sponsors)
+    - icon: fontawesome/brands/github
+      link: https://github.com/motom001/dms
+      name: Source code on GitHub
+
+nav:
+  - Set up in five steps: fuenf-schritte.md
+  - Overview: index.md
+  - New in this version: neu.md
+  - Installation and operation:
+      - Setup and operation: installation.md
+      - Sending e-mail: e-mail-versand.md
+      - Setup as a file: einrichtungsdatei.md
+      - "How do I get a DMS?": https://help.ablago.app/installieren/aktuell/en/
+      - Updating and backing up: aktualisieren.md
+      - Growing and moving: wachsen.md
+      - What Ablago can handle: verkraftet.md
+      - Running a load test yourself: lasttest.md
+      - Running AI locally: ki-lokal.md
+      - Encryption: verschluesselung.md
+  - Workbench:
+      - Workbench and overview: uebersicht.md
+      - Building your filing system:
+          - Mappe types: mappentypen.md
+          - Views: sichten.md
+          - Number ranges: nummernkreise.md
+          - Stamps when sharing: stempel.md
+          - Automations: automatisierungen.md
+          - Packages: pakete.md
+          - Search: suche.md
+          - Archive mode and retention: archiv.md
+          - Links via field values: direktlinks.md
+      - Users and security:
+          - Who may administer Ablago?: verwalten.md
+          - Users and roles: benutzer.md
+          - Permissions: berechtigungen.md
+          - Data protection in Ablago: datenschutz.md
+          - Deletion concept (template): loeschkonzept.md
+      - Post and incoming:
+          - Mailboxes: postfaecher.md
+          - Inbox folder: eingangsordner.md
+          - WebDAV drive: webdav.md
+          - Webhooks: webhooks.md
+          - Text recognition and maintenance: texterkennung.md
+      - Protecting your data:
+          - Backup: sicherung.md
+          - Off-site backup: sicherung-ausser-haus.md
+          - Restoring: wiederherstellen.md
+          - Exporting data: export.md
+          - Recycle bin: papierkorb.md
+      - Settings:
+          - Notifications and tasks: aufgaben.md
+          - Region: region.md
+          - Sign-in protection: anmeldeschutz.md
+          - Designs: designs.md
+      - Maintenance and troubleshooting:
+          - System status: speicherplatz.md
+          - Log, database, technology: fehlersuche.md
+          - Maintenance mode: wartungsmodus.md
+          - Demo data: demo.md
+  - Emergency:
+      - "What has happened?": was-ist-passiert.md
+      - "Emergency: no admin left": notfall.md
+      - "Console: the dms command": konsole.md
+      - Procedure documentation (template): verfahrensdokumentation.md
+  - Interface (API): api.md
+  - Background:
+      - Technology: technik.md
+      - Decisions: entscheidungen.md
+      - Terms (glossary): https://help.ablago.app/benutzer/aktuell/en/begriffe/
+  - More:
+      - What's new? (changelog): https://github.com/motom001/dms/releases
+      - User manual: https://help.ablago.app/benutzer/aktuell/en/
+      - "How do I get a DMS?": https://help.ablago.app/installieren/aktuell/en/
+      - Developer manual: https://help.ablago.app/entwickler/aktuell/en/

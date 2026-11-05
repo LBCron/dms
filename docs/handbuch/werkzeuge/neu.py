@@ -6,6 +6,9 @@
 
 Benutzerhandbuch: ohne die Abschnitte „Beim Aktualisieren beachten“ und „Für Administratoren“.
 Administratorhandbuch: alles. Dazu ein Link zum Vergleich auf GitHub.
+
+Englische Fassung (#730): docs-en/neu.md mit englischem Rahmen; die Release-Notizen selbst gibt es nur
+auf Deutsch, darauf weist die Seite hin.
 """
 import json, re, sys
 from pathlib import Path
@@ -56,7 +59,35 @@ def main():
         if not benutzer:
             teile += ['- Was deine Installation seit ihrer Version verpasst hat, verlinkt **Werkbank → Technik**.']
         (WURZEL / 'docs' / 'handbuch' / handbuch / 'docs' / 'neu.md').write_text('\n'.join(teile) + '\n', encoding='utf-8')
+        englisch = WURZEL / 'docs' / 'handbuch' / handbuch / 'docs-en'
+        if englisch.is_dir():
+            (englisch / 'neu.md').write_text(auf_englisch(teile, minor, ziel, bool(diese), vergleich, frueher, benutzer), encoding='utf-8')
     print(f'neu.md für {ziel}: {len(diese)} Release(s) {", ".join(p.stem for p in diese)}')
+
+def auf_englisch(teile, minor, ziel, gibt_es, vergleich, frueher, benutzer) -> str:
+    """Englischer Rahmen um die deutschen Release-Notizen (#730)."""
+    rumpf = [z for z in teile if not z.startswith('# Neu in Version')]
+    # Rahmen des deutschen Teils weglassen; die Abschnitte der Versionen bleiben.
+    try:
+        rumpf = rumpf[:rumpf.index('## Ältere Versionen')]
+    except ValueError:
+        pass
+    rumpf = [z for z in rumpf if z not in ('!!! info "Entwicklungsstand"', '    Dieses Handbuch beschreibt den Stand von `main` – manches davon ist noch in keinem Release.', 'Für diese Version gibt es noch keine Release-Notizen.')]
+    z = [f'# New in version {minor}', '']
+    if ziel == 'entwicklung':
+        z += ['!!! info "Development version"', '    This manual describes the state of `main` – some of it is not in any release yet.', '']
+    z += ['!!! note "Release notes in German"', '    The release notes are written in German. A browser translation helps until they are available in English.', '']
+    if not gibt_es:
+        z += ['There are no release notes for this version yet.', '']
+    z += [x for x in rumpf]
+    z += ['## Older versions', '']
+    if vergleich:
+        z += [f'- All changes since {frueher[0].stem.lstrip("v")} in detail: [comparison on GitHub]({vergleich})']
+    z += ['- All versions with their changes: [releases on GitHub](https://github.com/motom001/dms/releases)']
+    if not benutzer:
+        z += ['- What your installation has missed since its version is linked under **Workbench → Technology**.']
+    return '\n'.join(z).rstrip() + '\n'
+
 
 if __name__ == '__main__':
     main()

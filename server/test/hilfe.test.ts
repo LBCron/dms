@@ -4,7 +4,8 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { handbuchOnlineUrl, handbuchUrl, hilfeOnlineUrl, hilfeUrl, HILFE } from '../../shared/src/hilfe';
+import { handbuchOnlineUrl, handbuchStartUrl, handbuchsprache, handbuchUrl, hilfeOnlineUrl, hilfeUrl, HILFE, installierenUrl } from '../../shared/src/hilfe';
+import { setzeSprache } from '../../shared/src/sprache';
 import { hilfeAntwort } from '../src/hilfe';
 
 describe('Offline-Hilfe (#219)', () => {
@@ -45,5 +46,53 @@ describe('Offline-Hilfe (#219)', () => {
     } finally {
       if (alt === undefined) delete process.env.DMS_VERSION; else process.env.DMS_VERSION = alt;
     }
+  });
+
+  describe('Sprache der Person (#730)', () => {
+    it('Deutsch ohne Unterordner, Englisch unter …/en/ – lokal und online, mit demselben Anker', () => {
+      assert.equal(hilfeUrl(HILFE['werkbank.sicherung'], '0.44.4', 'de'), '/hilfe/admin/sicherung/');
+      assert.equal(hilfeUrl(HILFE['sicherung.zeitplan'], '0.44.4', 'en'), '/hilfe/admin/en/sicherung/#zeitplan-und-aufbewahrung');
+      assert.equal(handbuchUrl('benutzer', null, 'mappen/', 'en'), '/hilfe/benutzer/en/mappen/');
+      assert.equal(handbuchOnlineUrl('admin', 'sicherung/', 'en'), 'https://help.ablago.app/admin/aktuell/en/sicherung/');
+      assert.equal(hilfeOnlineUrl(HILFE['einrichtung.code'], 'en'), 'https://help.ablago.app/admin/aktuell/en/installation/#einrichtungscode');
+      assert.equal(installierenUrl('en'), 'https://help.ablago.app/installieren/aktuell/en/');
+      assert.equal(installierenUrl('de'), 'https://help.ablago.app/installieren/aktuell/');
+      assert.equal(handbuchStartUrl('en'), 'https://help.ablago.app/en/');
+    });
+
+    it('Gebietsschema und Sprachen ohne eigenes Handbuch', () => {
+      assert.equal(handbuchsprache('en-GB'), 'en');
+      assert.equal(handbuchsprache('EN_us'), 'en');
+      assert.equal(handbuchsprache('de-formal'), 'de');
+      assert.equal(handbuchsprache('fr'), 'de', 'ohne französisches Handbuch das deutsche');
+      assert.equal(handbuchsprache(''), 'de');
+    });
+
+    it('ohne Angabe die Sprache der Oberfläche (setzeSprache)', () => {
+      try {
+        setzeSprache('en');
+        assert.equal(hilfeUrl(HILFE['ablage.post'], null), '/hilfe/benutzer/en/post/');
+        assert.equal(hilfeOnlineUrl(HILFE['einrichtung.fertig']), 'https://help.ablago.app/admin/aktuell/en/installation/#fertig');
+        assert.equal(hilfeUrl(HILFE['ablage.post'], null, 'de'), '/hilfe/benutzer/post/', 'ausdrückliche Sprache gewinnt');
+      } finally {
+        setzeSprache('de');
+      }
+      assert.equal(hilfeUrl(HILFE['ablage.post'], null), '/hilfe/benutzer/post/');
+    });
+
+    it('ohne gebaute Handbücher: englische Seiten und Startseite online', async () => {
+      const web = await mkdtemp(join(tmpdir(), 'dms-hilfe-'));
+      assert.deepEqual(hilfeAntwort('/hilfe/admin/en/sicherung/', web), { umleiten: 'https://help.ablago.app/admin/aktuell/en/sicherung/', status: 302 });
+      assert.deepEqual(hilfeAntwort('/hilfe/en/', web), { umleiten: 'https://help.ablago.app/en/', status: 302 });
+    });
+
+    it('mit gebauten Handbüchern: englische Seite aus dem Unterordner', async () => {
+      const web = await mkdtemp(join(tmpdir(), 'dms-hilfe-'));
+      await mkdir(join(web, 'hilfe', 'admin', 'en', 'sicherung'), { recursive: true });
+      await writeFile(join(web, 'hilfe', 'index.html'), 'START');
+      await writeFile(join(web, 'hilfe', 'admin', 'en', 'sicherung', 'index.html'), 'BACKUP');
+      assert.deepEqual(hilfeAntwort('/hilfe/admin/en/sicherung/', web), { datei: join('hilfe', 'admin', 'en', 'sicherung', 'index.html') });
+      assert.deepEqual(hilfeAntwort('/hilfe/admin/en/sicherung', web), { umleiten: '/hilfe/admin/en/sicherung/', status: 301 });
+    });
   });
 });

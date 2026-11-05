@@ -1,0 +1,95 @@
+# Englische Fassung (#730): erbt alles von mkdocs.yml, eigene Seiten in docs-en/, gebaut nach …/benutzer/en/.
+# Alles außer Seiten (Stile, Logo, Bilder) holt werkzeuge/sprache_hook.py aus docs/; Grafiken mit Text als *.en.svg.
+INHERIT: mkdocs.yml
+site_name: Ablago – User manual
+site_description: Working with Ablago – Mappen, documents, search and My account
+site_url: !ENV [SITE_URL, 'https://help.ablago.app/benutzer/aktuell/en/']
+edit_uri: edit/main/docs/handbuch/benutzer/docs-en/
+docs_dir: docs-en
+copyright: Ablago's source code is licensed under Apache-2.0; the name and logo are not covered · <a href="https://github.com/sponsors/motom001">Support the project</a> · This manual loads nothing from third parties (<a href="https://help.ablago.app/admin/aktuell/en/datenschutz/#keine-telemetrie">privacy</a>)
+
+theme:
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-sunny, name: Light mode }
+
+plugins:
+  - search:
+      lang: en
+
+hooks:
+  - ../werkzeuge/sprache_hook.py
+
+# Die Anker sind dieselben wie im Deutschen (werkzeuge/anker.py) – ein falscher fällt beim Bauen auf.
+validation:
+  anchors: warn
+
+extra_css:
+  - stylesheets/ablago.css
+  - stylesheets/selbstcheck.css
+  - stylesheets/sprache.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.keys
+
+extra:
+  alternate:
+    - { name: Deutsch, link: ../, lang: de }
+    - { name: English, link: ./, lang: en }
+  # Hinweis oben auf jeder Seite (#730, overrides/main.html). Entfällt, sobald jemand die Übersetzung durchgesehen hat.
+  maschinell:
+    text: Machine translated – improvements welcome.
+    verweis: Suggest an improvement
+    link: https://github.com/motom001/dms/issues/new
+  social:
+    - icon: fontawesome/solid/heart
+      link: https://github.com/sponsors/motom001
+      name: Support the project (GitHub Sponsors)
+    - icon: fontawesome/brands/github
+      link: https://github.com/motom001/dms
+      name: Source code on GitHub
+
+nav:
+  - Welcome: index.md
+  - What is a DMS for?: wofuer.md
+  - Keep or destroy the original?: original.md
+  - New in this version: neu.md
+  - First steps: erste-schritte.md
+  - Working in the filing view:
+      - Home page: startseite.md
+      - Views and lists: ablage.md
+      - Post: post.md
+      - Mappen: mappen.md
+      - Documents: dokumente.md
+      - Understanding versions: versionen.md
+      - To do and tasks: eingang.md
+      - Notes, mentions, history: zusammenarbeit.md
+      - E-mail, PDF, link and stamp: versenden.md
+      - Connect as a network drive: laufwerk.md
+      - Connect to home automation: hausautomatisierung.md
+      - Users and roles: benutzer-und-rollen.md
+  - My account and settings: profil.md
+  - Frequently asked questions: fragen.md
+  - Terms: begriffe.md
+  - More:
+      - What's new? (changelog): https://github.com/motom001/dms/releases
+      - Administrator manual: https://help.ablago.app/admin/aktuell/en/
+      - "How do I get a DMS?": https://help.ablago.app/installieren/aktuell/en/
+      - Developer manual: https://help.ablago.app/entwickler/aktuell/en/

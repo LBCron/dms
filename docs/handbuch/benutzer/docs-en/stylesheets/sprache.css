@@ -1,0 +1,3 @@
+/* Englische Fassung (#730): Kurzname am Handy und der Hinweis auf die maschinelle Übersetzung (overrides/main.html). */
+:root{--ablago-kurz:"User"}
+.ablago-maschinell{margin:0 0 1em;padding:.5em .8em;border-left:3px solid var(--ablago-akzent);background:var(--md-accent-fg-color--transparent);font-size:.75rem;color:var(--md-default-fg-color--light)}

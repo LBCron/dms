@@ -1,0 +1,13 @@
+# Englische Offline-Fassung im Image (#219, #730), gebaut von werkzeuge/offline.py.
+INHERIT: mkdocs.en.yml
+site_url: https://dms.local/hilfe/installieren/en/
+# Ohne Repository-Angabe (#698): Material fragt sonst beim Öffnen jeder Seite api.github.com nach Sternen und Version.
+repo_url: ''
+# Ohne Repository auch kein „Bearbeiten“-Link (sonst warnt mkdocs je Seite, und --strict bricht ab).
+edit_uri: ''
+theme:
+  font: false
+# Erst die Bilder entfernen (offline_hook), dann die Sprache (sprache_hook): offline kein Hinweis auf deutsche Bilder.
+hooks:
+  - ../werkzeuge/offline_hook.py
+  - ../werkzeuge/sprache_hook.py

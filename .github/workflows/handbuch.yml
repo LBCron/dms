@@ -1,6 +1,7 @@
 name: Handbuch
 
-# Baut alle vier Handbücher mit aktuellen Screenshots. Online gibt es nur noch „aktuell“ (#846),
+# Baut alle vier Handbücher mit aktuellen Screenshots, auf Deutsch und Englisch (#730: …/<handbuch>/aktuell/en/).
+# Online gibt es nur noch „aktuell“ (#846),
 # veröffentlicht über GitHub Actions (Pages-Quelle „GitHub Actions“, kein Zweig gh-pages):
 #   Release (image.yml)    → bauen und veröffentlichen
 #   von Hand auf main      → bauen und veröffentlichen (z. B. nach einer Störung)
@@ -130,6 +131,27 @@ jobs:
         env:
           DMS_URL: http://localhost:3000
 
+      # Bildschirmfotos auf Englisch (#730): ein zweites, frisches Ablago mit eigener Datenbank und englischer
+      # Oberfläche nach bilder/en/. Solange die Oberfläche noch kein Englisch spricht (#729), endet das Skript
+      # ohne Bilder; die englischen Handbücher zeigen dann die deutschen mit einem Hinweis. Ein Fehler hier
+      # hält das Handbuch nicht auf – dann fehlen nur englische Bilder.
+      - name: Bildschirmfotos auf Englisch
+        continue-on-error: true
+        working-directory: docs/handbuch/screenshots
+        run: |
+          PGPASSWORD=dms psql -h localhost -U dms -d dms -qc 'CREATE DATABASE dms_en'
+          DMS_DATENWURZEL="$RUNNER_TEMP/daten-en" PORT=3001 DMS_VERSION=handbuch nohup node "$GITHUB_WORKSPACE/server/dist/index.js" > "$RUNNER_TEMP/dms-en.log" 2>&1 &
+          set -o pipefail
+          node aufnehmen.mjs "$GITHUB_WORKSPACE/docs/handbuch/bilder/en" 2>&1 | tee -a "$RUNNER_TEMP/aufnahme.log"
+        shell: bash
+        env:
+          DMS_URL: http://localhost:3001
+          DMS_SPRACHE: en
+          DMS_DATENWURZEL: ${{ runner.temp }}/daten-en
+          DB_HOST: localhost
+          DB_PASSWORT: dms
+          DB_NAME: dms_en
+
       # Immer (#489): Bilder in iPhone SE/15/17 Pro-Größe zum Nachsehen, bei Fehlern mit den Fundstellen.
       - name: Bilder der iPhone-Prüfung hochladen
         if: always()
@@ -171,14 +193,27 @@ jobs:
           mkdir -p docs/handbuch/installieren/docs/bilder
           for b in einrichtung-code einrichtung-pakete anmelden werkbank-demo; do
             cp "docs/handbuch/bilder/$b.png" docs/handbuch/installieren/docs/bilder/
+            # Englische Fassung, falls aufgenommen (#730)
+            if [ -f "docs/handbuch/bilder/en/$b.png" ]; then mkdir -p docs/handbuch/installieren/docs/bilder/en; cp "docs/handbuch/bilder/en/$b.png" docs/handbuch/installieren/docs/bilder/en/; fi
           done
           mkdir -p docs/handbuch/admin/docs/api
           mv docs/handbuch/admin/docs/bilder/openapi.json docs/handbuch/admin/docs/api/openapi.json
           rm -f docs/handbuch/benutzer/docs/bilder/openapi.json
-          # Alle Handbücher (#179, #180): Benutzer, Administrator, Installieren, Entwickler.
+          # Alle Handbücher (#179, #180): Benutzer, Administrator, Installieren, Entwickler –
+          # erst Deutsch, dann Englisch in den Unterordner en/ (#730).
           for h in benutzer admin installieren entwickler; do
             SITE_URL="https://help.ablago.app/$h/aktuell/" mkdocs build --strict -f "docs/handbuch/$h/mkdocs.yml" -d "$GITHUB_WORKSPACE/site/$h"
+            SITE_URL="https://help.ablago.app/$h/aktuell/en/" mkdocs build --strict -f "docs/handbuch/$h/mkdocs.en.yml" -d "$GITHUB_WORKSPACE/site/$h/en"
           done
+          # Größe (#730): GitHub Pages erlaubt 1 GB, veroeffentlichen.py bricht über 900 MB ab.
+          { echo '### Größe der Handbücher'; echo; echo '| Handbuch | Deutsch und Englisch | davon Englisch |'; echo '| --- | --- | --- |';
+            for h in benutzer admin installieren entwickler; do echo "| $h | $(du -sh "site/$h" | cut -f1) | $(du -sh "site/$h/en" | cut -f1) |"; done; } >> "$GITHUB_STEP_SUMMARY"
+
+      # Gleiche Anker in jeder Sprache (#730): fehlende Seiten oder Abschnitte der Übersetzung auflisten, bricht nie ab.
+      # Was die Oberfläche verlinkt, prüft „Hilfe-Links prüfen“ – das bricht ab.
+      - name: Übersetzung vollständig?
+        continue-on-error: true
+        run: python3 docs/handbuch/werkzeuge/anker.py en --pruefen
 
       # Weiche Zeitangaben (#303): Liste zum Durchsehen in der Zusammenfassung des Laufs, bricht nie ab.
       - name: Weiche Zeitangaben auflisten
@@ -192,7 +227,7 @@ jobs:
       # Nichts von fremden Diensten (#698): keine Schriften, Skripte, Stile oder Bilder von außerhalb
       # help.ablago.app – weder in den Handbüchern noch auf der Einstiegsseite. Links nach draußen sind erlaubt.
       - name: Nichts von fremden Diensten
-        run: python3 docs/handbuch/werkzeuge/fremd.py site docs/handbuch/start/index.html
+        run: python3 docs/handbuch/werkzeuge/fremd.py site docs/handbuch/start/index.html docs/handbuch/start/en/index.html
 
       # Offline-Fassung fürs Image (#219): baut wie im Dockerfile und prüft lokale Verweise und Hilfe-Ziele.
       - name: Offline-Hilfe prüfen

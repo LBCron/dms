@@ -7,17 +7,60 @@
  *
  *   DMS_URL=http://localhost:3000 node docs/handbuch/screenshots/aufnehmen.mjs <zielordner>
  *
+ * Je Sprache (#730): DMS_SPRACHE=en nimmt dieselben Bilder mit englischer Oberfläche auf – in einem
+ * eigenen, frischen Ablago (eigene Datenbank: DB_NAME) nach <zielordner>, im Workflow bilder/en/. Die
+ * Handbücher nehmen dann bilder/en/<name>.png statt des deutschen Bildes (werkzeuge/sprache_hook.py).
+ * Texte der Oberfläche, nach denen das Skript sucht, stehen hier auf Deutsch in w(…); w übersetzt sie über
+ * die Sprachdateien (shared/src/sprachen/<sprache>/). Zeigt die Oberfläche die Sprache noch nicht
+ * (<html lang>), endet das Skript ohne Bilder und ohne Fehler – die Handbücher zeigen dann die deutschen.
+ *
  * Braucht Playwright mit Chromium (npm install playwright; npx playwright install chromium).
  * Jedes Bild hat einen festen Namen; die Handbücher binden sie über bilder/<name>.png ein.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 
 const BASIS = process.env.DMS_URL ?? 'http://localhost:3000';
 const ZIEL = process.argv[2] ?? 'bilder';
+// Sprache der Aufnahme (#730): de (Vorgabe) oder en.
+const SPRACHE = process.env.DMS_SPRACHE ?? 'de';
+const GEBIET = { de: 'de-DE', en: 'en-GB' }[SPRACHE] ?? SPRACHE;
+
+/* ---------- Texte der Oberfläche je Sprache (#730) ---------- */
+
+const SPRACHDATEIEN = join(import.meta.dirname, '../../../shared/src/sprachen');
+function texte(sprache) {
+  const aus = new Map();
+  let dateien = [];
+  try { dateien = readdirSync(join(SPRACHDATEIEN, sprache)).filter((n) => n.endsWith('.json')); } catch { return aus; }
+  for (const n of dateien) {
+    for (const [k, v] of Object.entries(JSON.parse(readFileSync(join(SPRACHDATEIEN, sprache, n), 'utf8')))) aus.set(`${n.slice(0, -5)}.${k}`, v);
+  }
+  return aus;
+}
+const DEUTSCH = SPRACHE === 'de' ? new Map() : texte('de');
+const ZIELTEXTE = SPRACHE === 'de' ? new Map() : texte(SPRACHE);
+const fehlendeTexte = new Set();
+const maskiert = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ohnePlatzhalter = (s) => s.replace(/\{[A-Za-z0-9_]+\}/g, '…');
+/**
+ * Deutscher Text der Oberfläche → derselbe Text in der Sprache der Aufnahme. Gesucht wird der Schlüssel, dessen
+ * deutscher Text passt (bei einem regulären Ausdruck: auf den er passt); Platzhalter werden zu „beliebig“.
+ * Ohne Treffer bleibt der deutsche Text (und landet in der Liste am Ende).
+ */
+function w(text) {
+  if (SPRACHE === 'de') return text;
+  const passt = (v) => (text instanceof RegExp ? text.test(v) || text.test(ohnePlatzhalter(v)) : v === text || v.trim() === text);
+  const ziele = new Set();
+  for (const [k, v] of DEUTSCH) if (passt(v) && ZIELTEXTE.has(k)) ziele.add(ZIELTEXTE.get(k));
+  if (ziele.size === 0) { fehlendeTexte.add(String(text)); return text; }
+  const muster = [...ziele].map((z) => maskiert(z).replace(/\\\{[A-Za-z0-9_]+\\\}/g, '.*'));
+  if (!(text instanceof RegExp) && ziele.size === 1 && !/\{[A-Za-z0-9_]+\}/.test([...ziele][0])) return [...ziele][0];
+  return new RegExp(muster.map((m) => `(?:${m})`).join('|'), text instanceof RegExp ? text.flags : '');
+}
 // Persona-Namen (Lena: Einsteigerin, richtet ein; Jonas: Familienmitglied) und nur Beispiel-Domains (example.org).
 const ADMIN = { email: 'lena@example.org', name: 'Lena Beispiel', passwort: 'handbuch-passwort-1' };
 const MITGLIED = { email: 'jonas@example.org', name: 'Jonas Beispiel', passwort: 'handbuch-passwort-2' };
@@ -233,72 +276,74 @@ async function einrichtungscode() {
 
 /** Einrichtungsassistent (#119) im Browser durchgehen – mit Bildern jedes Schritts. */
 async function einrichtenImBrowser(browser, bild) {
-  const k = await browser.newContext({ viewport: { width: 1100, height: 900 }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
+  const k = await browser.newContext({ viewport: { width: 1100, height: 900 }, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
   const s = await k.newPage();
   await s.goto(BASIS + '/');
-  // Erster Schritt (#729): Sprache – vorgeschlagen ist die des Browsers (de-DE), also nur weiter.
-  await s.getByRole('heading', { name: 'Sprache' }).waitFor();
+  // Erster Schritt (#729): Sprache – vorgeschlagen ist die des Browsers, also nur weiter.
+  await s.getByRole('heading', { name: w('Sprache') }).waitFor();
   await bild(s, 'einrichtung-sprache');
-  await s.getByRole('button', { name: 'Weiter' }).click();
-  await s.getByRole('heading', { name: 'Einrichtungscode' }).waitFor();
+  await s.getByRole('button', { name: w('Weiter') }).click();
+  await s.getByRole('heading', { name: w('Einrichtungscode') }).waitFor();
   await bild(s, 'einrichtung-code');
-  await s.getByLabel('Einrichtungscode').fill(await einrichtungscode());
-  await s.getByRole('button', { name: 'Weiter' }).click();
-  const ohneDb = await s.getByRole('heading', { name: 'Datenbank', exact: true }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+  await s.getByLabel(w('Einrichtungscode')).fill(await einrichtungscode());
+  await s.getByRole('button', { name: w('Weiter') }).click();
+  const ohneDb = await s.getByRole('heading', { name: w('Datenbank'), exact: true }).waitFor({ timeout: 5000 }).then(() => true, () => false);
   if (ohneDb) {
-    await s.getByLabel(/^Server/).fill(process.env.DB_HOST ?? 'db');
-    await s.getByLabel(/^Passwort/).fill(process.env.DB_PASSWORT ?? 'dms');
-    await s.getByRole('button', { name: 'Verbindung prüfen' }).click();
-    await s.getByRole('button', { name: 'Übernehmen und weiter' }).waitFor();
+    await s.getByLabel(w(/^Server/)).fill(process.env.DB_HOST ?? 'db');
+    await s.getByLabel(w(/^Passwort/)).fill(process.env.DB_PASSWORT ?? 'dms');
+    // Eigene Datenbank je Sprache (#730), damit jede Aufnahme mit einem leeren Ablago beginnt.
+    if (process.env.DB_NAME) await s.getByLabel(w(/^Datenbank/)).fill(process.env.DB_NAME);
+    await s.getByRole('button', { name: w('Verbindung prüfen') }).click();
+    await s.getByRole('button', { name: w('Übernehmen und weiter') }).waitFor();
     await bild(s, 'einrichtung-datenbank');
-    await s.getByRole('button', { name: 'Übernehmen und weiter' }).click();
+    await s.getByRole('button', { name: w('Übernehmen und weiter') }).click();
   }
-  await s.getByRole('heading', { name: 'Neu einrichten oder wiederherstellen?' }).waitFor({ timeout: 90_000 });
+  await s.getByRole('heading', { name: w('Neu einrichten oder wiederherstellen?') }).waitFor({ timeout: 90_000 });
   await bild(s, 'einrichtung-wahl');
-  await s.getByRole('button', { name: /^Neu einrichten/ }).click();
+  await s.getByRole('button', { name: w(/^Neu einrichten/) }).click();
   // Erst sammeln, dann Zusammenfassung, dann einrichten (#804): bis „Jetzt einrichten“ legt Ablago nichts an.
-  await s.getByLabel(/Name deiner Ablage/).fill('Familie Beispiel');
+  await s.getByLabel(w(/Name deiner Ablage/)).fill('Familie Beispiel');
   await bild(s, 'einrichtung-mandant');
-  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByRole('button', { name: w('Weiter') }).click();
   // „Dein Konto“ (#821): nur das eigene Konto – Mitglieder legt das Skript danach an (vorbereiten).
-  await s.getByRole('heading', { name: 'Dein Konto' }).waitFor();
-  await s.getByLabel('Name', { exact: true }).fill(ADMIN.name);
-  await s.getByLabel(/E-Mail-Adresse/).fill(ADMIN.email);
-  await s.getByLabel(/^Passwort mindestens/).fill(ADMIN.passwort);
-  await s.getByLabel('Passwort wiederholen').fill(ADMIN.passwort);
+  await s.getByRole('heading', { name: w('Dein Konto') }).waitFor();
+  await s.getByLabel(w('Name'), { exact: true }).fill(ADMIN.name);
+  await s.getByLabel(w(/E-Mail-Adresse/)).fill(ADMIN.email);
+  await s.getByLabel(w(/^Passwort mindestens/)).fill(ADMIN.passwort);
+  await s.getByLabel(w('Passwort wiederholen')).fill(ADMIN.passwort);
   await bild(s, 'einrichtung-konto');
-  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByRole('button', { name: w('Weiter') }).click();
   // Pakete dazuholen (#460): Katalog abrufen (ohne Internet: Hinweis), dann überspringen.
-  await s.getByRole('heading', { name: 'Pakete dazuholen' }).waitFor();
-  await s.getByRole('button', { name: 'Überspringen' }).waitFor({ timeout: 30_000 });
+  await s.getByRole('heading', { name: w('Pakete dazuholen') }).waitFor();
+  await s.getByRole('button', { name: w('Überspringen') }).waitFor({ timeout: 30_000 });
   await bild(s, 'einrichtung-pakete', { fullPage: true });
-  await s.getByRole('button', { name: 'Überspringen' }).click();
-  await s.getByRole('heading', { name: 'Optionales' }).waitFor();
+  await s.getByRole('button', { name: w('Überspringen') }).click();
+  await s.getByRole('heading', { name: w('Optionales') }).waitFor();
   await bild(s, 'einrichtung-optional', { fullPage: true });
   // E-Mail-Versand im Assistenten (#813, #804): Häkchen setzen, Adresse ist die des Administrators; beim Verlassen
   // des Felds sucht Ablago den Server. Fürs Bild nur ausgefüllt, danach wieder abgewählt – gespeichert wird nichts.
-  await s.getByLabel('E-Mail-Versand jetzt einrichten').check();
+  await s.getByLabel(w('E-Mail-Versand jetzt einrichten')).check();
   await s.locator('#mail-adresse').focus();
   await s.locator('#mail-passwort').focus();
   await s.locator('#mail .mail-vorschlag').waitFor({ timeout: 20_000 });
-  await s.getByText('Suche den Server …').waitFor({ state: 'detached', timeout: 20_000 }).catch(() => {});
+  await s.getByText(w('Suche den Server …')).waitFor({ state: 'detached', timeout: 20_000 }).catch(() => {});
   await s.locator('#mail').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'einrichtung-mail');
-  await s.getByLabel('E-Mail-Versand jetzt einrichten').uncheck();
-  await s.getByRole('button', { name: 'Weiter' }).click();
-  await s.getByRole('heading', { name: 'Zusammenfassung' }).waitFor();
+  await s.getByLabel(w('E-Mail-Versand jetzt einrichten')).uncheck();
+  await s.getByRole('button', { name: w('Weiter') }).click();
+  await s.getByRole('heading', { name: w('Zusammenfassung') }).waitFor();
   await bild(s, 'einrichtung-zusammenfassung', { fullPage: true });
-  await s.getByRole('button', { name: 'Jetzt einrichten' }).click();
-  await s.getByRole('heading', { name: /ist eingerichtet/ }).waitFor({ timeout: 60_000 });
+  await s.getByRole('button', { name: w('Jetzt einrichten') }).click();
+  await s.getByRole('heading', { name: w(/ist eingerichtet/) }).waitFor({ timeout: 60_000 });
   await bild(s, 'einrichtung-fertig', { fullPage: true });
   // Das Notfallblatt muss heruntergeladen sein, bevor „Einrichtung abschließen“ geht (#804). Seit #821 ein Knopf: Die
   // Oberfläche lädt es selbst (mit Dialog, falls eine frische Anmeldung nötig ist). Zwei-Faktor bleibt hier „Später“.
   const download = s.waitForEvent('download');
-  await s.getByRole('button', { name: 'Notfallblatt herunterladen' }).click();
+  await s.getByRole('button', { name: w('Notfallblatt herunterladen') }).click();
   await (await download).cancel().catch(() => {});
-  await s.getByText(/Notfallblatt heruntergeladen/).waitFor({ timeout: 15_000 });
-  await s.getByRole('button', { name: 'Später' }).click();
-  await s.getByRole('button', { name: 'Einrichtung abschließen' }).click();
+  await s.getByText(w(/Notfallblatt heruntergeladen/)).waitFor({ timeout: 15_000 });
+  await s.getByRole('button', { name: w('Später') }).click();
+  await s.getByRole('button', { name: w('Einrichtung abschließen') }).click();
   await s.waitForURL(/\/werkbank/);
   const sitzung = (await k.cookies()).find((c) => c.name === 'dms_sitzung');
   if (!sitzung) throw new Error('Nach der Einrichtung keine Sitzung im Browser.');
@@ -336,15 +381,15 @@ async function lasttestSeite(browser, bild) {
   ];
   for (const [name, fertig, schema, viewport] of aufnahmen) {
     const handy = viewport.width < 500;
-    const k = await browser.newContext({ viewport, colorScheme: schema, locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1, ...(handy ? { isMobile: true, hasTouch: true } : {}) });
+    const k = await browser.newContext({ viewport, colorScheme: schema, locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 1, ...(handy ? { isMobile: true, hasTouch: true } : {}) });
     const stand = lasttestStand(fertig);
     await k.route('**/api/konto/status', (r) => r.fulfill({ json: { einrichtungNoetig: false, mail: false, benutzer: null, marke: null, wartung: null, lasttest: true } }));
     await k.route('**/api/lasttest', (r) => r.fulfill({ json: { ...stand, jetzt: Date.now() } }));
     await k.route('**/api/lasttest/angaben', (r) => r.fulfill({ json: stand }));
     const s = await k.newPage();
     await s.goto(BASIS + '/');
-    await s.getByRole('heading', { name: /^Lasttest/ }).waitFor();
-    await s.getByLabel('Beschreibe dein Gerät').fill('Beispiel-NAS mit Intel N100, 16 GB RAM');
+    await s.getByRole('heading', { name: w(/^Lasttest/) }).waitFor();
+    await s.getByLabel(w('Beschreibe dein Gerät')).fill('Beispiel-NAS mit Intel N100, 16 GB RAM');
     await bild(s, name, { fullPage: fertig || handy });
     await k.close();
   }
@@ -352,8 +397,8 @@ async function lasttestSeite(browser, bild) {
 
 async function main() {
   await mkdir(ZIEL, { recursive: true });
-  // Deutsche Oberfläche auch für Datumsfelder (Chromium richtet sich dafür nach --lang).
-  const browser = await chromium.launch({ channel: 'chromium', args: ['--lang=de-DE'], env: { ...process.env, LANG: 'de_DE.UTF-8', LANGUAGE: 'de' } });
+  // Oberfläche in der Sprache der Aufnahme, auch für Datumsfelder (Chromium richtet sich dafür nach --lang).
+  const browser = await chromium.launch({ channel: 'chromium', args: [`--lang=${GEBIET}`], env: { ...process.env, LANG: `${GEBIET.replace('-', '_')}.UTF-8`, LANGUAGE: SPRACHE } });
   const erstellt = [];
   const bild = async (seite, name, optionen = {}) => {
     await seite.waitForLoadState('networkidle');
@@ -363,10 +408,17 @@ async function main() {
     console.log(`  ${name}.png`);
   };
   await warteAufServer();
+  if (!(await spricht(browser))) {
+    // Noch keine Oberfläche in dieser Sprache (#729): keine Bilder, kein Fehler – die Handbücher zeigen die deutschen.
+    console.log(`::notice title=Bildschirmfotos ${SPRACHE}::Die Oberfläche zeigt noch kein ${SPRACHE} – keine Bilder aufgenommen.`);
+    await browser.close();
+    await rm(ZIEL, { recursive: true, force: true });
+    return;
+  }
   await einrichtenImBrowser(browser, bild);
   const d = await vorbereiten();
   const kontext = async (mitCookie = true, breite = 1440, hoehe = 860, adminHinweis = false) => {
-    const k = await browser.newContext({ viewport: { width: breite, height: hoehe }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
+    const k = await browser.newContext({ viewport: { width: breite, height: hoehe }, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
     if (mitCookie) {
       const [name, wert] = d.adminCookie.split('=');
       await k.addCookies([{ name, value: wert, url: BASIS }]);
@@ -382,7 +434,7 @@ async function main() {
     const k = await kontext(false, 1100, 700);
     const s = await k.newPage();
     await geheZu(s, '/');
-    await s.getByRole('button', { name: 'Anmelden' }).waitFor();
+    await s.getByRole('button', { name: w('Anmelden') }).waitFor();
     await bild(s, 'anmelden');
     await k.close();
   }
@@ -405,23 +457,23 @@ async function main() {
 
   // Ablage: drei Spalten mit geöffneter Mappe
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
+  await s.getByRole('heading', { name: w('Stromvertrag Haus') }).waitFor();
   await bild(s, 'ablage');
   // README (#290): breiter, doppelte Auflösung, hell und dunkel – feste Namen, die README holt sie vom Handbuch.
   for (const [schema, name] of [['light', 'readme'], ['dark', 'readme-dunkel']]) {
-    const kr = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme: schema, locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 2 });
+    const kr = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme: schema, locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 2 });
     const [cn, cw] = d.adminCookie.split('=');
     await kr.addCookies([{ name: cn, value: cw, url: BASIS }]);
     await kr.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.verwaltungsbalken{display:none!important}'; document.head.appendChild(st); }));
     const sr = await kr.newPage();
     await geheZu(sr, `/ablage/${vertrag.id}/${d.strom.id}`);
-    await sr.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
+    await sr.getByRole('heading', { name: w('Stromvertrag Haus') }).waitFor();
     await bild(sr, name);
     await kr.close();
   }
 
   // Register mit Dokumenten
-  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
+  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
   // Vorschaubilder der ersten Seite (#332) entstehen im Hintergrund – kurz warten, bis sie geladen sind.
   await s.waitForFunction(() => [...document.querySelectorAll('img.vorschaubild')].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15_000 }).catch(() => {});
   // Erstes anzeigbares Dokument öffnen: die Anzeige steht direkt unter seiner Zeile (#85).
@@ -433,53 +485,53 @@ async function main() {
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Scan Vertragsunterlagen.pdf')}&typ=application/pdf`,
     beispielPdf(['Vertrag Seite 1', 'Vertrag Seite 2', 'Preisblatt', 'Widerrufsbelehrung']), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
-  const scan = s.locator('.dokumentliste li', { hasText: 'Scan Vertragsunterlagen.pdf' });
-  await scan.getByRole('button', { name: 'Seiten', exact: true }).click();
+  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
+  const scan = s.locator('.dokumentliste li', { hasText: w('Scan Vertragsunterlagen.pdf') });
+  await scan.getByRole('button', { name: w('Seiten'), exact: true }).click();
   await s.waitForFunction(() => [...document.querySelectorAll('.seitenbild img')].length > 0 && [...document.querySelectorAll('.seitenbild img')].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 20_000 }).catch(() => {});
-  await s.getByRole('button', { name: 'Seite 2 nach rechts drehen' }).click();
-  await s.locator('.seitenraster .seite').nth(2).getByRole('button', { name: 'Teilen ab hier' }).click();
+  await s.getByRole('button', { name: w('Seite 2 nach rechts drehen') }).click();
+  await s.locator('.seitenraster .seite').nth(2).getByRole('button', { name: w('Teilen ab hier') }).click();
   await s.locator('.pdfseiten').scrollIntoViewIfNeeded();
   await bild(s, 'pdf-bearbeiten');
 
   // Herunterladen mit Stempel (#394): Dialog am Scan, Vorlage „Kopie für …“ mit Empfänger.
-  await s.locator('.pdfseiten').getByRole('button', { name: 'Abbrechen' }).click().catch(() => {});
-  await scan.getByRole('button', { name: /Mit Stempel/ }).click();
+  await s.locator('.pdfseiten').getByRole('button', { name: w('Abbrechen') }).click().catch(() => {});
+  await scan.getByRole('button', { name: w(/Mit Stempel/) }).click();
   const stempel = s.locator('.stempeldialog');
   await stempel.locator('input[id$="-empfaenger"]').fill('Hausverwaltung Müller');
   await s.addStyleTag({ content: '.speicherleiste { position: static !important; }' });
   await stempel.scrollIntoViewIfNeeded();
   await stempel.screenshot({ path: join(ZIEL, 'stempel-herunterladen.png') });
   erstellt.push('stempel-herunterladen');
-  await stempel.getByRole('button', { name: 'Schließen' }).click();
+  await stempel.getByRole('button', { name: w('Schließen') }).click();
 
   // PDF verkleinern (#393): ein Foto-Scan mit 600 dpi, Dialog mit den drei Stufen.
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Foto Zählerstand.pdf')}&typ=application/pdf`,
     fotoPdf(['Zählerstand 12.345 kWh', 'Ablesekarte Rückseite']), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
-  const foto = s.locator('.dokumentliste li', { hasText: 'Foto Zählerstand.pdf' });
-  await foto.getByRole('button', { name: 'Verkleinern', exact: true }).click();
+  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
+  const foto = s.locator('.dokumentliste li', { hasText: w('Foto Zählerstand.pdf') });
+  await foto.getByRole('button', { name: w('Verkleinern'), exact: true }).click();
   const klein = s.locator('.pdfseiten.verkleinern');
   await klein.locator('.stufenwahl').waitFor({ timeout: 30_000 });
   await klein.scrollIntoViewIfNeeded();
   await klein.screenshot({ path: join(ZIEL, 'pdf-verkleinern.png') });
   erstellt.push('pdf-verkleinern');
-  await klein.getByRole('button', { name: 'Abbrechen' }).click();
+  await klein.getByRole('button', { name: w('Abbrechen') }).click();
 
   // Schwärzen (#392): Suchbegriff überall, IBAN als Vorschlag angehakt, Vorschau der schwarzen Bereiche.
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Kontoauszug.pdf')}&typ=application/pdf`,
     beispielPdf('Lena Beispiel - IBAN DE89 3704 0044 0532 0130 00 - Telefon 0351 1234567'), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
-  const auszug = s.locator('.dokumentliste li', { hasText: /^Kontoauszug\.pdf/ }).first();
-  await auszug.getByRole('button', { name: 'Schwärzen', exact: true }).click();
+  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
+  const auszug = s.locator('.dokumentliste li', { hasText: w(/^Kontoauszug\.pdf/) }).first();
+  await auszug.getByRole('button', { name: w('Schwärzen'), exact: true }).click();
   const schwarz = s.locator('.pdfseiten.schwaerzen');
   await schwarz.locator('.schwarz-seite img').first().waitFor({ timeout: 30_000 });
-  await schwarz.getByLabel('Überall schwärzen').fill('Beispiel');
-  await schwarz.getByRole('button', { name: 'Hinzufügen' }).click();
-  await schwarz.locator('.schwarz-art', { hasText: 'IBAN' }).locator('legend input').check();
-  await schwarz.getByRole('button', { name: 'Vorschau' }).click();
+  await schwarz.getByLabel(w('Überall schwärzen')).fill('Beispiel');
+  await schwarz.getByRole('button', { name: w('Hinzufügen') }).click();
+  await schwarz.locator('.schwarz-art', { hasText: w('IBAN') }).locator('legend input').check();
+  await schwarz.getByRole('button', { name: w('Vorschau') }).click();
   await s.waitForTimeout(500);
   await schwarz.scrollIntoViewIfNeeded();
   // Die Speicherleiste der Mappe liegt unten über dem Dialog – für das Bild ausblenden.
@@ -487,11 +539,11 @@ async function main() {
   await schwarz.screenshot({ path: join(ZIEL, 'schwaerzen.png') });
   await ohneLeiste.evaluate((e) => e.remove());
   erstellt.push('schwaerzen');
-  await schwarz.getByRole('button', { name: 'Abbrechen' }).click();
+  await schwarz.getByRole('button', { name: w('Abbrechen') }).click();
 
   // Verknüpfungsregister beim Vertragspartner
   await geheZu(s, `/ablage/${partner.id}/${d.stadtwerke.id}`);
-  await s.getByRole('tab', { name: 'Verträge' }).click();
+  await s.getByRole('tab', { name: w('Verträge') }).click();
   await bild(s, 'verknuepfungen');
 
   // Neue Mappe
@@ -517,8 +569,8 @@ async function main() {
   await s.locator('.suchchip').first().waitFor();
   await s.waitForTimeout(600);
   await bild(s, 'erweiterte-suche-treffer');
-  await s.getByRole('button', { name: 'Suche ändern' }).click();
-  await s.getByRole('form', { name: 'Erweiterte Suche' }).waitFor();
+  await s.getByRole('button', { name: w('Suche ändern') }).click();
+  await s.getByRole('form', { name: w('Erweiterte Suche') }).waitFor();
   await s.waitForTimeout(300);
   await bild(s, 'erweiterte-suche');
 
@@ -533,23 +585,23 @@ async function main() {
   await bild(s, 'formatiert');
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
   // Notizen als Register vor der Historie, „Mappe ▾“ neben dem Stern (#427)
-  await s.getByRole('tab', { name: /Notizen/ }).click();
+  await s.getByRole('tab', { name: w(/Notizen/) }).click();
   await s.locator('.notizliste li').first().waitFor();
   await bild(s, 'notizen');
-  await s.getByRole('tab', { name: 'Vertrag', exact: true }).click();
-  await s.getByRole('button', { name: 'Mappe', exact: true }).click();
-  await s.getByRole('menuitem', { name: /Aufgabe vergeben/ }).click();
-  const neueAufgabe = s.getByRole('region', { name: 'Aufgabe vergeben' });
-  await neueAufgabe.getByLabel('Empfänger').selectOption({ label: MITGLIED.name });
+  await s.getByRole('tab', { name: w('Vertrag'), exact: true }).click();
+  await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
+  await s.getByRole('menuitem', { name: w(/Aufgabe vergeben/) }).click();
+  const neueAufgabe = s.getByRole('region', { name: w('Aufgabe vergeben') });
+  await neueAufgabe.getByLabel(w('Empfänger')).selectOption({ label: MITGLIED.name });
   await neueAufgabe.getByPlaceholder(/Rechnung/).fill('Sonderkündigung vorbereiten');
   await bild(s, 'aufgabe-vergeben');
-  await neueAufgabe.getByRole('button', { name: 'Schließen' }).click();
+  await neueAufgabe.getByRole('button', { name: w('Schließen') }).click();
   // Erinnern (#131) und Termine in „Zu erledigen“ (#528, #725)
-  await s.getByRole('button', { name: 'Mappe', exact: true }).click();
-  await s.getByRole('menuitem', { name: /Erinnern/ }).click();
-  const erinnern = s.getByRole('region', { name: 'Erinnern' });
+  await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
+  await s.getByRole('menuitem', { name: w(/Erinnern/) }).click();
+  const erinnern = s.getByRole('region', { name: w('Erinnern') });
   await erinnern.getByPlaceholder(/Angebote/).fill('Angebote der anderen Stromanbieter vergleichen');
-  await erinnern.getByRole('button', { name: 'Erinnern' }).click();
+  await erinnern.getByRole('button', { name: w('Erinnern') }).click();
   await s.locator('.erinnerungen').waitFor();
   await bild(s, 'erinnerung');
   // Kalender in „Zu erledigen“ (#528, #725): Erinnerungen in den nächsten Wochen und eine überfällige von vor 12 Tagen
@@ -563,7 +615,7 @@ async function main() {
   }
   await geheZu(s, '/ablage/eingang');
   // Monat über Mitte und rechts, mit offener Mappe in der Mitte, Jahr.
-  await s.getByRole('radio', { name: 'Monat' }).click();
+  await s.getByRole('radio', { name: w('Monat') }).click();
   await s.locator('.ka-raster[aria-busy="false"] .ka-zeile').first().waitFor();
   await bild(s, 'anstehend-monat');
   await s.locator('.ka-raster .ka-zeile:not(.ka-ueber)').first().click();
@@ -571,21 +623,21 @@ async function main() {
   await s.locator('.ka-kompakt').waitFor();
   await bild(s, 'anstehend-monat-mappe');
   await geheZu(s, '/ablage/eingang');
-  await s.getByRole('radio', { name: 'Jahr' }).click();
+  await s.getByRole('radio', { name: w('Jahr') }).click();
   // Ab Herbst zeigt das nächste Jahr mehr: dort stehen die Folgetermine der jährlichen Fristen.
-  if (new Date().getMonth() >= 8) await s.getByRole('button', { name: 'Nächstes Jahr' }).click();
+  if (new Date().getMonth() >= 8) await s.getByRole('button', { name: w('Nächstes Jahr') }).click();
   await s.locator('.ka-jahr[aria-busy="false"] .ka-mt-knopf').first().waitFor();
   await bild(s, 'anstehend-jahr');
   await api('PUT', '/api/konto/einstellungen/erledigen_ansicht', { wert: null });
   // Am Handy: Monat kompakt mit Punkten, darunter die Einträge des gewählten Tags.
   {
-    const kh = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
+    const kh = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
     const [name, wert] = d.adminCookie.split('=');
     await kh.addCookies([{ name, value: wert, url: BASIS }]);
     await kh.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.verwaltungsbalken{display:none!important}'; document.head.append(st); }));
     const sh = await kh.newPage();
     await geheZu(sh, '/ablage/eingang');
-    await sh.getByRole('radio', { name: 'Monat' }).click();
+    await sh.getByRole('radio', { name: w('Monat') }).click();
     await sh.locator('.ka-kompakt .ka-raster[aria-busy="false"]').waitFor();
     const mitEintrag = sh.locator('td:not(.ka-fremd) > .ka-tagknopf:has(.ka-punkt)').first();
     if (await mitEintrag.count()) await mitEintrag.click();
@@ -594,26 +646,26 @@ async function main() {
     await kh.close();
   }
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: 'Historie' }).click();
+  await s.getByRole('tab', { name: w('Historie') }).click();
   await s.locator('.historie details').first().click();
   await bild(s, 'protokoll');
-  await s.getByRole('button', { name: 'Mappe', exact: true }).click();
+  await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
   await bild(s, 'aktionen');
-  await s.getByRole('menuitem', { name: /E-Mail/ }).click();
-  const email = s.getByRole('region', { name: 'Per E-Mail versenden' });
-  await email.getByLabel(/^An/).fill('steuerberater@example.org');
-  await email.getByLabel('Nachricht').fill('Hallo Frau Berger,\n\nanbei der Stromvertrag und die Preisanpassung.\n\nViele Grüße');
+  await s.getByRole('menuitem', { name: w(/E-Mail/) }).click();
+  const email = s.getByRole('region', { name: w('Per E-Mail versenden') });
+  await email.getByLabel(w(/^An/)).fill('steuerberater@example.org');
+  await email.getByLabel(w('Nachricht')).fill('Hallo Frau Berger,\n\nanbei der Stromvertrag und die Preisanpassung.\n\nViele Grüße');
   await bild(s, 'email');
-  await email.getByRole('button', { name: 'Schließen' }).click();
+  await email.getByRole('button', { name: w('Schließen') }).click();
   // Mit verknüpften Mappen löschen (#424): Vorschau als Baum beim Vertragspartner – nur ansehen, nicht löschen.
   await geheZu(s, `/ablage/${partner.id}/${d.stadtwerke.id}`);
-  await s.getByRole('button', { name: 'Mappe', exact: true }).click();
-  await s.getByRole('menuitem', { name: /Mit verknüpften Mappen löschen/ }).click();
-  const loeschBaum = s.getByRole('region', { name: 'Mit verknüpften Mappen löschen' });
+  await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
+  await s.getByRole('menuitem', { name: w(/Mit verknüpften Mappen löschen/) }).click();
+  const loeschBaum = s.getByRole('region', { name: w('Mit verknüpften Mappen löschen') });
   await loeschBaum.locator('.lb-summe').waitFor();
   await loeschBaum.evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'mit-verknuepften-loeschen');
-  await loeschBaum.getByRole('button', { name: 'Schließen' }).click();
+  await loeschBaum.getByRole('button', { name: w('Schließen') }).click();
 
   // Post (#192): neuer Brief in „Neue Post“, Zuordnen zum Stromvertrag
   const brief = await api('POST', '/api/post', { betreff: 'Preisanpassung Strom 2027' });
@@ -621,9 +673,9 @@ async function main() {
   const neuePost = (await api('GET', '/api/sichten')).neuePost ?? brief.typId;
   await geheZu(s, `/ablage/${neuePost}/${brief.id}`);
   await s.locator('.postleiste').waitFor();
-  await s.getByRole('button', { name: /Zuordnen/ }).click();
-  const zu = s.getByRole('region', { name: 'Zuordnen' });
-  await zu.getByLabel('Mappentyp').selectOption({ value: vertrag.id });
+  await s.getByRole('button', { name: w(/Zuordnen/) }).click();
+  const zu = s.getByRole('region', { name: w('Zuordnen') });
+  await zu.getByLabel(w('Mappentyp')).selectOption({ value: vertrag.id });
   await zu.getByPlaceholder(/suchen/).fill('Strom');
   await zu.locator('.zuordnen-treffer button').first().click();
   await bild(s, 'post-zuordnen');
@@ -648,22 +700,22 @@ async function main() {
   if (neu.dokumente.length !== 2) throw new Error(`Ablegen (#193): ${neu.dokumente.length} statt 2 Dokumente in der neuen Post`);
   // Auf einer Mappe mit Dokumentenregister: zwei Ziele.
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
+  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
   dateien = await neueDateien();
   await s.dispatchEvent('body', 'dragenter', { dataTransfer: dateien });
   await s.locator('.ablageflaeche.zwei').waitFor();
   await bild(s, 'post-ablegen-mappe');
   await s.keyboard.press('Escape');
   // „+ Neu“ in der Kopfzeile
-  await s.getByRole('button', { name: '+ Neu' }).click();
-  await s.getByRole('menuitem', { name: /Mappe/ }).waitFor();
+  await s.getByRole('button', { name: w('+ Neu') }).click();
+  await s.getByRole('menuitem', { name: w(/Mappe/) }).waitFor();
   await bild(s, 'neu-knopf');
   await s.keyboard.press('Escape');
 
   // Papierkorb in der Ablage (#43)
   await geheZu(s, '/ablage/papierkorb');
   await s.locator('.spalte.liste .eintrag, .spalte.liste tbody tr').first().click();
-  await s.getByRole('button', { name: 'Wiederherstellen' }).waitFor();
+  await s.getByRole('button', { name: w('Wiederherstellen') }).waitFor();
   await bild(s, 'papierkorb');
 
   // Sprechender Link (#98): Trefferliste mit der ersten Mappe geöffnet, „Link kopieren“, Fehlermeldung
@@ -671,8 +723,8 @@ async function main() {
   await s.locator('.spalte.mappe .mappenkopf h1').waitFor();
   await bild(s, 'direktlink');
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('button', { name: 'Mappe', exact: true }).click();
-  await s.getByRole('menuitem', { name: /Link kopieren/ }).click();
+  await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
+  await s.getByRole('menuitem', { name: w(/Link kopieren/) }).click();
   await s.locator('.linkkopiert').waitFor();
   await bild(s, 'link-kopieren');
   await geheZu(s, '/ablage/link?typ=Rechnung&rechnungsnumer=R-2026-117');
@@ -688,7 +740,7 @@ async function main() {
   // Eingeklappte Spalten (#536): links die Leiste „Ansichten“, rechts der Titel der geöffneten Mappe.
   await s.evaluate(([key]) => localStorage.setItem(key, JSON.stringify({ l: 220, m: 340, linksZu: true, rechtsZu: true })), [breitSchluessel]);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.locator('.spl-lasche-rechts').getByText('Stromvertrag Haus').waitFor();
+  await s.locator('.spl-lasche-rechts').getByText(w('Stromvertrag Haus')).waitFor();
   await bild(s, 'spalten-eingeklappt');
   await s.evaluate(([key]) => localStorage.removeItem(key), [breitSchluessel]);
 
@@ -696,7 +748,7 @@ async function main() {
   await api('PUT', `/api/mappen/${d.strom.id}/favorit`);
   await api('PUT', `/api/mappen/${d.stadtwerke.id}/favorit`);
   await geheZu(s, `/ablage/favoriten/${d.strom.id}`);
-  await s.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
+  await s.getByRole('heading', { name: w('Stromvertrag Haus') }).waitFor();
   await bild(s, 'favoriten');
   // Favorit = Abo (#422): Jonas ändert einen Favoriten von Lena – Punkt in der Liste, „Geändert“ unter Zu erledigen.
   {
@@ -719,11 +771,11 @@ async function main() {
   await s.locator('.trefferlistenblock').nth(1).scrollIntoViewIfNeeded();
   await bild(s, 'werkbank-trefferlisten');
   await geheZu(s, `/ablage/${partner.id}/${d.stadtwerke.id}`);
-  await s.getByRole('tab', { name: /Rechnungen/ }).click();
+  await s.getByRole('tab', { name: w(/Rechnungen/) }).click();
   await s.locator('.verweistabelle table').waitFor();
   await bild(s, 'verknuepfungen-tabelle');
   // Mappe löschen (#423): Auf die Stadtwerke verweisen Verträge – „Warum ist Löschen gesperrt?“ am gesperrten Knopf (#648).
-  await s.getByRole('button', { name: 'Warum ist Löschen gesperrt?' }).click();
+  await s.getByRole('button', { name: w('Warum ist Löschen gesperrt?') }).click();
   await s.locator('.loeschwahl-begruendung').waitFor();
   await bild(s, 'mappe-loeschen-warum');
   await s.keyboard.press('Escape');
@@ -755,14 +807,14 @@ async function main() {
   await s.locator('.spalte.liste .eintrag, .spalte.liste tbody tr').first().waitFor();
   await bild(s, 'sichten-baum');
   await geheZu(s, `/werkbank/sichten/${d.fristen.id}#bedingungen`);
-  await s.getByRole('heading', { name: 'Bedingungen' }).waitFor();
-  await s.getByText('Diese Ansicht zeigt zurzeit').waitFor();
+  await s.getByRole('heading', { name: w('Bedingungen') }).waitFor();
+  await s.getByText(w('Diese Ansicht zeigt zurzeit')).waitFor();
   await bild(s, 'werkbank-sichten');
 
   // Benutzer und Rollen in der Ablage
   await geheZu(s, `/ablage/${d.rolleTyp.id}`);
-  await s.locator('.mappenliste .eintrag').filter({ hasText: 'Steuern und Finanzen' }).click();
-  await s.getByRole('tab', { name: 'Benutzer' }).click();
+  await s.locator('.mappenliste .eintrag').filter({ hasText: w('Steuern und Finanzen') }).click();
+  await s.getByRole('tab', { name: w('Benutzer') }).click();
   await bild(s, 'rolle');
   await geheZu(s, `/ablage/${d.benutzerTyp.id}/${d.mitglied.id}`);
   await bild(s, 'benutzer-mappe');
@@ -777,12 +829,12 @@ async function main() {
   await s.locator('#berechtigungen').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-berechtigungen');
   {
-    await s.locator('.sprungleiste').getByRole('button', { name: 'Testlauf' }).click();
+    await s.locator('.sprungleiste').getByRole('button', { name: w('Testlauf') }).click();
     const test = s.locator('#testlauf');
     // Benutzer und Testmappe wie im Verweisfeld (#371); das Ergebnis erscheint ohne „Prüfen“.
-    await test.getByLabel('Benutzer', { exact: true }).fill(MITGLIED.name);
+    await test.getByLabel(w('Benutzer'), { exact: true }).fill(MITGLIED.name);
     await test.locator('.wahlliste button').first().click();
-    await test.getByLabel('Testmappe', { exact: true }).fill('Stromvertrag');
+    await test.getByLabel(w('Testmappe'), { exact: true }).fill('Stromvertrag');
     await test.locator('.wahlliste button').first().click();
     await s.locator('.testlauf table').waitFor();
     await test.evaluate((e) => e.scrollIntoView({ block: 'start' }));
@@ -791,11 +843,11 @@ async function main() {
   {
     const anm = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: MITGLIED.email, passwort: MITGLIED.passwort }) });
     const [name, wert] = (anm.headers.get('set-cookie') ?? '').split(';')[0].split('=');
-    const km = await browser.newContext({ viewport: { width: 1100, height: 900 }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+    const km = await browser.newContext({ viewport: { width: 1100, height: 900 }, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin' });
     await km.addCookies([{ name, value: wert, url: BASIS }]);
     const sm = await km.newPage();
     await geheZu(sm, '/profil/konto');
-    const blatt = sm.locator('.blatt', { hasText: 'Meine Rechte' });
+    const blatt = sm.locator('.blatt', { hasText: w('Meine Rechte') });
     await blatt.locator('table').waitFor();
     await blatt.scrollIntoViewIfNeeded();
     const box = await blatt.boundingBox();
@@ -804,8 +856,8 @@ async function main() {
     await geheZu(sm, '/ablage/eingang/weitergeben');
     const meine = sm.locator('#meine-aufgaben');
     await meine.waitFor();
-    if (await meine.getByLabel('Alle angezeigten auswählen').count()) {
-      await meine.getByLabel('Alle angezeigten auswählen').check();
+    if (await meine.getByLabel(w('Alle angezeigten auswählen')).count()) {
+      await meine.getByLabel(w('Alle angezeigten auswählen')).check();
       await meine.locator('.sammel-leiste').waitFor();
     }
     await meine.scrollIntoViewIfNeeded();
@@ -821,7 +873,7 @@ async function main() {
   await s.locator('.benutzermenue .menue').waitFor();
   await bild(s, 'benutzermenue', { clip: { x: 1440 - 420, y: 0, width: 420, height: 400 } });
   // Über Ablago (#430): Version, Lizenz, Quellcode der laufenden Version.
-  await s.getByRole('button', { name: 'Über Ablago' }).click();
+  await s.getByRole('button', { name: w('Über Ablago') }).click();
   const ueber = s.locator('dialog.ueber-dms');
   await ueber.waitFor();
   {
@@ -841,7 +893,7 @@ async function main() {
     const v = await fetch(`${BASIS}/api/benutzer/${jonas.id}/vertreten`, { method: 'POST', headers: { 'x-dms': '1', cookie: adminCookie } });
     const vc = (v.headers.get('set-cookie') ?? adminCookie).split(';')[0];
     const [name, wert] = vc.split('=');
-    const kv = await browser.newContext({ viewport: { width: 1100, height: 520 }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+    const kv = await browser.newContext({ viewport: { width: 1100, height: 520 }, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin' });
     await kv.addCookies([{ name, value: wert, url: BASIS }]);
     const sv = await kv.newPage();
     await geheZu(sv, '/ablage/eingang');
@@ -849,31 +901,31 @@ async function main() {
     await sv.locator('.benutzermenue .wer').click();
     const menue = sv.locator('.benutzermenue .menue');
     await menue.waitFor();
-    if (await menue.getByText('Zurück zum eigenen Konto').count()) throw new Error('#418: „Zurück zum eigenen Konto“ steht wieder im Benutzermenü.');
+    if (await menue.getByText(w('Zurück zum eigenen Konto')).count()) throw new Error('#418: „Zurück zum eigenen Konto“ steht wieder im Benutzermenü.');
     await bild(sv, 'vertretung', { clip: { x: 0, y: 0, width: 1100, height: 420 } });
     await sv.keyboard.press('Escape');
-    await sv.locator('.vertretungsbanner').getByRole('button', { name: 'Zurück zum eigenen Konto' }).click();
+    await sv.locator('.vertretungsbanner').getByRole('button', { name: w('Zurück zum eigenen Konto') }).click();
     await sv.locator('.vertretungsbanner').waitFor({ state: 'detached' });
     await kv.close();
   }
 
   // Profil (#69) und Fehler melden (#70)
   await geheZu(s, '/profil/sicherheit');
-  await s.getByRole('heading', { name: 'Meine angemeldeten Geräte' }).waitFor();
+  await s.getByRole('heading', { name: w('Meine angemeldeten Geräte') }).waitFor();
   await bild(s, 'profil', { fullPage: true });
   // #420, #725: Startseite und „Geänderte Mappen“ unter Darstellung, Benachrichtigungen nur noch Benachrichtigungen.
   await geheZu(s, '/profil/darstellung');
-  await s.getByRole('heading', { name: 'Geänderte Mappen' }).waitFor();
+  await s.getByRole('heading', { name: w('Geänderte Mappen') }).waitFor();
   await bild(s, 'profil-darstellung', { fullPage: true });
   await geheZu(s, '/profil/benachrichtigungen');
-  await s.getByRole('heading', { name: /Aufgaben/ }).waitFor();
+  await s.getByRole('heading', { name: w(/Aufgaben/) }).waitFor();
   await bild(s, 'profil-benachrichtigungen', { fullPage: true });
   await geheZu(s, '/profil/fehler-melden');
   await s.getByPlaceholder(/Beim Speichern/).fill('Beim Speichern einer Rechnung kam „Fehler 500“, nachdem ich ein Dokument hinzugefügt hatte.');
-  await s.getByText('Technische Angaben ansehen').click();
+  await s.getByText(w('Technische Angaben ansehen')).click();
   await bild(s, 'fehler-melden');
-  await s.getByRole('button', { name: 'Meldung senden' }).click();
-  await s.getByText('Deine Meldung ist angekommen.').waitFor();
+  await s.getByRole('button', { name: w('Meldung senden') }).click();
+  await s.getByText(w('Deine Meldung ist angekommen.')).waitFor();
   await geheZu(s, '/api-doku');
   await bild(s, 'api-doku');
 
@@ -884,20 +936,20 @@ async function main() {
   // Werkbank anpassen (#281) mit der Vorlage Haushalt, danach wieder alles.
   await api('PUT', '/api/werkbank/ansicht', { installation: { vorlage: 'haushalt', ein: [], aus: [] } });
   await geheZu(s, '/werkbank/ansicht');
-  await s.getByRole('heading', { name: /Werkbank anpassen/, level: 1 }).waitFor();
+  await s.getByRole('heading', { name: w(/Werkbank anpassen/), level: 1 }).waitFor();
   await bild(s, 'werkbank-anpassen');
   await api('PUT', '/api/werkbank/ansicht', { installation: { vorlage: 'alles', ein: [], aus: [] } });
   await geheZu(s, '/werkbank/fehlermeldungen');
   await s.locator('.spalte.liste .eintrag').first().click();
-  await s.getByRole('heading', { name: 'Technische Angaben' }).waitFor();
+  await s.getByRole('heading', { name: w('Technische Angaben') }).waitFor();
   await bild(s, 'werkbank-fehlermeldung');
   // Werkbank
   // Bestehende Typen starten eingeklappt (#144): Übersicht mit Kurzinfos, dann „Felder“ aufklappen.
   await s.evaluate(() => { try { localStorage.removeItem('dms.typeditor.offen'); } catch { /* egal */ } });
   await geheZu(s, `/werkbank/typen/${vertrag.id}`);
   await bild(s, 'werkbank-mappentyp');
-  await s.locator('.sprungleiste').getByRole('button', { name: 'Felder' }).click();
-  await s.locator('button.feldkopfknopf').filter({ hasText: 'Kündigung bis' }).click();
+  await s.locator('.sprungleiste').getByRole('button', { name: w('Felder') }).click();
+  await s.locator('button.feldkopfknopf').filter({ hasText: w('Kündigung bis') }).click();
   await s.locator('.feldzeile.offen').scrollIntoViewIfNeeded();
   await bild(s, 'werkbank-feld');
   // Fristen (#129): Erinnerung am Datumsfeld
@@ -911,8 +963,8 @@ async function main() {
   await bild(s, 'werkbank-benutzer-neu');
   // Archivnummern (#345): Aufkleber drucken beim Nummernkreis „Archivnummer“.
   await geheZu(s, '/werkbank/nummernkreise/archivnummer');
-  await s.getByRole('heading', { name: /Aufkleber drucken/ }).waitFor();
-  await s.getByRole('heading', { name: /Aufkleber drucken/ }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+  await s.getByRole('heading', { name: w(/Aufkleber drucken/) }).waitFor();
+  await s.getByRole('heading', { name: w(/Aufkleber drucken/) }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-aufkleber');
   // Stempel (#394): Vorlage „Kopie für …“ mit Vorschau.
   await geheZu(s, '/werkbank/stempel?offen=kopie');
@@ -933,14 +985,14 @@ async function main() {
     await s.locator('.automatisierung-karten .karte-kopf button[aria-expanded]').first().click();
     await s.locator('.automatisierung-karten .karte.offen').scrollIntoViewIfNeeded();
     await bild(s, 'werkbank-automatisierung-karte');
-    await s.getByRole('heading', { name: 'Verlauf', exact: true }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+    await s.getByRole('heading', { name: w('Verlauf'), exact: true }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
     await s.locator('.automatisierung-schritte').first().waitFor({ state: 'attached' }).catch(() => null);
     // Verlauf wie die Historie (#707): den Probelauf aufklappen, damit Karte · Ergebnis · Einzelheiten zu sehen ist.
     await s.locator('.blatt:has(> h2:text-is("Verlauf")) .historie summary').first().click().catch(() => null);
     await bild(s, 'werkbank-automatisierung-verlauf');
     for (const [name, schema, viewport] of [['werkbank-automatisierung-dunkel', 'dark', { width: 1440, height: 860 }], ['werkbank-automatisierung-handy', 'light', { width: 393, height: 852 }]]) {
       const handy = viewport.width < 500;
-      const ka = await browser.newContext({ viewport, colorScheme: schema, locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1, ...(handy ? { isMobile: true, hasTouch: true } : {}) });
+      const ka = await browser.newContext({ viewport, colorScheme: schema, locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 1, ...(handy ? { isMobile: true, hasTouch: true } : {}) });
       const [cn, cw] = d.adminCookie.split('=');
       await ka.addCookies([{ name: cn, value: cw, url: BASIS }]);
       const sa = await ka.newPage();
@@ -953,9 +1005,9 @@ async function main() {
   // Datenschutz (#396): Vertragspartner „betrifft eine Person“, Auskunft für die Stadtwerke gesammelt – Prüfliste.
   await api('PUT', '/api/werkbank/datenschutz', { verantwortlicher: 'Familie Beispiel\nMusterweg 1, 01234 Musterstadt', empfaenger: '', typen: { [d.typ('Vertragspartner').id]: { person: true, zweck: 'Verträge und Rechnungen des Haushalts' } } });
   await geheZu(s, `/werkbank/auskuenfte/neu?mappe=${d.stadtwerke.id}`);
-  await s.getByRole('button', { name: 'Sammeln', exact: true }).click();
-  await s.getByRole('heading', { name: '3. Prüfen' }).waitFor();
-  await s.getByRole('heading', { name: '3. Prüfen' }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+  await s.getByRole('button', { name: w('Sammeln'), exact: true }).click();
+  await s.getByRole('heading', { name: w('3. Prüfen') }).waitFor();
+  await s.getByRole('heading', { name: w('3. Prüfen') }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-datenschutz');
   // Auskunft zustellen (#455): Auskunft mit Passwort erzeugen, Abruf-Link erstellen (ohne Mail) – Link und Code.
   {
@@ -967,10 +1019,10 @@ async function main() {
     // Liste der Auskünfte (#668): die neue Auskunft wählen, rechts Zustellen.
     await geheZu(s, '/werkbank/auskuenfte');
     await s.locator('.spalte.liste .eintrag').first().click();
-    await s.getByRole('button', { name: 'Zustellen …' }).first().click();
-    await s.getByRole('radio', { name: /Abruf-Link mit Abrufcode/ }).check();
-    await s.getByRole('checkbox', { name: /Link per E-Mail/ }).uncheck();
-    await s.getByRole('button', { name: 'Abruf-Link erstellen' }).click();
+    await s.getByRole('button', { name: w('Zustellen …') }).first().click();
+    await s.getByRole('radio', { name: w(/Abruf-Link mit Abrufcode/) }).check();
+    await s.getByRole('checkbox', { name: w(/Link per E-Mail/) }).uncheck();
+    await s.getByRole('button', { name: w('Abruf-Link erstellen') }).click();
     await s.locator('.auskunft-code').waitFor();
     const url = await s.locator('.auskunft-url').inputValue();
     await s.locator('.auskunft-zustellen').evaluate((e) => e.scrollIntoView({ block: 'center' }));
@@ -979,7 +1031,7 @@ async function main() {
     const ka = await kontext(false, 900, 640);
     const sa = await ka.newPage();
     await geheZu(sa, new URL(url).pathname + new URL(url).hash);
-    await sa.getByRole('heading', { name: 'Auskunft abrufen' }).waitFor();
+    await sa.getByRole('heading', { name: w('Auskunft abrufen') }).waitFor();
     await bild(sa, 'abrufseite');
     await ka.close();
   }
@@ -996,16 +1048,16 @@ async function main() {
   }
   // Pakete (#369): Abschnitt „Expertenmodus“ aufgeklappt unter den Knöpfen (ohne Katalogabruf).
   await geheZu(s, '/werkbank/pakete');
-  await s.getByRole('button', { name: /Expertenmodus/ }).click();
-  await s.getByRole('heading', { name: 'Paket hochladen' }).waitFor();
+  await s.getByRole('button', { name: w(/Expertenmodus/) }).click();
+  await s.getByRole('heading', { name: w('Paket hochladen') }).waitFor();
   await bild(s, 'werkbank-pakete');
-  await s.getByRole('button', { name: /Expertenmodus/ }).click();
+  await s.getByRole('button', { name: w(/Expertenmodus/) }).click();
   // Postfächer (#358): Anmeldung mit OAuth 2.0 – App eingetragen, noch nicht angemeldet (kein echter Anbieter).
   await api('PUT', '/api/werkbank/postfaecher-oauth/microsoft', { clientId: '0b5c6a1e-1234-4c8d-9e0f-5a6b7c8d9e0f', clientSecret: 'nur-fuer-bilder', tenant: 'common' });
   const pfOauth = (await api('POST', '/api/werkbank/postfaecher', { name: 'Büro', aktiv: false, server: 'outlook.office365.com', benutzer: 'buero@example.org', anmeldung: 'oauth', anbieter: 'microsoft' })).at(-1);
   await geheZu(s, `/werkbank/postfaecher/${pfOauth.id}`);
-  await s.getByRole('heading', { name: /Anmeldung per OAuth 2.0/ }).waitFor();
-  await s.getByRole('heading', { name: /Anmeldung per OAuth 2.0/ }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+  await s.getByRole('heading', { name: w(/Anmeldung per OAuth 2.0/) }).waitFor();
+  await s.getByRole('heading', { name: w(/Anmeldung per OAuth 2.0/) }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-postfach-oauth');
   await geheZu(s, '/werkbank/designs');
   await s.locator('.spalte.liste a.eintrag').first().click();
@@ -1013,67 +1065,67 @@ async function main() {
   await geheZu(s, '/werkbank/protokoll');
   await bild(s, 'werkbank-protokoll');
   await geheZu(s, '/werkbank/betrieb');
-  await s.getByRole('heading', { name: 'E-Mail-Versand' }).waitFor();
+  await s.getByRole('heading', { name: w('E-Mail-Versand') }).waitFor();
   await bild(s, 'werkbank-betrieb');
   // E-Mail-Versand (#813): Vorschläge, Verbindung prüfen, Erweitert.
   await s.locator('#mail').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-mail');
   await geheZu(s, '/werkbank/verschluesselung');
-  await s.getByRole('heading', { name: /^Schlüssel\b/ }).first().waitFor();
+  await s.getByRole('heading', { name: w(/^Schlüssel\b/) }).first().waitFor();
   await bild(s, 'werkbank-verschluesselung');
   await geheZu(s, '/werkbank/aufgaben');
-  await s.getByRole('heading', { name: 'Tägliche Zusammenfassung' }).waitFor();
+  await s.getByRole('heading', { name: w('Tägliche Zusammenfassung') }).waitFor();
   // #366: Mitte Zusammenfassung und Liste mit Filter, rechts die Mappe der ersten Aufgabe.
   if (await s.locator('.spalte.liste a.eintrag').count()) await s.locator('.spalte.liste a.eintrag').first().click();
   await bild(s, 'werkbank-aufgaben');
   // #415: Mehrfachauswahl mit Leiste „Ausgewählte weitergeben an“ (nur auswählen, nichts weitergeben).
-  await s.getByLabel('Alle angezeigten auswählen').check();
+  await s.getByLabel(w('Alle angezeigten auswählen')).check();
   await s.locator('.sammel-leiste').waitFor();
   await bild(s, 'werkbank-aufgaben-auswahl');
-  await s.locator('.sammel-leiste').getByRole('button', { name: 'Auswahl aufheben' }).click();
+  await s.locator('.sammel-leiste').getByRole('button', { name: w('Auswahl aufheben') }).click();
   await geheZu(s, '/werkbank/papierkorb');
-  await s.getByRole('heading', { name: 'Aufbewahrung', exact: true }).waitFor();
+  await s.getByRole('heading', { name: w('Aufbewahrung'), exact: true }).waitFor();
   // #366: Aufbewahrung und Liste in der Mitte, rechts die gewählte Mappe.
   if (await s.locator('.spalte.liste a.eintrag, .spalte.liste tbody tr').count()) {
     await s.locator('.spalte.liste a.eintrag, .spalte.liste tbody tr').first().click();
-    await s.getByRole('button', { name: 'Wiederherstellen' }).first().waitFor();
+    await s.getByRole('button', { name: w('Wiederherstellen') }).first().waitFor();
   }
   await bild(s, 'werkbank-papierkorb');
   await geheZu(s, '/werkbank/texterkennung');
-  await s.getByRole('heading', { name: 'Werkzeuge', exact: true }).waitFor();
-  await s.getByRole('heading', { name: 'Aufträge', exact: true }).waitFor();
+  await s.getByRole('heading', { name: w('Werkzeuge'), exact: true }).waitFor();
+  await s.getByRole('heading', { name: w('Aufträge'), exact: true }).waitFor();
   await bild(s, 'werkbank-texterkennung');
   // Ohne Mitte (#366): lange Zugriffe unter den Einstellungen, „Installiert“ unter „Neuere Versionen“.
   // #407: unter Einstellungen → Datenbank-Anbindung, unter der Verbindung.
   // #725: lange Datenbankzugriffe stehen im Systemzustand.
   await geheZu(s, '/werkbank/systemzustand');
-  await s.getByRole('heading', { name: /Lange Datenbankzugriffe/ }).waitFor();
+  await s.getByRole('heading', { name: w(/Lange Datenbankzugriffe/) }).waitFor();
   await s.locator('#lange-zugriffe').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-datenbank');
   await geheZu(s, '/werkbank/systemzustand#version');
-  await s.getByRole('heading', { name: 'Installiert', exact: true }).waitFor();
+  await s.getByRole('heading', { name: w('Installiert'), exact: true }).waitFor();
   await s.locator('#version').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-technik');
   // #408: Systemzustand unter Wartung und Fehlersuche – Schwellen oben, Ordner darunter.
   await geheZu(s, '/werkbank/systemzustand');
-  await s.getByRole('heading', { name: 'Schwellen für den Speicherplatz' }).waitFor();
+  await s.getByRole('heading', { name: w('Schwellen für den Speicherplatz') }).waitFor();
   await bild(s, 'werkbank-speicherplatz');
   // #409: Auslastung zwischen Schwellen und Ordnern (Kurven erst nach zwei Minuten).
   await s.locator('#auslastung').scrollIntoViewIfNeeded();
-  await s.getByRole('heading', { name: /^Auslastung\b/ }).first().waitFor();
+  await s.getByRole('heading', { name: w(/^Auslastung\b/) }).first().waitFor();
   await bild(s, 'werkbank-auslastung');
   await geheZu(s, '/werkbank/demo');
   // Mit Dokumenten (#365): Schieberegler, Mischung und Abschätzung sichtbar.
   await s.locator('#demo-dokumente').check();
-  await s.getByText('Abschätzung:').waitFor();
+  await s.getByText(w('Abschätzung:')).waitFor();
   await bild(s, 'werkbank-demo');
 
   // Sicherung (#103–#106): jetzt sichern, Notfallblatt herunterladen (als Bild fürs Handbuch), Zeitplan
   await geheZu(s, '/werkbank/sicherung');
-  await s.getByRole('button', { name: 'Jetzt sichern' }).click();
-  await s.getByText(/Sicherung fertig/).waitFor({ timeout: 120_000 });
+  await s.getByRole('button', { name: w('Jetzt sichern') }).click();
+  await s.getByText(w(/Sicherung fertig/)).waitFor({ timeout: 120_000 });
   const download = s.waitForEvent('download');
-  await s.locator('#notfallblatt').getByRole('link', { name: /Notfallblatt herunterladen/ }).click();
+  await s.locator('#notfallblatt').getByRole('link', { name: w(/Notfallblatt herunterladen/) }).click();
   const pdf = join(ZIEL, 'notfallblatt.pdf');
   await (await download).saveAs(pdf);
   try {
@@ -1088,7 +1140,7 @@ async function main() {
   await s.locator('#zeitplan').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-sicherung-zeitplan');
   // Probe-Wiederherstellung (#109)
-  await s.getByRole('button', { name: 'Jetzt probeweise wiederherstellen' }).click();
+  await s.getByRole('button', { name: w('Jetzt probeweise wiederherstellen') }).click();
   await s.locator('#probe .chip.gut').first().waitFor({ timeout: 120_000 });
   await s.locator('#probe').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-sicherung-probe');
@@ -1098,18 +1150,18 @@ async function main() {
   const mitgliedAnmeldung = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: MITGLIED.email, passwort: MITGLIED.passwort }) });
   const mitgliedCookie = (mitgliedAnmeldung.headers.get('set-cookie') ?? '').split(';')[0];
   await geheZu(s, '/werkbank/wartung');
-  await s.getByLabel(/Text für alle/).fill('Update auf die neue Version');
+  await s.getByLabel(w(/Text für alle/)).fill('Update auf die neue Version');
   // #402: Zeitschiene Beginn → Ende mit Satz darunter und „Jetzt sofort sperren“ – vor dem Ankündigen.
-  await s.getByLabel(/Erwartetes Ende/).fill(await s.locator('#wartung-beginn').evaluate((e) => {
+  await s.getByLabel(w(/Erwartetes Ende/)).fill(await s.locator('#wartung-beginn').evaluate((e) => {
     const d = new Date(new Date(e.value).getTime() + 3600_000); const p = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   }));
-  await s.getByRole('button', { name: 'Jetzt sofort sperren' }).waitFor();
+  await s.getByRole('button', { name: w('Jetzt sofort sperren') }).waitFor();
   await bild(s, 'werkbank-wartungsmodus');
-  await s.getByRole('button', { name: 'Wartung ankündigen' }).click();
+  await s.getByRole('button', { name: w('Wartung ankündigen') }).click();
   await s.locator('.wartungsbanner').waitFor();
   if (mitgliedCookie) {
-    const km = await browser.newContext({ viewport: { width: 1100, height: 620 }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+    const km = await browser.newContext({ viewport: { width: 1100, height: 620 }, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin' });
     const [name, wert] = mitgliedCookie.split('=');
     await km.addCookies([{ name, value: wert, url: BASIS }]);
     const sm = await km.newPage();
@@ -1120,24 +1172,24 @@ async function main() {
   }
   // Wiederherstellen (#107): nur im aktiven Wartungsmodus – Abgleich einer Sicherung, ohne zu starten.
   // Rückfragen sind eigene Dialoge (#355), keine Browser-Fenster.
-  await s.getByRole('button', { name: 'Alle jetzt abmelden' }).click();
-  await s.getByRole('alertdialog').getByRole('button', { name: 'Alle abmelden' }).click();
-  await s.getByText('Wartungsmodus aktiv', { exact: false }).first().waitFor();
+  await s.getByRole('button', { name: w('Alle jetzt abmelden') }).click();
+  await s.getByRole('alertdialog').getByRole('button', { name: w('Alle abmelden') }).click();
+  await s.getByText(w('Wartungsmodus aktiv'), { exact: false }).first().waitFor();
   await geheZu(s, '/werkbank/sicherung#wiederherstellen');
   await s.locator('.auswahlliste input[type=radio]').first().check();
-  await s.getByRole('heading', { name: /Abgleich/ }).waitFor();
+  await s.getByRole('heading', { name: w(/Abgleich/) }).waitFor();
   await bild(s, 'werkbank-wiederherstellen');
   await geheZu(s, '/werkbank/wartung');
-  await s.getByRole('button', { name: 'Wartung beenden' }).click();
+  await s.getByRole('button', { name: w('Wartung beenden') }).click();
   await s.locator('.wartungsbanner').waitFor({ state: 'detached' });
 
   // Schlüssel wechseln (#47) – ganz am Ende, weil danach Notfallblatt und Sicherungen auf den alten Schlüssel zeigen.
   await geheZu(s, '/werkbank/verschluesselung');
-  await s.getByRole('button', { name: 'Schlüssel wechseln' }).click();
+  await s.getByRole('button', { name: w('Schlüssel wechseln') }).click();
   const frage = s.getByRole('alertdialog');
   await frage.getByRole('textbox').fill('wechseln');
   await bild(s, 'rueckfrage');
-  await frage.getByRole('button', { name: 'Schlüssel wechseln' }).click();
+  await frage.getByRole('button', { name: w('Schlüssel wechseln') }).click();
   await s.locator('#wechseln .hinweis.gut').waitFor();
   await s.locator('#wechseln').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-schluesselwechsel');
@@ -1151,6 +1203,19 @@ async function main() {
 
   await browser.close();
   console.log(`${erstellt.length} Bilder in ${ZIEL}`);
+  if (fehlendeTexte.size) console.log(`::warning title=Bildschirmfotos ${SPRACHE}::Ohne Übersetzung gesucht: ${[...fehlendeTexte].join(' · ')}`);
+}
+
+/** Zeigt die Oberfläche die Sprache der Aufnahme? Deutsch immer; sonst am Attribut lang der Seite (#730). */
+async function spricht(browser) {
+  if (SPRACHE === 'de') return true;
+  const k = await browser.newContext({ locale: GEBIET });
+  const s = await k.newPage();
+  await s.goto(BASIS + '/');
+  await s.waitForLoadState('networkidle');
+  const lang = await s.evaluate(() => document.documentElement.lang || '');
+  await k.close();
+  return lang.toLowerCase().startsWith(SPRACHE);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

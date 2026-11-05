@@ -140,6 +140,13 @@ describe('Handbuchseite „Notfall“ (#814)', () => {
   it('Kurzadressen /notfall und /emergency bleiben dauerhaft und führen auf die Seite', () => {
     const v = readFileSync(join(WURZEL, 'docs/handbuch/werkzeuge/veroeffentlichen.py'), 'utf8');
     assert.match(v, /'notfall': 'admin\/aktuell\/was-ist-passiert\/'/);
-    assert.match(v, /'emergency': 'admin\/aktuell\/was-ist-passiert\/'/);
+    // Seit #730 auf die englische Notfallseite.
+    assert.match(v, /'emergency': 'admin\/aktuell\/en\/was-ist-passiert\/'/);
+  });
+  it('englische Notfallseite (#730): gleiche Seite, gleiche Fälle, im englischen Handbuch', () => {
+    const seite = readFileSync(join(WURZEL, 'docs/handbuch/admin/docs-en/was-ist-passiert.md'), 'utf8');
+    assert.match(seite, /^# Emergency: What has happened to you\?/m);
+    assert.ok(seite.includes('https://help.ablago.app/emergency'));
+    assert.match(readFileSync(join(WURZEL, 'docs/handbuch/admin/mkdocs.en.yml'), 'utf8'), /was-ist-passiert\.md/);
   });
 });

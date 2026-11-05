@@ -4,17 +4,20 @@ Handbuch online (#846): stellt aus den gebauten Handbüchern die Seite für GitH
 
     python3 veroeffentlichen.py <ausgabe> <gebaut> <startseite.html>
 
-  <gebaut>   enthält benutzer/, admin/, installieren/ und entwickler/ (mkdocs build)
+  <gebaut>   enthält benutzer/, admin/, installieren/ und entwickler/ (mkdocs build), darin je
+             Übersetzung einen Unterordner, z. B. benutzer/en/ (#730)
   <ausgabe>  wird neu angelegt und mit actions/upload-pages-artifact hochgeladen
 
 Online gibt es nur noch „aktuell“. Ältere Fassungen bringt jede Installation unter /hilfe/ mit
 (#219), und aus jedem Git-Tag lassen sie sich neu bauen. Aufbau:
 
   /index.html                 Startseite mit Logo und Favicons
+  /en/index.html              Startseite auf Englisch (#730)
   /notfall/, /emergency/      Kurzadressen vom Notfallblatt (#814) – bleiben dauerhaft gültig
   /404.html                   leitet alte Adressen (v0.xx, entwicklung, ohne Ordner) auf „aktuell“
   /benutzer/index.html        → aktuell/
   /benutzer/aktuell/          …, ebenso admin/, installieren/, entwickler/
+  /benutzer/aktuell/en/       dieselben Seiten auf Englisch (#730)
 
 Die eigene Adresse help.ablago.app steht in den Pages-Einstellungen; eine Datei CNAME
 braucht die Veröffentlichung über Actions nicht.
@@ -24,12 +27,14 @@ from pathlib import Path
 
 HANDBUECHER = ('benutzer', 'admin', 'installieren', 'entwickler')
 ORDNER = 'aktuell'
+# Übersetzungen (#730): je Handbuch ein Unterordner mit denselben Seiten.
+SPRACHEN = ('en',)
 
 # Kurzadressen (#814): Sie stehen auf dem Notfallblatt, also auf Papier – nie entfernen oder umbenennen, nur das
-# Ziel darf sich ändern. Englisch zeigt bis zum englischen Handbuch (#730) auf die deutsche Seite.
+# Ziel darf sich ändern. Englisch zeigt seit #730 auf die englische Notfallseite.
 KURZADRESSEN = {
     'notfall': 'admin/aktuell/was-ist-passiert/',
-    'emergency': 'admin/aktuell/was-ist-passiert/',
+    'emergency': 'admin/aktuell/en/was-ist-passiert/',
 }
 
 UMLEITUNG = """<!doctype html>
@@ -53,7 +58,9 @@ NICHT_GEFUNDEN = """<!doctype html>
   const [, basis, h, rest] = m;
   const teile = rest.split('/');
   if (teile[0] === 'aktuell') {
-    if (teile.slice(1).join('') !== '') location.replace(basis + h + '/aktuell/');
+    // Unbekannte Seite: auf die Startseite des Handbuchs in derselben Sprache (#730).
+    const sprache = teile[1] === 'en' ? 'en/' : '';
+    if (teile.slice(sprache ? 2 : 1).join('') !== '') location.replace(basis + h + '/aktuell/' + sprache);
     return;
   }
   const seite = /^v\\d+\\.\\d+$/.test(teile[0]) || teile[0] === 'entwicklung' ? teile.slice(1).join('/') : rest;
@@ -63,7 +70,8 @@ NICHT_GEFUNDEN = """<!doctype html>
   location.replace((da ? ziel : basis + h + '/aktuell/') + (da ? location.hash : ''));
 })();
 </script></head>
-<body><h1>Seite nicht gefunden</h1><p>Weiter zu <a href="/">allen Handbüchern</a>: <a href="/installieren/">Wie komme ich an Ablago?</a>, <a href="/benutzer/">Benutzerhandbuch</a>, <a href="/admin/">Administratorhandbuch</a>, <a href="/entwickler/">Entwicklerhandbuch</a>.</p></body></html>
+<body><h1>Seite nicht gefunden</h1><p>Weiter zu <a href="/">allen Handbüchern</a>: <a href="/installieren/">Wie komme ich an Ablago?</a>, <a href="/benutzer/">Benutzerhandbuch</a>, <a href="/admin/">Administratorhandbuch</a>, <a href="/entwickler/">Entwicklerhandbuch</a>.</p>
+<h2 lang="en">Page not found</h2><p lang="en">Continue to <a href="/en/">all manuals in English</a>.</p></body></html>
 """
 
 
@@ -77,6 +85,9 @@ def main():
     for h in HANDBUECHER:
         if not (gebaut / h).is_dir():
             sys.exit(f'Handbuch {h} fehlt in {gebaut}')
+        for s in SPRACHEN:
+            if not (gebaut / h / s / 'index.html').is_file():
+                sys.exit(f'Handbuch {h} fehlt auf {s} in {gebaut}/{h}/{s}')
         shutil.copytree(gebaut / h, ausgabe / h / ORDNER)
         weiter = f'{ORDNER}/'
         (ausgabe / h / 'index.html').write_text(UMLEITUNG.format(ziel=weiter, ziel_js=json.dumps(weiter)))
@@ -90,6 +101,11 @@ def main():
     for f in start.parent.iterdir():  # Logo und Favicons der Startseite (#689)
         if f.is_file() and f.name != 'index.html':
             shutil.copy(f, ausgabe / f.name)
+    for s in SPRACHEN:  # Startseite je Sprache (#730), z. B. start/en/index.html → /en/
+        if not (start.parent / s / 'index.html').is_file():
+            sys.exit(f'Startseite {s}/index.html fehlt')
+        (ausgabe / s).mkdir(exist_ok=True)
+        shutil.copy(start.parent / s / 'index.html', ausgabe / s / 'index.html')
     (ausgabe / '404.html').write_text(NICHT_GEFUNDEN)
     (ausgabe / '.nojekyll').write_text('')
     groesse = sum(f.stat().st_size for f in ausgabe.rglob('*') if f.is_file())
