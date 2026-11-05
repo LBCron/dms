@@ -98,7 +98,7 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     assert.deepEqual(s.durchgaenge.map((x) => x.name), ['klein', 'klein + Speichern']);
     assert.match(s.ergebnis!.vorlage, /Messergebnis Lasttest[\s\S]*Gerät\/Modell: \{\{geraet\}\}[\s\S]*klein\s+25 gleichzeitig: p50[^\n]*\n  Engpass klein: Warten auf DB-Verbindung p95 [^\n]*\nklein \+ Speichern\s+25 gleichzeitig: p50/);
     // Engpass (#874): eigene Zeile je Durchgang, über alle Prozesse.
-    assert.match(s.ergebnis!.vorlage, /\n  Engpass klein \+ Speichern: [^\n]*Speicher je Prozess: 1 \d+ MB/);
+    assert.match(s.ergebnis!.vorlage, /\n  Engpass klein \+ Speichern: [^\n]*Speicher je Prozess: Prozess 1: \d+ MB \(Halde \d+\)/);
     assert.ok(!/Abgelehnt \(4xx\)/.test(s.ergebnis!.bericht), 'alle schreibenden Anfragen gehen durch');
     assert.match(s.ergebnis!.bericht, /Bestand: 50\d\d Mappen \(5000 Demo-Mappen\)/);
     assert.ok(!/lasttest-passwort|EINRICHTUNGSCODE|127\.0\.0\.1/.test(JSON.stringify(s)), 'keine Zugangsdaten, keine Adressen');

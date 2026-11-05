@@ -77,6 +77,10 @@ describe('Mehrere Prozesse, ganzes Ablago (#745)', { skip: !URL_DB && 'TEST_DATA
     }, 'bereit', x.log);
     assert.ok(gesehen, 'Startseite mit dem Schritt der Migration');
     await warte(async () => /Prozess 2 ist bereit/.test(x.log()), 'Prozess 2', x.log);
+    // Halde (#891): auch der Leiter begrenzt, 512 MB über der der anderen – beide Werte im Startprotokoll.
+    const grenzen = x.log().match(/Ablago startet mit 2 Prozessen[^\n]*haldeLeiterMb=(\d+)[^\n]*haldeMb=(\d+)/);
+    assert.ok(grenzen, `Startprotokoll mit beiden Grenzen:\n${x.log()}`);
+    assert.equal(Number(grenzen[1]), Number(grenzen[2]) + 512);
     assert.equal(x.log().match(/999_a745_langsam/g)?.length ?? 0, 1, 'die Migration läuft genau einmal');
     const g = await (await fetch(`${x.basis}/api/gesundheit`)).json() as { ok: boolean; zustand: string };
     assert.deepEqual([g.ok, g.zustand], [true, 'laeuft'], 'Gesundheit unverändert');
