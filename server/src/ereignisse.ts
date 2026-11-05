@@ -65,7 +65,17 @@ export class Ereignisverteiler {
       for (;;) {
         const liste = await this.o.repo().holeKatalogEreignisse(50, SPERRE_S);
         if (!liste.length) break;
-        for (const e of liste) if (await this.eines(e)) n++;
+        // „Verteilt“ gesammelt setzen (#743): eine Anweisung je Abholung statt je Ereignis. Dauert eine Abholung
+        // länger als die halbe Sperre, schon zwischendurch – sonst holte ein anderer Server sie noch einmal.
+        let verteilt: string[] = [];
+        let seit = Date.now();
+        const merke = async () => { if (verteilt.length) await this.o.repo().katalogEreignisseVerteilt(verteilt); verteilt = []; seit = Date.now(); };
+        try {
+          for (const e of liste) {
+            if (await this.eines(e)) { verteilt.push(e.id); n++; }
+            if (Date.now() - seit > (SPERRE_S * 1000) / 2) await merke();
+          }
+        } finally { await merke(); }
       }
     } while (this.nochmal);
     if (Date.now() - this.aufgeraeumt > 600_000) { this.aufgeraeumt = Date.now(); await this.o.repo().raeumeKatalogEreignisseAuf(AUFBEWAHREN_TAGE); }
@@ -78,7 +88,7 @@ export class Ereignisverteiler {
     for (const [name, fn] of this.abnehmer) {
       try { await fn(e); } catch (x) { fehler.push(`${name}: ${(x as Error).message}`); }
     }
-    if (!fehler.length) { await this.o.repo().katalogEreignisVerteilt(g.id); return true; }
+    if (!fehler.length) return true;
     const warte = WIEDERHOLEN_MIN[g.versuche];
     await this.o.repo().katalogEreignisFehlgeschlagen(g.id, fehler.join('; '), warte === undefined ? null : new Date(Date.now() + warte * 60_000));
     log[warte === undefined ? 'error' : 'warn'](warte === undefined ? 'Ereignis aufgegeben' : 'Ereignis wird wiederholt', { art: g.art, id: g.id, versuch: g.versuche + 1, fehler: fehler.join('; ') });

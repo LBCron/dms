@@ -13,7 +13,7 @@ import type { Quelle } from '../../shared/src/model';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { beiVerklemmungWiederholen } from './db';
 import { protokoll } from './protokoll';
-import { feldweise, istUuid, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
+import { feldweise, istUuid, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type SeitenAnfrage, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 import { zeitzone } from '../../shared/src/region';
 /** Sprachmarke im Hinweis der Texterkennung (#395) samt Konfidenz, zum Ersetzen (#400). */
@@ -562,6 +562,85 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     });
   }
 
+  /**
+   * Bedingungen einer Seite (#740): `wo` (Typ, Eingang/Favoriten, Textfilter der erweiterten Suche, Lesefilter – je mit
+   * AND davor) und, mit Suche, `treffer`: die Ids der Mappen, die den Begriff enthalten, als eine Menge (UNION aus
+   * Mappe, Notizen und Dokumenten). Jede Teilmenge nutzt ihren Index (Trigramm auf suchtext, Notizen, Suchindex
+   * der Dokumente) – mit OR in einer Bedingung über alle Mappen ginge das nicht. Gleiche Treffer wie vorher.
+   */
+  const seitenTeile = async (o: SeitenAnfrage) => {
+    const typ = o.klauseln ? sql`AND (${klauselnSql(sql, o.klauseln)})`
+      : o.typId && istUuid(o.typId) ? sql`AND typ_id = ${o.typId}` : o.typId ? sql`AND false` : sql``;
+    const eingang = o.eingang
+      ? sql`AND EXISTS (SELECT 1 FROM aufgaben a WHERE a.mappe_id = mappen.id AND a.erledigt IS NULL
+          AND (a.empfaenger_id = ${istUuid(o.eingang.benutzerId) ? o.eingang.benutzerId : null}::uuid ${o.eingang.admin ? sql`OR a.empfaenger_id IS NULL` : sql``}))`
+      : o.favoriten
+      ? sql`AND EXISTS (SELECT 1 FROM favoriten fav WHERE fav.mappe_id = mappen.id AND fav.benutzer_id = ${istUuid(o.favoriten.benutzerId) ? o.favoriten.benutzerId : null}::uuid)`
+      : sql``;
+    const musterAus = (t: string) => `%${t.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+    // Unscharfe Suche (#356): Titel, Werte und Notizen ohne Umlaute, Groß-/Kleinschreibung und Bindestriche
+    // verglichen; ein einzelner Begriff auch in seinen Varianten (gleichbedeutende Wörter, ähnliche Schreibweisen).
+    const nurV = o.varianten ?? {};
+    // Ähnliche Schreibweisen (Tippfehler) gelten wie Varianten – nur nicht für Wortteile im Volltext.
+    const v: Varianten = { ...nurV };
+    for (const [k, w] of Object.entries(o.aehnlich ?? {})) v[k] = [...(v[k] ?? []), ...w];
+    // Volltext (#400): je Sprache der Ablage eine Anfrage; gleiche Anfragen (dieselben Wortstämme) nur einmal.
+    const anfragen = new Map<string, SqlTeil>();
+    for (const t of [o.volltext ? o.suche : undefined, o.textfilter?.dokumente ? o.textfilter.text.trim() : undefined]) {
+      if (t && !anfragen.has(t)) anfragen.set(t, (await tsAnfrage(t, v)).q);
+    }
+    const schreibweisen = (t: string) => { const b = suchbegriffe(t); return b?.length === 1 ? [t, ...(v[falte(b[0])] ?? [])] : [t]; };
+    const enthaelt = (spalte: Teil, t: string) => schreibweisen(t)
+      .map((x) => sql`replace(lower(dms_falte(${spalte})), '-', '') LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`);
+    // Teilwörter im Volltext (#161): „Ofen“ findet „Backofen“ – zusätzlich zu den Wortformen; je Wort auch die Varianten.
+    const teilSql = (spalte: string, teil: string[]) => teil.map((w) => [w, ...(nurV[falte(w)] ?? []).map((x) => x.toLowerCase()).filter((x) => x.length >= 3)]
+      .map((x) => sql`${sql.unsafe(spalte)} ILIKE ${musterAus(x)}`).reduce((a, b) => sql`${a} OR ${b}`))
+      .reduce((a, b) => sql`(${a}) AND (${b})`);
+    // Ids der Mappen mit dem Begriff in einer Notiz bzw. einem Dokument – einmal über die Indizes (#356).
+    const inNotizen = (t: string) => sql`SELECT n.mappe_id FROM notizen n WHERE n.haushalt_id = ${haushaltId} AND (${enthaelt(sql`n.text`, t)})`;
+    const inDokumenten = (t: string) => {
+      const teil = teilwoerter(t);
+      return sql`SELECT d.mappe_id FROM dokumente d WHERE d.haushalt_id = ${haushaltId}
+        AND (${SUCHINDEX} @@ ${anfragen.get(t) ?? suchanfrage(sql, t, v)}${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``})`;
+    };
+    // Vorfilter (#615, #740): Titel und Werte stehen gefaltet in suchtext (Migration 055, nie leer seit 075) – was in
+    // einem davon vorkommt, kommt auch dort vor; der Trigramm-Index findet diese Mappen. Danach wird je Titel und Wert
+    // genau verglichen (dieselben Treffer wie vorher), aber nur noch für die wenigen Mappen, die den Begriff enthalten.
+    const vorfilter = (t: string) => schreibweisen(t)
+      .map((x) => sql`mappen.suchtext LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`);
+    const inMappen = (t: string) => sql`SELECT mappen.id FROM mappen WHERE mappen.haushalt_id = ${haushaltId} AND (${vorfilter(t)})
+      AND (${enthaelt(sql`titel`, t)} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value NOT LIKE 'dms1$%' AND (${enthaelt(sql`e.value`, t)})))`;
+    const vereint = (teile: Teil[]) => teile.reduce((a, b) => sql`${a} UNION ${b}`);
+    const suche = o.suche
+      ? vereint([inMappen(o.suche), ...(o.notizen ? [inNotizen(o.suche)] : []), ...(o.volltext ? [inDokumenten(o.suche)] : [])])
+      : null;
+    // Erweiterte Suche (#199): Begriff in Dokumenten oder Notizen, zusätzlich zu allen anderen Bedingungen.
+    const tf = o.textfilter?.text.trim() && (o.textfilter.dokumente || o.textfilter.notizen) ? o.textfilter : null;
+    const tfMenge = tf ? vereint([...(tf.dokumente ? [inDokumenten(tf.text)] : []), ...(tf.notizen ? [inNotizen(tf.text)] : [])]) : null;
+    // Ohne Suche ist der Textfilter die Treffermenge; mit Suche eine weitere Bedingung.
+    const treffer = suche ?? tfMenge;
+    const textfilter = suche && tfMenge ? sql`AND mappen.id IN (${tfMenge})` : sql``;
+    // Berechtigungen (#124): nur, was der Benutzer lesen darf.
+    const lesen = o.lesen ? sql`AND ${lesefilterSql(sql, o.lesen)}` : sql``;
+    const wo = sql`${typ} ${eingang} ${textfilter} ${lesen}`;
+    const so = o.sortierung;
+    const k = so?.key ?? '';
+    const ausdruck = !so || so.art === 'titel' ? sql`lower(titel)`
+      : so.art === 'erstellt' ? sql`erstellt` : so.art === 'geaendert' ? sql`geaendert`
+      : so.art === 'erstelltVon' ? sql`(SELECT lower(coalesce(nullif(b.name, ''), b.email)) FROM benutzer b WHERE b.id = mappen.erstellt_von)`
+      : so.art === 'geaendertVon' ? sql`(SELECT lower(coalesce(nullif(b.name, ''), b.email)) FROM benutzer b WHERE b.id = mappen.geaendert_von)`
+      : so.art === 'typ' ? sql`(SELECT lower(t.name) FROM mappentypen t WHERE t.id = mappen.typ_id)`
+      : so.art === 'zahl' || so.art === 'janein' ? sql`(werte -> ${k}::text)`
+      : so.art === 'betrag' ? sql`((werte -> ${k}::text ->> 'betrag')::numeric)`
+      : so.art === 'datum' ? sql`(werte ->> ${k}::text)`
+      : sql`lower(werte ->> ${k}::text)`;
+    // Leere Werte zuletzt. erstellt und geaendert sind nie leer (NOT NULL), ohne „NULLS LAST“ liest PostgreSQL ihren
+    // Index auch rückwärts (#740). Ebenso Titel absteigend: Ein Titel fehlt nur kurz vor dem ersten Berechnen.
+    const ohneLeere = !so || ['titel', 'erstellt', 'geaendert'].includes(so.art);
+    const richtung = so?.absteigend ? (ohneLeere ? sql`DESC` : sql`DESC NULLS LAST`) : sql`ASC NULLS LAST`;
+    return { wo, treffer, ausdruck, richtung, tf, enthaelt, schreibweisen, anfragen, v, teilSql };
+  };
+
   return {
     transaktion(f) {
       return sql.begin((tx) => f(pgRepo(inTransaktion(tx), haushaltId))) as Promise<Awaited<ReturnType<typeof f>>>;
@@ -748,8 +827,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         .map((r) => ({ id: r.id as string, nr: Number(r.nr), art: r.art as string, daten: r.daten as Record<string, unknown>, ausloeser: r.ausloeser as Record<string, unknown>, erstellt: (r.erstellt as Date).toISOString(), versuche: r.versuche as number }))
         .sort((a, b) => a.nr - b.nr);
     },
-    async katalogEreignisVerteilt(id) {
-      await sql`UPDATE ereignisse SET verteilt = now(), fehler = NULL, gesperrt_bis = NULL WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+    async katalogEreignisseVerteilt(ids) {
+      if (!ids.length) return;
+      await sql`UPDATE ereignisse SET verteilt = now(), fehler = NULL, gesperrt_bis = NULL WHERE haushalt_id = ${haushaltId} AND id = ANY(${ids}::uuid[])`;
     },
     async katalogEreignisFehlgeschlagen(id, fehler, naechster) {
       await sql`UPDATE ereignisse SET versuche = versuche + 1, fehler = ${fehler.slice(0, 1000)}, gesperrt_bis = NULL,
@@ -839,8 +919,11 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
           neu = feldweise((a?.werte as Werte | undefined) ?? {}, fw.basis, werte);
           verweise = fw.verweise(neu);
         }
+        // Titel im selben UPDATE (#743): eine Zeilenversion, Suchtext und Wörterverzeichnis nur einmal neu.
+        const titel = fw?.titel?.(neu);
         const [r] = await tx`
           UPDATE mappen SET werte = ${json(sql, neu)}, geaendert = ${STAND_WEITER}, geaendert_von = ${benutzerId}, passt = true, problem = NULL
+            ${titel !== undefined ? tx`, titel = ${titel}` : tx``}
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
           RETURNING ${MAP}`;
         await schreibeVerweise(tx, id, verweise);
@@ -901,83 +984,31 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return r;
     },
     async seite(o) {
-      const typ = o.klauseln ? sql`AND (${klauselnSql(sql, o.klauseln)})`
-        : o.typId && istUuid(o.typId) ? sql`AND typ_id = ${o.typId}` : o.typId ? sql`AND false` : sql``;
-      const eingang = o.eingang
-        ? sql`AND EXISTS (SELECT 1 FROM aufgaben a WHERE a.mappe_id = mappen.id AND a.erledigt IS NULL
-            AND (a.empfaenger_id = ${istUuid(o.eingang.benutzerId) ? o.eingang.benutzerId : null}::uuid ${o.eingang.admin ? sql`OR a.empfaenger_id IS NULL` : sql``}))`
-        : o.favoriten
-        ? sql`AND EXISTS (SELECT 1 FROM favoriten fav WHERE fav.mappe_id = mappen.id AND fav.benutzer_id = ${istUuid(o.favoriten.benutzerId) ? o.favoriten.benutzerId : null}::uuid)`
-        : sql``;
-      const musterAus = (t: string) => `%${t.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
-      // Unscharfe Suche (#356): Titel, Werte und Notizen ohne Umlaute, Groß-/Kleinschreibung und Bindestriche
-      // verglichen; ein einzelner Begriff auch in seinen Varianten (gleichbedeutende Wörter, ähnliche Schreibweisen).
-      const nurV = o.varianten ?? {};
-      // Ähnliche Schreibweisen (Tippfehler) gelten wie Varianten – nur nicht für Wortteile im Volltext.
-      const v: Varianten = { ...nurV };
-      for (const [k, w] of Object.entries(o.aehnlich ?? {})) v[k] = [...(v[k] ?? []), ...w];
-      // Volltext (#400): je Sprache der Ablage eine Anfrage; gleiche Anfragen (dieselben Wortstämme) nur einmal.
-      const anfragen = new Map<string, SqlTeil>();
-      for (const t of [o.volltext ? o.suche : undefined, o.textfilter?.dokumente ? o.textfilter.text.trim() : undefined]) {
-        if (t && !anfragen.has(t)) anfragen.set(t, (await tsAnfrage(t, v)).q);
-      }
-      const schreibweisen = (t: string) => { const b = suchbegriffe(t); return b?.length === 1 ? [t, ...(v[falte(b[0])] ?? [])] : [t]; };
-      const enthaelt = (spalte: Teil, t: string) => schreibweisen(t)
-        .map((x) => sql`replace(lower(dms_falte(${spalte})), '-', '') LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`);
-      // Teilwörter im Volltext (#161): „Ofen“ findet „Backofen“ – zusätzlich zu den Wortformen; je Wort auch die Varianten.
-      const teilSql = (spalte: string, teil: string[]) => teil.map((w) => [w, ...(nurV[falte(w)] ?? []).map((x) => x.toLowerCase()).filter((x) => x.length >= 3)]
-        .map((x) => sql`${sql.unsafe(spalte)} ILIKE ${musterAus(x)}`).reduce((a, b) => sql`${a} OR ${b}`))
-        .reduce((a, b) => sql`(${a}) AND (${b})`);
-      // Als Teilmenge (IN) statt je Mappe (EXISTS): PostgreSQL sucht die Dokumente einmal über die Indizes (#356) –
-      // je Mappe hieße bei häufigen Wörtern, die Volltexte immer wieder zu lesen.
-      const inNotizen = (t: string) => sql`mappen.id IN (SELECT n.mappe_id FROM notizen n WHERE n.haushalt_id = ${haushaltId} AND (${enthaelt(sql`n.text`, t)}))`;
-      const inDokumenten = (t: string) => {
-        const teil = teilwoerter(t);
-        return sql`mappen.id IN (SELECT d.mappe_id FROM dokumente d WHERE d.haushalt_id = ${haushaltId}
-          AND (${SUCHINDEX} @@ ${anfragen.get(t) ?? suchanfrage(sql, t, v)}${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``}))`;
-      };
-      // Vorfilter (#615): Titel und Werte stehen gefaltet in suchtext (Migration 055) – was in einem davon vorkommt,
-      // kommt auch dort vor. Erst danach wird je Titel und Wert genau verglichen (dieselben Treffer wie vorher), aber
-      // nur noch für die wenigen Mappen, die den Begriff überhaupt enthalten. Ohne suchtext (NULL) wie bisher.
-      const vorfilter = (t: string) => sql`(mappen.suchtext IS NULL OR ${schreibweisen(t)
-        .map((x) => sql`mappen.suchtext LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`)})`;
-      const inMappe = (t: string) => sql`(${vorfilter(t)} AND (${enthaelt(sql`titel`, t)} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value NOT LIKE 'dms1$%' AND (${enthaelt(sql`e.value`, t)}))))`;
-      const suche = o.suche
-        ? sql`AND (${inMappe(o.suche)}
-            ${o.notizen ? sql`OR ${inNotizen(o.suche!)}` : sql``}
-            ${o.volltext ? sql`OR ${inDokumenten(o.suche!)}` : sql``})`
-        : sql``;
-      // Erweiterte Suche (#199): Begriff in Dokumenten oder Notizen, zusätzlich zu allen anderen Bedingungen.
-      const tf = o.textfilter?.text.trim() && (o.textfilter.dokumente || o.textfilter.notizen) ? o.textfilter : null;
-      const textfilter = tf
-        ? sql`AND (${[...(tf.dokumente ? [inDokumenten(tf.text)] : []), ...(tf.notizen ? [inNotizen(tf.text)] : [])].reduce((a, b) => sql`${a} OR ${b}`)})`
-        : sql``;
-      // Berechtigungen (#124): nur, was der Benutzer lesen darf.
-      const lesen = o.lesen ? sql`AND ${lesefilterSql(sql, o.lesen)}` : sql``;
-      const [{ n }] = await sql`SELECT count(*)::int AS n FROM mappen WHERE haushalt_id = ${haushaltId} ${typ} ${eingang} ${suche} ${textfilter} ${lesen}`;
-      const so = o.sortierung;
-      const k = so?.key ?? '';
-      const ausdruck = !so || so.art === 'titel' ? sql`lower(titel)`
-        : so.art === 'erstellt' ? sql`erstellt` : so.art === 'geaendert' ? sql`geaendert`
-        : so.art === 'erstelltVon' ? sql`(SELECT lower(coalesce(nullif(b.name, ''), b.email)) FROM benutzer b WHERE b.id = mappen.erstellt_von)`
-        : so.art === 'geaendertVon' ? sql`(SELECT lower(coalesce(nullif(b.name, ''), b.email)) FROM benutzer b WHERE b.id = mappen.geaendert_von)`
-        : so.art === 'typ' ? sql`(SELECT lower(t.name) FROM mappentypen t WHERE t.id = mappen.typ_id)`
-        : so.art === 'zahl' || so.art === 'janein' ? sql`(werte -> ${k}::text)`
-        : so.art === 'betrag' ? sql`((werte -> ${k}::text ->> 'betrag')::numeric)`
-        : so.art === 'datum' ? sql`(werte ->> ${k}::text)`
-        : sql`lower(werte ->> ${k}::text)`;
-      const richtung = so?.absteigend ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`;
-      // Mit Suche erst alle Treffer, dann sortieren (#615): Sonst geht PostgreSQL bei einem seltenen Begriff den
-      // Titel-Index einer großen Ansicht der Reihe nach durch und prüft jede Mappe (bei 20 000 Mappen über 100 ms
-      // statt 15 ms). Ohne Suche liefert der Index die Seite direkt in der richtigen Reihenfolge. OFFSET 0 hält die
-      // Teilabfrage zusammen.
-      const r = o.suche || tf
-        ? await sql`
-          SELECT * FROM (SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ${typ} ${eingang} ${suche} ${textfilter} ${lesen} OFFSET 0) AS mappen
-          ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`
-        : await sql`
-          SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ${typ} ${eingang} ${suche} ${textfilter} ${lesen}
+      const { wo, treffer, ausdruck, richtung, tf, enthaelt, schreibweisen, anfragen, v, teilSql } = await seitenTeile(o);
+      let n: number | undefined;
+      let r: postgres.Row[];
+      if (treffer) {
+        // Mit Suche (#740): erst die Treffer als eine Id-Menge (Mappe, Notizen, Dokumente – je über ihren Index),
+        // dann Typ, Bedingungen und Lesefilter, Gesamtzahl und Seite in einer Abfrage. OFFSET 0 hält die Treffer
+        // zusammen (sonst geht PostgreSQL bei einem seltenen Begriff einen Sortier-Index der Reihe nach durch).
+        r = await sql`
+          SELECT *, count(*) OVER () AS dms_gesamt FROM (SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId}
+            AND id IN (SELECT id FROM (${treffer}) AS t(id)) ${wo} OFFSET 0) AS mappen
           ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`;
+        // Blatt hinter dem Ende: keine Zeile, die die Zahl trägt – dann eigens zählen.
+        n = r.length ? Number(r[0].dms_gesamt) : o.von === 0 ? 0 : undefined;
+        if (n === undefined) [{ n }] = await sql`SELECT count(*)::int AS n FROM mappen WHERE haushalt_id = ${haushaltId} AND id IN (SELECT id FROM (${treffer}) AS t(id)) ${wo}`;
+      } else {
+        // Ohne Suche liefert ein Index die Seite direkt in der richtigen Reihenfolge (#740).
+        r = await sql`
+          SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ${wo}
+          ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`;
+        // Gezählt wird nur beim ersten Blatt (#740); beim Blättern gilt die Zahl vom ersten Blatt (o.gesamt).
+        // Ist die Seite nicht voll, ist die Zahl ohnehin klar.
+        if (o.von > 0 && r.length > 0 && r.length < o.anzahl) n = o.von + r.length;
+        else if (o.von > 0 && r.length > 0 && o.gesamt !== undefined) n = Math.max(o.gesamt, o.von + r.length);
+        else [{ n }] = await sql`SELECT count(*)::int AS n FROM mappen WHERE haushalt_id = ${haushaltId} ${wo}`;
+      }
       const mappen = r.map(alsMappe);
       // Fundstellen: zur Suche oder – in der erweiterten Suche – zum Volltextfilter.
       const fund = o.suche && (o.volltext || o.notizen) ? { text: o.suche, volltext: !!o.volltext, notizen: !!o.notizen }
@@ -1017,6 +1048,12 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         }
       }
       return { gesamt: n as number, mappen, ausschnitte };
+    },
+    async gibtTreffer(o) {
+      const { wo, treffer } = await seitenTeile(o);
+      const [r] = await sql`SELECT EXISTS (SELECT 1 FROM mappen WHERE haushalt_id = ${haushaltId}
+        ${treffer ? sql`AND id IN (SELECT id FROM (${treffer}) AS t(id))` : sql``} ${wo} LIMIT 1) AS da`;
+      return r.da as boolean;
     },
     async gibtMappen(typIds) {
       const t = typIds.filter(istUuid);
@@ -1112,13 +1149,36 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return r;
     },
     async findeDoppelt(typId, feldKey, wert, ausser) {
+      // Über den Index der Feldwerte (#743, Migration 075), danach genau wie bisher verglichen.
       const [r] = await sql`
         SELECT ${MAP} FROM mappen
-        WHERE haushalt_id = ${haushaltId} AND typ_id = ${typId}
+        WHERE dms_gleichwerte(werte) @> dms_gleichwerte(jsonb_build_object(${feldKey}::text, ${wert}::text))
+          AND haushalt_id = ${haushaltId} AND typ_id = ${typId}
           AND id <> ${istUuid(ausser) ? ausser : '00000000-0000-0000-0000-000000000000'}
-          AND lower(trim(werte ->> ${feldKey})) = lower(trim(${wert}))
+          AND lower(trim(werte ->> ${feldKey}::text)) = lower(trim(${wert}::text))
         LIMIT 1`;
       return r ? alsMappe(r) : undefined;
+    },
+    async findeDoppelte(typId, liste) {
+      const erg = new Map<string, { id: string; titel: string }>();
+      if (!istUuid(typId)) return erg;
+      const ohne = '00000000-0000-0000-0000-000000000000';
+      for (let i = 0; i < liste.length; i += 1000) {
+        const teil = liste.slice(i, i + 1000);
+        const zeilen = await sql`
+          SELECT q.mappe, q.feld, m.id, m.titel
+          FROM unnest(${teil.map((x) => (istUuid(x.mappeId) ? x.mappeId : ohne))}::uuid[], ${teil.map((x) => x.feldKey)}::text[], ${teil.map((x) => x.wert)}::text[]) AS q(mappe, feld, wert)
+          CROSS JOIN LATERAL (
+            -- Nur über den Index der Feldwerte (OFFSET 0): Mit dem Typ-Index dazu (BitmapAnd) läse PostgreSQL je
+            -- Eintrag alle Mappen des Typs aus dem Index.
+            SELECT d.id, d.titel FROM (SELECT id, titel, haushalt_id, typ_id, werte FROM mappen
+              WHERE dms_gleichwerte(werte) @> dms_gleichwerte(jsonb_build_object(q.feld, q.wert)) OFFSET 0) d
+            WHERE d.haushalt_id = ${haushaltId} AND d.typ_id = ${typId} AND d.id <> q.mappe
+              AND lower(trim(d.werte ->> q.feld)) = lower(trim(q.wert))
+            LIMIT 1) m`;
+        for (const z of zeilen) erg.set(`${z.mappe === ohne ? '' : z.mappe}|${z.feld}`, { id: z.id as string, titel: (z.titel as string | null) ?? '' });
+      }
+      return erg;
     },
     async lesbare(ids, lesefilter) {
       const gueltig = [...new Set(ids.filter(istUuid))];

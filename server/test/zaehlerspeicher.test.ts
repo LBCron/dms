@@ -222,7 +222,7 @@ describe('Dienst: Zahlen der Ansichten (#512)', () => {
     const stand = new Haushaltsstand();
     const repo = stand.umhuelle(speicherRepo());
     await repo.legeKatalogEreignisAn({ id: 'e1', art: 'mappe.angelegt', daten: {}, ausloeser: {} });
-    for (const e of await repo.holeKatalogEreignisse(50, 60)) await repo.katalogEreignisVerteilt(e.id);
+    await repo.katalogEreignisseVerteilt((await repo.holeKatalogEreignisse(50, 60)).map((e) => e.id));
     await repo.legeKatalogEreignisAn({ id: 'e2', art: 'mappe.angelegt', daten: {}, ausloeser: {} });
     for (const e of await repo.holeKatalogEreignisse(50, 60)) await repo.katalogEreignisFehlgeschlagen(e.id, 'weg', null);
     await repo.katalogEreignisStand();

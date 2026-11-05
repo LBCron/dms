@@ -260,7 +260,7 @@ export function speicherRepo(): Repo {
       for (const x of liste) x.gesperrtBis = t + sperreS * 1000;
       return liste.map((x) => ({ id: x.id, nr: x.nr, art: x.art, daten: kopie(x.daten), ausloeser: kopie(x.ausloeser), erstellt: x.erstellt, versuche: x.versuche }));
     },
-    async katalogEreignisVerteilt(id) { const x = katalog.get(id); if (x) { x.verteilt = jetzt(); x.fehler = null; } },
+    async katalogEreignisseVerteilt(ids) { for (const id of ids) { const x = katalog.get(id); if (x) { x.verteilt = jetzt(); x.fehler = null; } } },
     async katalogEreignisFehlgeschlagen(id, fehler, naechster) {
       const x = katalog.get(id); if (!x) return;
       x.versuche++; x.fehler = fehler.slice(0, 1000); x.gesperrtBis = 0;
@@ -330,7 +330,8 @@ export function speicherRepo(): Repo {
       // Feldweise (#609) wie in PostgreSQL: nur Geändertes auf den aktuellen Stand legen.
       if (fw?.stand !== undefined && a.geaendert !== fw.stand) throw new StandVeraltet();
       const neu = fw ? feldweise(a.werte, fw.basis, werte) : werte;
-      const m = { ...a, werte: kopie(neu), geaendert: standWeiter(a.geaendert), geaendertVon: benutzerId, passt: true, problem: null };
+      const titel = fw?.titel?.(neu);
+      const m = { ...a, werte: kopie(neu), geaendert: standWeiter(a.geaendert), geaendertVon: benutzerId, passt: true, problem: null, ...(titel !== undefined ? { titel } : {}) };
       mappen.set(id, m); verweise.set(id, kopie(fw ? fw.verweise(neu) : vs));
       return kopie(m);
     },
@@ -407,6 +408,7 @@ export function speicherRepo(): Repo {
       }
       return { gesamt: alle.length, mappen: seite, ausschnitte };
     },
+    async gibtTreffer(o) { return (await this.seite({ ...o, von: 0, anzahl: 1 })).gesamt > 0; },
     /* Unscharfe Suche (#356): Wörterverzeichnis aus dem Bestand, jedes Mal neu gezählt. */
     async aehnlicheWoerter(liste, max) {
       const r: Record<string, string[]> = {};
@@ -483,6 +485,14 @@ export function speicherRepo(): Repo {
       const w = wert.trim().toLowerCase();
       const m = [...mappen.values()].find((x) => x.id !== ausser && x.typId === typId && x.werte[feldKey] != null && String(x.werte[feldKey]).trim().toLowerCase() === w);
       return m && kopie(m);
+    },
+    async findeDoppelte(typId, liste) {
+      const erg = new Map<string, { id: string; titel: string }>();
+      for (const x of liste) {
+        const d = await this.findeDoppelt(typId, x.feldKey, x.wert, x.mappeId ?? undefined);
+        if (d) erg.set(`${x.mappeId ?? ''}|${x.feldKey}`, { id: d.id, titel: d.titel ?? '' });
+      }
+      return erg;
     },
     async rueckverweise(zielId) {
       const r: Rueckverweis[] = [];

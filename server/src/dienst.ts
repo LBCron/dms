@@ -9,7 +9,7 @@ import type { Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
-import { istVerklemmung } from './db';
+import { beiVerklemmungWiederholen, istVerklemmung } from './db';
 import { fingerabdruck, Haushaltsstand, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher } from './zaehlerspeicher';
 import { rechteMessen } from './messung';
 import { graubild } from './graubild';
@@ -992,6 +992,15 @@ export class Dienst {
     const erg = await this.grundRepo.transaktion((repo) => transaktionen.run({ dienst: this, repo, nachher }, f));
     for (const n of nachher) n();
     return erg;
+  }
+
+  /**
+   * Wie `inTransaktion`; bricht PostgreSQL die eigene Transaktion wegen einer Verklemmung ab (#575), noch einmal von
+   * vorn (#743). In einer äußeren Transaktion nicht – die ist dann ohnehin verloren.
+   */
+  private async inEinemZug<T>(f: () => Promise<T>): Promise<T> {
+    if (transaktionen.getStore()?.dienst === this) return f();
+    return beiVerklemmungWiederholen(() => this.inTransaktion(f));
   }
 
   /** Nach dem Speichern (bzw. sofort ohne Transaktion); bei Zurückrollen nie. */
@@ -3155,7 +3164,7 @@ export class Dienst {
    * Eine Seite einer Sicht: „eingang“, eine verwaltete Sicht (#38) oder – für Links auf Mappen,
    * deren Typ keine eigene Sicht hat – eine Typ-Id. Mit den Bezügen für die Anzeige.
    */
-  async seite(ich: { id: string; rolle: string }, q: { sicht?: string; link?: unknown; eigene?: unknown; von?: unknown; anzahl?: unknown; suche?: unknown; sortierung?: unknown; absteigend?: unknown; volltext?: unknown; notizen?: unknown }, z?: Zugriff, grenze = 500) {
+  async seite(ich: { id: string; rolle: string }, q: { sicht?: string; link?: unknown; eigene?: unknown; von?: unknown; anzahl?: unknown; suche?: unknown; sortierung?: unknown; absteigend?: unknown; volltext?: unknown; notizen?: unknown; gesamt?: unknown }, z?: Zugriff, grenze = 500) {
     // Berechtigungen (#124): nur lesbare Mappen; der Eingang zeigt Aufgaben auch zu nicht lesbaren – ohne Inhalt.
     const lesen = z?.lesen ?? null;
     const von = Math.max(0, Math.floor(Number(q.von) || 0));
@@ -3215,7 +3224,10 @@ export class Dienst {
       : sicht
         ? { klauseln: klauselnFuer(sichten, sicht.id, typen, await aufloesung(), verborgen), suche, volltext, notizen, von, anzahl, sortierung, lesen }
         : { typId: nurTyp ?? q.sicht, suche, volltext, notizen, von, anzahl, sortierung, lesen };
-    let r = await this.repo.seite({ ...anfrage, varianten });
+    // Beim Blättern ohne Suche (#740): die Zahl vom ersten Blatt statt noch einmal zu zählen.
+    const bekannt = Number(q.gesamt);
+    const gesamt = von > 0 && !suche && !textfilter && Number.isInteger(bekannt) && bekannt >= 0 ? bekannt : undefined;
+    let r = await this.repo.seite({ ...anfrage, varianten, ...(gesamt !== undefined ? { gesamt } : {}) });
     // Ohne genauen Treffer (#356): mit ähnlichen Wörtern aus dem Wörterverzeichnis noch einmal – genaue Treffer gehen so
     // immer vor; „Meintest du …?“ schlägt die Suche mit dem besten ähnlichen Wort vor.
     let unscharf: { statt: string; vorschlag: string | null; begriffe: Record<string, string[]> } | null = null;
@@ -3232,7 +3244,7 @@ export class Dienst {
           let vorschlag = vorschlagAus(begriffe!, aehnlich);
           if (vorschlag && anfrage.lesen) {
             const probe: SeitenAnfrage = suche ? { ...anfrage, suche: vorschlag } : { ...anfrage, textfilter: { ...textfilter!, text: vorschlag } };
-            if ((await this.repo.seite({ ...probe, von: 0, anzahl: 1 })).gesamt === 0) vorschlag = null;
+            if (!(await this.repo.gibtTreffer(probe))) vorschlag = null;
           }
           unscharf = { statt: gesucht, vorschlag, begriffe: aehnlich };
         }
@@ -3989,15 +4001,14 @@ export class Dienst {
   /** Prüft einzelne Mappen eines Typs gegen seine Definition und speichert das Ergebnis. */
   private async passungFuer(typ: Mappentyp, ids: string[]) {
     const liste: Array<{ id: string; problem: string | null }> = [];
-    for (const m of await this.repo.holeMappen(ids)) {
-      const typen = await this.repo.typenVon(verweiseVon(typ, m.werte).map((v) => v.zielId).filter(istUuid));
-      const doppelt = new Map<string, string>();
-      for (const f of typ.felder) {
-        if (!f.eindeutig || istLeer(m.werte[f.key]) || (f.typ !== 'text' && f.typ !== 'zahl')) continue;
-        const d = await this.repo.findeDoppelt(typ.id, f.key, String(m.werte[f.key]), m.id);
-        if (d) doppelt.set(f.key, d.titel || 'Ohne Titel');
-      }
-      const problem = ersterGrund(typ, pruefeMappe(typ, m.werte, { typVon: (id) => typen.get(id), doppelt: (k) => doppelt.get(k) }));
+    const mappen = await this.repo.holeMappen(ids);
+    // In einem Zug statt je Mappe (#743): Typen der Verweisziele und „Bereits vergeben“ über den Index.
+    const typen = await this.repo.typenVon([...new Set(mappen.flatMap((m) => verweiseVon(typ, m.werte).map((v) => v.zielId)))].filter(istUuid));
+    const eindeutig = typ.felder.filter((f) => f.eindeutig && (f.typ === 'text' || f.typ === 'zahl'));
+    const funde = await this.repo.findeDoppelte(typ.id, mappen.flatMap((m) => eindeutig.filter((f) => !istLeer(m.werte[f.key])).map((f) => ({ mappeId: m.id, feldKey: f.key, wert: String(m.werte[f.key]) }))));
+    for (const m of mappen) {
+      const doppelt = (k: string) => { const d = funde.get(`${m.id}|${k}`); return d ? d.titel || 'Ohne Titel' : undefined; };
+      const problem = ersterGrund(typ, pruefeMappe(typ, m.werte, { typVon: (id) => typen.get(id), doppelt }));
       if (problem !== m.problem) liste.push({ id: m.id, problem });
     }
     await this.repo.setzePassung(liste);
@@ -4537,14 +4548,22 @@ export class Dienst {
     return ids.length;
   }
 
-  private async pruefeWerte(typ: Mappentyp, werte: Werte, eigeneId?: string, alt?: Werte) {
+  /**
+   * Werte vor dem Speichern prüfen. „Bereits vergeben“ (#743): alle eindeutigen Felder in einer Abfrage über den Index;
+   * liegt der gleiche Wert in einer Mappe, die der Benutzer nicht lesen darf, nennt die Meldung ihren Titel nicht.
+   */
+  private async pruefeWerte(typ: Mappentyp, werte: Werte, eigeneId?: string, alt?: Werte, z?: Zugriff) {
     const ids = [...new Set(verweiseVon(typ, werte).map((v) => v.zielId))].filter(istUuid);
     const typen = await this.repo.typenVon(ids);
     const doppelt = new Map<string, string>();
-    for (const f of typ.felder) {
-      if (!f.eindeutig || istLeer(werte[f.key]) || (f.typ !== 'text' && f.typ !== 'zahl')) continue;
-      const d = await this.repo.findeDoppelt(typ.id, f.key, String(werte[f.key]), eigeneId);
-      if (d) doppelt.set(f.key, await this.titel(d));
+    const eindeutig = typ.felder.filter((f) => f.eindeutig && !istLeer(werte[f.key]) && (f.typ === 'text' || f.typ === 'zahl'));
+    if (eindeutig.length) {
+      const funde = await this.repo.findeDoppelte(typ.id, eindeutig.map((f) => ({ mappeId: eigeneId ?? null, feldKey: f.key, wert: String(werte[f.key]) })));
+      const lesbar = await this.lesbare(z, [...new Set([...funde.values()].map((d) => d.id))]);
+      for (const f of eindeutig) {
+        const d = funde.get(`${eigeneId ?? ''}|${f.key}`);
+        if (d) doppelt.set(f.key, lesbar.has(d.id) ? d.titel || 'Ohne Titel' : '');
+      }
     }
     const p = pruefeMappe(typ, werte, { typVon: (id) => typen.get(id), doppelt: (k) => doppelt.get(k) });
     // Formate und Datumsgrenzen (#535): beim Bearbeiten nur, was sich ändert – der Bestand bleibt gültig.
@@ -4597,17 +4616,21 @@ export class Dienst {
     }
     await this.pruefeVerweisziele(z, typ, werte, {});
     await this.pruefeAuswahlfilter(typ, werte, {}, benutzerId);
-    await this.pruefeWerte(typ, werte);
+    await this.pruefeWerte(typ, werte, undefined, undefined, z);
     const id = istUuid(e.id) && !(await this.repo.holeMappe(e.id)) ? e.id : randomUUID();
-    const m = await this.repo.legeMappeAn(id, typ.id, werte, verweiseVon(typ, werte), benutzerId, demo, null, nummern.length ? { felder: nummern, jetzt: new Date() } : undefined);
-    if (!demo) {
-      await this.notiere(m.id, benutzerId, 'angelegt', { aenderungen: await this.aenderungen(typ, {}, m.werte) });
-      await this.meldeVerknuepft(typ, m.id, {}, m.werte, benutzerId);
-      await this.pruefeErwaehnungen(typ, m.id, {}, werte, benutzerId);
-    }
-    const titel = (await this.aktualisiereTitel([m.id])).get(m.id);
-    if (typ.felder.some((f) => f.eindeutig)) await this.pruefeUnpassende(typ);
-    if (!demo && fristFelder(typ).length) await this.fristenAbgleichen({ mappeIds: [m.id] });
+    // In einer Transaktion (#743): Mappe, Titel, Historie, Ereignisse und Fristen ganz oder gar nicht.
+    const { m, titel } = await this.inEinemZug(async () => {
+      const m = await this.repo.legeMappeAn(id, typ.id, werte, verweiseVon(typ, werte), benutzerId, demo, null, nummern.length ? { felder: nummern, jetzt: new Date() } : undefined);
+      if (!demo) {
+        await this.notiere(m.id, benutzerId, 'angelegt', { aenderungen: await this.aenderungen(typ, {}, m.werte) });
+        await this.meldeVerknuepft(typ, m.id, {}, m.werte, benutzerId);
+        await this.pruefeErwaehnungen(typ, m.id, {}, werte, benutzerId);
+      }
+      const titel = (await this.aktualisiereTitel([m.id])).get(m.id);
+      if (typ.felder.some((f) => f.eindeutig)) await this.pruefeUnpassende(typ);
+      if (!demo && fristFelder(typ).length) await this.fristenAbgleichen({ mappeIds: [m.id] });
+      return { m, titel };
+    });
     const hinweis = z ? await this.hinweisDanach(z, m.id) : undefined;
     return { ...m, titel, ...(hinweis ? { hinweis } : {}) };
   }
@@ -4748,14 +4771,34 @@ export class Dienst {
    * `anlass`: steht zusätzlich im Eintrag der Historie, z. B. die Umwandlung nach einem Paket-Update (#534).
    */
   async aendereMappe(id: string, eingabe: unknown, benutzerId: string | null = null, z?: Zugriff, anlass?: Record<string, unknown>): Promise<Mappe & { hinweis?: string }> {
-    // Schreibt zwischen Lesen und Schreiben jemand anderes, noch einmal von vorn (#609).
+    // Schreibt zwischen Lesen und Schreiben jemand anderes, noch einmal von vorn (#609). In einer eigenen Transaktion
+    // (#743) auch nach einer Verklemmung – die Transaktion ist dann ganz zurückgerollt.
+    const eigene = transaktionen.getStore()?.dienst !== this;
     for (let versuch = 1; ; versuch++) {
-      try { return await this.aendereMappeEinmal(id, eingabe, benutzerId, z, anlass); }
-      catch (e) { if (!(e instanceof StandVeraltet) || versuch >= 5) throw e; }
+      try {
+        const neu = await this.inTransaktion(() => this.aendereMappeEinmal(id, eingabe, benutzerId, z, anlass));
+        const hinweis = z ? await this.hinweisDanach(z, id) : undefined;
+        return { ...neu, ...(hinweis ? { hinweis } : {}) };
+      } catch (e) { if (!(e instanceof StandVeraltet || (eigene && istVerklemmung(e))) || versuch >= 5) throw e; }
     }
   }
 
-  private async aendereMappeEinmal(id: string, eingabe: unknown, benutzerId: string | null, z: Zugriff | undefined, anlass: Record<string, unknown> | undefined): Promise<Mappe & { hinweis?: string }> {
+  /**
+   * Titel einer Mappe, bevor sie geschrieben wird (#743): mit den Titeln der Mappen, auf die die Werte verweisen.
+   * Die Funktion liefert undefined, wenn die geschriebenen Werte auf eine Mappe verweisen, deren Titel nicht vorab
+   * gelesen wurde (jemand hat inzwischen einen Verweis gesetzt) – dann rechnet `aktualisiereTitel` danach wie bisher.
+   */
+  private async titelVorab(typ: Mappentyp, werte: Werte, m: Mappe): Promise<(w: Werte) => string | undefined> {
+    const ziele = [...new Set([...verweiseVon(typ, werte), ...verweiseVon(typ, m.werte)].map((v) => v.zielId))];
+    const titel = await this.repo.titelVon(ziele.filter(istUuid));
+    // „Zuletzt geändert“ im Titel ({geaendert}) zeigt den Tag des Speicherns.
+    const index = { ...m, geaendert: new Date().toISOString() };
+    return (w) => (verweiseVon(typ, w).every((v) => titel.has(v.zielId) || !istUuid(v.zielId))
+      ? titelAus(typ, w, (x) => titel.get(x) || 'Ohne Titel', index) : undefined);
+  }
+
+  /** Ein Versuch, in einer Transaktion (#743): Werte, Titel, Historie, Ereignisse, Passung, Fristen ganz oder gar nicht. */
+  private async aendereMappeEinmal(id: string, eingabe: unknown, benutzerId: string | null, z: Zugriff | undefined, anlass: Record<string, unknown> | undefined): Promise<Mappe> {
     const m = z ? await this.pruefeRecht(z, id, 'U') : await this.repo.holeMappe(id);
     if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
     const typ = await this.repo.holeTyp(m.typId);
@@ -4780,26 +4823,31 @@ export class Dienst {
     }
     await this.pruefeVerweisziele(z, typ, werte, m.werte);
     await this.pruefeAuswahlfilter(typ, werte, m.werte, benutzerId);
-    await this.pruefeWerte(typ, werte, id, m.werte);
+    await this.pruefeWerte(typ, werte, id, m.werte, z);
     const aenderungen = await this.aenderungen(typ, m.werte, werte);
     // Archivmodus (#212): eine neue Frist steht in der Historie.
     const bisAlt = aufbewahrenBis(typ.archiv, m), bisNeu = aufbewahrenBis(typ.archiv, { ...m, werte });
     if (bisAlt !== bisNeu) aenderungen.push({ feld: '_aufbewahrenBis', label: 'Aufbewahren bis', alt: bisAlt ? datumText(bisAlt) : '', neu: bisNeu ? datumText(bisNeu) : '' });
     // Feldweise (#609); mit Stand nur, wenn sich die Mappe seit dem Lesen oben nicht geändert hat.
-    const neu = await this.repo.aendereMappe(id, werte, [], benutzerId, { basis: m.werte, verweise: (w) => verweiseVon(typ, w), ...(stand ? { stand: m.geaendert } : {}) });
+    const titelFuer = await this.titelVorab(typ, werte, m);
+    const neu = await this.repo.aendereMappe(id, werte, [], benutzerId, { basis: m.werte, verweise: (w) => verweiseVon(typ, w), titel: titelFuer, ...(stand ? { stand: m.geaendert } : {}) });
     if (aenderungen.length) await this.notiere(id, benutzerId, 'geaendert', { ...anlass, aenderungen, stand: neu.geaendert });
     await this.meldeVerknuepft(typ, id, m.werte, neu.werte, benutzerId);
     // Gespeichert heißt: passt wieder – eine „passt nicht“-Aufgabe ist damit erledigt.
     await this.passungsAufgaben([{ id, problem: null }]);
     await this.pruefeErwaehnungen(typ, id, m.werte, werte, benutzerId);
-    const titel = (await this.aktualisiereTitel([id])).get(id);
+    // Titel (#743): stand er schon im UPDATE, nur noch die Mappen nachziehen, die auf diese verweisen (wenn er sich
+    // geändert hat); sonst wie bisher.
+    const vorab = titelFuer(neu.werte);
+    let titel = neu.titel;
+    if (vorab === undefined || vorab !== neu.titel) titel = (await this.aktualisiereTitel([id])).get(id);
+    else if (vorab !== m.titel) await this.aktualisiereTitel(await this.repo.quellenVon([id]));
     if (typ.felder.some((f) => f.eindeutig)) await this.pruefeUnpassende(typ);
     // Fristen (#129): neues Datum → neue Aufgabe, verschobenes oder leeres → alte erledigt.
     await this.fristenAbgleichen({ mappeIds: [id] });
     // Post (#192): „Für“ und Stand bestimmen die Aufgabe „Neue Post“.
     if (typ.system === 'post') await this.postAufgaben(id, benutzerId);
-    const hinweis = z ? await this.hinweisDanach(z, id) : undefined;
-    return { ...neu, titel, ...(hinweis ? { hinweis } : {}) };
+    return { ...neu, titel };
   }
 
   /** Viele neue Mappen auf einmal (Demo-Daten); Werte sind bereits geprüft. */
