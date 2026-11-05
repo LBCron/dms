@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join, resolve, sep } from 'node:path';
 import type { Readable } from 'node:stream';
 import type { Dateispeicher } from './dateispeicher';
 import { Fachfehler } from './fehler';
@@ -40,8 +40,15 @@ export async function raeumeHochladenAuf(ordner = einstellung.ordner): Promise<n
 /** Ein hochgeladener Körper als temporäre Datei. */
 export class Hochgeladen {
   constructor(readonly pfad: string, readonly groesse: number, readonly sha256: string, readonly kopf: Buffer) {}
-  lies(): Promise<Buffer> { return readFile(this.pfad); }
-  strom(): Readable { return createReadStream(this.pfad); }
+  /** Nur Dateien, die `nimmAuf` im Upload-Ordner angelegt hat (Name aus randomUUID) – nie ein anderer Pfad. */
+  private sicher(): string {
+    const ordner = resolve(einstellung.ordner);
+    const p = resolve(this.pfad);
+    if (!p.startsWith(ordner + sep) || !/^[0-9a-f-]{36}\.tmp$/.test(basename(p))) throw new Error('Unerwarteter Pfad für einen Upload');
+    return p;
+  }
+  lies(): Promise<Buffer> { return readFile(this.sicher()); }
+  strom(): Readable { return createReadStream(this.sicher()); }
   /** Löschen (auch, wenn sie schon in den Dateispeicher umbenannt wurde: dann gibt es nichts mehr zu tun). */
   async entferne() { await rm(this.pfad, { force: true }); }
 }
