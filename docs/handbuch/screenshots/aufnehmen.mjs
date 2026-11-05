@@ -372,7 +372,7 @@ async function main() {
       await k.addCookies([{ name, value: wert, url: BASIS }]);
     }
     // Die Bilder der Ablage zeigen, was ein normaler Benutzer sieht: ohne den roten Admin-Hinweis (#128).
-    if (!adminHinweis) await k.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.adminbanner{display:none!important}'; document.head.appendChild(st); }));
+    if (!adminHinweis) await k.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.verwaltungsbalken{display:none!important}'; document.head.appendChild(st); }));
     return k;
   };
   const geheZu = async (seite, pfad) => { await seite.goto(BASIS + pfad); await seite.waitForLoadState('networkidle'); };
@@ -387,12 +387,12 @@ async function main() {
     await k.close();
   }
 
-  // Roter Hinweis für Administratoren in der Ablage (#128)
+  // Roter Balken im Verwaltungsmodus, auch in der Ablage (#128, #819)
   {
     const k = await kontext(true, 1440, 420, true);
     const s = await k.newPage();
     await geheZu(s, '/ablage/eingang');
-    await s.locator('.adminbanner').waitFor();
+    await s.locator('.verwaltungsbalken').waitFor();
     await bild(s, 'admin-hinweis');
     await k.close();
   }
@@ -412,7 +412,7 @@ async function main() {
     const kr = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme: schema, locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 2 });
     const [cn, cw] = d.adminCookie.split('=');
     await kr.addCookies([{ name: cn, value: cw, url: BASIS }]);
-    await kr.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.adminbanner{display:none!important}'; document.head.appendChild(st); }));
+    await kr.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.verwaltungsbalken{display:none!important}'; document.head.appendChild(st); }));
     const sr = await kr.newPage();
     await geheZu(sr, `/ablage/${vertrag.id}/${d.strom.id}`);
     await sr.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
@@ -582,7 +582,7 @@ async function main() {
     const kh = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
     const [name, wert] = d.adminCookie.split('=');
     await kh.addCookies([{ name, value: wert, url: BASIS }]);
-    await kh.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.adminbanner{display:none!important}'; document.head.append(st); }));
+    await kh.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.verwaltungsbalken{display:none!important}'; document.head.append(st); }));
     const sh = await kh.newPage();
     await geheZu(sh, '/ablage/eingang');
     await sh.getByRole('radio', { name: 'Monat' }).click();
