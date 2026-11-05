@@ -23,7 +23,7 @@
 
 Instead of loose files in folders, you create **folders with structure** ("Mappen"): for the contract, the invoice, the heating system, the tradesperson. Mappen link to each other. From the heating system you find the maintenance contract, from there every invoice and the tradesperson who issued it. And Ablago reminds you of the notice period in good time.
 
-> Ablago itself and its user interface are in **German**; the manuals are also available in **English**. An English user interface is planned ([#357](https://github.com/motom001/dms/issues/357)). Issues and pull requests are welcome in German or English – see [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
+> Ablago's user interface and its manuals are available in **German** and **English**; each person picks their language under My account. Issues and pull requests are welcome in German or English – see [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
 <!-- Screenshot from the manual workflow (#290): retaken with every release, sample data only. The user interface
      exists in German only, so the screenshot is German and marked as such (#574); readme.en.png follows with #357. -->
@@ -32,7 +32,7 @@ Instead of loose files in folders, you create **folders with structure** ("Mappe
   <img alt="Ablago filing view with its German user interface: views on the left, the list in the middle, an open Mappe with its details and documents on the right" src="https://help.ablago.app/benutzer/aktuell/bilder/readme.png">
 </picture>
 
-*Screenshot of the German user interface. The interface is currently available in German only; English is planned ([#357](https://github.com/motom001/dms/issues/357)).*
+*Screenshot of the German user interface (German only) – the interface itself is also available in English.*
 
 ## Who is it for?
 

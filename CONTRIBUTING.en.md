@@ -27,7 +27,7 @@ Graphics containing text exist per language: `name.svg` in German, `name.en.svg`
 
 By contributing, you license your contribution under the [Apache-2.0](LICENSE). Please do not commit real documents or personal data.
 
-Ablago itself and its user interface are in German, an English user interface is planned (#357); the manuals are also available in English (#730). You do not need to speak German to report a bug, suggest a feature or send a pull request.
+Ablago's user interface (#729) and its manuals (#730) are available in German and English. You do not need to speak German to report a bug, suggest a feature or send a pull request.
 
 ## Code of conduct
 
