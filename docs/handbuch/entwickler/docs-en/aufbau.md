@@ -1,0 +1,645 @@
+# Architecture {#aufbau}
+
+```
+shared/           domain model, validation rules, help table – used by server and interface
+server/           Fastify API, PostgreSQL (postgres.js), SQL migrations, tests
+web/              React interface (Vite)
+deploy/           Compose templates for NAS and server, start script and test for dms-komplett
+docs/             manuals (MkDocs), screenshot script, release notes
+docs/glossar.yml  glossary – the one source for all terms (the page "Terms" is made from it)
+.github/          workflows (check, images, release, manual …), Dependabot, templates for issues and PRs
+```
+
+Ablago is a **modular monolith**: one process, one database. Server and interface are together in one image – as `dms` or, with PostgreSQL in the same container, as `dms-komplett`. The identifiers in the code are German. Important patterns:
+
+- **Repos twice:** every data access interface exists for PostgreSQL (`repo-pg.ts`, `pg…` functions) and for memory (`repo-speicher.ts`, `speicher…`). Most tests run quickly in memory; the tests with `TEST_DATABASE_URL` cover PostgreSQL. New functions need both, and both must behave the same.
+- **Routes** are collected in `server/src/routen.ts`, each with `zugang: 'offen' | 'angemeldet' | 'admin'`. Two features are added: `api: true` makes a route part of the public API (sign-in also with an API key); `konsole: true` only allows it via the command `dms` in the container. The public API for programs is under `/api/v1` (`api-v1.ts`, OpenAPI).
+- **Workbench routes** (`zugang: 'admin'`, #818/#819) only work in **administration mode** (state of the session, `Konten.modusPruefen`) and only with permission for their area. Every new route needs an entry in `server/src/verwaltungsbereiche.ts` (`bereicheDerRoute`) – otherwise only people with "Full administration" may use it, and the test `verwaltungsmodus.test.ts` fails. Sensitive actions that require a fresh sign-in are listed there in `heikleHandlung`. `benutzer.rolle` is the request's **effective** role (`admin` only in the mode); the stored permission is in `benutzer.verwaltung` (`shared/src/verwaltungsrecht.ts`). API keys never get `admin`.
+- **Public links without sign-in** so far only exist for an access copy's retrieval page (#455, `server/src/abruf.ts`, `web/src/abruf.tsx`): key only in the fragment (`/abruf#…`), in the database only hashes (SHA-256 for the key, scrypt for the code), failed attempts in sign-in protection per IP and on the link, download via a one-time ticket. Further sharing links should follow this pattern. In addition there is the **emergency access** `/notfall` (#815, `server/src/notfallcode.ts`, `web/src/notfall.tsx`): emergency code from the emergency sheet only as a scrypt hash (table `notfallcode`), redeemed in one transaction with the new password, default "home network only" with the real address behind a proxy (`istHeimnetz`), 30 s lock per address range, accounts only after the right code, notification before every change.
+- **Migrations** are numbered SQL files in `server/migrations/`. They run at start-up in one transaction and are never changed afterwards, always supplemented by a new one.
+- **Start** (#802, `server/src/startmodus.ts`): right after creating the folders, `ablago.ts` opens the port (with several processes only the leader at the first start, see [Several processes](#mehrere-prozesse)) with the page "Ablago is starting …". It knows no database, only the state in memory (`start.schritt('migration', { nr, von, datei })`, `start.menge(fertig, gesamt)`): pages of the interface show step and numbers (reloading via `meta refresh`, no script), `/api/*` and `/webdav` answer `503` with `Retry-After` and `startet: true` (the interface counts that as an outage and waits), `/api/gesundheit` reports `503` with `zustand: startet|fehler`. It only releases the port immediately before `app.listen` (and in between for setup mode). An error at start-up lands on the page via `uncaughtException` – only kind, step, migration file and SQLSTATE, never the message itself (it can contain values); after 5 minutes the process ends, except with the lock against a downgrade. New long preparations get a `Startschritt` of their own (text in `shared/src/sprachen/de/start.json`) or run in the background after the start, like the first deadline reconciliation.
+- **Uploads as a stream** (#746, `server/src/hochladen.ts`): routes with `strom: true` (upload document, new version, also via `/api/v1`) are in a Fastify scope of their own whose parser writes the body into a temporary file under `files/hochladen/` (0600, checksum and header while reading); `body` is then a `Hochgeladen`. Via `Eingang.aus()` the service treats upload or buffer alike; filing happens by renaming (`Dateispeicher.uebernimm`). WebDAV PUT uses `nimmAuf` directly. Other uploads (logo, photo stack, packages) still read into memory because they need the whole content anyway.
+- **Settings** are stored as JSON per key in the table `einstellungen`. `null` deletes an entry.
+- **Recognising the home network** (#595): whether an address is in the home network is decided only by `shared/src/heimnetz.ts` (`imHeimnetz`, list `HEIMNETZ_ENDUNGEN` with `.local`, `.lan`, `.internal`, `.home.arpa`). Kind `ausnahme` (strict) allows `http://` without TLS – sign-in via a provider, endpoints of mailboxes with an own provider; kind `hinweis` (wider, e.g. also `.fritz.box`, 100.64/10) only serves suggestions such as "retrieval link or email", never a security exception. New places use this function instead of a list of their own. "Same computer" (only `localhost`) is a different question and stays at its places.
+- **Help:** every ? symbol in the interface points to a place in the manual. The table for this is in `shared/src/hilfe.ts`, and CI checks that every anchor exists – since #730 in the German and the English manual. The functions take the person's language as an optional last parameter (`handbuchOnlineUrl(handbuch, seite, sprache?)`); without it, the interface's current language applies (`sprache()` from `shared/src/sprache.ts`).
+- **Rows written by many and deadlocks** (#575): triggers that make many transactions write into the same rows (e.g. counters per word with `INSERT … ON CONFLICT DO UPDATE`) deadlock under load – every transaction locks its rows in a different order, PostgreSQL cancels one (deadlock). Pattern: the trigger only appends to an inbox without a unique key, a background run takes it over under a lock and in a fixed order (word index: `suchwoerter_eingang`, `dms_woerter_einarbeiten`, `Dienst.woerterEinarbeiten`, migration 052). What can still be cancelled and mustn't get lost runs via `beiVerklemmungWiederholen` (`server/src/db.ts`, repeats on 40P01/40001) – as a transaction of its own or `sql.begin` (inside a transaction a savepoint). Test: `server/test/verklemmung.test.ts`.
+- **Backup and restore** back up all tables except the content of `sitzungen` and `schema_migrationen` (`OHNE_INHALT` in `server/src/datenbankabzug.ts`). A new table is automatically included. Data outside the database needs a thought: where is it, and does it come along?
+
+
+## Dependencies { #abhaengigkeiten }
+
+Ablago gets by with **little outside code**: 8 npm packages in the server, 3 in the interface, plus a handful of Alpine packages in the image. That is the best protection against supply-chain attacks and keeps security updates rare and manageable – and one of the main reasons why Node.js fits well here. It should stay like this.
+
+**Rule (#543):** a new **runtime dependency** – npm under `dependencies` or an Alpine package via `apk add` in the `Dockerfile` – only comes with a justification in the pull request (section "Neue Abhängigkeiten" of the template):
+
+- **What** is it needed for?
+- **Why not** with Node.js's built-in means or the existing dependencies and tools? Often a small implementation of our own is enough, as with the [language files](#texte-und-sprachdateien) instead of i18next.
+- **Licence:** compatible with Apache-2.0? Deliberately not in the image are, for example, Ghostscript and MuPDF (AGPL).
+- **Maintenance:** latest version, number of maintainers.
+- **Its own dependencies:** what it brings into the image.
+
+The check **Abhängigkeiten** (`.github/workflows/abhaengigkeiten.yml`) reports new runtime dependencies in the PR as a warning, removed and new build and test tools as a note and changed versions in the run's summary – nothing is blocked. The script `.github/werkzeuge/abhaengigkeiten-hinweis.py` (only Python and git) does this; locally: `python3 .github/werkzeuge/abhaengigkeiten-hinweis.py main HEAD`. GitHub's Dependency Review checks known vulnerabilities and incompatible licences in the same run.
+
+**In the image today** (as of 0.122):
+
+| Package | Where | Licence | What for |
+| --- | --- | --- | --- |
+| `fastify` | server | MIT | HTTP server, routes, checking requests |
+| `@fastify/static` | server | MIT | delivering the interface as files |
+| `postgres` (postgres.js) | server | Unlicense | access to PostgreSQL |
+| `nodemailer` | server | MIT-0 | sending emails via SMTP (invitations, notices, sending folders) |
+| `imapflow` | server | MIT | collecting post from mailboxes via IMAP |
+| `mailparser` | server | MIT | splitting collected emails into text and attachments |
+| `pdf-lib` | server | MIT | assembling, shrinking, redacting, stamping PDFs – only via the [PDF place](#pdf-stelle) |
+| `yaml` | server | ISC | reading and writing packages in YAML format |
+| `react`, `react-dom` | interface | MIT | interface |
+| `qrcode` | interface | MIT | QR code for two-factor sign-in |
+| `poppler-utils` | image (Alpine) | GPL-2.0-or-later, called as a separate program | `pdftotext`, `pdftoppm`: text and images from PDFs |
+| `qpdf` | image (Alpine) | Apache-2.0 | optimising the structure of PDFs when shrinking |
+| `postgresql17`, `postgresql17-contrib` | only `dms-komplett` | PostgreSQL | database in the same container; `contrib` for `pg_trgm` |
+| `tini`, `su-exec` | only `dms-komplett` | MIT | starting and cleanly ending processes, PostgreSQL without root |
+
+Only for build and tests (not in the image): `typescript`, `tsx`, `esbuild`, `vite` with `@vitejs/plugin-react` and the types under `@types/…`. Here too: rather built-in means – the tests run with Node.js's test runner (`node --test`), without a test framework of their own.
+
+## PDF place { #pdf-stelle }
+
+All work on PDFs with **pdf-lib** is in one folder: `server/src/pdf/` (#541). Only there is pdf-lib included; the check `server/test/pdf-stelle.test.ts` (runs with `npm test` in CI) fails as soon as server, interface or `shared` import pdf-lib elsewhere – also via `import()` or `require()`. Tests may still use pdf-lib to examine generated PDFs.
+
+```
+server/src/pdf/index.ts          public interface – all modules import from './pdf'
+server/src/pdf/seiten.ts         counting, rotating, deleting, reordering, splitting, merging pages, photos as pages
+server/src/pdf/stempel.ts        stamp and footer when passing on, image as an A4 page
+server/src/pdf/verkleinern.ts    downscaling images (via pdftoppm), tidying up the structure (qpdf)
+server/src/pdf/schwaerzen.ts     rebuilding pages, redacting, text layer without redacted words
+server/src/pdf/schreiber.ts      text documents by plan (access copy, deletion concept, deletion log)
+server/src/pdf/export.ts         PDF of several folders
+server/src/pdf/aufkleber.ts      label sheet with barcode
+server/src/pdf/anzeige.ts        cleaned copy for display in the browser (#639)
+server/src/pdf/demo-dokumente.ts demo documents
+server/src/pdf/einfach.ts        small writer for text pages without any library (emergency sheet)
+server/src/pdf/bild.ts, puffer.ts, text.ts   image kind, JPEG dimensions, EXIF; workaround #456; WinAnsi
+```
+
+**Rules for new code**
+
+- Domain matters stay outside: what goes on a PDF (texts, fields without passwords, permissions, placeholders) is decided by the respective module (`export.ts`, `auskunft.ts`, `ausgabe.ts` …). Only **how** something is drawn or rebuilt goes into the PDF place.
+- The operations take and return **simple data** – bytes (`Buffer`/`Uint8Array`), numbers, texts, lists –, never pdf-lib objects. The caller describes text documents as a plan (`Anweisung[]`: text, line, spacing, table, new page) and has them drawn with `textdokumentPdf()`. That way all operations run in the [worker pool](#arbeiter-pool) (#542): `pdf/index.ts` passes them there; a new operation additionally goes into `arbeit/vorgaenge.ts`.
+- The PDF place only loads PDFs via `ladePdf()` (`pdf/laden.ts`, #823), never directly with `PDFDocument.load`: it first checks how large the object and cross-reference streams unpack (at most 64 MB per stream, 256 MB together) – otherwise a crafted PDF of a few MB occupies several GB when loading, bypassing the workers' memory limit. In addition, their entries (`/W`, `/Index`, `/Size`, `/N`, `/First`) must match the stream's length; otherwise pdf-lib would run almost endlessly when loading.
+- Images only go to pdf-lib via `eigenerPuffer()` (#456: pdf-lib overlooks a Buffer's offset in shared memory and reports "SOI not found" for JPEGs).
+- The PDF place writes nothing into the log and reads no settings. What the caller is to know is in the result (e.g. `hinweise` when shrinking).
+- Domain errors with an understandable message (`Fachfehler(422, …)`) may come from the PDF place, for instance for encrypted or broken PDFs.
+
+### Assessment of the PDF libraries (#822) { #pdf-bibliotheken }
+
+**pdf-lib (MIT) is the only widespread library in pure JavaScript that can edit existing PDFs and create new ones.** pdfkit, pdfmake and jsPDF only create new PDFs; PDF.js only reads and displays. The last version 1.17.1 dates from the end of 2021; there has been no further development since. We already work around one bug in it (#456). Replacing it is **not** part of #541 – but the encapsulation makes it manageable.
+
+**What Ablago needs and what the tools can do** (as of 04/11/2026):
+
+| Tool | A | B | C | D | E | F | G | H | I |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **pdf-lib 1.17.1** (today) | yes | yes | yes | yes | yes (workaround #456) | partly | yes | yes (MIT) | **no** (2021) |
+| **@cantoo/pdf-lib** 2.11.1 | yes | yes | yes | yes | yes | partly | yes | yes (MIT) | yes (15/09/2026) |
+| **@pdfme/pdf-lib** 6.2.8 | yes | yes | yes | yes | yes | partly | yes | yes (MIT) | yes (23/10/2026) |
+| pdfkit | no | no | only in new PDFs | yes | yes | no | yes | yes (MIT) | yes |
+| pdfmake (on pdfkit) | no | no | partly, only new | yes (from a description) | yes | no | yes | yes (MIT) | yes |
+| jsPDF | no | no | only in new PDFs | yes | yes | no | yes | yes (MIT) | yes |
+| PDF.js | no | no | no | no | no | partly (reading, text) | yes | yes (Apache-2.0) | yes |
+| qpdf (in the image) | partly (structure, objects, decrypting) | yes | partly (overlaying, rotating; no text) | no | no | yes (`--check`, JSON) | **no** (separate program) | yes (Apache-2.0) | yes |
+| PDFium as WebAssembly (e.g. `@embedpdf/pdfium`) | yes | yes | yes (via the C interface) | yes | yes | partly | yes (WebAssembly) | yes (Apache-2.0/BSD) | engine yes, wrapper young |
+| MuPDF.js | yes | yes | yes | yes | yes | yes | yes (WebAssembly) | **no** (AGPL-3.0) | yes |
+
+The columns – what Ablago needs them for and where they come from:
+
+- **A – editing existing PDFs internally:** repacking images and tidying up structures ([#393](https://github.com/motom001/dms/issues/393)), the cleaned copy for display without scripts and actions ([#639](https://github.com/motom001/dms/issues/639)), stamps into existing pages ([#394](https://github.com/motom001/dms/issues/394)).
+- **B – pages:** rotating, deleting, reordering, splitting ([#335](https://github.com/motom001/dms/issues/335)), photos as pages ([#490](https://github.com/motom001/dms/issues/490)), merging pages of several folders ([#152](https://github.com/motom001/dms/issues/152)).
+- **C – drawing on pages, also opacity, rotation and blend mode:** stamps and watermarks ([#394](https://github.com/motom001/dms/issues/394)), colours and blend mode ([#799](https://github.com/motom001/dms/issues/799)).
+- **D – creating new PDFs:** text documents by plan ([#541](https://github.com/motom001/dms/issues/541)), export of several folders ([#152](https://github.com/motom001/dms/issues/152)), label sheet ([#345](https://github.com/motom001/dms/issues/345)), demo documents ([#248](https://github.com/motom001/dms/issues/248)).
+- **E – embedding images:** photos as PDF ([#490](https://github.com/motom001/dms/issues/490)), rebuilding when redacting ([#392](https://github.com/motom001/dms/issues/392)), JPEG from shared memory ([#456](https://github.com/motom001/dms/issues/456)).
+- **F – checking:** PDF/A identifier, encryption, signature and text layer for the archive version ([#631](https://github.com/motom001/dms/issues/631)).
+- **G – without native parts:** the operations run in the worker pool ([#542](https://github.com/motom001/dms/issues/542)); native modules contradict the slim dependency list. qpdf and poppler are separate programs in the image, not modules.
+- **H – licence fits Apache-2.0:** MIT, BSD and Apache-2.0 yes; AGPL no (that's why MuPDF and Ghostscript are deliberately not in the image).
+- **I – maintained:** new versions in the last twelve months and answers to reports.
+
+**Several small packages don't replace pdf-lib.** For A, B and C – editing existing PDFs – in pure JavaScript there is only the pdf-lib family (the original and its forks). A generator such as pdfkit would only come in addition.
+
+**Ways** (the decision is prepared by [#823](https://github.com/motom001/dms/issues/823), see [below](#pdf-entscheidung)):
+
+| Way | For it | Against it |
+| --- | --- | --- |
+| **a) pdf-lib stays** (today) | runs stably, all functions and tests build on it; MIT; four small dependencies of its own (`pako`, `tslib`, standard fonts, `upng`) | no more bug fixes and no security updates; workarounds such as #456 stay our business |
+| **b) `@cantoo/pdf-lib`** (maintained fork) | same interface, regular versions (21 versions in 2026), MIT; fixes in parsing; `crypto-js` removed since 2.9.0 | almost all changes since 2025 by one person; since 2.11 only minified builds; packaging regressions (ESM build, `prepare: husky`); HTML parser and colours as dependencies |
+| **c) A copy of our own** in `server/src/pdf/` | no new dependency; only the fixes that concern us | we become maintainers ourselves; Dependabot and OSV no longer cover the copy |
+| `@pdfme/pdf-lib` (fork by the pdfme project) | same interface, maintained (6.2.8 of 23/10/2026), MIT | a single maintainer; also additional dependencies (HTML parser, colours) |
+| More via qpdf (already in the image, Apache-2.0) | robust and maintained (C++); can rotate, select, reorder, split, merge, overlay, decrypt pages (#827) and optimise structures – without a new dependency; a process of its own | draws no texts and embeds no images: stamps, export pages, labels, text documents and the rebuild when redacting would need a writer of their own (approach in `einfach.ts`); every call writes files |
+| PDFium as WebAssembly (Apache-2.0, Chrome's engine) | very capable: reads, edits, draws and renders; no native modules | the JavaScript wrapper is young and aimed at the browser; large (several MB of WebAssembly); interface close to C, so a lot of code of our own |
+| MuPDF, Ghostscript | very capable | AGPL – deliberately not in the image |
+
+**State and sources** (04/11/2026): versions, dates, dependencies and sizes from the npm registry (`npm view <package> time dependencies dist.unpackedSize`); functionality from the projects' documentation (pdf-lib.js.org, github.com/cantoo-scribe/pdf-lib, github.com/pdfme/pdfme, pdfkit.org, pdfmake.org, github.com/parallax/jsPDF, mozilla.github.io/pdf.js, qpdf.readthedocs.io, pdfium.googlesource.com, github.com/embedpdf, mupdf.readthedocs.io); preliminary review of the fork in the comment on #823. Whoever renews the assessment changes the date and above all checks column I.
+
+### Basis for the decision: stay, cantoo, own copy (#823) { #pdf-entscheidung }
+
+The maintainer decides between a, b and c. Here is what has been checked for it (as of 04/11/2026). What couldn't be checked from this environment is explicitly listed as open.
+
+**Signs of life** (npm registry): `pdf-lib` last 1.17.1, package last changed on 12/05/2022. `@cantoo/pdf-lib`: versions per year 2021: 20, 2022: 9, 2023: 39, 2024: 20, 2025: 13, 2026: 21; last 2.11.1 of 15/09/2026; six people may publish on npm; according to the preliminary review, the commits since 2025 almost all come from one person. `@pdfme/pdf-lib` last 6.2.8 of 23/10/2026. A revival of the original isn't known.
+
+**Dependencies of cantoo 2.11.1:** `tslib`, `culori`, `fflate`, `node-html-better-parser`, plus `html-entities` as a peer. According to the CHANGELOG, `crypto-js`, `pako`, `color`, `@pdf-lib/upng` and `@pdf-lib/standard-fonts` have been removed or embedded. HTML parser and `culori` serve drawing SVG and HTML; whether they are loaded with our calls only the trial run will show. Package size unpacked: 26.3 MB (pdf-lib 1.17.1: 19.5 MB) – most of it is several builds.
+
+**Scope of a copy of our own (way c):** pdf-lib 1.17.1 has 139 source files with 22,740 lines of TypeScript. Of these we don't use the forms (`api/form`, `core/acroform`, annotations: together about 6,900 lines); what remains is about 15,800 lines for parser, objects, streams, writer, embedding and the page API. Plus standard fonts, `upng` and `pako` (or `node:zlib`). Operation would need a fixed routine: compare cantoo's and the original's releases and security advisories monthly, a note in `SECURITY.md` that we maintain the code ourselves, and the fuzz tests below as a requirement. Estimated effort: a few hours a month, more with a report.
+
+**What the tests show today (independent of the way):**
+
+- All load points of the PDF place run in the worker pool and load via `ladePdf()` – the check `pdf-stelle.test.ts` records this (below).
+- The fuzz tests (below) found two kinds of errors, both fixed:
+    - **Hangs and memory:** cross-reference streams with impossible widths (`/W [1 2 2147483647]`) or ranges (`/Index [0 2147483647]`) made pdf-lib 1.17.1 run billions of steps when loading – a PDF of a good 1 KB held a worker until the time limit of 10 minutes or filled its memory. `ladePdf()` now checks these entries against the stream's unpacked length (also `/N` and `/First` for object streams, at most 10 million entries) and rejects the impossible with 422. The examples are in the corpus (`querverweis-*.pdf`). Whether cantoo is more robust here belongs to the trial run.
+    - **Messages:** broken structures (circular page tree, wrong object kinds) ended with errors from pdf-lib when stamping, with the pages and when shrinking. Now "can't be read as a PDF" or "couldn't be read and therefore not stamped" comes.
+
+**Open (couldn't be checked from this environment; the npm registry wasn't reachable for installations):** the trial run with `@cantoo/pdf-lib` – do all PDF tests stay green unchanged, is #456 fixed there, how big does the image get, how much memory does it need, does the bomb PDF also fail at `ladePdf()` there (it should: the check runs before the library) and which dependencies does it load with our calls. This is how it can be caught up without a change to the repository: install cantoo into an empty directory and start the tests with a load hook that redirects `pdf-lib` to this directory (`node --import <hook> --import tsx --test test/pdf*.test.ts test/stempel.test.ts …`). The list of changes compared with 1.17.1 (parsing, new functions, other) is in the preliminary review in #823 and is not re-checked here.
+
+**Criteria from a security perspective** (comment on #823): a) only with the protective measures around pdf-lib; b) the main objection `crypto-js` is gone; minified builds, packaging and a single maintainer remain open – with a fixed version and checked lockfile; c) fixed comparison, note in `SECURITY.md`, fuzzing required. Workers, time limit, `ladePdf()` and the fuzz tests stay with every way.
+
+### Tests with broken PDFs (#823) { #pdf-fuzz }
+
+`server/test/pdf-fuzz.test.ts` feeds deliberately damaged and randomly altered PDFs into all read points – via the worker pool as in operation: pages, shrinking (estimate), stamp, display, archive check and text layer. Expected: no crash of the worker (500), no memory abort (507), no hang (504, and every case under 30 seconds) and, with pages, shrinking and stamp, an understandable message (422). Display and archive check catch errors themselves (download only or "not readable").
+
+- **Corpus:** `server/test/pdf-korpus/*.pdf` – small, broken examples (circular page tree, deep nesting, wrong cross-references and lengths, truncated, references into nothing, broken encryption, no header). The test generates the object stream bomb itself.
+- **Randomness:** a small mutator of our own (flipping bytes, truncating, deleting or duplicating ranges, falsifying numbers, swapping streams, sprinkling in syntax, bending `startxref`) with a fixed seed – without a new dependency.
+- **Running it:** `cd server && node --import tsx --test test/pdf-fuzz.test.ts`. In the normal CI 120 cases (default). More: `DMS_FUZZ_FAELLE=5000`, another seed: `DMS_FUZZ_SEED=7`. On a schedule, `.github/workflows/fuzz.yml` (weekly and by hand) runs with 5,000 cases and a changing seed.
+- **Reproducing a finding:** the message names seed, case and starting PDF. With `DMS_FUZZ_AUSGABE=/tmp/funde` the triggering PDF is there afterwards.
+- **Adding a new broken example:** put the file (keep it small, a few KB) under a telling name into `server/test/pdf-korpus/` – it is then automatically part of the corpus and goes into all read points. Only examples without real data, with persona names.
+- **Errors found:** vulnerabilities with a security aspect (crash, memory, hang) only get a public issue with details once the fix is merged; before that, report to security (`SECURITY.md`).
+
+**Scorecard "Fuzzing":** the check recognises OSS-Fuzz, ClusterFuzzLite and fuzz functions of some languages, for JavaScript and TypeScript property-based tests with `fast-check`. It doesn't recognise our own mutator; so the check stays unmet as long as `fast-check` (only `devDependencies`) isn't added. The maintainer decides that, as well as the details at Scorecard and for the OpenSSF Best Practices badge.
+
+### Limits of the read points (#542, #823) { #pdf-grenzen }
+
+- Every place that opens an outside PDF with pdf-lib is in `server/src/pdf/` and runs via `arbeite()` in the worker pool. `pdf-stelle.test.ts` checks: `PDFDocument.load` is only in `pdf/laden.ts`; outside the PDF place there are only types from its modules; `pdf/index.ts` only passes on directly helpers that load no PDF; the worker knows every module with `ladePdf()` (`arbeit/vorgaenge.ts`). With `DMS_ARBEITER=0` the operations deliberately run in the main thread.
+- poppler (`pdftotext`, `pdftoppm`, `pdfinfo`) and qpdf run as processes of their own with a time limit.
+- **Memory:** the limit of 1.5 GB applies **per worker** and only covers the JS heap; the unpacking limit in `ladePdf()` protects against large `ArrayBuffer`s. With N workers, the requirement can in the extreme case be N × 1.5 GB. On small devices (Raspberry Pi with 2–4 GB) therefore set `DMS_ARBEITER=1`.
+
+### Protected PDFs (#827) { #pdf-geschuetzt }
+
+`server/src/entsperren.ts` recognises protected PDFs (`qpdf --requires-password`, only if `/Encrypt` is in the content) and creates an **unlocked version** with `qpdf --decrypt`. Like the converted versions (#577) it is under `<household>/fassungen/` at the original's checksum, with `entsperrt` in the details (`FassungInfo`). Preview (`vorschau.ts`), full text (`texterkennung.ts`), stamp and shrinking (`ausgabe.ts`, via `Ausgabekontext.entsperrt`), archive version (`archivfassung.ts`, source `lesefassung`) and the display (`GET /dokumente/{id}/inhalt` without `herunterladen`) take it; downloading returns the original.
+
+- **Password:** only via standard input (`--password-file=-`), never on the command line; never in database, log or history. A test checks qpdf's arguments.
+- **Limits:** five wrong passwords per person and document in 15 minutes, then 429; qpdf with a time limit (60 s, remembered passwords 20 s per attempt, 2 minutes per document).
+- **Remembered passwords:** setting `dokpasswoerter_<account>`, every password individually encrypted with the vault (kind "Remembered passwords for documents" in Workbench → Encryption, re-encrypted on a key change). Routes `/api/konto/dokument-passwoerter…` only in one's own session (no API key, no impersonation); displaying and changing the password only after `…/bestaetigen` (5 minutes per session). New post with "For" tries this person's passwords (`Dienst.neueDateien` → `PdfEntsperren.neu`).
+
+### Displaying PDFs in the browser (#639) { #pdf-anzeige }
+
+The server delivers files with `dateiKoepfe` (`routen.ts`): everything except PDF with a strict Content-Security-Policy including `sandbox`. PDFs need the browser's built-in viewer and don't get this policy – that's why the browser **never sees the original** when it displays a PDF:
+
+- `fuerAnzeige()` in `routen.ts` takes effect for every answer with `anzeigen: true` and `application/pdf` without an API key – i.e. when viewing in the interface: `GET /api/dokumente/:id/inhalt`, `…/versionen/:nummer/inhalt`, `…/fassung` and `…/archivfassung` (each without `herunterladen`).
+- `pdfanzeige.ts` fetches the cleaned copy from the PDF place (`pdf/anzeige.ts`, in the worker pool) and keeps it in memory per SHA-256 of the content (at most 256 MB, oldest out first; failures aren't remembered).
+- Removed are JavaScript (`/JS`, name tree `JavaScript`), automatic actions (`/OpenAction`, `/AA`), the actions `SubmitForm`, `Launch`, `ImportData`, `GoToR`, `GoToE`, media actions, XFA forms, embedded files (`/EF`, `EmbeddedFiles`, streams `/EmbeddedFile`) and annotations for file attachments and media. Links (`URI`) and jumps within the document stay.
+- If the PDF can't be cleaned (encrypted, damaged), a short text comes (`text/plain`, with sandbox) with `X-DMS-Anzeige: nur-herunterladen`; otherwise `X-DMS-Anzeige: bereinigt` is in the header.
+- **Downloading, passing on, export, email and API keys** (also packages) still get the original or the stamped output.
+
+## Worker pool { #arbeiter-pool }
+
+The server answers all requests in **one** thread. Heavy computing work therefore runs in a small pool of worker threads (`node:worker_threads`, #542), without a new dependency:
+
+```
+server/src/arbeit/index.ts        arbeite(vorgang, ...args), setting (DMS_ARBEITER), state for system health
+server/src/arbeit/pool.ts         worker pool: queue, time limit, memory limit, crash, idle
+server/src/arbeit/vorgaenge.ts    what a worker can do: all operations of the PDF place, tables of large exports, demo documents
+server/src/arbeit/arbeitsfaden.ts the worker's entry point (built as dist/arbeitsfaden.mjs)
+server/src/arbeit/nachricht.ts    messages, Buffers and errors across the boundary
+```
+
+- **Calling:** the PDF place passes its operations to the pool itself (`pdf/index.ts`); for everything else `await arbeite('exportTabellen', …)`. The types of parameters and results come from `VORGAENGE`.
+- **New operation:** enter a function with simple data as parameters and result (bytes, numbers, texts, lists, simple objects, `Map` – no classes, no functions, no repo, no database) in `vorgaenge.ts`. A `Buffer` arrives in the worker as a `Uint8Array` and `alsBuffer` turns it back into a `Buffer` – also in lists and simple objects. `Fachfehler` arrive at the caller with status and details. The worker writes nothing into the log; notices are in the result.
+- **What doesn't belong in it:** small requests (the handover itself costs something: data is copied, with 20,000 table rows about 0.1–0.3 s) and everything that needs database or files – the main thread fetches the data beforehand.
+- **Setting:** `DMS_ARBEITER` (0–16; 0 = off, everything in the main thread), default half of the cores from the cgroup's `cpu.max` or `availableParallelism()`, 1 to 4. Time limit 10 minutes, queue at most 50 (above that 503), heap per worker 1.5 GB, idle 2 minutes. Without calling `richteArbeiterEin()` (tests, command `dms`) the pool is created with the first job.
+- **Tests:** `server/test/arbeiter.test.ts` checks the pool (result, error, time limit, full queue, crash), the setting, the warning on high waiting time and that the Library loads quickly during a large PDF export (values without and with pool are in the output). In tests the worker runs with `tsx` (load arguments from `ladeArgumente`).
+- The **package runner** (`laeufer/`) is a process of its own with a permission model and stays separate from this.
+
+**Warning on high waiting time:** `Auslastung` (`messung.ts`) remembers the p99 of the event loop delay per minute window. If it is above 100 ms in 5 consecutive windows (`SCHLEIFE_GRENZE_MS`, `SCHLEIFE_MINUTEN` in `shared/src/systemlast.ts`), it writes a warning into the log, and `Systemlast.warnung()` reports `schleife` to system health, overview and the Workbench's bar.
+
+## Texts and language files { #texte-und-sprachdateien }
+
+Texts for users are not in the code but in **language files** (#473, #727, part of #357). Built in are German (source language) and English (since #729); Ablago addresses everyone informally ("du" in German), and every language takes the familiar form of address (in English simply "you"). Since #727 all areas have been converted: interface, the server's error messages and notices, emails, history and emergency sheet.
+
+**Rule:** a text that people read belongs in the language file – never as words in the code. CI doesn't let new fixed texts in the interface through (see below).
+
+```
+shared/src/sprachen/de/<area>.json            source language German (du), always complete
+shared/src/sprachen/de-formal/dritte.json     texts for third parties with "Sie" (see below)
+shared/src/sprachen/en/<area>.json            English, British spelling, complete
+shared/src/englisch.ts                        loads all English files (a chunk of its own in the interface)
+shared/src/sprachwahl.ts                      setting "sprachen", effective language, header X-Sprache
+shared/src/sprache.ts                         uebersetzer(), placeholders, plurals, gebietsschema()
+web/src/sprache.ts                            t() and tn() with the interface's areas
+server/src/sprache.ts                         t() with the server's areas
+shared/src/texte.ts                           t() for shared code (area gemeinsam)
+```
+
+**Areas** follow the folders:
+
+| Code | Area |
+|---|---|
+| `web/src/ablage/*` | `ablage` |
+| `web/src/werkbank/*` | `werkbank` (plus older Workbench keys) |
+| `web/src/profil/*` (My account) | `profil` |
+| `web/src/einrichtung/*` (folder type editor) | `mappentypen` |
+| `web/src/einrichtung.tsx`, `web/src/assistent/*` | `einrichtung` |
+| other files in `web/src` | `oberflaeche` |
+| `server/src/**` (errors, notices, history) | `meldungen` |
+| emails | `mail` |
+| emergency sheet and emergency access | `notfall` |
+| `shared/src/*` | `gemeinsam` |
+
+In addition there are domain areas from earlier issues (`anmeldung`, `automatisierung`, `pakete`, `suche` …); their texts stay there.
+
+**Creating a text**
+
+1. Choose the matching area (table above). A new area is entered in `web/src/sprache.ts` or `server/src/sprache.ts`; file name = area, lower case, without a dot.
+2. Write the key into the JSON file – flat, parts with a dot or hyphen, starting in lower case: `"vergessen.knopf": "Link anfordern"`.
+3. Retrieve it in the code: `t('anmeldung.vergessen.knopf')`. The type check knows all keys and reports typos.
+
+**Naming:** first the component or file, then place and purpose – `vergessen.titel`, `vergessen.knopf`, `fehler.link.abgelaufen`. During the move in #727 the keys arose from file and beginning of the text (`wartungsmodus.alle-jetzt-abmelden`); whoever changes a text may rename the key accordingly. Recurring words ("Save", "Cancel") don't get a shared key – that way every translation stays in context.
+
+**Placeholders** are in single curly brackets: `"passwort.zugang": "Für den Zugang {email}"` → `t('anmeldung.passwort.zugang', { email })`. Names only of letters, digits and `_`. Always store the **whole sentence** with placeholders, never string together parts of sentences – otherwise a translation can't change the order. If a value is missing, `{email}` remains and stands out.
+
+**Building blocks in the sentence** (link, bold, help button) go with `tn()` from `web/src/sprache.ts`: the placeholder gets an element as its value.
+
+```tsx
+// "hinweis": "Mehr dazu im {link}.", "hinweis.link": "Administratorhandbuch"
+<p>{tn('werkbank.uebersicht.hinweis', { link: <a href={url}>{t('werkbank.uebersicht.hinweis.link')}</a> })}</p>
+```
+
+**Plurals** via keys with `_one` and `_other` and the value `anzahl` – instead of `n === 1 ? … : …` in the code:
+
+```json
+"dauer.stunden_one": "{anzahl} Stunde",
+"dauer.stunden_other": "{anzahl} Stunden"
+```
+
+`t('mail.dauer.stunden', { anzahl: 2 })` gives "2 Stunden". The forms follow the language's `Intl.PluralRules` (English needs `one`/`other`, other languages also `few`, `many` …); if one is missing, `_other` applies. A text for exactly one may do without a number ("One folder").
+
+**Dates, numbers, amounts** never format with a fixed `'de-DE'`, but with `gebietsschema()` from `shared/src/sprache.ts` (`de-DE` or `en-GB`, depending on the request's language), e.g. `n.toLocaleString(gebietsschema())`. Fixed formats only remain where a file requires a format (ISO date, CSV for tables).
+
+**Composite keys** (`werkbank.gruppe.${g}`) go through `t.frei(…)` instead of `t(…)`. They escape the type check; the check in CI counts every key with the fixed prefix (`werkbank.gruppe.`) as used. Where you can, write keys out in full.
+
+**Checks in CI** (run with `npm test`, locally in the `server` folder with `node --import tsx --test test/<file>`):
+
+- `sprachdateien.test.ts`: keys the code asks for but that don't exist; keys nobody uses; languages that leave out keys or have extra ones; placeholders that differ between languages; **placeholders a call doesn't supply** (`t('…', { nam })` for `{name}`); plurals without `_other`; empty texts.
+- `sprachdateien-fest.test.ts`: **fixed texts in the interface** – text between tags, in visible attributes (`title`, `aria-label`, `placeholder`, `titel` …) and as a value in curly braces. What stays the same in every language (product names, commands in `<code>`, example addresses) is allowed; further exceptions are listed with a reason in `AUSNAHMEN` in the test file.
+- `symbole.test.ts`: no coloured emoji and no text characters used as symbols – in the language files too.
+
+**Deliberately still in the code** (#727): log lines (`log.*`, Workbench → Log) stay German so that error messages remain comparable and searchable; the description of the interface (OpenAPI in `server/src/api-v1.ts`) is developer documentation like this handbook; licence texts; sample data and demo content; the titles of the handbook sections in `shared/src/hilfe.ts` (they follow the headings in the handbook and come with its translation, #730); the fixed values of the post choice fields (`POST_STAND`, `POST_KANAL`, `POST_RICHTUNG` in `shared/src/model.ts`) – they are stored like that in every folder; what is shown is their label (see below). Names, fields and help texts of the system folder types have come from `gemeinsam.json` since #728 (`model.systemtyp.*`, `model.systemfeld.*`, `model.systemhilfe.*`).
+
+**Labels per language** (#728, `shared/src/beschriftung.ts`): what administrators create themselves – names of folder types, fields, tabs, result lists and views, help texts and the options of a choice field – is not in language files but on the entry under `beschriftungen`: language → texts, e.g. `{ en: { label: 'Kind', optionen: { Strom: 'Electricity' } } }`. The source text (`label`, `name` …) is German; if a label is missing, it applies. An option is its **fixed value** (`optionen`), and exactly that is stored in the folder; its label comes from `beschriftungen.<language>.optionen`, otherwise from `beschriftungen.de.optionen`, otherwise it is the value itself. It follows that:
+
+- **Always compare with the fixed value** – conditions, automations, API, full export (CSV, JSON), checking the folder. Inputs that may be a label (direct link, advanced search, the answer of a recognition engine) go through `wertZuOption()`. The simple search also finds a value by its label (`optionsGruppen()`, like synonyms).
+- **Always show the label:** `formatiere()` returns the label for choice fields (result list, title, export to Excel and PDF, history); names via `feldLabel()`, `feldHilfe()`, `typName()`, `registerName()`, `listenName()`, `sichtName()`, options via `optionText()`.
+- **Saving:** the server cleans up `beschriftungen` (valid language codes, only known parts, options only for existing values). If the field is missing entirely when saving, the existing labels stay – an older program using the API deletes nothing that way; `null` or `{}` removes them. Folder types and views store name and description per language in the `beschriftungen` column (migration 080), fields, tabs and result lists in the folder type's JSON.
+- **Allowed languages** come from `erlaubteSprachen()`, based on the `sprachen` setting (Workbench → Languages, #729); the server sets them with `setzeErlaubteSprachen()` at start-up and again every minute. Labels in other languages (from a package, say) stay stored.
+
+**Translating:** a new language gets a folder `shared/src/sprachen/<language>/` with the same files and keys as `de`, e.g. `en/ablage.json`. Placeholders stay the same (CI compares them), plural forms follow the language. If you change or add a German text, you maintain the English one too – CI reports missing keys in `en`. Language packs (#731) register their texts via `registriereSprache()`.
+
+**Choosing the language** (#729):
+
+- **Fallback:** `t()` looks in the chosen language, then in English, then in German; an empty text counts as missing. So no place is ever left blank.
+- **Which language applies:** that of the signed-in person (`benutzer.sprache`, migration 081), if allowed; otherwise the one the interface sends in the `X-Sprache` header (the one last used, or the browser's); otherwise the installation's (`sprachen.standard`). `GET /api/sprache` names it, the interface loads it before all other modules (`web/src/main.tsx`) and reloads after a change.
+- **Server:** every request runs in `mitSprache()` (AsyncLocalStorage in `server/src/sprache.ts`); error messages thus come in the person's language. Emails to one person are built by `mitSpracheVon(person, …)` in their language; emails to all administrators (`anVerwaltende`) pass subject and text as a function (`MailText`) so that every recipient gets their own language.
+- **Log lines** go through `tDe()` – always German, regardless of the request.
+- **Texts for third parties** (`textDritte`, data protection request, retrieval link) and values the server builds once for everyone (module-level constants, titles and names of the system folder types, texts of the administration items) are in the installation's language – computed at start-up or on creation. System folder types and system fields also carry `beschriftungen` from the language files (`systemBeschriftung()`) so that the interface shows them in every language.
+- **Machine-translated languages** (later from packages) show the note "Machine-translated – improvements welcome" in My account; the link leads here.
+
+**Library:** a small implementation of its own in `shared/src/sprache.ts` instead of i18next – no new dependency, offline, the same rules in interface and server. The format (flat JSON, `_one`/`_other`) matches i18next; a later switch remains possible.
+
+## Documents for third parties: informal or formal address { #unterlagen-fur-dritte }
+
+The interface always uses the informal German "du". Texts that go to people **outside** Ablago, on the other hand, follow the setting **Form of address in documents for third parties** (#474, Workbench → Data protection requests → Settings, `Datenschutz.anrede`, default `du`). All these texts are in the `dritte` area of the [language files](#texte-und-sprachdateien): the du version in `shared/src/sprachen/de/dritte.json`, the Sie version in `shared/src/sprachen/de-formal/dritte.json`, each with the same keys and placeholders. They are fetched with `textDritte(anrede, schluessel, werte)` from `shared/src/anrede.ts`. The language file check compares both versions; a test additionally checks that the Sie version contains no "du".
+
+New texts for third parties go as keys into both `dritte.json` files – no `anrede === 'sie' ? … : …` in the code – and into this list:
+
+| Output | Code | Keys |
+| --- | --- | --- |
+| Data protection request: Deckblatt.pdf, Uebersicht.html, LIESMICH.md (#396) | `server/src/auskunft.ts` | `auskunft.*` (suggested rights: `rechteStandard`) |
+| Email with the request as a ZIP, email with the retrieval link (#455) | `auskunftMail` in `shared/src/auskunft.ts` | `mail.*` |
+| Retrieval page `/abruf` and its messages (#455) | `web/src/abruf.tsx`, `GET /api/abruf/anrede`, `/api/abruf` in `routen.ts` | `abruf.*` |
+| Emergency access `/notfall` (#815) | `web/src/notfall.tsx`, `/api/notfall*` in `routen.ts`, `server/src/notfallcode.ts` | `konten.notfall.*` |
+| Emails with folders and documents (#58, #151) | – | none: the user writes the text, only the subject without a form of address is preset |
+
+## Tree via links {#baum-uber-verweise}
+
+Everything that hangs off a folder via links is collected by **one** module – used by the data protection request under Art. 15 GDPR (#396) and by "Delete folder with all linked folders" (#424). New functions that need "everything about this folder" use it instead of their own loops.
+
+- **Types and options:** `shared/src/baum.ts` – `BaumOptionen` (`richtungen`: `verwiesenVon` = folders that link to the node, "downwards"; `verweistAuf` = folders it links to; `tiefe` 1–10; `max` up to 5000; `seitwaerts`; `ohneTypen`; `nurZugehoerigkeit`), `bereinigeBaumOptionen(eingabe, standard)`, `Baum`, `BaumKnoten`, helpers `kinderVon`, `haengtAuchAnderswo`, `wirdAnderswoGebraucht`, `baumZahlen`.
+- **Algorithm:** `server/src/baum.ts` – `sammleBaum(quelle, startId, optionen)`: breadth-first search, one access per level for links (`Repo.kantenVon`), folders and readability. Without `seitwaerts` a node only continues in the direction it was reached from (the start folder in all chosen ones). Cycles and multiple paths end up in `auchUeber` and `kreise`; every node appears once. Beyond `max`: `abgeschnitten`. With `nurZugehoerigkeit` it only continues via link fields of the kind membership (`verweisartVon(typ, feldKey)`, default reference); nodes that only hang on via a reference are leaves with `nurBezug` – if the search later reaches them via a membership, they are attached there and followed further (within a level, memberships take precedence).
+- **Rights:** the `BaumQuelle` is built by `Dienst.baumQuelle(zugriff)`; only readable folders are included **and** followed, unreadable ones only count in `verborgen`. To call it: `await dienst.baum(startId, eingabe, zugriff)` (users and roles are excluded unless `ohneTypen` says otherwise), over HTTP `GET /api/v1/mappen/{id}/baum`.
+- **Per node:** `typ`, `titel`, `ebene`, `ueber` (parent node, direction, field, `verweisart`), `nurBezug`, `dokumente`, `aussen` (links to folders outside the tree per direction, unreadable ones without a title), `aufbewahrenBis`/`gesperrt` (archive mode #212) and `rechte` (the caller's CRUDP).
+
+The data protection request (`Dienst.auskunftVorschau`) and deletion both collect with `nurZugehoerigkeit` (#472, #424): reference nodes only go out as a mention in the request (`AuskunftAuswahl.erwaehnungen`, `erwaehnungText` in `shared/src/auskunft.ts`); when deleting, only their link is removed. Full-text suggestions are no longer part of the request.
+
+Tests: `server/test/auskunft.test.ts` (cycles, rights, upper limit, sideways, membership/reference).
+
+### Deleting with linked folders (#424) { #mit-verknupften-mappen-loschen-424 }
+
+- **Preview and plan** (pure functions, server and interface): `shared/src/loeschbaum.ts`. `Dienst.loeschVorschau(startId, { tiefe, max }, zugriff)` collects the tree only `verwiesenVon` with `nurZugehoerigkeit` (default depth 5) and adds `kanten` (all links between nodes, not just the tree paths), `geteilt` and `nichtLoeschbar`. Markers (`kennzeichen(v, k)`): 🔒 = `gesperrt`, 📎 = `nurBezug` (never deleted, `loeschen` counts as `entkoppeln`), ⛔ = `!rechte.D` or `nichtLoeschbar`, 🔗 = `geteilt` – narrower than `haengtAuchAnderswo(k)`: only counts outward links of the kind membership via a field the node hangs on in the tree, or to a folder of the same type as in the tree; links to master data (storage location, category) and users don't count, otherwise almost everything would be 🔗.
+- **Plan:** `planeLoeschung(vorschau, auswahl)` – a choice per id of `loeschen | entkoppeln | behalten` (missing ids stay). Fixed point: a folder stays if `wirdAnderswoGebraucht(k)` or a remaining folder in the tree links to it without `entkoppeln`. Locked folders are never unlinked.
+- **Running it:** `Dienst.loescheMitVerknuepften` collects again, plans, checks every folder as for a single deletion (`loeschPruefung` with all back-links), cuts the links (`entkoppeln`, right U) and puts everything into the Bin with `Repo.legeVorgangInPapierkorb` in **one** transaction (links among each other first – that way cycles work too). Columns `papierkorb.vorgang` and `papierkorb.entkoppelt` (migration 042). `stelleVorgangWiederHer` and `Repo.stelleMehrereWiederHer` first create all folders, then the links, and restore the unlinked links. Tests: `server/test/loeschbaum.test.ts`.
+
+## Writing folders, even at the same time (#609) { #mappen-schreiben }
+
+Whoever saves last must not reset fields they didn't touch. So for **every** writer of folder values:
+
+- **Write only what changed.** `Repo.aendereMappe(id, werte, [], von, { basis, verweise })` only sets the fields that differ from `basis` (the values read) to the current state – with the row locked (`SELECT … FOR UPDATE`), and the same in memory (`feldweise` in `server/src/repo.ts`). `verweise(w)` computes the links from the result. Internal writers (`schreibeSystemMappe`, `schreibeVerweisWerte`, `absenderBereinigen`, renaming fields) use this; `schreibeSystemMappe` also only gets the fields to change, never `{ ...mappe.werte, … }` from an older read.
+- **Version.** `mappen.geaendert` is accurate to the millisecond and increases with every write (`greatest(clock_timestamp(), geaendert + 1 ms)`) so it works as a version counter; no migration needed. With `stand` the repo only writes if the row still has that version, otherwise `StandVeraltet` – `Dienst.aendereMappe` then reads again and retries up to five times.
+- **Conflict.** `Dienst.aendereMappe(id, { werte, stand })`: if `stand` differs from the current one, `feldkonflikte` looks in the history for `geaendert` entries with `daten.stand` > `stand` (each entry remembers the version its write produced). A submitted field that appears there and should now have a different value results in 409 with `Mappenkonflikt` (`shared/src/model.ts`). Without `stand` there is no check, only field-by-field writing – so old API calls stay valid.
+- **Form.** `MappeFormular` only sends the fields whose raw value differs from `basis`, and `stand` = `mappe.geaendert` when `basis` was loaded. On 409, `Konfliktfrage` shows the choice per field; "Mine" goes along again with the new version from the response, "Theirs" takes over the value and is left out.
+
+Tests: `server/test/gleichzeitig.test.ts` (memory and PostgreSQL), in the browser `docs/handbuch/screenshots/gleichzeitig-pruefen.mjs` (two windows, workflow "Handbuch").
+
+## System accounts and account roles (#673) { #systemkonten }
+
+Besides people (`benutzer.art = 'person'`) there are two kinds of accounts that never sign in:
+
+| Kind | Example | System role | Rights to folders |
+|---|---|---|---|
+| `dienst` (#338) | "Paket Texterkennung", one per package with code | **Package** (`rolle:paket`) | confirmed rights from the manifest, restricted by rules for the Package role |
+| `system` (#673) | "Automatisierung" (`systemkonto = 'automatisierung'`) | **System account** (`rolle:systemkonto`) | everything except `P`, restricted by rules for the System account role |
+
+- **Creation:** `Konten.systemkonto(kennung)` at start-up (`ablago.ts`), idempotent; in PostgreSQL the index `benutzer_systemkonto` prevents a second account, even with two servers (migration 059).
+- **Never usable:** `holeHash`, `listeBenutzer`, `anzahlBenutzer` only see people; `benutzerZu` (session) and `benutzerMitId` (API key) reject system accounts; user management and "Sign in as user" don't know them (`person()`). `personen()` only returns them for names (`aktiv: false`, `art`).
+- **Roles:** the role folders `rolle:systemkonto` and `rolle:paket` are created by `sichereSystem()` (`kontorollen`). `listeRollen()` only returns them with `mitKonten`, `pruefeRollen()` rejects them.
+- **Access:** `Dienst.zugriff(konto)` sets `wer.rollen = [account role]` and trims the folder types with `kontoRegelwerk(typ, rolleId)` (`shared/src/rechte.ts`): default "everything", only rules that name the role (`nenntRolle`). So a strict default for members doesn't lock out an automation, but an administrator can restrict it on purpose. For packages the result is intersected with the confirmed rights. `Dienst.systemZugriff('automatisierung')` returns the system account's access (for the automation engine, #674).
+- **Workbench:** system accounts are never `admin`; which Workbench actions a card allows is up to the card itself (#677).
+- **Interface:** Workbench → Users, section "System accounts" (`GET /api/benutzer/systemkonten`, administrators only).
+
+## State between requests (#744) { #kurzzustand }
+
+Build rule "keep several servers possible later": whatever applies between two requests lives in PostgreSQL – not in a `Map` inside one process. Otherwise an attacker with two processes would get twice as many attempts, and the second sign-in step would end up at the wrong process.
+
+- **Building block:** `Kurzzustand` (`server/src/kurzzustand.ts`, table `kurzzustand`, migration 078): per entry a kind, key, counter, value and expiry. `pgKurzzustand(sql, haushalt)` in operation, `speicherKurzzustand()` in tests and building blocks without a database (same rules, one process). Not in the backup, like the sessions.
+- **Counting atomically:** `zaehle` is an `INSERT … ON CONFLICT … DO UPDATE … RETURNING` with a fixed or sliding window – never read-then-write.
+- **Exactly once:** `nimm` (`DELETE … RETURNING`) for tickets and identifiers; `belege`/`belegeAlle` for markers "only once in quick succession" and for claims with a deadline ("at most one check at a time" – if a process ends halfway through, the deadline releases it).
+- **Secrets:** if the key itself is secret (ticket, `state`, identifier, session), only its hash is stored (`hashe`). Secret values (TOTP draft, PKCE verifier, device code, new emergency sheet) are encrypted by the caller with the vault.
+- **Schedules:** `exklusiv(name, f)` takes `pg_try_advisory_lock(744, hashtext(haushalt:name))` on a connection of its own; if another process holds it, the run doesn't happen here (there is never any waiting). In `ablago.ts` as `nurEiner(…)` for the Bin, absences, deadlines (day of the last run also in the short-term state), technical tasks, test restore, RESCUE file, storage transitions and cleaning up the short-term state (every 10 minutes). Daily runs with `laufeFaellige` (backup, summary, automations) were already safe via the marker in the settings.
+- **Sign of life:** `lebenszeichen(sql, haushalt)` holds a shared lock per process – since #745 only the leader (the process for background work). Only a process that is alone at start-up resets "running" text recognition to interrupted.
+- **Compare and swap** instead of overwriting where two processes change the same value: last TOTP step and used recovery codes (`zweifaktor.ts`), renewed token of the mailbox sign-in (`postfach-oauth.ts`), toggling maintenance mode (`wartung.ts`, now reads the state from the database at every check).
+
+| What | Kind(s) in the short-term state |
+|---|---|
+| Sign-in protection: failed attempts per account and IP, per IP, IP blocks, collective and immediate notification | `anmeldung-konto`, `anmeldung-ip`, `anmeldung-ip-sperre`, `anmeldung-meldung`, `anmeldung-sammelmeldung`, `anmeldung-sofortmeldung` |
+| Second sign-in step, setting up two-factor | `zweiter-schritt`, `zweifaktor-entwurf` |
+| Retrieval page: tickets, failed attempts per scope, one check per link | `abruf-ticket`, `abruf-fehler`, `abruf-pruefung` |
+| OIDC, mailbox OAuth (callback, device code) | `oidc-anmeldung`, `postfach-oauth-code`, `postfach-oauth-geraet` |
+| WebDAV: counting windows, pending files | `webdav-fenster`, `webdav-schwebend` |
+| Protected PDFs: failed attempts, confirmation for document passwords | `pdf-passwort-fehler`, `dokumentpasswort-bestaetigt`, `dokumentpasswort-fehler` |
+| Emergency access: block and claim per scope, notification, new sheet | `notfall-sperre`, `notfall-pruefung`, `notfall-fehlversuche`, `notfall-gemeldet`, `notfall-blatt`, `notfall-blatt-erzeugen` |
+| Trail in administration mode, personal export, deadline run | `modusspur`, `eigener-export-laeuft`, `eigener-export-fehler`, `fristen-tag` |
+| Workbench jobs (#745): claim with deadline, progress, cancelling; own changes to the counters (#742, #745) | `auftrag` (`lauf`, `stand`, `abbruch:<id>`), `eigene-aenderung` |
+
+**May stay per process** (at most makes things slower, never wrong): caches for page images and PDF display, stamped WebDAV versions (#722: at most 64 MB or 2000 entries **per process**), protection type per PDF, the provider's discovery and keys (OIDC), settings read with a short lifetime (sign-in protection 10 s, WebDAV 5 s, OIDC 30 s), requests to packages "already requested", limits on concurrent work that protect this process's computing time (scrypt on the retrieval page, uploads per user, questions), metrics and load. What #744 left open for several processes is solved by #745 ([Several processes](#mehrere-prozesse)).
+
+## Several processes (#745) { #mehrere-prozesse }
+
+`DMS_PROZESSE` (default 1, `auto` = cores − 1, at most 4, 1 below 2 GB of memory; `prozesseAus` in `server/src/prozesse.ts`). With 1, everything runs in one process as before.
+
+- **Entry point:** `server/src/index.ts` is now only the switch. With more than one process it becomes the lean **main process** (`leite`, doesn't load Ablago) and uses `node:cluster` to start the processes, which begin in `index.ts` again and load `ablago.ts` (the former `index.ts`). In the build, `dist/ablago.js` is a separate file; the import in `index.ts` therefore has no fixed path.
+- **Roles:** process 1 is the **leader**. It starts first – `verbund.erster`: start page (#802), migrations, one-off work at start-up – and reports "ready"; only then does the main process start the others (without start page and migrations). If the leader doesn't come up before its first "ready", the main process ends with its code (as before: Docker restarts; the downgrade lock stays in place). After that the main process restarts crashed processes (`neustartWarten`: 1 s, doubled up to 60 s, back to 1 s after 5 minutes of running), the leader too (then without start page). The main process's log only contains number, code and signal.
+- **Group** (`Verbund` in `prozesse.ts`): `rufe` (call to the leader with result, parts and domain errors including status), `melde` (to the leader, to all, to the others), `frageAlle` (e.g. `prozess.stand`), `bereit`, `beendeAlle` (restart after a restore, changed database connection, end of the load test). The main process only passes things on (IPC with `serialization: 'advanced'`, so buffers and `Float32Array` too). With one process, `einzeln()` does everything in its own.
+- **What the leader does for the others** (`server/src/aufteilung.ts`): triggers for text recognition, thumbnails and the event dispatcher go to it as a message – the others process none of that themselves (a dispatcher without the automations' consumers would have marked events as dispatched). Starting backup, checksum, test and restore, fetching the mailbox, checking intake folders and catching up on thumbnails are calls to the leader; it mirrors running backups and restores to all every second so that `laeuft()` and `aktuellerLauf()` are right everywhere without waiting.
+- **Package runner** exactly once, in the leader – it holds the packages' API keys. The others use `Fernlaeufer` (`server/src/laeufer/fern.ts`): actions, vectors, "Ask your library" (parts of the answer come as parts of the call), "Fill in from document", overview. What they need without waiting (which package offers what, the packages' service accounts) the leader sends as a snapshot on every change.
+- **Webhooks** stay as they were built for several servers: after a change, the process in which it happened counts and delivers (outbox with row lock and deadline); only the leader has the regular runs.
+- **Workbench jobs** (`Auftraege.teile`): the job runs in the process that accepted it. "Only one at a time" is a claim in the short-term state with a 60 s deadline that the running process extends every second; it also writes the progress, and `stand()` reads it everywhere. Cancelling from another process sets a marker. Routes with 202 wait with `angemeldet()` until the progress is visible to all. If the process dies, the progress shows "Interrupted".
+- **Uploaded packages** are kept until installation (30 minutes) under `files/hochladen/pakete/` (archive and details, `0600`, name from the hash of the identifier) and are read again by the other process with the same checks.
+- **Own changes to the counters** (#742): after the household version is incremented, the new version per person is briefly kept in the short-term state (`eigene-aenderung`); another process only asks for it if the minimum validity would otherwise apply.
+- **Settings in memory** (encryption key, email sending, OIDC, timing threshold): every process reads the household version `lesen` every 2 seconds; if it changes, `Tresor.nachladen`, `Betrieb.nachladen`, `Oidc.vergiss` and `Messung.start` reload. If key file and fingerprint don't match at that moment (a change in another process), the next tick tries again.
+- **Per process:** connections (`verbindungenJeProzess`: together at most `max_connections` − 10), overload protection, workers (default divided by the number of processes), caches. The `dms` command uses a shared key from the main process; the leader writes the file. At start-up, a process only deletes temporary uploads next to others if they are older than 6 hours.
+- **System health:** `frageAlle('prozess.stand')` returns RSS, CPU time, event loop delay and running requests per process; plus Pss from `/proc`. `/api/werkbank/last` reports the memory of all processes together (including the main process) and the delay of the slowest – so the load test limit (1.5 GB) stays one for all of Ablago.
+- **Load test mode:** if the leader is measuring, the others also only listen on the internal port (`listen(0)` shares the same port under `cluster`).
+- **Tests:** `prozesse.test.ts` (setting, group with a real `cluster` via `test/hilfen-prozesse.ts`, triggers, remote runner, uploads, counters, jobs, keys), `prozesse-e2e.test.ts` (all of Ablago with two processes: start page, migration once, system health, console, job, crash with restart without signing out, shutdown, downgrade).
+
+## Event catalogue (#670) { #ereigniskatalog }
+
+What happens in Ablago is defined in **one** place: `shared/src/ereignisse.ts` (`EREIGNISKATALOG`), the texts in `shared/src/sprachen/de/ereignisse.json` (`name.<art>`, `text.<art>` – underscore as hyphen –, `gruppe.<gruppe>`). Packages (`code.ereignisse`, exactly the entries with `paket: true` plus the outdated names in `VERALTETE_EREIGNISSE`), webhooks and automations (#674) take their events from this catalogue. **The core reports every occurrence exactly once** (#724) – with `dienst.ereignis(…)` into the one outbox; there is no longer a second route for packages. The list for reference is in the Workbench with the package under **Which events exist**.
+
+**Rules**
+
+- **Only ids, kind, field keys and date** in `daten` – never values, titles or names. Anyone who wants to know more reads up with their own rights.
+- **At least once, in the same transaction:** `dienst.ereignis(art, daten, von)` writes to the outbox (table `ereignisse`, migration 060). If a transaction is running (`inTransaktion`), the event belongs to the change – if one fails, neither is saved. Every event has a fixed id; a consumer recognises a repetition by it.
+- **Several servers:** the `Ereignisverteiler` (`server/src/ereignisse.ts`) fetches open events with `FOR UPDATE SKIP LOCKED` and a lock (`gesperrt_bis`, 120 s). Only when **all** consumers have accepted it does an event count as dispatched; otherwise it is retried after 1, 5, 30, 120 and 360 minutes, then given up (log). Dispatched events are kept for 7 days.
+- **One rule for retries:** `wiederholungNach(versuche, plan)` in `shared/src/ereignisse.ts`. `kurz` (1, 5, 30, 120, 360 minutes) applies to the outbox and delivery to packages, `lang` (30 s up to 8 hours, a good 22 hours in total) to webhooks, whose target on the home network may be switched off overnight.
+- **Consumers in the core:** `automatisierungen`, `pakete` (every subscribed event; ends up with a fixed id per package in the package runner's delivery, `paket_ereignisse`) and webhooks (recount after changes). **Jobs** for exactly one package (`datei.umwandeln`, `datei.volltext`, `datei.archivfassung`, `paket.einstellungen_geaendert`, group `auftrag`) are not an occurrence for others: `dienst.auftrag(paket, art, daten)` puts them straight into delivery.
+- **Outdated names:** the core no longer reports `texterkennung.fertig`. A package that subscribed to it gets `volltext.fertig` with `quelle: kern` under the old name (transition, `VERALTETE_EREIGNISSE`).
+- **Bundling:** entries with `buendelS` (today `mappe.geaendert`, 5 s) combine quick successions for the same folder as long as the event hasn't been dispatched yet; the field keys are merged (`mischeFelder`).
+- **Deadline reached** exactly once: `frist_meldungen` (folder, field, date, time) as the primary key; remembering and event in one transaction.
+- **Silent:** `dienst.ohneEreignisse(f)` – examples, demo data (creating and removing). Only events in which packages process files (full text, vectors, post) go into the outbox with `ausloeser.still` – automations skip them, folder events aren't created at all. A restore marks all open events as dispatched; during maintenance and a restore the dispatcher rests.
+
+**Consumers**
+
+```ts
+dienst.ereignisse.abonniere('mein-abnehmer', async (e: KatalogEreignis) => {
+  // e.id, e.art, e.daten, e.ausloeser, e.erstellt – throwing an error means: try again later
+});
+```
+
+The `pakete` consumer passes folder events and `frist.erreicht` on to packages that have subscribed to them, name the type under `code.mappentypen` (their own, others', `*`) and are currently allowed to read the folder with their service account's rights (#686: confirmed rights, setting `paket_verwehrt` per folder type, rules for the role *Package*; otherwise a log entry instead of delivery) – with an id computed from event and package id so that a retry doesn't arrive twice at the package.
+
+**Trigger** (`e.ausloeser`): `{ art: 'benutzer' | 'paket' | 'automatisierung' | 'system', id, konto, kette }`. `dienst.ereignis` takes the trigger from the account (`von`: user or a package's service account) or from `dienst.mitAusloeser(a, f)`. An automation (#674) runs its actions like this:
+
+```ts
+await dienst.mitAusloeser({ art: 'automatisierung', id: regel.id, konto: systemkonto.id, kette: e.ausloeser.kette ? e.ausloeser.kette + 1 : 1 }, () => aktion());
+```
+
+That way it recognises its own changes and can limit chains. A package isn't notified of its own changes.
+
+**New event:** an entry in `EREIGNISKATALOG` (group, fields, if needed `paket`, `mappentyp`, `webhook`, `buendelS`), texts in `ereignisse.json`, and `await this.ereignis(...)` where the change happens – inside the transaction if possible. If packages should be able to subscribe to it, also in `EREIGNISSE` (`shared/src/pakete.ts`) and in the registry (`schema`, `pruefen.py`).
+
+## Automations (#674) { #automatisierungen }
+
+Small routines without code: **When · And · Then** (Otherwise comes with stage 2). Model and checks in `shared/src/automatisierung.ts`, engine and storage in `server/src/automatisierung.ts` (tables `automatisierungen`, `automatisierung_fassungen`, `automatisierung_laeufe`, migration 061), texts in `shared/src/sprachen/de/automatisierung.json`.
+
+**Model**
+
+- **Exactly one When card:** an event from the catalogue (all groups except `zaehler`, optionally only one folder type, for `mappe.geaendert` optionally only certain fields) or `datum` – "date field reached in N days" (negative: N days ago), daily from a time of day in the household's time zone. The When card sets the **context**: the event's folder (`daten.mappe`, for user events the user folder) and its folder type.
+- **And:** conditions from the views' toolkit (`Bedingung` from `sichten.ts`), plus "folder is in view …" and "folder is in the favourites of …" (person, role, field). Each can be inverted (`nicht`), groups `alle`/`eine` one level deep. Evaluated in the database (`Dienst.trifftTeile` → `repo.inKlauseln`); "me" is the system account.
+- **Then:** cards in their order; they are carried out by the entries in `DANN_AUSFUEHRER` (`(karte, kontext) => Promise<string>` – the line for the log; in a dry run (`trocken`) they only describe). "Don't run any further automations afterwards" (`stopp`) is handled by the engine itself.
+- **Placeholders** as for the folder title (`{feld}`, `{feld|filter}`), plus `{titel}`, `{mappentyp}`, `{heute}`, `{automatisierung}`, for `datum` also `{datum}` and `{tage}`. Values with the system account's rights; titles of linked folders it may not read appear as "(not visible)"; passwords never.
+
+**Sequence**
+
+1. The event catalogue's `automatisierungen` consumer looks for switched-on, non-paused automations with a matching When card and runs them **one after another** by `reihenfolge` (1–99, then name). Each reads the current state.
+2. Per automation and event there is **exactly one run** (`UNIQUE (automatisierung_id, ereignis_id)`) – if an event comes again or two servers check the same day, nothing runs twice. For the schedule, the event id is computed from the automation trigger, folder and date; `letzter_tag` is the schedule building block's marker (missed days up to 31 back are caught up).
+3. It runs under the system account "Automatisierung" (`dienst.systemZugriff('automatisierung')`) and with `dienst.mitAusloeser({ art: 'automatisierung', id, konto, kette })` – history and events show who acted. If the system account may not read the folder, the run is skipped.
+4. Every step (When, And, each Then card) is recorded with its state in the run (`schritte`) – the interface shows progress live. A card error ends the run as `fehlgeschlagen` (can be retried); the following automations still run.
+
+**Schedule building block** (`server/src/zeitplan.ts`, #724): `faelligeTage(zuletzt, jetzt, takt)` is the one rule – due is every day after the last one run on which the rhythm applies (`an(tag)`, e.g. weekday, public holiday), as soon as its time of day is reached, at most `nachholenTage` back (0 = only today); a new one begins today. `laufeFaellige(merker, jetzt, takt, lauf)` first records the day (compare and swap, `Einstellungen.tausche`) and then runs – with several servers exactly one does it. Backup, test restore, daily summary (per user) and "date reached" (catch up 31 days) use it; the marker keys in the settings are the same as before.
+
+**Date reached** (`art: 'datum'`): `vorlauf` with `einheit` (`tage`, `wochen`, `monate`), `uhrzeit`, `wiederholung` (months). `erreichteDaten(tag, vorlauf, einheit)` returns the field dates reached on `tag` – for months all D with D − lead time = tag (end of month capped). Old cards (`tage`, `frist.erreicht`) are translated by `bereinigeWenn`.
+
+**One route for to-dos** (`Dienst.aufgabeAusAutomatisierung`, #724): `aufgabenEmpfaenger` resolves absence and deactivation via `empfaengerAufloesen`; if no active person can be reached, they go to the administrators (`null`). `aufgaben.anlass` (migration 062, `AufgabenAnlass`): `datum` (resolves itself in `fristenAbgleichen` when the date no longer matches; `wiederholung` → next date), `post` (in `postAufgaben` when the post is no longer new), `abwesenheit` (when the absence ends). From "date reached" the to-do becomes a **deadline** (`art: 'frist'`, field, date); the unique index `aufgaben_frist_idx` applies per folder, field, date and recipient – the same person never gets two.
+
+**Then cards** (`server/src/automatisierung-karten.ts`, #676)
+
+- **Change field** (`feld`): `werte` per field key – fixed, text with placeholders (text, long text, formatted text), for date fields also `heute`, `heute+7`, `heute-3`. Writing goes through `Dienst.aendereMappe` with the system account's access and only the chosen fields (#609): field formats, required fields, choice lists and link targets are checked as in the form; archive mode and deadline lock are never bypassed. The history carries `automatisierung: { id, name, eingerichtetVon }`.
+- **To do / notification** (`aufgabe`): recipient a person, role (all active members), field of the folder (link to a user) or `ersteller` (whoever created the folder); `als: 'aufgabe'` creates a to-do every time (due `faellig` days from today → appears under "Upcoming"), `als: 'benachrichtigung'` bundles per automation, folder and recipient (one open, the text is updated). Anyone who may not read the folder gets it on their own user folder – without a link. Stage 1 fills placeholders with the system account's rights (recipient rights: #683).
+
+**Interface** (`web/src/werkbank/Automatisierungen.tsx`, #675): Workbench → Build the Library → Automations, in three parts. Cards from the supply come in via `useZiehen` (drop zones `wenn`/`und`/`dann`) or via "+ Card" (choice field, keyboard); Then cards and the list "by trigger" are sorted by dragging or Alt+↑/↓ (order is reassigned in steps of ten). **Live progress by polling:** as long as the editor is open, it fetches `GET …/:id/laeufe` every 2 s – the steps are in the database, so this works with several servers, without SSE and without session affinity. The list asks every 15 s. At start-up, `legeBeispiele()` creates three switched-off examples (origin `dms`, fixed ids from `uuidAus`) if they don't exist yet.
+
+**Protection and limits** (`AUTOMATISIERUNG_GRENZEN`)
+
+- No self-triggering (own changes don't trigger the same automation), chains at most 3 deep, brake at 30 runs per minute (then paused), run time 60 s, 200 automations, 20 cards per area, history of 200 runs or 30 days.
+- **Working comes before automating:** if something is missing (folder type, field, view), that never blocks work – the automation turns red and is paused (`angehalten.grund = 'fehlerhaft'`), at the latest on the next run or schedule pass. Saving only works with a valid state.
+- Demo data and examples trigger nothing (`ohneEreignisse`); during maintenance and restore the dispatcher rests. After a restore all switched-on automations are paused until an admin switches them on again.
+- Saving with `version` (outdated state → 409); every version is kept in `automatisierung_fassungen` and can be restored. In the full export: `struktur/automatisierungen.json` with change history; all tables in the backup.
+
+## Routes to the outside { #wege-nach-draussen }
+
+Ablago **never opens a connection** to the internet on its own. Every route to the outside is switched off until a person triggers it or an administrator switches it on. The overview for users is in the administrator handbook under [What leaves your library](https://help.ablago.app/admin/aktuell/en/datenschutz/#was-deine-ablage-verlasst).
+
+| Route | Who switches it on | What goes out | Where in the code |
+| --- | --- | --- | --- |
+| Package catalogue | Administrator at the push of a button, setup assistant in the "Packages" step | only the request to the catalogue | `server/src/pakete.ts`, `katalogsignatur.ts` |
+| Version check | Administrator at the push of a button (Workbench → Technology) | commit identifier, no data from the Library | `server/src/system.ts` |
+| Email | Administrator sets up the mail server; users send | sent folders and documents, daily summary (titles, links), invitations, data protection requests | `server/src/mail.ts`, `aufgabenmail.ts` |
+| Mailbox | Administrator sets it up | fetching from your own mail server | `server/src/postfach.ts`, `postfach-oauth.ts` |
+| Sign-in via a provider | Administrator | sign-in process with the provider | `server/src/oidc.ts` |
+| Webhooks | Administrator approves the target, user creates | only numbers, signed | `server/src/webhook.ts` |
+| Package network | Administrator confirms on installation | only to the addresses from the manifest or service address | package runner, right `netzwerk` |
+| Retrieval links (data protection request) | Administrator creates the link | the request, only after the retrieval code | `server/src/abruf.ts` |
+
+**Rule for new routes:** a new route to the outside needs an approved issue, is **switched off** until someone explicitly switches it on, sends as little as possible (numbers instead of content where that's enough), is listed in this table and in the overview in the administrator handbook, and is reviewed by security.
+
+## Counter endpoint and key levels (#625) { #zaehler-endpunkt }
+
+Other programs (home automation, wall tablet, clients) often only want to know **whether there is something new**. For that there is `GET /api/v1/ich/zaehler` (internally `/api/ich/zaehler`, `Dienst.zaehlerAbruf`):
+
+```sh
+curl -i -H "Authorization: Bearer dms_…" https://dms.example.org/api/v1/ich/zaehler
+# HTTP/1.1 200 OK
+# ETag: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"
+# {"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
+
+curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"' https://dms.example.org/api/v1/ich/zaehler
+# HTTP/1.1 304 Not Modified   (no content)
+```
+
+- **Numbers only.** The response never contains titles, names, senders or content – not even in future fields. The OpenAPI schema `Zaehlerstand` has `additionalProperties: false`; the test `server/test/zaehler-api.test.ts` checks the keys and that no texts slip through.
+- **Where the numbers come from.** `zuErledigen` is `eingang` from `Dienst.zaehler` (#512), `ueberfaellig` counts your own overdue entries from `Dienst.termine` (#528, #725; `anstehend` was dropped with #725), `neuePost` counts post with the status "New" and "For" = me or empty via `zaehleKlauseln` – with its own `Zaehlerspeicher` keyed to the household version. All within the user's rights (read filter); nothing is recomputed for the endpoint as long as nothing in the household changes.
+- **Version in the database** (table `zaehlerstaende`, migration 056). For each request the server builds a hash of the numbers (`fingerabdruck`), compares it with the stored one and only increments `stand` if they differ (`Repo.setzeZaehlerstand`, an `INSERT … ON CONFLICT DO UPDATE … WHERE abdruck IS DISTINCT FROM …`: concurrent requests count a change once). Unchanged means: read only. The household version from #512 only lives in memory and starts at 0 after every restart – so it isn't suitable as an ETag. The ETag is `"z<stand>-<hash>"`: the same ETag means the same numbers, even after a restart or a restore.
+- **ETag and 304.** `passtEtag` (`routen.ts`) understands lists, `W/…` and `*`. A route sets its own headers via `Antwort.koepfe`; it reads request headers via `Anfrage.kopf(name)`. `Cache-Control: private, no-cache` instead of `no-store`, so that programs may revalidate.
+- **Key level "counters only"** (`recht = 'zaehler'`, `NUR_ZAEHLER` and `ZAEHLER_PFAD` in `apischluessel.ts`). `pruefeZugang` only lets it through to `GET /api/v1/ich/zaehler`; every other route under `/api/v1` and – explicitly – every internal route with such a key in the header gets `403` (`api.schluessel.nur-zaehler`), and so does the drive (`webdav.ts`). "Read passwords" doesn't exist for this level. A new interface that accepts API keys must reject this level in the same way.
+- **Limits.** The overload protection (#544) counts these requests too. There is no limit per key; a request answered from the cache costs a few milliseconds. If Ablago runs on several servers, each has its own cache (as with #512, at most 5 or 30 minutes old) – until then two servers may briefly return different numbers, and the version then increments more often than necessary.
+
+**Adding another number:** add a field to `Zaehlerzahlen` (`dienst.ts`) and to the OpenAPI schema, and to `ZAHLEN` in the test – and only numbers. If the meaning of an existing number changes, increase `v` in the hash so that every client reads once more. The [webhook](#webhooks) (#627) calls `zaehlerAbruf` per user and reports when `stand` changes.
+
+## Webhooks (#627) { #webhooks }
+
+A webhook reports a user's changed numbers (the same as `GET /api/v1/ich/zaehler`) via `POST` to an address. Code: `server/src/webhook.ts` (service `Webhooks`, `pgWebhookRepo`, `speicherWebhookRepo`), shared types and rules in `shared/src/webhook.ts`, interface in `web/src/profil/Webhooks.tsx` and `web/src/werkbank/Webhooks.tsx`, tables `webhooks` and `webhook_meldungen` (migration 058).
+
+### Format
+
+```http
+POST /dms HTTP/1.1
+Content-Type: application/json
+User-Agent: DMS-Webhook
+X-DMS-Art: zaehler.geaendert
+X-DMS-Ereignis: 7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11
+X-DMS-Zeit: 1762154102
+X-DMS-Signatur: v1=5d2f…(64 hex characters)
+X-DMS-Versuch: 1
+X-DMS-Webhook: 0f8a…
+
+{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
+```
+
+- `art`: `zaehler.geaendert` or `probe` ("Send test", same `daten`). Further kinds (`post.neu` …) would be added as new values; a receiver ignores unknown ones.
+- `id`: event id. **The same on a retry** of the same data, new as soon as the data of a message already attempted changes. The receiver remembers the last ids and ignores duplicates.
+- `zeit`: when the message was created; `daten.geaendert`: when the numbers changed.
+- The body is compact JSON (`JSON.stringify`), ASCII characters only, keys in a fixed order – `JSON.stringify(JSON.parse(rumpf)) === rumpf`. That allows verification even where a framework only hands over the parsed JSON (Node-RED).
+- **Never content.** The test `server/test/webhook.test.ts` checks the body's keys and that no titles, senders or names slip in.
+- `2xx` counts as delivered; Ablago doesn't follow redirects (`3xx`) (`redirect: 'manual'`), timeout 5 s.
+
+### Verifying the signature {#signatur-prufen}
+
+`X-DMS-Signatur` is `v1=` followed by HMAC-SHA256 (hex) over `<X-DMS-Zeit>.<body>` with the webhook's secret (`whsec_…`, as UTF-8 text, not decoded). Several signatures (later, when the method changes) are separated by commas; one matching is enough. Verify the **body as bytes, exactly as it arrived**, compare in constant time and reject times that differ by more than 5 minutes.
+
+**JavaScript (Node.js):**
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createServer } from 'node:http';
+
+const GEHEIMNIS = process.env.DMS_WEBHOOK_GEHEIMNIS; // whsec_…
+const gesehen = new Set();
+
+function echt(kopf, rumpf) {
+  const zeit = Number(kopf['x-dms-zeit']);
+  if (!Number.isInteger(zeit) || Math.abs(Date.now() / 1000 - zeit) > 300) return false;
+  const soll = Buffer.from('v1=' + createHmac('sha256', GEHEIMNIS).update(`${zeit}.${rumpf}`).digest('hex'));
+  return String(kopf['x-dms-signatur'] ?? '').split(',').some((s) => {
+    const ist = Buffer.from(s.trim());
+    return ist.length === soll.length && timingSafeEqual(ist, soll);
+  });
+}
+
+createServer((req, res) => {
+  let rumpf = '';
+  req.on('data', (c) => { rumpf += c; });
+  req.on('end', () => {
+    if (!echt(req.headers, rumpf)) return res.writeHead(401).end();
+    res.writeHead(204).end();                      // confirm first, then work
+    const m = JSON.parse(rumpf);
+    if (gesehen.has(m.id)) return;                 // retry
+    gesehen.add(m.id);
+    console.log(m.art, m.daten.neuePost, 'new post');
+  });
+}).listen(8080);
+```
+
+**Python:**
+
+```python
+import hashlib, hmac, json, os, time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+GEHEIMNIS = os.environ["DMS_WEBHOOK_GEHEIMNIS"].encode()  # whsec_…
+gesehen = set()
+
+def echt(kopf, rumpf: bytes) -> bool:
+    try:
+        zeit = int(kopf.get("x-dms-zeit", ""))
+    except ValueError:
+        return False
+    if abs(time.time() - zeit) > 300:
+        return False
+    soll = "v1=" + hmac.new(GEHEIMNIS, f"{zeit}.".encode() + rumpf, hashlib.sha256).hexdigest()
+    return any(hmac.compare_digest(s.strip(), soll) for s in kopf.get("x-dms-signatur", "").split(","))
+
+class Empfang(BaseHTTPRequestHandler):
+    def do_POST(self):
+        rumpf = self.rfile.read(int(self.headers.get("content-length", 0)))
+        if not echt(self.headers, rumpf):
+            self.send_response(401); self.end_headers(); return
+        self.send_response(204); self.end_headers()
+        m = json.loads(rumpf)
+        if m["id"] in gesehen:
+            return
+        gesehen.add(m["id"])
+        print(m["art"], m["daten"]["neuePost"], "new post")
+
+HTTPServer(("", 8080), Empfang).serve_forever()
+```
+
+The server has the same check as `pruefeSignatur` (`webhook.ts`) for tests.
+
+### Sequence and several servers {#ablauf-und-mehrere-server}
+
+- **Trigger:** `Haushaltsstand.beiAenderung` (`zaehlerspeicher.ts`) calls `Webhooks.anstossen()` after every changing repo method (via `Dienst.beiAenderung`, for view numbers and dates). After 3 s, `pruefe()` counts `zaehlerAbruf` once for every user with a switched-on webhook (from the cache, usually milliseconds). Without a cause, the server holding the lock counts every minute (midnight, deadlines, changes on another server).
+- **Outbox in the database:** `merkeStand` sets `webhooks.gemeldet_stand` in a transaction with a row lock and creates the message – or replaces the data of the open one (at most one per webhook, unique partial index). So every version counts once, even if two servers check at the same time. New messages are due 30 s after the last send at the earliest (`webhooks.gesendet`) – that is the bundling.
+- **Delivery:** `faellige` fetches messages with `FOR UPDATE SKIP LOCKED`, increments the attempt and moves `faellig` on by 60 s (lease). If the server dies while sending, another one picks up the message afterwards – it may then arrive twice, with the same event id (**at least once**). If the data changes while sending, `zugestellt` doesn't close the message (the event id no longer matches) and it goes out again after the minimum interval.
+- **Retrying and giving up:** waiting times `WEBHOOK_WARTEN_S` (30 s up to 8 h, about 22 h in total, 12 attempts); after the last failure `zustand = 'aufgegeben'`, webhook off (`abgeschaltet.grund = 'fehler'`), log, email to the administrators and – if the owner isn't an administrator – to them too (`anBesitzer`).
+- **Regular runs** (counting every minute, delivering every 5 s, cleaning up after 7 days) only on the server with `pg_try_advisory_lock(4711197)`; the trigger after a change runs on the server where it happened. Paused in maintenance mode and during a restore.
+- **Gap under the build rule:** the household version and the number caches (#512) live in memory per server. Server B only notices a change on server A when its cache expires (at most 5 or 30 minutes). That's enough for correctness (the version in the database counts), not always for "immediately" – a shared event channel is a topic of its own.
+
+### Targets and secret {#ziele-und-geheimnis}
+
+- **Targets:** `zielProblem` (`shared/src/webhook.ts`) allows `https://`, and `http://` only on the home network (`imHeimnetz` from `heimnetz.ts`), no credentials and no `#`. In addition the origin must be listed in the `webhook_ziele` setting (Workbench). An administrator approves by creating it; Ablago checks again before every send.
+- **Secret:** `whsec_` + 32 random bytes (base64url), encrypted with Ablago's key in `webhooks.geheimnis`. `umschluesseln` and `verschluesselteFundstellen` (`repo-pg.ts`) include the column; in Workbench → Encryption the kind "Webhooks" appears.
+- **Adding a new kind:** a value in `WEBHOOK_EREIGNISSE` and, where needed, its own detection; the body keeps `art`, `id`, `zeit`, `daten` – and only numbers or ids.
+
+More background in the administrator handbook: [Technology](https://help.ablago.app/admin/aktuell/en/technik/) and [Decisions](https://help.ablago.app/admin/aktuell/en/entscheidungen/).
