@@ -3,6 +3,7 @@ import { ohneZugangsdaten } from './sicherung';
 import { t } from './sprache';
 import { NOTFALL_HILFE, NOTFALL_HILFE_EN, NOTFALL_QR } from './notfallqr';
 import { zeitzone } from '../../shared/src/region';
+import { notfallcodeInGruppen } from '../../shared/src/notfallcode';
 
 /**
  * Notfallblatt (#106, neu gestaltet mit #814): eine Seite A4 in Ablago-Optik, auch in Schwarzweiß lesbar.
@@ -10,7 +11,7 @@ import { zeitzone } from '../../shared/src/region';
  *
  * Aufbau: Kopf mit Logo, Name der Ablage, Datum und Version · Schlüssel groß mit Lesehilfe und Fingerabdruck ·
  * Diese Ablage (Adresse, Ablage-Id, wo die Sicherungen liegen) · Wen fragen? · Etwas ist passiert? mit Links
- * (immer https://) und QR-Code zur Hilfeseite. Keine Pfade oder Dateinamen aus Docker oder vom NAS: Die
+ * (immer https://) und QR-Code zur Hilfeseite, darin der Notfallcode für „Ich komme nicht mehr hinein“ (#815). Keine Pfade oder Dateinamen aus Docker oder vom NAS: Die
  * ausführliche Anleitung steht im Handbuch.
  *
  * `notfallblattPlan` stellt alle Texte zusammen (prüfbar ohne PDF); gezeichnet wird in der PDF-Stelle
@@ -30,6 +31,8 @@ export interface Notfalldaten {
   aussenziele?: Array<{ name: string; adresse: string | null; ziel?: string | null }>;
   /** Notfallkontakte (#812), sobald es sie gibt: Name und wie erreichbar. Ohne: Zeilen zum Eintragen. */
   kontakte?: Array<{ name: string; erreichbar: string }>;
+  /** Notfallcode (#815): öffnet `<adresse>/notfall`, gilt einmal. Gespeichert ist nur sein Hash – er steht nur hier. */
+  notfallcode?: string;
 }
 
 /** In Vierergruppen, gut abschreibbar; Leerzeichen zählen bei der Eingabe nicht. */
@@ -59,6 +62,8 @@ export interface NotfallblattPlan {
   ablage: { titel: string; zeilen: Array<{ marke: string; text: string; link?: string; mono?: boolean }>; warnung: string | null };
   fragen: { titel: string; kontakte: Array<{ name: string; erreichbar: string }>; leer: string | null };
   hilfe: { titel: string; text: string; links: Array<{ marke: string; url: string }>; qr: readonly string[]; qrText: string; handbuch: string };
+  /** Ausgesperrt? Notfallcode und wo man ihn eingibt (#815); null ohne Code. */
+  notfall: { titel: string; code: string; text: string; adresse: { text: string; link?: string } | null; hinweis: string } | null;
   fuss: string;
 }
 
@@ -100,6 +105,13 @@ export function notfallblattPlan(d: Notfalldaten): NotfallblattPlan {
       qrText: t('werkbank.notfallblatt.passiert.qr'),
       handbuch: t('werkbank.notfallblatt.passiert.handbuch'),
     },
+    notfall: d.notfallcode ? {
+      titel: t('werkbank.notfallblatt.notfallcode'),
+      code: notfallcodeInGruppen(d.notfallcode),
+      text: adresse ? t('werkbank.notfallblatt.notfallcode.text') : t('werkbank.notfallblatt.notfallcode.ohne-adresse'),
+      adresse: adresse ? { text: `${adresse.text.replace(/\/+$/, '')}/notfall`, ...(adresse.link ? { link: `${adresse.link.replace(/\/+$/, '')}/notfall` } : {}) } : null,
+      hinweis: t('werkbank.notfallblatt.notfallcode.hinweis'),
+    } : null,
     fuss: t('werkbank.notfallblatt.fuss', { name: d.name, datum: kurz }),
   };
 }

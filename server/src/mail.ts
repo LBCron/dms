@@ -46,6 +46,20 @@ export const mailtexte = {
     betreff: t('mail.verwaltungsrecht.betreff', { person }),
     text: `${[t('mail.verwaltung.anrede'), t('mail.verwaltungsrecht.text', { person, vorher, nachher, von }), t('mail.nicht-du')].join('\n\n')}\n`,
   }),
+  /**
+   * #815: Notfallzugang benutzt – an die bisherige Adresse des Kontos und an alle mit Verwaltungsrecht, bevor sich etwas
+   * ändert. Nennt die API-Schlüssel des Kontos (sie bleiben gültig).
+   */
+  notfallBenutzt: (konto: string, email: string, datum: string, ip: string, apiSchluessel: number) => ({
+    betreff: t('mail.notfall.benutzt.betreff'),
+    text: `${[t('mail.verwaltung.anrede'), t('mail.notfall.benutzt.text', { datum, konto, email, ip }),
+      ...(apiSchluessel ? [t('mail.notfall.benutzt.api', { anzahl: apiSchluessel })] : []), t('mail.notfall.benutzt.nicht-du')].join('\n\n')}\n`,
+  }),
+  /** #815: gebündelt, höchstens einmal je Stunde, an alle mit Verwaltungsrecht. */
+  notfallFehlversuche: (anzahl: number, ip: string) => ({
+    betreff: t('mail.notfall.fehlversuche.betreff'),
+    text: `${[t('mail.verwaltung.anrede'), t('mail.notfall.fehlversuche.text', { anzahl, ip }), t('mail.notfall.fehlversuche.rat')].join('\n\n')}\n`,
+  }),
   zuruecksetzen: (name: string, email: string, link: string, stunden: number) => ({
     betreff: t('mail.zuruecksetzen.betreff'),
     text: brief(name || email, t('mail.zuruecksetzen.text'),

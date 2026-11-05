@@ -45,7 +45,7 @@ async function paketeAusVorgabe(vorgabe: PlanPaket[]): Promise<string | null> {
 /** Alles prüfen, ohne etwas anzulegen; die Gründe stehen danach je Schritt in der Sammlung. */
 export async function pruefeAlles(): Promise<Planprobleme> {
   const s = holeStand().sammlung;
-  const { probleme } = await api.einrichtungPruefen(planAus(s), geheim.administrator || undefined);
+  const { probleme } = await api.einrichtungPruefen(planAus(s), geheim.konto || undefined);
   const p: Planprobleme = { ...probleme };
   const dazu = (k: keyof Planprobleme, m: string | null) => { if (m) p[k] = [...(p[k] ?? []), m]; };
   if (s.paketeVorgabe?.length && !s.pakete) dazu('pakete', await paketeAusVorgabe(s.paketeVorgabe));
@@ -68,7 +68,7 @@ export async function nachDemLaden() {
 export async function ladeDatei(text: string, imEinrichtungsmodus: boolean) {
   const r = await api.einrichtungDateiLesen(text);
   if (!r.plan || r.fehler.length) { setzeStand((x) => ({ ...x, dateiFehler: r.fehler })); return; }
-  geheim.administrator = ''; geheim.mail = ''; geheim.paketEinstellungen = undefined;
+  geheim.konto = ''; geheim.mail = ''; geheim.paketEinstellungen = undefined;
   setzeStand((x) => ({ ...x, neu: true, lauf: null, aendern: null, dateiFehler: [], sammlung: { ...sammlungAus(r.plan!, r.hinweise), pruefungOffen: true } }));
   if (!imEinrichtungsmodus) await nachDemLaden();
 }

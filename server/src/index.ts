@@ -59,6 +59,8 @@ import { Fachfehler } from './fehler';
 import { t, tAuto } from './sprache';
 import { Wartung } from './wartung';
 import { Notfallzugang } from './notfall';
+import { Notfallcode } from './notfallcode';
+import type { Benutzer } from '../../shared/src/model';
 import { anVerwaltende } from './mail';
 import { Verwaltung } from './verwaltung';
 import { arch, release, type } from 'node:os';
@@ -388,6 +390,12 @@ konten.verbindeAnbieter(() => oidc.bereit());
 tresor.beimWechsel(async () => oidc.vergiss());
 // Paket-Läufer (#338): Pakete mit Code in einem eigenen Prozess; ihre API-Anfragen laufen über app.inject.
 const apiSchluessel = new ApiSchluesselDienst(messung.umhuelle(pgApiSchluesselRepo(sql), 'apischluessel'));
+// Notfallzugang mit dem Notfallcode vom Notfallblatt (#815): /notfall, Vorgabe „nur aus dem Heimnetz“.
+const notfallcode = new Notfallcode({
+  konten, einstellungen: pgBetriebSpeicher(sql, cfg.haushalt), mailer: () => betrieb.mailer(), proxy: cfg.proxy.trust,
+  apiSchluessel: async (id) => (await apiSchluessel.liste({ id } as Benutzer)).length,
+  codeBenutzt: () => sicherung.notfallcodeBenutzt(),
+});
 let appFuerPakete: Awaited<ReturnType<typeof baueApp>> | null = null;
 const paketlaeufer: Paketlaeufer = new Paketlaeufer({
   dienst, konten, schluessel: apiSchluessel,
@@ -535,6 +543,7 @@ const app = await baueApp(dienst, konten, {
   // Screenshots der Fehlermeldungen getrennt von den Dokumenten (#70).
   wartung,
   notfall,
+  notfallcode,
   sicherung,
   exporte,
   wiederherstellung,

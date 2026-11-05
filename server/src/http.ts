@@ -74,6 +74,8 @@ interface Optionen {
   wartung?: Wartung;
   /** Notfallzugang (#108). */
   notfall?: Notfallzugang;
+  /** Notfallzugang mit dem Notfallcode vom Notfallblatt (#815). */
+  notfallcode?: import('./notfallcode').Notfallcode;
   /** Sicherungen (#103–#105). */
   sicherung?: Sicherung;
   /** Export-Ordner (#797). */

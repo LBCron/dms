@@ -104,6 +104,16 @@ export interface KontoRepo {
   /** Markiert den Link als benutzt; false, wenn er schon benutzt war. */
   verbraucheLink(hash: string): Promise<boolean>;
   loescheLinksVon(benutzerId: string): Promise<void>;
+
+  /** Notfallcode vom Notfallblatt (#815): nur der Hash; null = keiner (noch kein Blatt oder schon benutzt). */
+  notfallcode(): Promise<{ hash: string; erstellt: Date } | null>;
+  setzeNotfallcode(hash: string | null): Promise<void>;
+  /**
+   * Notfallcode einlösen (#815), alles in einer Transaktion: nur wenn noch genau dieser Hash gilt, Code ungültig machen,
+   * Passwort setzen, alle Sitzungen und Passwort-Links der Person löschen. false = inzwischen benutzt oder ersetzt –
+   * bei zwei gleichzeitigen Anfragen mit demselben Code gewinnt nur eine.
+   */
+  loeseNotfallcodeEin(erwartet: string, benutzerId: string, passwortHash: string): Promise<boolean>;
 }
 
 /* ---------------- Arbeitsspeicher (Tests) ---------------- */
@@ -115,6 +125,7 @@ export function speicherKontoRepo(): KontoRepo {
   const vertretungen = new Map<string, Vertretung & { gesehen: Date | null }>();
   const einstellungen = new Map<string, Record<string, unknown>>();
   const links = new Map<string, Link>();
+  let notfall: { hash: string; erstellt: Date } | null = null;
   const ohneHash = ({ hash: _h, ...b }: Benutzer & { hash: string | null }): Benutzer => ({ ...b, hatPasswort: !!_h });
 
   return {
@@ -222,6 +233,18 @@ export function speicherKontoRepo(): KontoRepo {
     async holeLink(hash) { return links.get(hash); },
     async verbraucheLink(hash) { const l = links.get(hash); if (!l || l.benutzt) return false; l.benutzt = new Date(); return true; },
     async loescheLinksVon(id) { for (const [k, l] of links) if (l.benutzerId === id) links.delete(k); },
+    async notfallcode() { return notfall && { ...notfall }; },
+    async setzeNotfallcode(hash) { notfall = hash ? { hash, erstellt: new Date() } : null; },
+    async loeseNotfallcodeEin(erwartet, benutzerId, passwortHash) {
+      // Ohne await zwischen Prüfen und Ändern: im Arbeitsspeicher ist das schon eine Einheit.
+      const b = benutzer.get(benutzerId);
+      if (!notfall || notfall.hash !== erwartet || !b) return false;
+      notfall = null;
+      b.hash = passwortHash;
+      for (const [k, x] of sitzungen) if (x.benutzerId === benutzerId) sitzungen.delete(k);
+      for (const [k, l] of links) if (l.benutzerId === benutzerId) links.delete(k);
+      return true;
+    },
   };
 }
 
@@ -460,5 +483,29 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
       return r.length === 1;
     },
     async loescheLinksVon(id) { await sql`DELETE FROM passwort_links WHERE benutzer_id = ${id}`; },
+
+    async notfallcode() {
+      const [r] = await sql`SELECT hash, erstellt FROM notfallcode WHERE haushalt_id = ${haushaltId} AND hash IS NOT NULL`;
+      return r ? { hash: r.hash as string, erstellt: new Date(r.erstellt as string) } : null;
+    },
+    async setzeNotfallcode(hash) {
+      await sql`
+        INSERT INTO notfallcode (haushalt_id, hash, erstellt) VALUES (${haushaltId}, ${hash}, now())
+        ON CONFLICT (haushalt_id) DO UPDATE SET hash = EXCLUDED.hash, erstellt = EXCLUDED.erstellt`;
+    },
+    async loeseNotfallcodeEin(erwartet, benutzerId, passwortHash) {
+      if (!istUuid(benutzerId)) return false;
+      return sql.begin(async (tx) => {
+        // Sperre auf die Zeile des Codes: Eine zweite Anfrage mit demselben Code wartet hier und sieht danach keinen mehr.
+        const [r] = await tx`SELECT hash FROM notfallcode WHERE haushalt_id = ${haushaltId} FOR UPDATE`;
+        if (!r || r.hash !== erwartet) return false;
+        const geaendert = await tx`UPDATE benutzer SET passwort_hash = ${passwortHash} WHERE id = ${benutzerId} AND haushalt_id = ${haushaltId} AND art = 'person' RETURNING 1`;
+        if (geaendert.length !== 1) return false;
+        await tx`UPDATE notfallcode SET hash = NULL WHERE haushalt_id = ${haushaltId}`;
+        await tx`DELETE FROM sitzungen WHERE benutzer_id = ${benutzerId}`;
+        await tx`DELETE FROM passwort_links WHERE benutzer_id = ${benutzerId}`;
+        return true;
+      }) as Promise<boolean>;
+    },
   };
 }

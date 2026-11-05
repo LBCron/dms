@@ -114,8 +114,9 @@ export function bereicheDerRoute(methode: string, pfad: string): string[] | null
 
 /**
  * Heikle Handlung dieser Anfrage (#819)? Dann braucht sie eine frische Anmeldung – auch im Verwaltungsmodus mit
- * Tagesmerker. Der Vollexport nur mit Passwörtern im Klartext. Das Wiederherstellen prüfen die eigenen Schnittstellen
- * unter /api/wiederherstellung (sie gehen auch ohne Anmeldung auf einem frischen System).
+ * Tagesmerker. Der Vollexport nur mit Passwörtern im Klartext, der Notfallzugang (#815) nur beim Erlauben aus dem
+ * Internet. Das Wiederherstellen prüfen die eigenen Schnittstellen unter /api/wiederherstellung (sie gehen auch ohne
+ * Anmeldung auf einem frischen System).
  */
 export function heikleHandlung(methode: string, pfad: string, body: unknown): HeikleHandlung | null {
   const k = `${methode} ${pfad}`;
@@ -127,6 +128,8 @@ export function heikleHandlung(methode: string, pfad: string, body: unknown): He
     case 'POST /api/werkbank/export': return (body as { passwoerter?: unknown } | null)?.passwoerter === true ? 'vollexport' : null;
     case 'PUT /api/werkbank/anbindung': return 'anbindung';
     case 'PUT /api/werkbank/anbieter': return 'anbieter';
+    // Notfallzugang aus dem Internet erlauben (#815); zurück auf „nur Heimnetz“ geht ohne.
+    case 'PUT /api/werkbank/anmeldeschutz/notfallzugang': return (body as { internet?: unknown } | null)?.internet === true ? 'notfall' : null;
     case 'PUT /api/werkbank/betrieb/mail':
     // Versand über OAuth (#813): anmelden bzw. abmelden ändert, womit Ablago verschickt.
     case 'POST /api/werkbank/betrieb/mail/oauth/start':

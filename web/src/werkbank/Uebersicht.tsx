@@ -30,7 +30,11 @@ const platzText = (o: Array<{ frei: number | null }>) => {
 };
 
 /** Eine Meldung der Übersicht; `schluessel` bleibt je Meldungsart gleich (#816: Akzeptieren), `datum` sortiert innerhalb der Stufe. */
-export interface Hinweis { schluessel: string; art: Schwere; text: ReactNode; ziel: string; knopf: string; datum?: string | null }
+export interface Hinweis {
+  schluessel: string; art: Schwere; text: ReactNode; ziel: string; knopf: string; datum?: string | null;
+  /** Statt „Zur Kenntnis nehmen“: ein Knopf, der den Hinweis endgültig abschließt (#821 „Nein, danke“, #815 „Gelesen“). */
+  erledigen?: string;
+}
 
 /** Alle Meldungen der Übersicht, ungeordnet; `ordneMeldungen` sortiert sie und trennt die akzeptierten ab (#816). */
 export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
@@ -38,6 +42,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   const tr = u.tresor;
   // Notfallzugang (#108): bis er umbenannt oder deaktiviert ist.
   for (const n of u.notfallzugaenge ?? []) h.push({ schluessel: `notfallzugang:${n.id}`, datum: n.erstellt, art: 'schlecht', text: <><strong>Notfallzugang „{n.name}“ ist aktiv.</strong> Er entstand über eine RESCUE-Datei am {datum(n.erstellt)}. Gib ihm einen richtigen Namen oder deaktiviere ihn – warst du das nicht, sofort deaktivieren.</>, ziel: `/werkbank/benutzer/${n.id}`, knopf: 'Zum Benutzer' });
+  // Notfallcode vom Notfallblatt benutzt (#815): bis jemand den Hinweis als gelesen markiert.
+  for (const n of u.notfallcodeBenutzt ?? []) h.push({ schluessel: `notfallzugang.benutzt:${n.id}`, datum: n.am, art: 'schlecht', text: <><strong>{t('werkbank.uebersicht.notfallcode', { datum: datum(n.am), name: n.name })}</strong> {t('werkbank.uebersicht.notfallcode.text')}</>, ziel: `/werkbank/benutzer/${n.benutzerId}`, knopf: t('werkbank.uebersicht.notfallcode.knopf'), erledigen: t('werkbank.uebersicht.notfallcode.gelesen') });
   // Speicherplatz (#116): Grenze, Warnschwelle, wieder genug Platz bei laufender Wartung.
   const sp = u.speicherplatz;
   if (sp?.zustand === 'grenze') h.push({ schluessel: 'speicherplatz.grenze', art: 'schlecht', text: <><strong>Speicherplatzlimit erreicht.</strong> Hochladen ist gesperrt{u.wartung?.ausloeser === 'speicherplatz' ? (u.wartung.stufe === 'aktiv' ? ', der Wartungsmodus läuft' : ', der Wartungsmodus beginnt gleich') : ''}. Schaffe Platz und beende danach den Wartungsmodus.</>, ziel: '/werkbank/systemzustand', knopf: 'Zum Systemzustand' });
@@ -80,11 +86,13 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   for (const p of u.paketeEinstellungen ?? []) h.push({ schluessel: `paket-einstellungen:${p.id}`, art: 'warn', text: <><strong>{t('pakete.ablauf.aufgabe', { name: p.name })}</strong> {t('pakete.ablauf.aufgabe.text')}</>, ziel: `/werkbank/pakete/${p.id}?reiter=einstellungen`, knopf: t('pakete.ablauf.aufgabe.knopf') });
   // Im Einrichtungsassistenten übersprungen (#119): hier nachholen.
   const nachholen: Record<string, { text: string; ziel: string; knopf: string }> = {
-    benutzer: { text: t('werkbank.uebersicht.nachholen.benutzer'), ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' },
     optional: { text: 'Adresse, E-Mail-Versand und Bundesland einstellen', ziel: '/werkbank/betrieb', knopf: 'Zu E-Mail und Adresse' },
     pakete: { text: 'Pakete dazuholen, z. B. die Texterkennung, damit gescannte Dokumente durchsuchbar werden', ziel: '/werkbank/pakete', knopf: 'Zu den Paketen' },
   };
-  for (const x of u.einrichtung?.uebersprungen ?? []) if (nachholen[x] && !(x === 'optional' && u.mail) && !(x === 'benutzer' && (u.bestand?.benutzer ?? 0) > 1)) h.push({ schluessel: `einrichtung:${x}`, art: 'info', text: <><strong>Aus der Einrichtung übersprungen:</strong> {nachholen[x].text}.</>, ziel: nachholen[x].ziel, knopf: nachholen[x].knopf });
+  for (const x of u.einrichtung?.uebersprungen ?? []) if (nachholen[x] && !(x === 'optional' && u.mail)) h.push({ schluessel: `einrichtung:${x}`, art: 'info', text: <><strong>Aus der Einrichtung übersprungen:</strong> {nachholen[x].text}.</>, ziel: nachholen[x].ziel, knopf: nachholen[x].knopf });
+  // Konzept Verwaltungsmodus, Punkt 7 (#821): Nach der Einrichtung eine zweite Person mit Verwaltungsrecht empfehlen –
+  // ein Hinweis, kein Balken; „Nein, danke“ gilt dauerhaft.
+  if (u.zweitePerson) h.push({ schluessel: 'verwaltung.zweite-person', art: 'info', text: <><strong>{t('werkbank.uebersicht.zweite')}</strong> {t('werkbank.uebersicht.zweite.text')}</>, ziel: '/werkbank/benutzer/neu', knopf: t('werkbank.uebersicht.zweite.knopf'), erledigen: t('werkbank.uebersicht.zweite.nein') });
   // Überflüssige Umgebungsvariablen (#115, #119), je mit Grund (#478).
   const vh = variablenHinweis(u.variablen ?? []);
   if (vh) h.push({ schluessel: 'variablen', art: 'info', text: vh.zeilen.length === 1
@@ -125,9 +133,11 @@ export function useUebersicht() {
   }, [stand, geordnet]);
   const akzeptieren = useCallback(async (h: Hinweis, grund: string) => setAkzeptiert(await api.meldungAkzeptieren(h.schluessel, h.art, grund.trim() || undefined)), []);
   const einblenden = useCallback(async (schluessel: string) => setAkzeptiert(await api.akzeptanzAufheben([schluessel], 'eingeblendet')), []);
+  // „Nein, danke“ bzw. „Gelesen“ (#821, #815): Der Hinweis kommt danach nicht wieder.
+  const erledigen = useCallback(async (schluessel: string) => { await api.meldungErledigt(schluessel); await laden(); }, [laden]);
   // Zahl in der Leiste: offene Warnungen und rote Meldungen, ohne Hinweise und ohne bewusst akzeptierte.
   const hinweise = geordnet ? geordnet.offen.filter((h) => h.art !== 'info').length : 0;
-  return { stand, fehler, laden, hinweise, geordnet, akzeptieren, einblenden };
+  return { stand, fehler, laden, hinweise, geordnet, akzeptieren, einblenden, erledigen };
 }
 export type UebersichtZustand = ReturnType<typeof useUebersicht>;
 
@@ -139,6 +149,12 @@ function Akzeptieren({ h, u }: { h: Hinweis; u: UebersichtZustand }) {
   const [grund, setGrund] = useState('');
   const [fehler, setFehler] = useState<string>();
   const [sendet, setSendet] = useState(false);
+  if (h.erledigen) return (
+    <>
+      <button type="button" className="textknopf klein" disabled={sendet} onClick={() => { setSendet(true); setFehler(undefined); u.erledigen(h.schluessel).catch((x) => setFehler((x as Error).message)).finally(() => setSendet(false)); }}>{h.erledigen}</button>
+      {fehler && <p className="fehlertext klein">{fehler}</p>}
+    </>
+  );
   if (!akzeptierbar(h.art)) return null;
   if (!offen) return <button type="button" className="textknopf klein" onClick={() => setOffen(true)}>{t('werkbank.uebersicht.akzeptieren')}</button>;
   return (

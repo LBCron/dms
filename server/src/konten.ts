@@ -4,7 +4,7 @@ import { protokoll } from './protokoll';
 
 const log = protokoll.modul('konto');
 import { Anmeldesperre } from './anmeldesperre';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { abwesenheitWirkt, istEmail, istPerson, KEINE_ABWESENHEIT, PASSWORT_MINDESTLAENGE, SYSTEMKONTEN, type Abwesenheit, type Benutzer, type Systemkonto } from '../../shared/src/model';
 import { darfVerwalten, FRISCH_MINUTEN, GESAMT, gleicheVerwaltung, hatGesamt, liesVerwaltung, MODUS_MINUTEN, verwaltungText, type Verwaltungsstand } from '../../shared/src/verwaltungsrecht';
 import { heuteIn } from '../../shared/src/sichten';
@@ -15,6 +15,7 @@ import { mailtexte, type Mailer } from './mail';
 import { t } from './sprache';
 import { hashePasswort, hasheSchluessel, neuerSchluessel, pruefePasswort } from './passwort';
 import { zeitzone } from '../../shared/src/region';
+import { NOTFALLCODE_LAENGE, NOTFALLCODE_ZEICHEN, normiereNotfallcode } from '../../shared/src/notfallcode';
 
 const TAG = 24 * 60 * 60 * 1000;
 export const SITZUNG_TAGE = 30;
@@ -790,6 +791,58 @@ export class Konten {
         if (b && !b.aktiv) await this.spiegle(await this.repo.aendereBenutzer(id, { aktiv: true }), von);
       },
     };
+  }
+
+  /* ---------- Notfallcode vom Notfallblatt (#815) ---------- */
+
+  /**
+   * Neuer Notfallcode für ein neues Notfallblatt: zufällig (140 Bit), gespeichert nur als Hash (scrypt wie beim
+   * Abrufcode). Der bisherige gilt damit nicht mehr. Den Code selbst gibt es nur in diesem Rückgabewert – er steht
+   * danach nur auf dem Blatt.
+   */
+  async neuerNotfallcode(): Promise<string> {
+    let c = '';
+    for (let i = 0; i < NOTFALLCODE_LAENGE; i++) c += NOTFALLCODE_ZEICHEN[randomInt(NOTFALLCODE_ZEICHEN.length)];
+    await this.repo.setzeNotfallcode(await hashePasswort(c));
+    return c;
+  }
+
+  /** Gibt es einen gültigen Notfallcode, und seit wann? */
+  async notfallcodeStand(): Promise<{ vorhanden: boolean; erstellt: string | null }> {
+    const n = await this.repo.notfallcode();
+    return { vorhanden: !!n, erstellt: n?.erstellt.toISOString() ?? null };
+  }
+
+  /**
+   * Notfallcode prüfen: immer ein scrypt-Durchlauf – auch ohne gespeicherten Code und bei falscher Schreibweise –,
+   * damit die Antwortzeit nichts verrät. Liefert den Hash, gegen den er passte (fürs Einlösen), sonst null.
+   */
+  async pruefeNotfallcode(eingabe: unknown): Promise<string | null> {
+    const code = normiereNotfallcode(eingabe);
+    const n = await this.repo.notfallcode();
+    const ok = await pruefePasswort(code ?? 'kein-notfallcode', code ? n?.hash : null);
+    return ok && n ? n.hash : null;
+  }
+
+  /** Wählbar beim Notfallzugang: aktive Personen mit Verwaltungsrecht (#810: führt zu einer Person mit Verwaltungsrecht). */
+  async notfallKonten(): Promise<Benutzer[]> {
+    return (await this.repo.listeBenutzer()).filter((b) => istPerson(b) && b.aktiv && darfVerwalten(b));
+  }
+
+  /**
+   * Notfallcode einlösen (#815): Code ungültig, neues Passwort, alle Sitzungen und Links weg – in einer Transaktion
+   * (nur eine von zwei gleichzeitigen Anfragen gewinnt). Danach Zwei-Faktor zurücksetzen und Modus, Tagesmerker und
+   * frische Anmeldung vergessen: Verwalten geht erst wieder nach einer neuen Anmeldung. Liefert die Person oder null,
+   * wenn der Code inzwischen benutzt oder ersetzt ist.
+   */
+  async loeseNotfallcodeEin(hash: string, benutzerId: string, passwort: unknown): Promise<Benutzer | null> {
+    const pw = pruefePasswortRegeln(passwort);
+    const b = (await this.notfallKonten()).find((x) => x.id === benutzerId);
+    if (!b) throw new Fachfehler(404, t('konten.notfall.fehler.konto'));
+    if (!(await this.repo.loeseNotfallcodeEin(hash, b.id, await hashePasswort(pw)))) return null;
+    if (this.zweifaktor) await this.zweifaktor.entferne(b.id, 'Notfallzugang');
+    await this.repo.vergissVerwaltungVon(b.id);
+    return (await this.repo.holeBenutzer(b.id)) ?? b;
   }
 
   /** Admin: neuen Link schicken (Einladung, wenn noch kein Passwort gesetzt ist, sonst Zurücksetzen). */

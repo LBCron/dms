@@ -49,9 +49,20 @@ Bist du selbst gesperrt und niemand sonst, der verwaltet, kann dich freigeben, h
 - `dms gesperrt` zeigt die gesperrten Adressen,
 - `dms entsperren <ip>` gibt eine Adresse sofort frei.
 
-Ohne Zugriff auf den Container warte die Sperrdauer ab oder melde dich von einem anderen Gerät oder Netz an. Kommt niemand mit Verwaltungsrecht mehr hinein, hilft der [Notfallzugang](notfall.md).
+Ohne Zugriff auf den Container warte die Sperrdauer ab oder melde dich von einem anderen Gerät oder Netz an. Kommt niemand mit Verwaltungsrecht mehr hinein, hilft der [Notfallcode vom Notfallblatt](was-ist-passiert.md#notfallcode) oder die [RESCUE-Datei](notfall.md).
 
 Kommst du wegen der [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) nicht weiter – Handy und Wiederherstellungscodes weg –, entfernt `dms zweifaktor-zuruecksetzen <email>` sie bei deinem Benutzer; danach reicht wieder das Passwort. Ist sie vorgeschrieben und du hast sie noch nicht eingerichtet, kannst du die Pflicht unter **Werkbank → Anmeldeschutz** trotzdem jederzeit ausschalten – auch auf der Einrichtungsseite nach der Anmeldung.
+
+## Notfallzugang { #notfallzugang }
+
+Wer sich ausgesperrt hat, kommt mit dem **Notfallcode** vom [Notfallblatt](sicherung.md#notfallblatt) über die Adresse von Ablago mit `/notfall` am Ende wieder hinein und legt für eine Person mit Verwaltungsrecht ein neues Passwort fest – Schritt für Schritt unter [Mit dem Notfallcode wieder hinein](was-ist-passiert.md#notfallcode). Hier steht, auf welchem Notfallblatt der gültige Code steht. Jedes neue Notfallblatt bringt einen neuen Code; der vorige gilt dann nicht mehr.
+
+- **Vorgabe: nur aus dem Heimnetz.** Die Seite `/notfall` geht nur von Geräten aus privaten Netzen (z. B. `192.168.…`, `10.…`, `fd…`), nicht aus dem Internet.
+- **Notfallzugang aus dem Internet erlauben:** Mit diesem Haken geht es von überall – für alle, die die Adresse kennen und den Code haben. Ablago warnt davor und verlangt dafür eine [frische Anmeldung](verwalten.md#frische-anmeldung). Zurück auf „nur Heimnetz“ geht ohne.
+- Jede Fehleingabe sperrt die Eingabe 30 Sekunden – je Adressbereich (IPv4 einzeln, IPv6 je /64). Fehlversuche zählen außerdem in den Anmeldeschutz oben; viele Fehlversuche melden die Verwaltenden gebündelt per E-Mail, höchstens einmal je Stunde.
+
+!!! info "Hinter einem Reverse Proxy"
+    Ob eine Anfrage aus dem Heimnetz kommt, entscheidet Ablago nach der echten Adresse des Browsers. Dafür muss der Proxy `X-Forwarded-For` setzen (das tun alle üblichen) und Ablago ihm vertrauen ([Was der Proxy Ablago mitteilt](installation.md#was-der-proxy-dem-dms-mitteilt)). Kommt eine solche Angabe an, obwohl `TRUST_PROXY=false` gilt, oder steht `TRUST_PROXY=true` (dann könnte jeder die Angabe fälschen), gilt die Anfrage als „nicht aus dem Heimnetz“. Ein Proxy, der gar keine Adresse weitergibt, lässt alle Anfragen wie aus dem Heimnetz aussehen – richte ihn so ein, dass er `X-Forwarded-For` setzt.
 
 ## Zwei-Faktor-Anmeldung
 

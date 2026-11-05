@@ -10,7 +10,7 @@ import { setzeStand, useAssistent } from './assistent/stand';
 
 /**
  * Einrichtungsassistent (#119). Seit #804: Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch
- * nötig sind. Danach sammelt der Assistent nur (Ablage, Administrator, erster Benutzer, Pakete, Optionales), zeigt eine
+ * nötig sind. Danach sammelt der Assistent nur (Ablage, Dein Konto, Pakete, Optionales), zeigt eine
  * Zusammenfassung und legt erst mit „Jetzt einrichten“ etwas an – Schritte und Ablauf in assistent/Schritte.tsx.
  * Übersprungenes lässt sich in der Werkbank nachholen.
  */
@@ -75,10 +75,10 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
   // Bisherige Anbindung und Fehler liefert der Server erst mit Code – dann neu vorbelegen.
   if (phase === 'datenbank') return <DatenbankSchritt key={`${e?.anbindung ? 'mit' : 'ohne'}-${st.sammlung.datenbank ? 'datei' : ''}`} status={status} weiter={fertig} />;
   const zurWahl = () => setzeStand((x) => ({ ...x, neu: false }));
-  // Läuft „Jetzt einrichten“ schon, bleibt es bei dieser Oberfläche – auch wenn der Administrator schon angelegt ist.
+  // Läuft „Jetzt einrichten“ schon, bleibt es bei dieser Oberfläche – auch wenn das eigene Konto schon angelegt ist.
   if (st.neu || st.lauf) return <Sammelassistent zurWahl={zurWahl} abschliessen={fertig} />;
   if (sicherung) return (
-    <Rahmen aktiv={2} titel="Aus Sicherung wiederherstellen" leiste={VORHER} unter="Wähle eine Sicherung aus dem Sicherungsordner. Danach meldest du dich mit den Zugangsdaten an, die zur Zeit der Sicherung galten – ein neuer Administrator ist nicht nötig.">
+    <Rahmen aktiv={2} titel="Aus Sicherung wiederherstellen" leiste={VORHER} unter="Wähle eine Sicherung aus dem Sicherungsordner. Danach meldest du dich mit den Zugangsdaten an, die zur Zeit der Sicherung galten – ein neues Konto ist nicht nötig.">
       <WiederherstellungsAssistent frisch gestartet={() => void fertig()} abbrechen={() => setSicherung(false)} />
     </Rahmen>
   );
@@ -182,10 +182,10 @@ function DatenbankSchritt({ status, weiter }: { status: KontoStatus; weiter: () 
 }
 
 
-/* ---------- Angemeldet als Administrator: „Jetzt einrichten“ läuft weiter bzw. Abschluss ---------- */
+/* ---------- Angemeldet mit „Gesamte Verwaltung“: „Jetzt einrichten“ läuft weiter bzw. Abschluss ---------- */
 
 /**
- * Nach dem Anlegen des Administrators (auch nach Neuladen): Fortschritt, Fehler und Abschluss aus dem gespeicherten
+ * Nach dem Anlegen des eigenen Kontos (auch nach Neuladen): Fortschritt, Fehler und Abschluss aus dem gespeicherten
  * Stand. Ohne Stand (anderer Browser oder ein Assistent aus einer älteren Version) bleiben nur Schlüssel und
  * Notfallblatt – den Rest holt man in der Werkbank nach.
  */

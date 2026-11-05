@@ -1,7 +1,7 @@
 import { PassThrough, type Readable } from 'node:stream';
 import { buffer as alsPuffer } from 'node:stream/consumers';
 import { pdfFuerAnzeige } from './pdfanzeige';
-import { MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
+import { istPerson, MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { type Recht } from '../../shared/src/rechte';
 import { ladeBeispiele } from './beispiele';
 import { demoPhasen, erzeugeDemo, pruefeDemoOptionen, schaetzeDemo, type DemoPlatz } from './demo';
@@ -68,6 +68,7 @@ import type { OrdnerPruefung } from './ordner';
 import type { Einrichtung } from './einrichtung';
 import type { AnbindungVerwaltung } from './anbindung';
 import { notfallblatt } from './notfallblatt';
+import { istHeimnetz, type Notfallcode } from './notfallcode';
 import { WartungFehler } from './wartung';
 import { werkbankZahlen } from './werkbankzahlen';
 import { akzeptanzAufheben, akzeptierteMeldungen, meldungAkzeptieren } from './meldungen';
@@ -261,6 +262,10 @@ export interface RoutenExtras {
   wartung?: Wartung;
   /** Notfallzugang über eine RESCUE-Datei (#108). */
   notfall?: Notfallzugang;
+  /** Notfallzugang mit dem Notfallcode vom Notfallblatt (#815). */
+  notfallcode?: Notfallcode;
+  /** Wem Ablago die Angaben eines Reverse Proxys glaubt (#234) – für „nur aus dem Heimnetz“ (#815). */
+  proxy?: import('./proxy').ProxyVertrauen;
   /** Sicherungen (#103–#105). */
   sicherung?: Sicherung;
   /** Export-Ordner (#797): Vollexport, persönliche Exporte, Auskünfte – nie im Sicherungsordner. */
@@ -300,6 +305,9 @@ export interface RoutenExtras {
   abruf?: (url: string) => Promise<unknown>;
   log?: (m: string) => void;
 }
+
+/** Einstellung: „Nein, danke“ zur Empfehlung einer zweiten Person mit Verwaltungsrecht (#821) – gilt dauerhaft. */
+export const ZWEITE_ABGELEHNT = 'verwaltung_zweite_abgelehnt';
 
 export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Route[] {
   const fotostapel = x.fotostapel ?? new Fotostapel();
@@ -472,6 +480,33 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const abrufTickets = new AbrufTickets();
   /** Fehlversuche je IP-Bereich über alle Abruf-Links und gleichzeitige Code-Prüfungen – getrennt vom Anmeldeschutz. */
   const abrufBremse = new AbrufBremse();
+  /**
+   * Notfallblatt (#106, #814) als PDF – jedes neue Blatt mit neuem Notfallcode (#815): Der bisherige gilt danach nicht
+   * mehr, gespeichert ist nur der Hash des neuen. Aus der Werkbank (frische Anmeldung) und nach dem Notfallzugang.
+   */
+  const notfallblattErzeugen = async (von: string): Promise<Buffer> => {
+    const t = tresor();
+    const text = t.alsText();
+    if (!text || !t.fingerabdruck) throw new Fachfehler(409, 'Es gibt noch keinen passenden Schlüssel. Erzeuge ihn zuerst unter Werkbank → Verschlüsselung.');
+    // #814: keine Ordner oder Dateinamen aus Docker oder vom NAS auf dem Blatt – nur Verweise ins Handbuch.
+    const inhalt = await notfallblatt({
+      name: (x.designs ? (await x.designs.marke()).schriftzug : null) || 'Ablago',
+      haushaltId: x.sicherung?.haushaltId ?? '–',
+      adresse: x.betrieb ? x.betrieb.ansicht().adresse || x.betrieb.adresseFuerLinks() : '',
+      version: eigeneVersion(), erstellt: new Date(), schluessel: text, fingerabdruck: t.fingerabdruck,
+      aussenziele: x.sicherung ? await x.sicherung.externZiele().catch(() => []) : [],
+      notfallcode: await konten.neuerNotfallcode(),
+    });
+    if (x.sicherung) await x.sicherung.notfallblattErstellt(von);
+    else L.system.warn('Notfallblatt heruntergeladen', { von, fingerabdruck: t.fingerabdruck });
+    return inhalt;
+  };
+  const notfallblattDatei = async (von: string): Promise<Antwort> => {
+    const inhalt = await notfallblattErzeugen(von);
+    // Der Schlüssel steht darauf: nicht im Cache des Browsers ablegen.
+    return { datei: { inhalt, name: `Ablago-Notfallblatt-${new Date().toISOString().slice(0, 10)}.pdf`, mime: 'application/pdf', anzeigen: false, groesse: inhalt.length, koepfe: { 'cache-control': 'no-store' } } };
+  };
+  const nf = () => { if (!x.notfallcode) throw new Fachfehler(404, t('konten.notfall.fehler.aus')); return x.notfallcode; };
   /** Meldungen der Abrufseite in der Anrede für Dritte (#474). */
   const abrufText = async (k: TextDritte) => textDritte((await dienst.datenschutz()).anrede, k);
   const exportZiel = () => { if (!x.exporte) throw new Fachfehler(404, t('werkbank.export.ohne-ordner')); return x.exporte.pfad; };
@@ -601,7 +636,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Sammeln vor „Jetzt einrichten“ (#804) und Konfigurationsdatei (#806): mit Code, solange nicht eingerichtet.
     { methode: 'POST', pfad: '/api/einrichtung/pruefen', zugang: 'offen', lesend: true, handler: async (a) => {
       await einrichtungZugang(a);
-      return ok({ probleme: x.einrichtung!.pruefePlan(b(a).plan, { administrator: b(a).passwort }) });
+      return ok({ probleme: x.einrichtung!.pruefePlan(b(a).plan, { passwort: b(a).passwort }) });
     } },
     { methode: 'POST', pfad: '/api/einrichtung/datei/lesen', zugang: 'offen', lesend: true, handler: async (a) => {
       await einrichtungZugang(a);
@@ -1241,6 +1276,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
      * und am Link (Sperre nach LINK_FEHLVERSUCHE_MAX). Antworten verraten nicht, ob es einen Link gibt.
      * Im Protokoll stehen weder Schlüssel noch Code, die IP nur gekürzt.
      */
+    /*
+     * Notfallzugang mit dem Notfallcode vom Notfallblatt (#815) – ohne Anmeldung, auf /notfall. Erst der richtige Code
+     * zeigt die Konten zur Wahl; jede Fehleingabe sperrt den Adressbereich 30 Sekunden (notfallcode.ts).
+     */
+    { methode: 'GET', pfad: '/api/notfall', zugang: 'offen', handler: async (a) => ok(await nf().stand(a)) },
+    { methode: 'POST', pfad: '/api/notfall/pruefen', zugang: 'offen', handler: async (a) => ok(await nf().pruefe(a, b(a).code)) },
+    { methode: 'POST', pfad: '/api/notfall/einloesen', zugang: 'offen', handler: async (a) => ok(await nf().einloesen(a, b(a))) },
+    { methode: 'GET', pfad: '/api/notfall/blatt', zugang: 'offen', ohneHead: true, handler: async (a) => {
+      const inhalt = await nf().blatt(a.query.schluessel, notfallblattErzeugen);
+      return { datei: { inhalt, name: `Ablago-Notfallblatt-${new Date().toISOString().slice(0, 10)}.pdf`, mime: 'application/pdf', anzeigen: false, groesse: inhalt.length, koepfe: { 'cache-control': 'no-store' } } };
+    } },
     // Anrede (#474): Die Abrufseite fragt nur ab, ob sie „du“ oder „Sie“ schreibt – sonst nichts über das DMS.
     { methode: 'GET', pfad: '/api/abruf/anrede', zugang: 'offen', handler: async () => ok({ anrede: (await dienst.datenschutz()).anrede }) },
     { methode: 'POST', pfad: '/api/abruf', zugang: 'offen', handler: async (a) => {
@@ -1460,23 +1506,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return { datei: { inhalt: s.inhalt, name: `${a.params.name}.dms-sicherung`, mime: 'application/octet-stream', anzeigen: false, groesse: s.inhalt.length, koepfe: { 'x-dms-groesse': String(s.groesse), 'cache-control': 'no-store' } } };
     } },
     { methode: 'PUT', pfad: '/api/sicherungen/:name/extern', zugang: 'angemeldet', handler: async (a) => ok(await sicherung().externRueckmeldung(await sicherungsPaket(a), a.params.name, a.body)) },
-    { methode: 'GET', pfad: '/api/werkbank/notfallblatt', zugang: 'admin', handler: async (a) => {
-      const t = tresor();
-      const text = t.alsText();
-      if (!text || !t.fingerabdruck) throw new Fachfehler(409, 'Es gibt noch keinen passenden Schlüssel. Erzeuge ihn zuerst unter Werkbank → Verschlüsselung.');
-      const jetzt = new Date();
-      // #814: keine Ordner oder Dateinamen aus Docker oder vom NAS auf dem Blatt – nur Verweise ins Handbuch.
-      const inhalt = await notfallblatt({
-        name: (x.designs ? (await x.designs.marke()).schriftzug : null) || 'Ablago',
-        haushaltId: x.sicherung?.haushaltId ?? '–',
-        adresse: x.betrieb ? x.betrieb.ansicht().adresse || x.betrieb.adresseFuerLinks() : '',
-        version: eigeneVersion(), erstellt: jetzt, schluessel: text, fingerabdruck: t.fingerabdruck,
-        aussenziele: x.sicherung ? await x.sicherung.externZiele().catch(() => []) : [],
-      });
-      if (x.sicherung) await x.sicherung.notfallblattErstellt(ich(a).email);
-      else L.system.warn('Notfallblatt heruntergeladen', { von: ich(a).email, fingerabdruck: t.fingerabdruck });
-      return { datei: { inhalt, name: `Ablago-Notfallblatt-${jetzt.toISOString().slice(0, 10)}.pdf`, mime: 'application/pdf', anzeigen: false, groesse: inhalt.length } };
-    } },
+    { methode: 'GET', pfad: '/api/werkbank/notfallblatt', zugang: 'admin', handler: async (a) => notfallblattDatei(ich(a).email) },
 
     { methode: 'GET', pfad: '/api/werkbank/tresor', zugang: 'admin', handler: async () => ok({ ...await tresor().status(), notfallblatt: x.sicherung ? await x.sicherung.notfallblatt() : null }) },
     { methode: 'POST', pfad: '/api/werkbank/tresor/erzeugen', zugang: 'admin', handler: async () => ok(await tresor().erzeuge()) },
@@ -1575,6 +1605,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         fehlermeldungen: x.fehlermeldungen ? await sicher(() => x.fehlermeldungen!.offen()) : null,
         // Notfallzugänge (#108), bis sie umbenannt oder deaktiviert sind.
         notfallzugaenge: x.notfall ? await sicher(() => x.notfall!.offen()) ?? [] : [],
+        // Notfallcode benutzt (#815): bis jemand mit „Gesamte Verwaltung“ den Hinweis als gelesen markiert.
+        notfallcodeBenutzt: x.notfallcode ? (await sicher(() => x.notfallcode!.offen()))?.map((n) => ({ id: n.id, benutzerId: n.benutzerId, name: n.name, am: n.am })) ?? [] : [],
+        // Zweite Person mit Verwaltungsrecht empfehlen (#821, Konzept Punkt 7): nach der Einrichtung, solange nur eine
+        // Person verwalten darf und niemand „Nein, danke“ gewählt hat.
+        zweitePerson: (await sicher(async () => !(await dienst.einstellungenSpeicher?.lies(ZWEITE_ABGELEHNT))
+          && !(x.einrichtung && (await x.einrichtung.stand()).offen)
+          && (await konten.listeBenutzer()).filter((p) => istPerson(p) && p.aktiv && darfVerwalten(p)).length === 1)) ?? false,
         wartung: x.wartung?.oeffentlich() ?? null,
         // Sicherung (#105): fehlgeschlagen, zu alt, Speicherort, Notfallblatt.
         sicherung: x.sicherung ? await sicher(() => x.sicherung!.zustand()) : null,
@@ -1622,6 +1659,22 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // „Zur Kenntnis genommen“ (#816): nur gelbe Warnungen und Hinweise, im Protokoll mit Benutzer und Begründung.
     { methode: 'POST', pfad: '/api/werkbank/uebersicht/akzeptieren', zugang: 'admin', handler: async (a) => ok(await meldungAkzeptieren(dienst.einstellungenSpeicher, b(a), ich(a).name || ich(a).email)) },
     { methode: 'POST', pfad: '/api/werkbank/uebersicht/aufheben', zugang: 'admin', handler: async (a) => ok(await akzeptanzAufheben(dienst.einstellungenSpeicher, b(a), ich(a).name || ich(a).email)) },
+    /*
+     * Hinweise, die man einmal abschließt (#821, #815): „Nein, danke“ zur zweiten Person mit Verwaltungsrecht gilt
+     * dauerhaft; „Gelesen“ beim benutzten Notfallcode. Beides nur „Gesamte Verwaltung“ (nur sie sieht die Hinweise).
+     */
+    { methode: 'POST', pfad: '/api/werkbank/uebersicht/erledigt', zugang: 'admin', handler: async (a) => {
+      const k = String(b(a).schluessel ?? '');
+      if (!hatGesamt(ich(a))) throw new Fachfehler(403, t('konten.verwaltung.fehler.vergeben'));
+      if (k === 'verwaltung.zweite-person') {
+        const e = dienst.einstellungenSpeicher;
+        if (!e) throw new Fachfehler(500, t('werkbank.uebersicht.akzeptiert.ohne-speicher'));
+        await e.schreibe(ZWEITE_ABGELEHNT, { von: ich(a).name || ich(a).email, am: new Date().toISOString() });
+        L.werkbank.info('Empfehlung „zweite Person mit Verwaltungsrecht“ abgelehnt', { meldung: k, von: ich(a).email });
+      } else if (k.startsWith('notfallzugang.benutzt:')) await nf().gelesen(k.slice('notfallzugang.benutzt:'.length), ich(a));
+      else throw new Fachfehler(400, t('werkbank.uebersicht.akzeptiert.ungueltig'));
+      return leer;
+    } },
     { methode: 'GET', pfad: '/api/werkbank/system', zugang: 'admin', handler: async () => {
       const sicher = async <T>(f: () => Promise<T>): Promise<T | null> => { try { return await f(); } catch { return null; } };
       const sp = x.speicherplatz ? await sicher(() => x.speicherplatz!.stand()) : null;
@@ -1666,6 +1719,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Anmeldeschutz (#240): Fehlversuche, gesperrte IPs, Ausnahmen.
     { methode: 'GET', pfad: '/api/werkbank/anmeldeschutz', zugang: 'admin', handler: async (a) => ok({ einstellung: await konten.sperre.einstellung(), gesperrt: await konten.sperre.gesperrt(), deineIp: a.ip }) },
     { methode: 'PUT', pfad: '/api/werkbank/anmeldeschutz', zugang: 'admin', handler: async (a) => ok({ einstellung: await konten.sperre.speichere(a.body, ich(a).email), gesperrt: await konten.sperre.gesperrt(), deineIp: a.ip }) },
+    // Notfallzugang (#815): Vorgabe „nur Heimnetz“; „aus dem Internet erlauben“ ist eine heikle Handlung (frische Anmeldung).
+    { methode: 'GET', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().einstellung(), code: await konten.notfallcodeStand(), heimnetz: istHeimnetz(a, x.proxy) }) },
+    { methode: 'PUT', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().setzeEinstellung(b(a), ich(a).email), code: await konten.notfallcodeStand(), heimnetz: istHeimnetz(a, x.proxy) }) },
     { methode: 'POST', pfad: '/api/werkbank/anmeldeschutz/entsperren', zugang: 'admin', handler: async (a) => {
       const ip = String((b(a) as { ip?: unknown }).ip ?? '');
       if (!(await konten.sperre.entsperre(ip, ich(a).email))) throw new Fachfehler(404, 'Diese Adresse ist nicht gesperrt.');
@@ -2510,7 +2566,7 @@ export function anfrageStufe(x: { methode: string; url: string; status: number; 
 }
 
 export function modulAus(url: string): string {
-  if (/^\/api\/(konto|benutzer|personen|rollen)\b/.test(url)) return 'konto';
+  if (/^\/api\/(konto|benutzer|personen|rollen|notfall)\b/.test(url)) return 'konto';
   if (/^\/api\/(dokumente|mappen\/[^/]+\/dokumente)\b/.test(url)) return 'dokumente';
   if (/^\/api\/(mappen|sichten|papierkorb|notizen|aufgaben)\b/.test(url)) return 'ablage';
   if (/^\/api\/(werkbank\/(sicherung|notfallblatt|wiederherstellung)|wiederherstellung|(v1\/)?sicherungen)\b/.test(url)) return 'sicherung';
@@ -2597,7 +2653,7 @@ const UEBERSICHT_BEREICHE: Record<string, { bereich: string; leer: unknown }> = 
   aufgaben: { bereich: 'aufgaben', leer: { offen: 0, ohneEmpfaenger: 0 } }, ohneLeserecht: { bereich: 'aufgaben', leer: 0 },
   aufgabenEmpfaenger: { bereich: 'benutzer', leer: null }, unpassend: { bereich: 'typen', leer: 0 },
   papierkorb: { bereich: 'papierkorb', leer: { anzahl: 0, aeltester: null, tage: 0 } }, fehlermeldungen: { bereich: 'fehlermeldungen', leer: null },
-  notfallzugaenge: { bereich: NUR_GESAMT, leer: [] }, wartung: { bereich: 'wartung', leer: null }, sicherung: { bereich: 'sicherung', leer: null },
+  notfallzugaenge: { bereich: NUR_GESAMT, leer: [] }, notfallcodeBenutzt: { bereich: NUR_GESAMT, leer: [] }, zweitePerson: { bereich: NUR_GESAMT, leer: false }, wartung: { bereich: 'wartung', leer: null }, sicherung: { bereich: 'sicherung', leer: null },
   exporte: { bereich: 'vollexport', leer: null }, speicherplatz: { bereich: 'systemzustand', leer: null }, auslastung: { bereich: 'systemzustand', leer: [] },
   engpaesse: { bereich: 'systemzustand', leer: [] }, erweiterungen: { bereich: 'systemzustand', leer: [] }, variablen: { bereich: 'systemzustand', leer: [] },
   bestand: { bereich: 'systemzustand', leer: null }, lasttestAbbruch: { bereich: 'systemzustand', leer: null }, anbindung: { bereich: 'anbindung', leer: null },

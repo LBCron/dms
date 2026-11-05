@@ -26,5 +26,14 @@
   "verwaltung.fuss": "Diese Mail kommt höchstens einmal am Tag und nur, wenn etwas Neues dazugekommen ist.",
   "verwaltung.anrede": "Hallo,",
   "verwaltungsrecht.betreff": "Ablago: Verwaltungsrechte von {person} geändert",
-  "verwaltungsrecht.text": "die Verwaltungsrechte von {person} wurden geändert.\n\nVorher: {vorher}\nNachher: {nachher}\nGeändert von: {von}\n\n„*“ steht für „Gesamte Verwaltung“."
+  "verwaltungsrecht.text": "die Verwaltungsrechte von {person} wurden geändert.\n\nVorher: {vorher}\nNachher: {nachher}\nGeändert von: {von}\n\n„*“ steht für „Gesamte Verwaltung“.",
+  "notfall.benutzt.betreff": "Ablago: Der Notfallzugang wurde benutzt",
+  "notfall.benutzt.text": "der Notfallzugang deiner Ablage wurde am {datum} benutzt (Konto {konto}, {email}). Jemand hat den Notfallcode vom Notfallblatt eingegeben und setzt für dieses Konto gerade ein neues Passwort. Alle Anmeldungen des Kontos werden beendet, die Zwei-Faktor-Anmeldung wird zurückgesetzt.\n\nAngefragt von: {ip}",
+  "notfall.benutzt.api_one": "Der API-Schlüssel des Kontos bleibt gültig. Widerrufe ihn unter Mein Konto → API-Schlüssel, wenn du nicht weißt, wofür er da ist.",
+  "notfall.benutzt.api_other": "Die {anzahl} API-Schlüssel des Kontos bleiben gültig. Widerrufe sie unter Mein Konto → API-Schlüssel, wenn du nicht weißt, wofür sie da sind.",
+  "notfall.benutzt.nicht-du": "Warst du das nicht, hat jemand dein Notfallblatt. Melde dich mit einem anderen Konto an, das Ablago verwalten darf, deaktiviere das Konto oder setze sein Passwort zurück, lade unter Werkbank → Verschlüsselung ein neues Notfallblatt herunter und wechsle den Schlüssel – auf dem Blatt stand auch er.",
+  "notfall.fehlversuche.betreff": "Ablago: Fehlversuche am Notfallzugang",
+  "notfall.fehlversuche.text_one": "in der letzten Stunde wurde {anzahl}-mal ein falscher Notfallcode eingegeben, zuletzt von {ip}.",
+  "notfall.fehlversuche.text_other": "in der letzten Stunde wurde {anzahl}-mal ein falscher Notfallcode eingegeben, zuletzt von {ip}.",
+  "notfall.fehlversuche.rat": "Raten bringt bei der Länge des Codes nichts, und nach jedem Fehlversuch ist die Eingabe 30 Sekunden gesperrt. Warst du das nicht und ist der Notfallzugang aus dem Internet erlaubt, stell ihn unter Werkbank → Anmeldeschutz wieder auf „nur Heimnetz“."
 }

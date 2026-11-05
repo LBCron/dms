@@ -7,6 +7,7 @@ Die Konfigurationsdatei des Einrichtungsassistenten (#806) beschreibt eine Einri
 - Kopfzeile `ablago-einrichtung: 1` – die Formatversion. Eine neue Version bekommt ein eigenes Schema (`ablago-einrichtung-<n>.schema.json`); Ablago lehnt unbekannte Versionen ab.
 - Schema: [ablago-einrichtung-1.schema.json](einrichtungsdatei/ablago-einrichtung-1.schema.json) (dieselbe Datei wie im Administratorhandbuch, `$id` zeigt dorthin).
 - Unbekannte Felder sind Fehler (`additionalProperties: false`), damit Tippfehler nicht still verloren gehen.
+- **Dein Konto (#821):** Abschnitt `konto` – die Person, die einrichtet, mit „Gesamte Verwaltung“. Ältere Dateien (0.191, 0.192) mit `administrator` liest Ablago als `konto`; `erster-benutzer` fällt mit einem Hinweis weg (`hinweise`). Beides steht nicht im Schema – die Umstellung geschieht vor der Prüfung, Zeile und Feld eines Fehlers nennen trotzdem den Namen aus der Datei.
 - **Keine Geheimnisse:** Felder `passwort` nehmen nur einen Verweis auf eine Umgebungsvariable an (`${NAME}`, Großbuchstaben, Ziffern, Unterstrich). Einen Schlüssel kennt das Format nicht – Ablago erzeugt ihn immer neu.
 
 ## Im Code
@@ -15,7 +16,7 @@ Die Konfigurationsdatei des Einrichtungsassistenten (#806) beschreibt eine Einri
 | --- | --- |
 | `shared/src/einrichtungsplan.ts` | Der Plan, wie Oberfläche und Server ihn austauschen (`Einrichtungsplan`), Verweis-Muster, Schritte |
 | `server/src/einrichtungsdatei.ts` | Schema (`SCHEMA`), Prüfung mit Zeile und Feld, Lesen und Schreiben (YAML mit Kommentaren, Bibliothek `yaml`) |
-| `server/src/einrichtung.ts` | Prüfen eines Plans je Schritt, Datei lesen und schreiben – nur mit Einrichtungscode bzw. als Administrator bei offenem Assistenten |
+| `server/src/einrichtung.ts` | Prüfen eines Plans je Schritt, Datei lesen und schreiben – nur mit Einrichtungscode bzw. mit „Gesamte Verwaltung“ bei offenem Assistenten |
 | `web/src/assistent/` | Sammeln, Zusammenfassung, „Jetzt einrichten“ mit Fortschritt (#804), Laden und Speichern der Datei |
 
 Schnittstellen (alle `POST`, Kopf `x-einrichtungscode`, nur solange Ablago nicht eingerichtet ist): `/api/einrichtung/datei/lesen` (`{ text }` → `{ plan, fehler: [{ zeile, feld, text }], hinweise }`), `/api/einrichtung/datei/schreiben` (`{ plan }` → `{ text, name }`), `/api/einrichtung/pruefen` (`{ plan, passwort? }` → `{ probleme }` je Schritt). Ohne Datenbank (Einrichtungsmodus) gibt es nur `datei/lesen`. Angelegt wird über diese Schnittstellen nichts.
@@ -39,16 +40,11 @@ datenbank:
   passwort: ${DMS_DB_PASSWORT}
 # Name der Ablage – Schriftzug in Kopfzeile und Browser-Tab.
 ablage: Familie Beispiel
-# Richtet Ablago ein, arbeitet aber nicht in der Ablage.
-administrator:
-  name: Admin
-  email: admin@example.org
-  passwort: ${DMS_ADMIN_PASSWORT}
-# Das Konto für die Arbeit in der Ablage.
-erster-benutzer:
+# Dein Konto: richtet Ablago ein, darf es verwalten und arbeitet auch in der Ablage.
+konto:
   name: Lena Beispiel
   email: lena@example.org
-  aufgaben-ohne-empfaenger: true
+  passwort: ${DMS_KONTO_PASSWORT}
 # Aus dem offiziellen Katalog, je die neueste passende Version; Automatisierungen: true = eingeschaltet.
 pakete:
   - id: texterkennung
@@ -71,4 +67,4 @@ optionales:
 
 ## Später: Einrichtung ohne Oberfläche
 
-Vorbereitet, aber noch nicht gebaut: eine Datei im Datenordner oder eine Variable beim ersten Start, etwa für Anbieter. Dann werden die Verweise (`${DMS_ADMIN_PASSWORT}` usw.) aus der Umgebung aufgelöst; der Assistent im Browser fragt Passwörter bis dahin immer ab.
+Vorbereitet, aber noch nicht gebaut: eine Datei im Datenordner oder eine Variable beim ersten Start, etwa für Anbieter. Dann werden die Verweise (`${DMS_KONTO_PASSWORT}` usw.) aus der Umgebung aufgelöst; der Assistent im Browser fragt Passwörter bis dahin immer ab.

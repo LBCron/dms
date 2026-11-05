@@ -3,7 +3,7 @@ import { BUNDESLAENDER } from '../../../shared/src/feiertage';
 import { handbuchUrl, HILFE, hilfeOnlineUrl, type Hilfeort } from '../../../shared/src/hilfe';
 import { PASSWORT_MINDESTLAENGE } from '../../../shared/src/model';
 import type { Sammelschritt } from '../../../shared/src/einrichtungsplan';
-import { api } from '../api';
+import { api, heikleDatei } from '../api';
 import { Marke } from '../Marke';
 import { geheZu } from '../ort';
 import { rueckfrage } from '../rueckfrage';
@@ -12,31 +12,35 @@ import { Symbol } from '../Symbol';
 import { PaketApiKontext, type PaketApi, type PaketWahl } from '../werkbank/PaketAblauf';
 import { PaketeDazuholen } from '../werkbank/PaketeDazuholen';
 import { MailSammeln, type MailGriff } from '../werkbank/MailVersand';
+import { ZweifaktorEinrichten } from '../profil/Zweifaktor';
 import { ausfuehren, neuerLauf, STUFEN_JE_SCHRITT, stufenZuruecksetzen } from './ausfuehren';
 import { ladeDatei, merkeDatei, pruefeAlles, speichereDatei } from './datei';
-import { geheim, holeStand, planAus, setzeSammlung, setzeStand, STUFEN, useAssistent, vergiss, type Ansicht, type MailSammlung, type Sammlung, type Stufe } from './stand';
+import { geheim, holeStand, planAus, setzeSammlung, setzeStand, STUFEN, useAssistent, vergiss, type Ansicht, type Lauf, type MailSammlung, type Sammlung, type Stufe } from './stand';
 
 /**
  * Einrichtungsassistent (#119, #804): erst sammeln, dann eine Zusammenfassung, dann „Jetzt einrichten“.
  *
  *   1 Code · 2 Datenbank · 3 Neu oder Sicherung       – sofort, weil technisch nötig
- *   4 Ablage · 5 Administrator · 6 Erster Benutzer · 7 Pakete · 8 Optionales  – nur gesammelt, jederzeit änderbar
- *   9 Zusammenfassung → „Jetzt einrichten“ (mit Fortschritt) · 10 Fertig: Notfallblatt herunterladen, abschließen
+ *   4 Ablage · 5 Dein Konto · 6 Pakete · 7 Optionales  – nur gesammelt, jederzeit änderbar
+ *   8 Zusammenfassung → „Jetzt einrichten“ (mit Fortschritt) · 9 Fertig: Notfallblatt, Zwei-Faktor anbieten, abschließen
+ *
+ * Seit #821 gibt es nur „Dein Konto“: die Person, die einrichtet, mit „Gesamte Verwaltung“ – kein Administrator und
+ * kein erster Benutzer daneben. Eine zweite Person mit Verwaltungsrecht empfiehlt danach ein Hinweis in der Werkbank.
  *
  * Im Assistenten gibt es keine einzelnen Speichern-Knöpfe (#803): „Weiter“ übernimmt alles, was im Schritt sichtbar
  * steht – auch Vorschläge, die man nicht geändert hat. Die Knöpfe stehen in jedem Schritt unten an derselben Stelle.
  */
 export const SCHRITTE = [
   t('einrichtung.schritt.code'), t('einrichtung.schritt.datenbank'), t('einrichtung.schritt.wahl'), t('einrichtung.schritt.ablage'),
-  t('einrichtung.schritt.administrator'), t('einrichtung.schritt.benutzer'), t('einrichtung.schritt.pakete'), t('einrichtung.schritt.optional'),
+  t('einrichtung.schritt.konto'), t('einrichtung.schritt.pakete'), t('einrichtung.schritt.optional'),
   t('einrichtung.schritt.zusammenfassung'), t('einrichtung.schritt.fertig'),
 ] as const;
-export const NR: Record<Ansicht | 'fertig', number> = { ablage: 3, administrator: 4, benutzer: 5, pakete: 6, optional: 7, zusammenfassung: 8, fertig: 9 };
-const REIHE: Ansicht[] = ['ablage', 'administrator', 'benutzer', 'pakete', 'optional', 'zusammenfassung'];
+export const NR: Record<Ansicht | 'fertig', number> = { ablage: 3, konto: 4, pakete: 5, optional: 6, zusammenfassung: 7, fertig: 8 };
+const REIHE: Ansicht[] = ['ablage', 'konto', 'pakete', 'optional', 'zusammenfassung'];
 const REPO = 'https://github.com/motom001/dms';
 
 /** Hilfe je Schritt (#278): der passende Abschnitt im Online-Handbuch, mit Bildern. */
-const HILFE_JE_SCHRITT: Hilfeort[] = ['einrichtung.code', 'einrichtung.datenbank', 'einrichtung.wahl', 'einrichtung.mandant', 'einrichtung.administrator', 'einrichtung.benutzer', 'einrichtung.pakete', 'einrichtung.optional', 'einrichtung.zusammenfassung', 'einrichtung.fertig'];
+const HILFE_JE_SCHRITT: Hilfeort[] = ['einrichtung.code', 'einrichtung.datenbank', 'einrichtung.wahl', 'einrichtung.mandant', 'einrichtung.konto', 'einrichtung.pakete', 'einrichtung.optional', 'einrichtung.zusammenfassung', 'einrichtung.fertig'];
 
 /** Schrittleiste: welche Schritte anklickbar sind, welche gesperrt (mit Grund). */
 export interface Leiste { erledigt(i: number): boolean; klick?(i: number): (() => void) | null; gesperrt?(i: number): string | null }
@@ -67,8 +71,8 @@ function Fortschritt({ aktiv, leiste }: { aktiv: number; leiste?: Leiste }) {
 function SchrittHilfe({ aktiv }: { aktiv: number }) {
   const z = HILFE[HILFE_JE_SCHRITT[aktiv]];
   return (
-    <a className="assistent-hilfe" href={hilfeOnlineUrl(z)} target="_blank" rel="noreferrer" title={`Hilfe zu „${z.titel}“ im Administratorhandbuch`} aria-label="Hilfe zu diesem Schritt im Handbuch, mit Bildern (öffnet in neuem Tab)">
-      <span className="hilfesymbol" aria-hidden="true">?</span> Hilfe mit Bildern
+    <a className="assistent-hilfe" href={hilfeOnlineUrl(z)} target="_blank" rel="noreferrer" title={t('einrichtung.hilfe.titel', { titel: z.titel })} aria-label={t('einrichtung.hilfe.label')}>
+      <span className="hilfesymbol" aria-hidden="true">?</span> {t('einrichtung.hilfe')}
     </a>
   );
 }
@@ -110,7 +114,7 @@ export function Rahmen({ aktiv, titel, unter, children, leiste, datei }: {
       <div className="karte breit assistent">
         <div className="marke gross"><Marke logo={null} schriftzug="Ablago" gross /></div>
         <div className="assistent-kopf">
-          <p className="ueber">Einrichtung · Schritt {aktiv + 1} von {SCHRITTE.length}</p>
+          <p className="ueber">{t('einrichtung.kopf', { nr: aktiv + 1, von: SCHRITTE.length })}</p>
           <span className="assistent-kopf-rechts">{datei && <DateiLaden {...datei} />}<SchrittHilfe aktiv={aktiv} /></span>
         </div>
         <Fortschritt aktiv={aktiv} leiste={leiste} />
@@ -135,8 +139,8 @@ export function Rahmen({ aktiv, titel, unter, children, leiste, datei }: {
 function sammelLeiste(s: Sammlung, zurWahl: () => void): Leiste {
   return {
     erledigt: (i) => i < 3 || REIHE.some((a) => NR[a] === i && s.besucht.includes(a)),
-    klick: (i) => (i === 2 ? zurWahl : i >= 3 && i <= 8 ? () => setzeSammlung((x) => ({ ...x, ansicht: REIHE[i - 3] })) : null),
-    gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : i === 1 ? t('einrichtung.gesperrt.datenbank') : i === 9 ? t('einrichtung.gesperrt.fertig') : null),
+    klick: (i) => (i === 2 ? zurWahl : i >= NR.ablage && i <= NR.zusammenfassung ? () => setzeSammlung((x) => ({ ...x, ansicht: REIHE[i - NR.ablage] })) : null),
+    gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : i === 1 ? t('einrichtung.gesperrt.datenbank') : i === NR.fertig ? t('einrichtung.gesperrt.fertig') : null),
   };
 }
 
@@ -205,13 +209,13 @@ async function pruefeSchritt(s: Sammelschritt, passwort?: string): Promise<strin
 function AblageSchritt({ s, zurWahl, leiste, datei }: { s: Sammlung; zurWahl: () => void; leiste: Leiste; datei?: { imEinrichtungsmodus?: boolean } }) {
   const [name, setName] = useState(s.ablage);
   return (
-    <Rahmen aktiv={NR.ablage} titel="Willkommen" unter="Wie heißt dein Ablago? Meist der Name der Familie oder der Firma." leiste={leiste} datei={datei}>
+    <Rahmen aktiv={NR.ablage} titel={t('einrichtung.ablage.titel')} unter={t('einrichtung.ablage.unter')} leiste={leiste} datei={datei}>
       <form className="stapel" onSubmit={(e) => e.preventDefault()}>
         {s.hinweise.length > 0 && <div className="hinweis info"><ul>{s.hinweise.map((h) => <li key={h}>{h}</li>)}</ul></div>}
         <Probleme liste={s.probleme.ablage} />
-        <label className="eigenschaft"><span>Name deiner Ablage <small>z. B. „Familie Mustermann“ oder „Büro Mustermann“</small></span>
+        <label className="eigenschaft"><span>{t('einrichtung.ablage.name')} <small>{t('einrichtung.ablage.name.beispiel')}</small></span>
           <input value={name} onChange={(x) => setName(x.target.value)} maxLength={30} autoFocus required /></label>
-        <p className="leise klein">Er erscheint als Schriftzug in der Kopfzeile, im Browser-Tab und auf der Anmeldeseite. Ändern lässt er sich jederzeit unter Werkbank → Designs → Logo und Schriftzug.</p>
+        <p className="leise klein">{t('einrichtung.ablage.hinweis')}</p>
         <Navigation zurueck={() => { setzeSammlung((x) => ({ ...x, ablage: name })); zurueckVon('ablage', zurWahl); }} kannWeiter={!!name.trim()}
           weiter={() => { setzeSammlung((x) => ({ ...x, ablage: name.replace(/\s+/g, ' ').trim() })); weiterVon('ablage'); }} />
       </form>
@@ -219,62 +223,40 @@ function AblageSchritt({ s, zurWahl, leiste, datei }: { s: Sammlung; zurWahl: ()
   );
 }
 
-function AdminSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => void; leiste: Leiste }) {
-  const [name, setName] = useState(s.administrator.name);
-  const [email, setEmail] = useState(s.administrator.email);
-  const [pw, setPw] = useState(geheim.administrator);
-  const [pw2, setPw2] = useState(geheim.administrator);
-  const [probleme, setProbleme] = useState<string[] | undefined>(s.probleme.administrator);
+/**
+ * „Dein Konto“ (#821): Name, E-Mail und Passwort der Person, die einrichtet – direkt gesetzt, kein Einladungslink. Sie
+ * bekommt „Gesamte Verwaltung“ und arbeitet im Alltag trotzdem ohne Verwaltungsrechte. Zwei-Faktor bietet der Assistent
+ * nach „Jetzt einrichten“ an (dann gibt es das Konto).
+ */
+function KontoSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => void; leiste: Leiste }) {
+  const [name, setName] = useState(s.konto.name);
+  const [email, setEmail] = useState(s.konto.email);
+  const [pw, setPw] = useState(geheim.konto);
+  const [pw2, setPw2] = useState(geheim.konto);
+  const [probleme, setProbleme] = useState<string[] | undefined>(s.probleme.konto);
   const x = useSenden();
-  const merke = () => setzeSammlung((a) => ({ ...a, administrator: { name: name.trim(), email: email.trim() } }));
+  const merke = () => setzeSammlung((a) => ({ ...a, konto: { name: name.trim(), email: email.trim() } }));
   return (
-    <Rahmen aktiv={NR.administrator} titel="Administrator" leiste={leiste} unter={<>Diese Person richtet Ablago ein und darf es verwalten („Gesamte Verwaltung“). <strong>Sie arbeitet ganz normal in der Ablage</strong>; in die Verwaltung wechselt sie bewusst über „Ablago verwalten“ im Benutzermenü.</>}>
+    <Rahmen aktiv={NR.konto} titel={t('einrichtung.konto.titel')} leiste={leiste} unter={t('einrichtung.konto.unter')}>
       <form className="stapel" onSubmit={(e) => e.preventDefault()}>
         <Probleme liste={probleme} />
-        {s.verweise.administrator && <p className="leise klein">{t('einrichtung.administrator.verweis', { verweis: s.verweise.administrator })}</p>}
-        <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="z. B. Lena" autoFocus /></label>
-        <label className="eigenschaft"><span>E-Mail-Adresse <small>damit meldest du dich an</small></span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
-        <label className="eigenschaft"><span>Passwort <small>mindestens {PASSWORT_MINDESTLAENGE} Zeichen</small></span><input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required /></label>
-        <label className="eigenschaft"><span>Passwort wiederholen</span><input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" required /></label>
-        <p className="leise klein">{t('einrichtung.administrator.erst')}</p>
-        <Navigation sendet={x.sendet} fehler={x.fehler} zurueck={() => { merke(); zurueckVon('administrator', zurWahl); }}
+        {s.verweise.konto && <p className="leise klein">{t('einrichtung.konto.verweis', { verweis: s.verweise.konto })}</p>}
+        <label className="eigenschaft"><span>{t('einrichtung.konto.name')}</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={t('einrichtung.konto.name.beispiel')} autoFocus /></label>
+        <label className="eigenschaft"><span>{t('einrichtung.konto.email')} <small>{t('einrichtung.konto.email.hilfe')}</small></span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
+        <label className="eigenschaft"><span>{t('einrichtung.konto.passwort')} <small>{t('einrichtung.konto.passwort.hilfe', { anzahl: PASSWORT_MINDESTLAENGE })}</small></span><input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required /></label>
+        <label className="eigenschaft"><span>{t('einrichtung.konto.passwort2')}</span><input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" required /></label>
+        <div className="hinweis info"><p>{t('einrichtung.konto.alltag')}</p></div>
+        <p className="leise klein">{t('einrichtung.konto.zweifaktor')}</p>
+        <p className="leise klein">{t('einrichtung.konto.erst')}</p>
+        <Navigation sendet={x.sendet} fehler={x.fehler} zurueck={() => { merke(); zurueckVon('konto', zurWahl); }}
           weiter={() => void x.los(async () => {
-            if (pw !== pw2) throw new Error('Die beiden Passwörter stimmen nicht überein.');
+            if (pw !== pw2) throw new Error(t('einrichtung.konto.passwort.ungleich'));
             merke();
-            const p = await pruefeSchritt('administrator', pw);
+            const p = await pruefeSchritt('konto', pw);
             setProbleme(p);
             if (p.length) return;
-            geheim.administrator = pw;
-            weiterVon('administrator');
-          })} />
-      </form>
-    </Rahmen>
-  );
-}
-
-function BenutzerSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => void; leiste: Leiste }) {
-  const [b, setB] = useState(s.benutzer);
-  const [probleme, setProbleme] = useState<string[] | undefined>(s.probleme.benutzer);
-  const x = useSenden();
-  const name = b.name.trim() || b.email.trim();
-  const merke = () => setzeSammlung((a) => ({ ...a, benutzer: b }));
-  return (
-    <Rahmen aktiv={NR.benutzer} titel="Erster Benutzer" leiste={leiste} unter="Gern gleich eine zweite Person, die mit Ablago arbeitet. Verwaltungsrechte bekommt sie dadurch nicht – die vergibst du später unter Werkbank → Benutzer.">
-      <form className="stapel" onSubmit={(e) => e.preventDefault()}>
-        <Probleme liste={probleme} />
-        <label className="eigenschaft"><span>Name</span><input value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} autoComplete="off" autoFocus /></label>
-        <label className="eigenschaft"><span>E-Mail-Adresse <small>eine andere als im Schritt davor</small></span><input type="email" value={b.email} onChange={(e) => setB({ ...b, email: e.target.value })} autoComplete="off" /></label>
-        {b.email.trim() && (
-          <label className="haken"><input type="checkbox" checked={b.aufgabenOhneEmpfaenger} onChange={(e) => setB({ ...b, aufgabenOhneEmpfaenger: e.target.checked })} />
-            <span>{t('werkbank.aufgabenempfaenger.assistent.haken', { name })}<small className="hilfe">{t('werkbank.aufgabenempfaenger.assistent.hilfe', { name })}</small></span></label>
-        )}
-        <p className="leise klein">{t('einrichtung.benutzer.leer')}</p>
-        <Navigation sendet={x.sendet} fehler={x.fehler} zurueck={() => { merke(); zurueckVon('benutzer', zurWahl); }}
-          weiter={() => void x.los(async () => {
-            merke();
-            const p = b.email.trim() || b.name.trim() ? await pruefeSchritt('benutzer') : [];
-            setProbleme(p);
-            if (!p.length) weiterVon('benutzer');
+            geheim.konto = pw;
+            weiterVon('konto');
           })} />
       </form>
     </Rahmen>
@@ -295,7 +277,7 @@ function PaketeSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => voi
     weiterVon('pakete');
   };
   return (
-    <Rahmen aktiv={NR.pakete} titel="Pakete dazuholen" leiste={leiste} unter="Pakete bringen fertige Mappentypen, Ansichten und Funktionen wie die Texterkennung mit. Wähle, was du gleich brauchst – alles andere holst du später unter Werkbank → Pakete.">
+    <Rahmen aktiv={NR.pakete} titel={t('einrichtung.pakete.titel')} leiste={leiste} unter={t('einrichtung.pakete.unter')}>
       <Probleme liste={s.probleme.pakete} />
       <p className="leise klein">{t('einrichtung.pakete.erst')}</p>
       <PaketApiKontext.Provider value={EINRICHTUNG_PAKETE}>
@@ -325,14 +307,14 @@ function OptionalSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
     setzeSammlung((a) => ({ ...a, optional: { ...o, beispiele: o.beispiele && !mitTypen, mail: m ? { ...m, ...angaben, mitPasswort: !!passwort } : null } }));
   };
   return (
-    <Rahmen aktiv={NR.optional} titel="Optionales" leiste={leiste} unter={t('einrichtung.optional.unter')}>
+    <Rahmen aktiv={NR.optional} titel={t('einrichtung.schritt.optional')} leiste={leiste} unter={t('einrichtung.optional.unter')}>
       <form className="stapel" onSubmit={(e) => e.preventDefault()}>
         <Probleme liste={probleme} />
         <section className="blatt">
-          <h2 className="h3">Adresse von Ablago</h2>
-          <p className="leise klein">Unter dieser Adresse öffnen die Benutzer Ablago; sie steht in den Links der E-Mails.</p>
+          <h2 className="h3">{t('einrichtung.optional.adresse.titel')}</h2>
+          <p className="leise klein">{t('einrichtung.optional.adresse.text')}</p>
           <label className="eigenschaft"><span>{t('einrichtung.optional.adresse')} {o.adresse && o.adresse === vorschlag && <small className="chip">{t('einrichtung.vorgeschlagen')}</small>}</span>
-            <input value={o.adresse} onChange={(e) => setO({ ...o, adresse: e.target.value })} inputMode="url" autoComplete="off" placeholder="z. B. http://nas.home.arpa:8080" /></label>
+            <input value={o.adresse} onChange={(e) => setO({ ...o, adresse: e.target.value })} inputMode="url" autoComplete="off" placeholder={t('einrichtung.optional.adresse.beispiel')} /></label>
           <p className="leise klein">{o.adresse ? t('einrichtung.optional.adresse.hinweis') : t('einrichtung.optional.adresse.leer')}</p>
         </section>
         <section className="blatt">
@@ -345,8 +327,8 @@ function OptionalSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
             </select></label>
         </section>
         <section className="blatt">
-          <h2 className="h3">Beispiele</h2>
-          <p className="leise klein">Ein paar fertige Mappentypen (z. B. Verträge, Rechnungen) als Ausgangspunkt. Sie lassen sich anpassen oder löschen.</p>
+          <h2 className="h3">{t('einrichtung.optional.beispiele.titel')}</h2>
+          <p className="leise klein">{t('einrichtung.optional.beispiele.text')}</p>
           <label className="haken"><input type="checkbox" checked={o.beispiele && !mitTypen} disabled={mitTypen} onChange={(e) => setO({ ...o, beispiele: e.target.checked })} />
             <span>{t('einrichtung.optional.beispiele')}{mitTypen && <small className="hilfe">{t('einrichtung.optional.beispiele.pakete')}</small>}</span></label>
         </section>
@@ -355,7 +337,7 @@ function OptionalSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
           <p className="leise klein">{t('einrichtung.optional.mail.text')}</p>
           <label className="haken"><input type="checkbox" checked={!!m} onChange={(e) => setO({ ...o, mail: e.target.checked ? neueMail() : null })} /><span>{t('einrichtung.optional.mail.an')}</span></label>
           {m && <>
-            <MailSammeln wert={m} passwort={geheim.mail} email={s.administrator.email.trim()} ablage={s.ablage} griff={mail} />
+            <MailSammeln wert={m} passwort={geheim.mail} email={s.konto.email.trim()} ablage={s.ablage} griff={mail} />
             <p className="leise klein">{s.verweise.mail ? t('einrichtung.optional.mail.verweis', { verweis: s.verweise.mail }) : t('einrichtung.optional.mail.passwort')}</p>
             <p className="leise klein">{t('einrichtung.optional.mail.testen')}</p>
           </>}
@@ -392,7 +374,6 @@ function Zusammenfassung({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
   const [gespeichert, setGespeichert] = useState(false);
   const p = s.probleme;
   const offen = REIHE.filter((a) => a !== 'zusammenfassung' && !s.besucht.includes(a));
-  const benutzer = s.benutzer.email.trim() ? s.benutzer : null;
   const autoAn = s.pakete?.pakete.reduce((n, q) => n + Object.values(q.automatisierungen).filter(Boolean).length, 0) ?? 0;
   const m = s.optional.mail;
   const keineProbleme = !Object.values(p).some((l) => l?.length) && !offen.length;
@@ -401,14 +382,9 @@ function Zusammenfassung({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
       {offen.length > 0 && <div className="hinweis info"><p>{t('einrichtung.zf.offen', { schritte: offen.map((a) => SCHRITTE[NR[a]]).join(', ') })}</p></div>}
       <div className="stapel">
         <Abschnitt titel={t('einrichtung.zf.ablage')} ziel="ablage" probleme={p.ablage}><p>{s.ablage || <span className="leise">{t('einrichtung.zf.fehlt')}</span>}</p></Abschnitt>
-        <Abschnitt titel={t('einrichtung.zf.administrator')} ziel="administrator" probleme={p.administrator}>
-          <p>{[s.administrator.name, s.administrator.email].filter(Boolean).join(' · ') || <span className="leise">{t('einrichtung.zf.fehlt')}</span>}</p>
-          <p className="leise klein">{geheim.administrator ? t('einrichtung.zf.passwort.gesetzt') : t('einrichtung.zf.passwort.fehlt')}</p>
-        </Abschnitt>
-        <Abschnitt titel={t('einrichtung.zf.benutzer')} ziel="benutzer" probleme={p.benutzer}>
-          {benutzer ? <><p>{[benutzer.name, benutzer.email].filter(Boolean).join(' · ')}</p>
-            <p className="leise klein">{benutzer.aufgabenOhneEmpfaenger ? t('einrichtung.zf.benutzer.aufgaben') : t('einrichtung.zf.benutzer.ohne')}</p></>
-            : <p className="leise">{t('einrichtung.zf.benutzer.keiner')}</p>}
+        <Abschnitt titel={t('einrichtung.zf.konto')} ziel="konto" probleme={p.konto}>
+          <p>{[s.konto.name, s.konto.email].filter(Boolean).join(' · ') || <span className="leise">{t('einrichtung.zf.fehlt')}</span>}</p>
+          <p className="leise klein">{geheim.konto ? t('einrichtung.zf.passwort.gesetzt') : t('einrichtung.zf.passwort.fehlt')} · {t('einrichtung.zf.konto.recht')}</p>
         </Abschnitt>
         <Abschnitt titel={t('einrichtung.zf.pakete')} ziel="pakete" probleme={p.pakete}>
           {s.pakete?.pakete.length ? <p>{s.pakete.pakete.map((q) => q.name).join(', ')}{autoAn ? ` (${t('einrichtung.zf.pakete.automatisierungen', { anzahl: autoAn })})` : ''}</p>
@@ -419,7 +395,7 @@ function Zusammenfassung({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
           <dl className="eigenschaften klein">
             <dt>{t('einrichtung.optional.adresse')}</dt><dd>{s.optional.adresse.trim() || <span className="leise">{t('einrichtung.zf.adresse.keine')}</span>}</dd>
             <dt>{t('einrichtung.optional.bundesland')}</dt><dd>{s.optional.bundesland ? BUNDESLAENDER[s.optional.bundesland as keyof typeof BUNDESLAENDER] : <span className="leise">{t('einrichtung.optional.bundesland.keins')}</span>}</dd>
-            <dt>Beispiele</dt><dd>{s.optional.beispiele ? t('einrichtung.zf.ja') : t('einrichtung.zf.nein')}</dd>
+            <dt>{t('einrichtung.optional.beispiele.titel')}</dt><dd>{s.optional.beispiele ? t('einrichtung.zf.ja') : t('einrichtung.zf.nein')}</dd>
             <dt>{t('einrichtung.optional.mail')}</dt><dd>{m ? `${m.host}:${m.port}${m.benutzer ? ` · ${m.benutzer}` : ''} · ${m.mitPasswort && geheim.mail ? t('einrichtung.zf.passwort.gesetzt') : t('einrichtung.zf.mail.ohne')}${m.aktiv ? '' : ` · ${t('einrichtung.zf.mail.aus')}`}` : <span className="leise">{t('einrichtung.zf.mail.keine')}</span>}</dd>
           </dl>
         </Abschnitt>
@@ -448,10 +424,10 @@ function Zusammenfassung({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
 
 const STUFE_TEXT: Record<Stufe, string> = {
   ablage: 'einrichtung.lauf.ablage', schluessel: 'einrichtung.lauf.schluessel', adresse: 'einrichtung.lauf.adresse', region: 'einrichtung.lauf.region',
-  mail: 'einrichtung.lauf.mail', benutzer: 'einrichtung.lauf.benutzer', beispiele: 'einrichtung.lauf.beispiele', pakete: 'einrichtung.lauf.pakete',
+  mail: 'einrichtung.lauf.mail', beispiele: 'einrichtung.lauf.beispiele', pakete: 'einrichtung.lauf.pakete',
 };
 /** Welcher Schritt eine Stufe ändert (nach einem Fehler). */
-const SCHRITT_JE_STUFE: Partial<Record<Stufe, Ansicht>> = { ablage: 'administrator', adresse: 'optional', region: 'optional', mail: 'optional', benutzer: 'benutzer', beispiele: 'optional', pakete: 'pakete' };
+const SCHRITT_JE_STUFE: Partial<Record<Stufe, Ansicht>> = { ablage: 'konto', adresse: 'optional', region: 'optional', mail: 'optional', beispiele: 'optional', pakete: 'pakete' };
 
 function LaufAnsicht() {
   const st = useAssistent();
@@ -491,58 +467,82 @@ function LaufAnsicht() {
   );
 }
 
-/* ---------- Fertig: Notfallblatt ---------- */
+/* ---------- Fertig: Notfallblatt, Zwei-Faktor ---------- */
 
+/**
+ * Zwei-Faktor-Anmeldung anbieten (#821, #810 Frage 10): „Jetzt einrichten“ oder „Später“, keine Pflicht. Passkeys
+ * (#811) gibt es noch nicht. Die Wahl steht im Lauf (sessionStorage), damit sie ein Neuladen übersteht.
+ */
+function ZweifaktorAngebot({ l, aktualisieren }: { l: Lauf; aktualisieren: () => Promise<void> }) {
+  const [einrichten, setEinrichten] = useState(false);
+  const setze = (zweifaktor: Lauf['zweifaktor']) => setzeStand((a) => (a.lauf ? { ...a, lauf: { ...a.lauf, zweifaktor } } : a));
+  return (
+    <section className="blatt stapel" aria-label={t('einrichtung.abschluss.zweifaktor')}>
+      <h2 className="h3">{t('einrichtung.abschluss.zweifaktor')}</h2>
+      {l.zweifaktor === 'eingerichtet' ? <p className="gutertext klein" role="status"><Symbol name="haken" /> {t('einrichtung.abschluss.zweifaktor.fertig')}</p>
+        : einrichten ? (
+          // Danach den Kontostand neu laden: Die erneute Anmeldung fragt jetzt auch den Code ab.
+          <ZweifaktorEinrichten fertig={() => { setze('eingerichtet'); setEinrichten(false); void aktualisieren(); }} abbrechen={() => setEinrichten(false)} />
+        ) : <>
+          <p>{t('einrichtung.abschluss.zweifaktor.text')}</p>
+          {l.zweifaktor === 'spaeter' && <p className="leise klein">{t('einrichtung.abschluss.zweifaktor.spaeter.text')}</p>}
+          <div className="knoepfe links">
+            <button type="button" className="knopf" onClick={() => setEinrichten(true)}>{t('einrichtung.abschluss.zweifaktor.jetzt')}</button>
+            {l.zweifaktor !== 'spaeter' && <button type="button" className="knopf" onClick={() => setze('spaeter')}>{t('einrichtung.abschluss.zweifaktor.spaeter')}</button>}
+          </div>
+        </>}
+    </section>
+  );
+}
+
+/**
+ * Abschluss: Notfallblatt (Pflicht), Zwei-Faktor anbieten, Links, „Einrichtung abschließen“.
+ *
+ * Das Notfallblatt lädt die Oberfläche selbst herunter (statt über einen Link): Es ist eine heikle Handlung (#819), und
+ * dauerte „Jetzt einrichten“ länger als 10 Minuten oder endete der Verwaltungsmodus inzwischen, verlangt der Server
+ * eine frische Anmeldung. Ein Link könnte diese Antwort nicht abfangen – `heikleDatei` zeigt dafür denselben Dialog wie
+ * die Werkbank und lädt danach herunter. Eine Ausnahme von der Frischeprüfung für den offenen Assistenten gibt es
+ * bewusst nicht: Der Assistent bleibt offen, bis man abschließt, und eine liegen gelassene Sitzung brächte sonst den
+ * Schlüssel mit.
+ */
 function Abschluss({ abschliessen, version }: { abschliessen: () => Promise<void>; version: string | null }) {
   const st = useAssistent();
   const l = st.lauf!;
   const [fingerabdruck, setFingerabdruck] = useState<string | null>(null);
   const [geladen, setGeladen] = useState(false);
-  const [kopiert, setKopiert] = useState(false);
   const x = useSenden();
+  const blatt = useSenden();
   useEffect(() => { void api.tresor().then((s) => { setFingerabdruck(s.fingerabdruck); if (s.notfallblatt?.aktuell) setGeladen(true); }, () => {}); }, []);
-  // Der Server merkt sich das Herunterladen; erst dann gilt es (auch nach Neuladen).
-  async function heruntergeladen() {
-    for (let i = 0; i < 20; i++) {
-      await new Promise((r) => setTimeout(r, 500));
-      try { if ((await api.tresor()).notfallblatt?.aktuell) { setGeladen(true); return; } } catch { /* gleich noch einmal */ }
-    }
-  }
-  const umgebung = `Version ${version ?? 'unbekannt'}, Browser ${navigator.userAgent}`;
-  const issue = `${REPO}/issues/new?${new URLSearchParams({ title: 'Problem bei der Einrichtung', body: `**Was ist passiert?**\n\n\n**Was hätte ich erwartet?**\n\n\n---\n${umgebung}` })}`;
+  // Der Server merkt sich das Herunterladen (mit neuem Notfallcode, #815); erst dann gilt es – auch nach Neuladen.
+  const herunterladen = () => void blatt.los(async () => {
+    await heikleDatei('/api/werkbank/notfallblatt', 'Ablago-Notfallblatt.pdf');
+    setGeladen(!!(await api.tresor()).notfallblatt?.aktuell);
+  });
+  const umgebung = t('einrichtung.abschluss.problem.umgebung', { version: version ?? t('einrichtung.abschluss.problem.unbekannt'), browser: navigator.userAgent });
+  const issue = `${REPO}/issues/new?${new URLSearchParams({ title: t('einrichtung.abschluss.problem.titel'), body: `${t('einrichtung.abschluss.problem.vorlage')}\n\n---\n${umgebung}` })}`;
   const nicht = STUFEN.filter((s) => l.stufen[s].meldung && l.stufen[s].zustand === 'fertig');
   const leiste: Leiste = { erledigt: (i) => i < NR.fertig, gesperrt: () => t('einrichtung.gesperrt.abschluss') };
   return (
-    <Rahmen aktiv={NR.fertig} titel={t('einrichtung.abschluss.titel', { ablage: st.sammlung.ablage || 'Dein Ablago' })} unter={t('einrichtung.abschluss.unter')} leiste={leiste}>
+    <Rahmen aktiv={NR.fertig} titel={t('einrichtung.abschluss.titel', { ablage: st.sammlung.ablage || t('einrichtung.abschluss.titel.ohne') })} unter={t('einrichtung.abschluss.unter')} leiste={leiste}>
       {l.unterbrochen && <div className="hinweis info"><p>{t('einrichtung.abschluss.unterbrochen')}</p></div>}
       {nicht.length > 0 && <div className="hinweis warn"><ul>{nicht.map((s) => <li key={s}>{l.stufen[s].meldung}</li>)}</ul></div>}
-      {l.einladung && (
-        <section className="blatt stapel">
-          <h2 className="h3">{t('einrichtung.abschluss.einladung', { name: l.einladung.name })}</h2>
-          <p className="leise">{l.einladung.mailVerschickt ? 'Die Einladung ist per E-Mail unterwegs.' : 'Mit diesem Link legt er sein Passwort fest – öffne ihn nach der Einrichtung, am besten in einem anderen Browser oder privaten Fenster:'}</p>
-          {l.einladung.link && (
-            <div className="zeile">
-              <input className="mono" readOnly value={l.einladung.link} onFocus={(e) => e.target.select()} style={{ flex: 1 }} aria-label="Einladungslink" />
-              <button type="button" className="knopf" onClick={() => void navigator.clipboard?.writeText(l.einladung!.link!).then(() => setKopiert(true), () => {})}>{kopiert ? 'Kopiert' : 'Kopieren'}</button>
-            </div>
-          )}
-        </section>
-      )}
       <section className="blatt stapel" aria-label={t('einrichtung.abschluss.notfallblatt')}>
         <h2 className="h3">{t('einrichtung.abschluss.notfallblatt')}</h2>
         <p>{t('einrichtung.abschluss.notfallblatt.text')}</p>
         {fingerabdruck && <p className="leise klein">{t('einrichtung.abschluss.fingerabdruck')} <span className="mono">{fingerabdruck}</span></p>}
         <div className="knoepfe links">
-          <a className={`knopf${geladen ? '' : ' primaer'}`} href="/api/werkbank/notfallblatt" download onClick={() => void heruntergeladen()}>{t('einrichtung.abschluss.herunterladen')}</a>
+          <button type="button" className={`knopf${geladen ? '' : ' primaer'}`} disabled={blatt.sendet} onClick={herunterladen}>{t('einrichtung.abschluss.herunterladen')}</button>
         </div>
+        {blatt.fehler && <p className="fehlertext" role="alert">{blatt.fehler}</p>}
         {geladen ? <p className="gutertext klein" role="status"><Symbol name="haken" /> {t('einrichtung.abschluss.geladen')}</p> : <p className="leise klein">{t('einrichtung.abschluss.pflicht')}</p>}
       </section>
+      <ZweifaktorAngebot l={l} aktualisieren={abschliessen} />
       <ul className="linkliste">
-        <li><a className="verweis" href={handbuchUrl('admin', version, 'fuenf-schritte/')} target="_blank" rel="noreferrer">Einrichten in fünf Schritten ↗</a> – was du jetzt noch tun solltest, damit alles sicher läuft.</li>
-        <li><a className="verweis" href={handbuchUrl('benutzer', version)} target="_blank" rel="noreferrer">Benutzerhandbuch ↗</a> – Ablage, Dokumente, Aufgaben.</li>
-        <li><a className="verweis" href={handbuchUrl('admin', version)} target="_blank" rel="noreferrer">Administratorhandbuch ↗</a> – Mappentypen, Sicherung, Wartung.</li>
-        <li><a className="verweis" href={issue} target="_blank" rel="noreferrer">Problem melden ↗</a> – als vorbereitetes GitHub-Issue mit Version und Umgebung.</li>
-        <li><a className="verweis" href="https://github.com/sponsors/motom001" target="_blank" rel="noreferrer">Projekt unterstützen ↗</a> – freiwillig, Betrag frei wählbar.</li>
+        <li><a className="verweis" href={handbuchUrl('admin', version, 'fuenf-schritte/')} target="_blank" rel="noreferrer">{t('einrichtung.abschluss.link.fuenf')}</a> – {t('einrichtung.abschluss.link.fuenf.text')}</li>
+        <li><a className="verweis" href={handbuchUrl('benutzer', version)} target="_blank" rel="noreferrer">{t('einrichtung.abschluss.link.benutzer')}</a> – {t('einrichtung.abschluss.link.benutzer.text')}</li>
+        <li><a className="verweis" href={handbuchUrl('admin', version)} target="_blank" rel="noreferrer">{t('einrichtung.abschluss.link.admin')}</a> – {t('einrichtung.abschluss.link.admin.text')}</li>
+        <li><a className="verweis" href={issue} target="_blank" rel="noreferrer">{t('einrichtung.abschluss.link.problem')}</a> – {t('einrichtung.abschluss.link.problem.text')}</li>
+        <li><a className="verweis" href="https://github.com/sponsors/motom001" target="_blank" rel="noreferrer">{t('einrichtung.abschluss.link.unterstuetzen')}</a> – {t('einrichtung.abschluss.link.unterstuetzen.text')}</li>
       </ul>
       {x.fehler && <p className="fehlertext" role="alert">{x.fehler}</p>}
       <div className="knoepfe">
@@ -555,7 +555,7 @@ function Abschluss({ abschliessen, version }: { abschliessen: () => Promise<void
 /* ---------- Ganzer Ablauf nach „Neu einrichten“ ---------- */
 
 /**
- * Sammeln, Zusammenfassung, Fortschritt und Abschluss – vor und nach dem Anlegen des Administrators dieselbe
+ * Sammeln, Zusammenfassung, Fortschritt und Abschluss – vor und nach dem Anlegen des eigenen Kontos dieselbe
  * Oberfläche, der Stand liegt außerhalb der Komponente (stand.ts). `zurWahl` führt zurück zu „Neu oder Sicherung“.
  */
 export function Sammelassistent({ zurWahl, abschliessen, version = null, imEinrichtungsmodus }: { zurWahl: () => void; abschliessen: () => Promise<void>; version?: string | null; imEinrichtungsmodus?: boolean }) {
@@ -569,8 +569,7 @@ export function Sammelassistent({ zurWahl, abschliessen, version = null, imEinri
   const p = { s, zurWahl, leiste };
   const k = `${ansicht}-${st.aendern ?? ''}`;
   if (ansicht === 'ablage') return <AblageSchritt key={k} {...p} datei={st.aendern ? undefined : { imEinrichtungsmodus }} />;
-  if (ansicht === 'administrator') return <AdminSchritt key={k} {...p} />;
-  if (ansicht === 'benutzer') return <BenutzerSchritt key={k} {...p} />;
+  if (ansicht === 'konto') return <KontoSchritt key={k} {...p} />;
   if (ansicht === 'pakete') return <PaketeSchritt key={k} {...p} />;
   if (ansicht === 'optional') return <OptionalSchritt key={k} {...p} />;
   return <Zusammenfassung key={k} {...p} />;

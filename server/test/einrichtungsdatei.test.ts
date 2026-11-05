@@ -24,8 +24,7 @@ const DOKU = ['docs/handbuch/admin/docs/einrichtungsdatei', 'docs/handbuch/entwi
 const BEISPIEL: Einrichtungsplan = {
   datenbank: { host: 'db', port: 5432, datenbank: 'dms', benutzer: 'dms', passwort: '${DMS_DB_PASSWORT}' },
   ablage: 'Familie Beispiel',
-  administrator: { name: 'Admin', email: 'admin@example.org', passwort: '${DMS_ADMIN_PASSWORT}' },
-  benutzer: { name: 'Lena Beispiel', email: 'lena@example.org', aufgabenOhneEmpfaenger: true },
+  konto: { name: 'Lena Beispiel', email: 'lena@example.org', passwort: '${DMS_KONTO_PASSWORT}' },
   pakete: [{ id: 'texterkennung', beispiele: false, automatisierungen: {} }, { id: 'benachrichtigungen', beispiele: false, automatisierungen: {} }],
   optional: {
     adresse: 'https://ablago.example.org', bundesland: 'SN', beispiele: false,
@@ -42,7 +41,7 @@ const fehlerVon = (text: string) => liesEinrichtungsdatei(text).fehler;
 
 describe('Konfigurationsdatei (#806): Hin und Zurück', () => {
   it('Speichern und Laden ergeben denselben Plan und dieselbe Datei', () => {
-    for (const p of [BEISPIEL, VOLL, { ...BEISPIEL, datenbank: null, benutzer: null, pakete: null, optional: { adresse: null, bundesland: null, beispiele: false, mail: null } }, { ...BEISPIEL, pakete: [] }]) {
+    for (const p of [BEISPIEL, VOLL, { ...BEISPIEL, datenbank: null, pakete: null, optional: { adresse: null, bundesland: null, beispiele: false, mail: null } }, { ...BEISPIEL, pakete: [] }]) {
       const text = schreibeEinrichtungsdatei(p);
       const r = liesEinrichtungsdatei(text);
       assert.deepEqual(r.fehler, []);
@@ -56,70 +55,87 @@ describe('Konfigurationsdatei (#806): Hin und Zurück', () => {
     assert.match(text, /^ablago-einrichtung: 1$/m);
     assert.match(text, /^# Ohne Passwörter und ohne Schlüssel/m);
     assert.match(text, /^# Aufbau: https:\/\/help\.ablago\.app\/admin\/aktuell\/einrichtungsdatei\/ablago-einrichtung-1\.schema\.json$/m);
-    assert.match(text, /^# Richtet Ablago ein/m);
+    assert.match(text, /^# Dein Konto: richtet Ablago ein/m);
+    assert.doesNotMatch(text, /administrator|erster-benutzer/, '#821: nur noch „konto“');
   });
 
   it('JSON geht auch (gültiges JSON ist gültiges YAML)', () => {
-    const r = liesEinrichtungsdatei(JSON.stringify({ 'ablago-einrichtung': 1, ablage: 'Büro Brandt', administrator: { email: 'it@example.com' } }));
+    const r = liesEinrichtungsdatei(JSON.stringify({ 'ablago-einrichtung': 1, ablage: 'Büro Brandt', konto: { email: 'markus@example.com' } }));
     assert.deepEqual(r.fehler, []);
     assert.equal(r.plan?.ablage, 'Büro Brandt');
-    assert.equal(r.plan?.benutzer, null);
+    assert.deepEqual(r.plan?.konto, { name: '', email: 'markus@example.com' });
     assert.equal(r.plan?.pakete, null, 'ohne Liste: im Assistenten wählen');
   });
 });
 
 describe('Konfigurationsdatei (#806): keine Geheimnisse', () => {
   it('ein Passwort im Klartext wird abgelehnt – mit Zeile und Feld', () => {
-    const f = fehlerVon('ablago-einrichtung: 1\nablage: Familie Beispiel\nadministrator:\n  email: admin@example.org\n  passwort: geheim123\n');
+    const f = fehlerVon('ablago-einrichtung: 1\nablage: Familie Beispiel\nkonto:\n  email: lena@example.org\n  passwort: geheim123\n');
     assert.equal(f.length, 1);
-    assert.deepEqual([f[0].zeile, f[0].feld], [5, 'administrator.passwort']);
+    assert.deepEqual([f[0].zeile, f[0].feld], [5, 'konto.passwort']);
     assert.match(f[0].text, /Passwörter gehören nicht in die Datei/);
-    assert.equal(fehlerVon('ablago-einrichtung: 1\nablage: X\nadministrator:\n  email: a@example.org\n  passwort: ${DMS_ADMIN_PASSWORT}\n').length, 0, 'Verweis geht');
+    assert.equal(fehlerVon('ablago-einrichtung: 1\nablage: X\nkonto:\n  email: a@example.org\n  passwort: ${DMS_KONTO_PASSWORT}\n').length, 0, 'Verweis geht');
   });
 
   it('ein Schlüssel hat keinen Platz in der Datei', () => {
-    const f = fehlerVon('ablago-einrichtung: 1\nablage: X\nadministrator:\n  email: a@example.org\nschluessel: AAAA\n');
+    const f = fehlerVon('ablago-einrichtung: 1\nablage: X\nkonto:\n  email: a@example.org\nschluessel: AAAA\n');
     assert.deepEqual(f.map((x) => [x.zeile, x.feld]), [[5, 'schluessel']]);
     assert.match(f[0].text, /Unbekanntes Feld/);
   });
 
   it('beim Schreiben bleiben nur Verweise – Passwörter aus der Oberfläche fallen weg', () => {
-    const p = planAusEingabe({ ...BEISPIEL, administrator: { ...BEISPIEL.administrator, passwort: 'ein-langes-passwort' }, optional: { ...BEISPIEL.optional, mail: { ...BEISPIEL.optional.mail, passwort: 'mailgeheim' } } });
+    const p = planAusEingabe({ ...BEISPIEL, konto: { ...BEISPIEL.konto, passwort: 'ein-langes-passwort' }, optional: { ...BEISPIEL.optional, mail: { ...BEISPIEL.optional.mail, passwort: 'mailgeheim' } } });
     const text = schreibeEinrichtungsdatei(p);
     assert.doesNotMatch(text, /ein-langes-passwort|mailgeheim/);
     assert.match(text, /passwort: \$\{DMS_DB_PASSWORT\}/);
-    assert.doesNotMatch(text, /DMS_ADMIN_PASSWORT|DMS_MAIL_PASSWORT/);
+    assert.doesNotMatch(text, /DMS_KONTO_PASSWORT|DMS_MAIL_PASSWORT/);
   });
 });
 
 describe('Konfigurationsdatei (#806): Prüfung gegen das Schema', () => {
   it('verständliche Fehler mit Zeile und Feld', () => {
     const f = fehlerVon([
-      'ablago-einrichtung: 1', 'ablage: ""', 'administrator:', '  name: Admin', 'erster-benutzer:', '  email: kein-at', 'pakete:', '  - id: texterkennung', '  - name: Ohne Id',
+      'ablago-einrichtung: 1', 'ablage: ""', 'konto:', '  name: Lena', 'pakete:', '  - id: texterkennung', '  - name: Ohne Id',
       'optionales:', '  bundesland: XX', '  adresse: ftp://nas', '  e-mail:', '    server: smtp.example.org', '    port: 70000',
     ].join('\n'));
     const kurz = f.map((x) => `${x.zeile} ${x.feld}`);
-    assert.deepEqual(kurz, ['2 ablage', '3 administrator.email', '6 erster-benutzer.email', '9 pakete[1].id', '9 pakete[1].name', '11 optionales.bundesland', '12 optionales.adresse', '15 optionales.e-mail.port']);
+    assert.deepEqual(kurz, ['2 ablage', '3 konto.email', '7 pakete[1].id', '7 pakete[1].name', '9 optionales.bundesland', '10 optionales.adresse', '13 optionales.e-mail.port']);
     assert.match(f[0].text, /nicht leer/);
     assert.match(f[1].text, /Pflicht/);
-    assert.match(f[2].text, /E-Mail-Adresse/);
-    assert.match(f[4].text, /Unbekanntes Feld/);
-    assert.match(f[5].text, /Erlaubt sind: BW/);
-    assert.match(f[6].text, /http:\/\//);
-    assert.match(f[7].text, /1 bis 65535/);
+    assert.match(f[3].text, /Unbekanntes Feld/);
+    assert.match(f[4].text, /Erlaubt sind: BW/);
+    assert.match(f[5].text, /http:\/\//);
+    assert.match(f[6].text, /1 bis 65535/);
+    const mail = fehlerVon('ablago-einrichtung: 1\nablage: X\nkonto:\n  email: kein-at\n');
+    assert.deepEqual([mail[0].zeile, mail[0].feld], [4, 'konto.email']);
+    assert.match(mail[0].text, /E-Mail-Adresse/);
   });
 
   it('falsche Version, falsche Art, kaputtes YAML, leere Datei', () => {
-    assert.match(fehlerVon('ablago-einrichtung: 2\nablage: X\nadministrator: { email: a@example.org }\n')[0].text, /Formatversion/);
-    const typ = fehlerVon('ablago-einrichtung: 1\nablage: X\nadministrator: a@example.org\n')[0];
-    assert.deepEqual([typ.zeile, typ.feld], [3, 'administrator']);
+    assert.match(fehlerVon('ablago-einrichtung: 2\nablage: X\nkonto: { email: a@example.org }\n')[0].text, /Formatversion/);
+    const typ = fehlerVon('ablago-einrichtung: 1\nablage: X\nkonto: a@example.org\n')[0];
+    assert.deepEqual([typ.zeile, typ.feld], [3, 'konto']);
     assert.match(typ.text, /Abschnitt mit Feldern/);
-    const kaputt = fehlerVon('ablago-einrichtung: 1\nablage: [X\nadministrator:\n');
+    const kaputt = fehlerVon('ablago-einrichtung: 1\nablage: [X\nkonto:\n');
     assert.equal(kaputt[0].feld, 'Datei');
     assert.ok(kaputt[0].zeile && kaputt[0].zeile >= 2);
     assert.match(kaputt[0].text, /Kein gültiges YAML/);
     assert.match(fehlerVon('   ')[0].text, /leer/);
-    assert.match(fehlerVon('ablago-einrichtung: 1\nablage: X\nablage: Y\nadministrator: { email: a@example.org }\n')[0].text, /YAML/, 'doppelte Schlüssel');
+    assert.match(fehlerVon('ablago-einrichtung: 1\nablage: X\nablage: Y\nkonto: { email: a@example.org }\n')[0].text, /YAML/, 'doppelte Schlüssel');
+  });
+
+  it('#821: Dateien aus 0.191/0.192 – „administrator“ gilt als „Dein Konto“, „erster-benutzer“ fällt mit Hinweis weg', () => {
+    const alt = 'ablago-einrichtung: 1\nablage: Familie Beispiel\nadministrator:\n  name: Lena\n  email: lena@example.org\n  passwort: ${DMS_ADMIN_PASSWORT}\nerster-benutzer:\n  name: Jonas\n  email: jonas@example.org\n';
+    const r = liesEinrichtungsdatei(alt);
+    assert.deepEqual(r.fehler, []);
+    assert.deepEqual(r.plan?.konto, { name: 'Lena', email: 'lena@example.org', passwort: '${DMS_ADMIN_PASSWORT}' });
+    assert.equal(r.hinweise.length, 1);
+    assert.match(r.hinweise[0], /ersten Benutzer \(Jonas\).*Werkbank → Benutzer/);
+    assert.doesNotMatch(schreibeEinrichtungsdatei(r.plan!), /administrator|erster-benutzer|Jonas/, 'gespeichert wird nur noch „konto“');
+    // Fehler stehen mit dem Namen, den die Datei nutzt.
+    const f = fehlerVon('ablago-einrichtung: 1\nablage: X\nadministrator:\n  email: kein-at\n');
+    assert.deepEqual([f[0].zeile, f[0].feld], [4, 'administrator.email']);
+    assert.deepEqual(fehlerVon('ablago-einrichtung: 1\nablage: X\n').map((x) => x.feld), ['konto'], 'ohne beides fehlt „konto“');
   });
 
   it('Schema und Beispieldatei in Administrator- und Entwicklerhandbuch, versioniert und aktuell', () => {
@@ -132,7 +148,8 @@ describe('Konfigurationsdatei (#806): Prüfung gegen das Schema', () => {
     }
     const schema = JSON.parse(schemaText()) as { $id: string; required: string[]; properties: Record<string, unknown> };
     assert.match(schema.$id, /ablago-einrichtung-1\.schema\.json$/);
-    assert.deepEqual(schema.required, ['ablago-einrichtung', 'ablage', 'administrator']);
+    assert.deepEqual(schema.required, ['ablago-einrichtung', 'ablage', 'konto']);
+    assert.ok(!('administrator' in schema.properties) && !('erster-benutzer' in schema.properties), '#821: nur „Dein Konto“');
   });
 });
 
@@ -153,13 +170,15 @@ async function neueEinrichtung(o: { notfallblatt?: () => boolean } = {}) {
 describe('Erst sammeln, dann einrichten (#804)', () => {
   it('Prüfen je Schritt legt nichts an; Gründe stehen beim passenden Schritt', async () => {
     const { e, konten } = await neueEinrichtung();
-    const p = e.pruefePlan({ ...BEISPIEL, ablage: '', benutzer: { ...BEISPIEL.benutzer, email: 'ADMIN@example.org' }, optional: { ...BEISPIEL.optional, adresse: 'http://nas/?x=1' } });
-    assert.deepEqual(Object.keys(p).sort(), ['ablage', 'administrator', 'benutzer', 'optional']);
-    assert.match(p.administrator![0], /Passwort für den Administrator/, 'Passwort steht nie in der Datei – der Assistent fragt');
-    assert.match(p.benutzer![0], /andere E-Mail-Adresse/);
+    const p = e.pruefePlan({ ...BEISPIEL, ablage: '', optional: { ...BEISPIEL.optional, adresse: 'http://nas/?x=1' } });
+    assert.deepEqual(Object.keys(p).sort(), ['ablage', 'konto', 'optional']);
+    assert.match(p.konto![0], /Passwort für dein Konto/, 'Passwort steht nie in der Datei – der Assistent fragt');
     assert.match(p.optional![0], /keine Parameter/);
-    assert.deepEqual(e.pruefePlan(BEISPIEL, { administrator: 'ein-langes-passwort' }), {});
-    assert.match(e.pruefePlan(BEISPIEL, { administrator: 'kurz' }).administrator![0], /mindestens/);
+    assert.deepEqual(e.pruefePlan(BEISPIEL, { passwort: 'ein-langes-passwort' }), {});
+    assert.match(e.pruefePlan(BEISPIEL, { passwort: 'kurz' }).konto![0], /mindestens/);
+    assert.match(e.pruefePlan({ ...BEISPIEL, konto: { name: 'Lena', email: 'kein-at' } }, { passwort: 'ein-langes-passwort' }).konto![0], /E-Mail/);
+    // Ein Plan aus der Oberfläche von 0.192 („administrator“) gilt weiter als „Dein Konto“.
+    assert.deepEqual(planAusEingabe({ ...BEISPIEL, konto: undefined, administrator: { name: 'Lena', email: 'lena@example.org' } }).konto, { name: 'Lena', email: 'lena@example.org' });
     assert.equal(await konten.einrichtungNoetig(), true, 'nichts angelegt');
   });
 

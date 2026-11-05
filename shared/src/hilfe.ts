@@ -20,8 +20,7 @@ export const HILFE = {
   'einrichtung.datenbank': admin('installation/', 'Datenbank', 'datenbank'),
   'einrichtung.wahl': admin('installation/', 'Neu einrichten oder wiederherstellen', 'neu-einrichten-oder-wiederherstellen'),
   'einrichtung.mandant': admin('installation/', 'Name deiner Ablage', 'haushalt'),
-  'einrichtung.administrator': admin('installation/', 'Administrator', 'administrator'),
-  'einrichtung.benutzer': admin('installation/', 'Erster Benutzer', 'erster-benutzer'),
+  'einrichtung.konto': admin('installation/', 'Dein Konto', 'dein-konto'),
   'einrichtung.pakete': admin('installation/', 'Pakete dazuholen', 'pakete-dazuholen'),
   'einrichtung.optional': admin('installation/', 'Optionales', 'optionales'),
   'einrichtung.zusammenfassung': admin('installation/', 'Zusammenfassung', 'zusammenfassung'),
@@ -162,6 +161,7 @@ export const HILFE = {
   'sicherung.speicher': admin('sicherung/', 'Speicherplatz', 'speicherplatz'),
   'sicherung.ort': admin('sicherung/', 'Speicherort', 'speicherort'),
   'sicherung.notfallblatt': admin('sicherung/', 'Notfallblatt', 'notfallblatt'),
+  'werkbank.notfallzugang': admin('anmeldeschutz/', 'Notfallzugang', 'notfallzugang'),
   'sicherung.extern': admin('sicherung-ausser-haus/', 'Sicherung außer Haus'),
   'sicherung.probe': admin('wiederherstellen/', 'Probe-Wiederherstellung', 'probe-wiederherstellung'),
   // Ablage und Profil: Benutzerhandbuch

@@ -4,7 +4,7 @@ Was du im [Einrichtungsassistenten](installation.md#der-einrichtungsassistent) z
 
 ## Speichern
 
-In der [Zusammenfassung](installation.md#zusammenfassung) des Assistenten speichert **Als Datei speichern** die Datei `ablago-einrichtung.yaml` in deinen Download-Ordner. Darin stehen Datenbank (Rechner, Port, Name, Benutzer), Name der Ablage, Administrator und erster Benutzer (Name, E-Mail-Adresse), die Pakete samt ein- und ausgeschalteter Automatisierungen und das Optionale (Adresse, Bundesland, Beispiele, E-Mail-Versand). Kurze Kommentare erklären jeden Abschnitt.
+In der [Zusammenfassung](installation.md#zusammenfassung) des Assistenten speichert **Als Datei speichern** die Datei `ablago-einrichtung.yaml` in deinen Download-Ordner. Darin stehen Datenbank (Rechner, Port, Name, Benutzer), Name der Ablage, dein Konto (Name, E-Mail-Adresse), die Pakete samt ein- und ausgeschalteter Automatisierungen und das Optionale (Adresse, Bundesland, Beispiele, E-Mail-Versand). Kurze Kommentare erklären jeden Abschnitt.
 
 !!! info "Nicht in der Datei: Passwörter und Schlüssel"
     Die Datei enthält **keine Passwörter** und **keinen Schlüssel**. Passwörter fragt der Assistent beim Laden ab. Den Schlüssel erzeugt Ablago bei jeder Einrichtung neu, und das [Notfallblatt](sicherung.md#notfallblatt) bleibt Pflicht. Steht in einer Datei trotzdem ein Passwort im Klartext, lehnt Ablago sie ab.
@@ -15,12 +15,12 @@ Im Assistenten steht oben rechts, klein neben der Hilfe, **Aus Konfigurationsdat
 
 Ablago prüft die Datei Schritt für Schritt:
 
-- **Aufbau:** gegen das [Schema](#schema). Fehler stehen mit Zeile und Feld da, zum Beispiel „Zeile 5, administrator.passwort: Passwörter gehören nicht in die Datei“. Dann ändert sich nichts.
+- **Aufbau:** gegen das [Schema](#schema). Fehler stehen mit Zeile und Feld da, zum Beispiel „Zeile 5, konto.passwort: Passwörter gehören nicht in die Datei“. Dann ändert sich nichts.
 - **Datenbank:** Ohne Datenbank füllt die Datei den Schritt „Datenbank“ vor; das Passwort gibst du dort ein. Ist Ablago schon verbunden, bleibt es bei dieser Verbindung, und ein Hinweis nennt die Abweichung.
-- **Inhalt:** E-Mail-Adressen, Adresse von Ablago, erster Benutzer mit anderer Adresse als der Administrator.
+- **Inhalt:** E-Mail-Adresse deines Kontos, Adresse von Ablago.
 - **Pakete:** Gibt es sie im Katalog? Rechte, Herkunft, Namenskonflikte und Pflicht-Einstellungen bestätigst du immer selbst, auch mit Datei.
 
-Passt alles, geht es direkt zur **Zusammenfassung**, die du wie gewohnt mit **Jetzt einrichten** bestätigst. Passt ein Schritt nicht, zeigt der Assistent genau diesen Schritt mit dem Grund; der Rest bleibt vorausgefüllt. Weil Passwörter nie in der Datei stehen, landest du in der Regel zuerst beim Schritt „Administrator“.
+Passt alles, geht es direkt zur **Zusammenfassung**, die du wie gewohnt mit **Jetzt einrichten** bestätigst. Passt ein Schritt nicht, zeigt der Assistent genau diesen Schritt mit dem Grund; der Rest bleibt vorausgefüllt. Weil Passwörter nie in der Datei stehen, landest du in der Regel zuerst beim Schritt „Dein Konto“.
 
 JSON geht auch: Gültiges JSON ist gültiges YAML.
 
@@ -41,16 +41,11 @@ datenbank:
   passwort: ${DMS_DB_PASSWORT}
 # Name der Ablage – Schriftzug in Kopfzeile und Browser-Tab.
 ablage: Familie Beispiel
-# Richtet Ablago ein, arbeitet aber nicht in der Ablage.
-administrator:
-  name: Admin
-  email: admin@example.org
-  passwort: ${DMS_ADMIN_PASSWORT}
-# Das Konto für die Arbeit in der Ablage.
-erster-benutzer:
+# Dein Konto: richtet Ablago ein, darf es verwalten und arbeitet auch in der Ablage.
+konto:
   name: Lena Beispiel
   email: lena@example.org
-  aufgaben-ohne-empfaenger: true
+  passwort: ${DMS_KONTO_PASSWORT}
 # Aus dem offiziellen Katalog, je die neueste passende Version; Automatisierungen: true = eingeschaltet.
 pakete:
   - id: texterkennung
@@ -73,12 +68,14 @@ optionales:
 
 [Beispieldatei herunterladen](einrichtungsdatei/beispiel.yaml)
 
-- Ohne Abschnitt `erster-benutzer` legt Ablago keinen ersten Benutzer an. Ohne Liste `pakete` wählst du die Pakete im Assistenten; `pakete: []` heißt „keine“.
+- `konto` ist die Person, die einrichtet: Sie bekommt „Gesamte Verwaltung“ und arbeitet auch in der Ablage. Weitere Personen lädst du nach der Einrichtung unter Werkbank → Benutzer ein.
+- Ohne Liste `pakete` wählst du die Pakete im Assistenten; `pakete: []` heißt „keine“.
+- **Dateien aus Version 0.191 und 0.192** lädt Ablago weiter: Der Abschnitt `administrator` gilt als `konto`. Einen Abschnitt `erster-benutzer` übergeht Ablago mit einem Hinweis – den ersten Benutzer gibt es im Assistenten nicht mehr. Beim Speichern steht nur noch `konto` in der Datei.
 - Automatisierungen eines Pakets stehen als Schlüssel mit `true` (eingeschaltet) oder `false` (aus); fehlt eine, ist sie wie im Assistenten eingeschaltet.
 
 ## Verweise statt Passwörter
 
-Statt eines Passworts darf ein **Verweis auf eine Umgebungsvariable** stehen, etwa `passwort: ${DMS_ADMIN_PASSWORT}`. Er ist für eine spätere Einrichtung ganz ohne Oberfläche gedacht. Der Assistent im Browser wertet ihn nicht aus und fragt das Passwort trotzdem ab; beim Speichern bleibt der Verweis erhalten.
+Statt eines Passworts darf ein **Verweis auf eine Umgebungsvariable** stehen, etwa `passwort: ${DMS_KONTO_PASSWORT}`. Er ist für eine spätere Einrichtung ganz ohne Oberfläche gedacht. Der Assistent im Browser wertet ihn nicht aus und fragt das Passwort trotzdem ab; beim Speichern bleibt der Verweis erhalten.
 
 ## Schema { #schema }
 

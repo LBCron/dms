@@ -11,9 +11,9 @@ Ablago läuft – **empfohlen** – als zwei Container: die Anwendung (`ghcr.io/
 
 ## Der Einrichtungsassistent
 
-Beim ersten Aufruf führt ein Assistent in zehn Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet.
+Beim ersten Aufruf führt ein Assistent in neun Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet.
 
-**Erst sammeln, dann einrichten:** Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch nötig sind. Ab „Ablage“ sammelt der Assistent nur: Name der Ablage, Administrator, erster Benutzer, Pakete und Optionales. Angelegt wird dabei **nichts**. Mit **Zurück** oder einem Klick in die Schrittleiste kommst du jederzeit zu jedem dieser Schritte. Am Ende zeigt die [Zusammenfassung](#zusammenfassung) alles auf einer Seite, und erst **Jetzt einrichten** legt los. Brichst du vorher ab oder lädst die Seite neu, bleibt keine halbe Einrichtung zurück. Deine Eingaben merkt sich der Browser bis dahin, Passwörter nicht.
+**Erst sammeln, dann einrichten:** Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch nötig sind. Ab „Ablage“ sammelt der Assistent nur: Name der Ablage, dein Konto, Pakete und Optionales. Angelegt wird dabei **nichts**. Mit **Zurück** oder einem Klick in die Schrittleiste kommst du jederzeit zu jedem dieser Schritte. Am Ende zeigt die [Zusammenfassung](#zusammenfassung) alles auf einer Seite, und erst **Jetzt einrichten** legt los. Brichst du vorher ab oder lädst die Seite neu, bleibt keine halbe Einrichtung zurück. Deine Eingaben merkt sich der Browser bis dahin, Passwörter nicht.
 
 **Keine einzelnen Speichern-Knöpfe:** In jedem Schritt übernimmt **Weiter** alles, was in den Feldern steht, auch Vorschläge, die du nicht geändert hast (sie tragen den Hinweis „vorgeschlagen – wird mit „Weiter“ übernommen“). Leer gelassene Felder bleiben leer, und es gibt keine versteckten Vorgaben. **Zurück** und **Weiter** stehen in jedem Schritt unten an derselben Stelle.
 
@@ -50,17 +50,15 @@ Bei einer leeren Datenbank fragt Ablago, ob du neu anfängst oder eine Sicherung
 
 Der Name deiner Ablage, meist der Name der Familie („Familie Mustermann“) oder deines Betriebs („Büro Mustermann“). Er erscheint als Schriftzug in der Kopfzeile, im Browser-Tab und auf der Anmeldeseite (änderbar unter **Werkbank → [Designs](designs.md)**).
 
-### Administrator
+### Dein Konto { #dein-konto }
 
-![Administrator](bilder/einrichtung-administrator.png)
+![Dein Konto](bilder/einrichtung-konto.png)
 
-Name, E-Mail-Adresse und Passwort der Person, die Ablago einrichtet. Ein eigenes Konto „Administrator“ gibt es nicht: Diese Person bekommt **Gesamte Verwaltung** und arbeitet ganz normal in der Ablage (siehe [Wer darf Ablago verwalten?](verwalten.md)). **Weiter** prüft Adresse und Passwort gleich, angelegt wird die Person aber erst mit **Jetzt einrichten**. Danach bist du angemeldet, und zwar gleich im [Verwaltungsmodus](verwalten.md#der-verwaltungsmodus).
+Name, E-Mail-Adresse und Passwort **deines eigenen Kontos** – mit deiner einen E-Mail-Adresse. Das Passwort legst du hier direkt fest, einen Einladungslink für dich selbst gibt es nicht. Ein eigenes Konto „Administrator“ und einen „ersten Benutzer“ daneben gibt es nicht: Dein Konto bekommt **Gesamte Verwaltung** und arbeitet ganz normal in der Ablage (siehe [Wer darf Ablago verwalten?](verwalten.md)).
 
-### Erster Benutzer
+> Im Alltag arbeitest du ohne Verwaltungsrechte. Zum Einrichten wechselst du über „Ablago verwalten“. So kann aus Versehen nichts Wichtiges kaputtgehen.
 
-![Erster Benutzer](bilder/einrichtung-benutzer.png)
-
-Hier kannst du gleich eine zweite Person anlegen, die mit Ablago arbeitet – Verwaltungsrechte bekommt sie dadurch nicht. Das Häkchen darunter bestimmt, ob er die Aufgaben ohne eigenen Empfänger bekommt (vorgeschlagen: ja). Lässt du die Felder leer, legt Ablago keinen ersten Benutzer an. Ohne E-Mail-Versand zeigt die Abschlussseite den Einladungslink zum Kopieren.
+**Weiter** prüft Adresse und Passwort gleich, angelegt wird das Konto aber erst mit **Jetzt einrichten**. Danach bist du angemeldet, und zwar gleich im [Verwaltungsmodus](verwalten.md#der-verwaltungsmodus). Die **Zwei-Faktor-Anmeldung** bietet dir der Assistent am Ende an ([Fertig](#fertig)). Weitere Personen lädst du nach der Einrichtung unter **Werkbank → Benutzer** ein – die Übersicht erinnert daran, dass eine zweite Person verwalten können sollte.
 
 ### Pakete dazuholen
 
@@ -92,21 +90,25 @@ Alles lässt sich auch später in der Werkbank einstellen.
 
 ![Zusammenfassung](bilder/einrichtung-zusammenfassung.png)
 
-Alles auf einer Seite, je Abschnitt mit **Ändern**: Ablage, Administrator, erster Benutzer, Pakete (mit der Zahl der eingeschalteten Automatisierungen) und Optionales. Passwörter stehen dort nur als „gesetzt“. Nach **Ändern** führt **Weiter** zurück zur Zusammenfassung; alles andere bleibt, wie es war.
+Alles auf einer Seite, je Abschnitt mit **Ändern**: Ablage, dein Konto (mit „Gesamte Verwaltung“), Pakete (mit der Zahl der eingeschalteten Automatisierungen) und Optionales. Passwörter stehen dort nur als „gesetzt“. Nach **Ändern** führt **Weiter** zurück zur Zusammenfassung; alles andere bleibt, wie es war.
 
 **Als Datei speichern** legt die Einrichtung als [Konfigurationsdatei](einrichtungsdatei.md) ab, ohne Passwörter und ohne Schlüssel.
 
-**Jetzt einrichten** prüft alles noch einmal und führt es dann aus, mit Fortschritt: Ablage und Administrator anlegen, Schlüssel erzeugen, Adresse, Bundesland und E-Mail-Versand speichern, ersten Benutzer anlegen, Beispiele laden, Pakete installieren. Klappt etwas nicht, steht dort, was und warum. Was schon erledigt ist, bleibt erhalten; mit **Ändern** korrigierst du die Angabe, mit **Erneut versuchen** geht es an dieser Stelle weiter. Doppelt angelegt wird nichts.
+**Jetzt einrichten** prüft alles noch einmal und führt es dann aus, mit Fortschritt: Ablage und dein Konto anlegen, Schlüssel erzeugen, Adresse, Bundesland und E-Mail-Versand speichern, Beispiele laden, Pakete installieren. Klappt etwas nicht, steht dort, was und warum. Was schon erledigt ist, bleibt erhalten; mit **Ändern** korrigierst du die Angabe, mit **Erneut versuchen** geht es an dieser Stelle weiter. Doppelt angelegt wird nichts.
 
 ### Fertig: Notfallblatt { #fertig }
 
 ![Fertig](bilder/einrichtung-fertig.png)
 
-Beim Einrichten hat Ablago einen neuen **Schlüssel** erzeugt. Er verschlüsselt gespeicherte Passwörter und alle Sicherungen (siehe [Verschlüsselung](verschluesselung.md)); das [Notfallblatt](sicherung.md#notfallblatt) enthält ihn zum Ausdrucken. **Einrichtung abschließen** geht erst, wenn du das Notfallblatt heruntergeladen hast. Druck es aus und leg es zu deinen wichtigen Unterlagen, denn ohne Schlüssel lässt sich keine Sicherung zurückholen.
+Beim Einrichten hat Ablago einen neuen **Schlüssel** erzeugt. Er verschlüsselt gespeicherte Passwörter und alle Sicherungen (siehe [Verschlüsselung](verschluesselung.md)); das [Notfallblatt](sicherung.md#notfallblatt) enthält ihn zum Ausdrucken, dazu den **Notfallcode**, mit dem du wieder hineinkommst, wenn du dich ausgesperrt hast ([Ich komme nicht mehr hinein](was-ist-passiert.md#kein-zugang)). **Einrichtung abschließen** geht erst, wenn du das Notfallblatt heruntergeladen hast. Druck es aus und leg es zu deinen wichtigen Unterlagen, denn ohne Schlüssel lässt sich keine Sicherung zurückholen.
 
-Ohne E-Mail-Versand steht hier auch der Einladungslink für den ersten Benutzer. Dazu Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-Issue und der Hinweis auf GitHub Sponsors.
+Das Notfallblatt herunterzuladen ist eine [heikle Handlung](verwalten.md#frische-anmeldung): Dauerte „Jetzt einrichten“ länger als 10 Minuten (etwa mit vielen Paketen), fragt Ablago vorher noch einmal dein Passwort ab.
 
-Danach: Wie es weitergeht, steht kurz unter [Einrichten in fünf Schritten](fuenf-schritte.md) – unter **Werkbank → [Sicherung](sicherung.md)** den Zeitplan einschalten, eigene [Mappentypen](mappentypen.md) anlegen und weitere [Benutzer einladen](benutzer.md).
+Darunter bietet der Assistent die **Zwei-Faktor-Anmeldung** an – mit **Jetzt einrichten** (Authenticator-App am Handy, danach die Wiederherstellungscodes sichern) oder **Später**. Sie ist freiwillig; einrichten lässt sie sich jederzeit unter **Mein Konto → Sicherheit**. Richtest du sie jetzt ein, fragt Ablago beim Abschließen einmal Passwort und Code ab, weil sich deine Anmeldung geändert hat. Passkeys gibt es noch nicht.
+
+Dazu Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-Issue und der Hinweis auf GitHub Sponsors.
+
+Danach: Wie es weitergeht, steht kurz unter [Einrichten in fünf Schritten](fuenf-schritte.md) – unter **Werkbank → [Sicherung](sicherung.md)** den Zeitplan einschalten, eigene [Mappentypen](mappentypen.md) anlegen und weitere [Benutzer einladen](benutzer.md) – am besten auch eine zweite Person, die verwalten darf.
 
 **Für Selbständige und kleine Betriebe:** Die Werkbank startet mit der schlanken Vorlage *Haushalt*. Stell unter **Werkbank → Werkbank anpassen** die Vorlage **Betrieb** ein – dann siehst du auch Nummernkreise, Archivmodus, Postfächer, Datenschutz und die übrigen Bereiche, die ein Betrieb braucht (siehe [Übersicht](uebersicht.md)).
 

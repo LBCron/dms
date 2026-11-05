@@ -17,25 +17,25 @@ export type Ansicht = Sammelschritt | 'zusammenfassung';
 export interface MailSammlung { aktiv: boolean; host: string; port: number; verbindung: PlanVerbindung; benutzer: string; absender: string; selbstsigniert: boolean; /** Im Formular ein Passwort eingegeben (der Wert selbst nur im Speicher). */ mitPasswort: boolean }
 
 /** Ausführen bei „Jetzt einrichten“: in dieser Reihenfolge, jede Stufe einzeln wiederholbar. */
-export const STUFEN = ['ablage', 'schluessel', 'adresse', 'region', 'mail', 'benutzer', 'beispiele', 'pakete'] as const;
+export const STUFEN = ['ablage', 'schluessel', 'adresse', 'region', 'mail', 'beispiele', 'pakete'] as const;
 export type Stufe = (typeof STUFEN)[number];
 export interface StufeStand { zustand: 'wartet' | 'laeuft' | 'fertig' | 'ausgelassen' | 'fehler'; meldung?: string }
 export interface Lauf {
   stufen: Record<Stufe, StufeStand>;
   laeuft: boolean;
-  /** Einladungslink des ersten Benutzers, wenn keine Mail verschickt wurde. */
-  einladung?: { name: string; link: string | null; mailVerschickt: boolean };
   pakete?: AblaufErgebnis;
   /** Alles durch: Abschlussseite mit Notfallblatt. */
   fertig: boolean;
   /** Ohne gespeicherten Stand neu geöffnet (anderer Browser): nur noch Schlüssel und Notfallblatt. */
   unterbrochen?: boolean;
+  /** Zwei-Faktor auf der Abschlussseite (#821): eingerichtet oder „Später“ gewählt. */
+  zweifaktor?: 'eingerichtet' | 'spaeter';
 }
 
 export interface Sammlung {
   ablage: string;
-  administrator: { name: string; email: string };
-  benutzer: { name: string; email: string; aufgabenOhneEmpfaenger: boolean };
+  /** „Dein Konto“ (#821): die Person, die einrichtet – das Passwort nur in `geheim`. */
+  konto: { name: string; email: string };
   /** Pakete: gesammelte Antworten; null = keine bzw. übersprungen. */
   pakete: PaketWahl | null;
   /** Aus einer Datei, noch nicht bestätigt (#806). */
@@ -48,7 +48,7 @@ export interface Sammlung {
   zurZusammenfassung: boolean;
   probleme: Planprobleme;
   /** Aus der Datei: Verweise statt Passwörtern (bleiben beim Speichern erhalten) und die Datenbank. */
-  verweise: { administrator?: string; mail?: string; datenbank?: string };
+  verweise: { konto?: string; mail?: string; datenbank?: string };
   datenbank: PlanDatenbank | null;
   /** Hinweise beim Laden, z. B. eine andere Datenbank in der Datei. */
   hinweise: string[];
@@ -67,10 +67,10 @@ export interface Assistentenstand {
 }
 
 /** Nur im Speicher – nie in sessionStorage. */
-export const geheim: { administrator: string; mail: string; paketEinstellungen: PaketWahl['eingabe']['einstellungen'] | undefined } = { administrator: '', mail: '', paketEinstellungen: undefined };
+export const geheim: { konto: string; mail: string; paketEinstellungen: PaketWahl['eingabe']['einstellungen'] | undefined } = { konto: '', mail: '', paketEinstellungen: undefined };
 
 export const leereSammlung = (): Sammlung => ({
-  ablage: '', administrator: { name: '', email: '' }, benutzer: { name: '', email: '', aufgabenOhneEmpfaenger: true },
+  ablage: '', konto: { name: '', email: '' },
   pakete: null, paketeVorgabe: null,
   // Vorschlag, sichtbar im Feld: die Adresse, unter der Ablago gerade aufgerufen wird (#803).
   optional: { adresse: typeof location === 'undefined' ? '' : location.origin, bundesland: '', beispiele: false, mail: null },
@@ -85,7 +85,10 @@ function lies(): Assistentenstand {
     if (x && x.sammlung) {
       // Neu geladen, während eine Stufe lief: Sie gilt als unterbrochen und lässt sich erneut versuchen.
       const lauf = x.lauf ? { ...x.lauf, laeuft: false, stufen: Object.fromEntries(Object.entries(x.lauf.stufen).map(([k, v]) => [k, v.zustand === 'laeuft' ? { zustand: 'fehler', meldung: t('einrichtung.lauf.neugeladen') } : v])) as Lauf['stufen'] } : null;
-      return { ...leer(), ...x, sammlung: { ...leereSammlung(), ...x.sammlung }, lauf };
+      // Ein Stand aus 0.191/0.192 (#821): Schritt „Administrator“ heißt jetzt „Dein Konto“, den ersten Benutzer gibt es nicht mehr.
+      const alt = x.sammlung as Sammlung & { administrator?: Sammlung['konto'] };
+      const sammlung = { ...leereSammlung(), ...x.sammlung, konto: x.sammlung.konto ?? alt.administrator ?? { name: '', email: '' } };
+      return { ...leer(), ...x, sammlung, lauf };
     }
   } catch { /* privates Fenster o. Ä. */ }
   return leer();
@@ -112,7 +115,7 @@ export const holeStand = () => zustand;
 
 /** Alles vergessen (nach „Einrichtung abschließen“ oder „Neu einrichten“ abgewählt). */
 export function vergiss() {
-  geheim.administrator = ''; geheim.mail = ''; geheim.paketEinstellungen = undefined;
+  geheim.konto = ''; geheim.mail = ''; geheim.paketEinstellungen = undefined;
   try { sessionStorage.removeItem(SPEICHER); } catch { /* egal */ }
   zustand = leer();
   for (const h of hoerer) h();
@@ -126,12 +129,10 @@ export function useAssistent(): Assistentenstand {
 
 export function planAus(s: Sammlung, db: PlanDatenbank | null = s.datenbank): Einrichtungsplan {
   const m = s.optional.mail;
-  const be = s.benutzer.email.trim() || s.benutzer.name.trim() ? { name: s.benutzer.name.trim(), email: s.benutzer.email.trim(), aufgabenOhneEmpfaenger: s.benutzer.aufgabenOhneEmpfaenger } : null;
   return {
     datenbank: db ? { ...db, ...(s.verweise.datenbank ? { passwort: s.verweise.datenbank } : {}) } : null,
     ablage: s.ablage.replace(/\s+/g, ' ').trim(),
-    administrator: { name: s.administrator.name.trim(), email: s.administrator.email.trim(), ...(s.verweise.administrator ? { passwort: s.verweise.administrator } : {}) },
-    benutzer: be,
+    konto: { name: s.konto.name.trim(), email: s.konto.email.trim(), ...(s.verweise.konto ? { passwort: s.verweise.konto } : {}) },
     pakete: s.pakete ? s.pakete.pakete.map((p) => ({ id: p.id, beispiele: p.beispiele, automatisierungen: p.automatisierungen }))
       : s.paketeVorgabe ?? (s.besucht.includes('pakete') ? [] : null),
     optional: {
@@ -147,16 +148,15 @@ export function sammlungAus(p: Einrichtungsplan, hinweise: string[]): Sammlung {
   return {
     ...leereSammlung(),
     ablage: p.ablage,
-    administrator: { name: p.administrator.name, email: p.administrator.email },
-    benutzer: p.benutzer ?? { name: '', email: '', aufgabenOhneEmpfaenger: true },
+    konto: { name: p.konto.name, email: p.konto.email },
     paketeVorgabe: p.pakete,
     optional: {
       adresse: p.optional.adresse ?? '', bundesland: p.optional.bundesland ?? '', beispiele: p.optional.beispiele,
       mail: m ? { aktiv: m.aktiv, host: m.host, port: m.port, verbindung: m.verbindung, benutzer: m.benutzer, absender: m.absender, selbstsigniert: m.selbstsigniert, mitPasswort: false } : null,
     },
-    besucht: ['ablage', 'administrator', 'benutzer', ...(p.pakete ? ['pakete' as const] : []), 'optional'],
+    besucht: ['ablage', 'konto', ...(p.pakete ? ['pakete' as const] : []), 'optional'],
     zurZusammenfassung: true,
-    verweise: { administrator: p.administrator.passwort, mail: m?.passwort, datenbank: p.datenbank?.passwort },
+    verweise: { konto: p.konto.passwort, mail: m?.passwort, datenbank: p.datenbank?.passwort },
     datenbank: p.datenbank,
     hinweise,
   };

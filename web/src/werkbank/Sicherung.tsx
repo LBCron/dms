@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { heikelHerunterladen } from '../verwaltungsmodus';
 import { Symbol } from '../Symbol';
-import { api, type ExternStand, type ExternZustand, type ProbeStand, type SicherungEintrag, type SicherungsPlan, type SicherungStand, type SicherungsZustand, type WhLauf } from '../api';
+import { api, type ExternStand, type ExternZustand, type Notfallblattstand, type ProbeStand, type SicherungEintrag, type SicherungsPlan, type SicherungStand, type SicherungsZustand, type WhLauf } from '../api';
 import { t } from '../sprache';
 import { Schritte } from '../wiederherstellen';
 import { Hilfe, useHandbuch } from '../Hilfe';
@@ -71,7 +71,11 @@ export function sicherungsHinweise(z: SicherungsZustand): Array<{ art: 'schlecht
   if (z.fehler) h.push({ schluessel: 'sicherung.fehler', datum: z.fehler.am, art: 'schlecht', text: <><strong>Die letzte Sicherung ist fehlgeschlagen</strong> ({zeit(z.fehler.am)}): {z.fehler.grund}</> });
   if (!z.letzte) h.push({ schluessel: 'sicherung.keine', art: 'warn', text: <><strong>Es gibt noch keine Sicherung.</strong> Lege eine an und schalte den Zeitplan ein.</> });
   else if (z.zuAlt) h.push({ schluessel: 'sicherung.alt', datum: z.letzte.ende, art: 'warn', text: <><strong>Die letzte Sicherung ist älter als 2 Tage</strong> ({zeit(z.letzte.ende)}).</> });
-  if (!z.notfallblatt.aktuell && (z.letzte || z.planAktiv || z.notfallblatt.am)) h.push({ schluessel: 'sicherung.notfallblatt', art: 'warn', text: <><strong>{z.notfallblatt.am ? 'Das Notfallblatt gehört zu einem früheren Schlüssel.' : 'Das Notfallblatt fehlt.'}</strong> Ohne den Schlüssel darauf lassen sich die Sicherungen nicht wiederherstellen.</> });
+  // Seit #815 auch: Der Notfallcode darauf wurde benutzt, oder das Blatt stammt aus der Zeit vor dem Notfallcode.
+  const nb = z.notfallblatt;
+  if (!nb.aktuell && (z.letzte || z.planAktiv || nb.am)) h.push({ schluessel: 'sicherung.notfallblatt', art: 'warn', text: nb.grund === 'benutzt' || nb.grund === 'ohne-code'
+    ? <NotfallblattGrund n={nb} />
+    : <><strong>{nb.am ? 'Das Notfallblatt gehört zu einem früheren Schlüssel.' : 'Das Notfallblatt fehlt.'}</strong> Ohne den Schlüssel darauf lassen sich die Sicherungen nicht wiederherstellen.</> });
   // Probe-Wiederherstellung (#109): Ampel.
   if (z.probe?.ampel === 'rot') h.push({ schluessel: 'sicherung.probe-fehler', datum: z.probe.letzte?.am, art: 'schlecht', text: <><strong>Die letzte Probe-Wiederherstellung ist fehlgeschlagen</strong> ({zeit(z.probe.letzte!.am)}): {z.probe.letzte!.info}</> });
   else if (z.probe?.ampel === 'gelb' && z.letzte) h.push({ schluessel: 'sicherung.probe', art: 'info', text: <><strong>{z.probe.letzte ? `Die letzte Probe-Wiederherstellung ist vom ${zeit(z.probe.letzte.am)}.` : 'Noch keine Sicherung wurde probeweise wiederhergestellt.'}</strong> Erst eine Probe zeigt, dass sich eine Sicherung im Ernstfall einspielen lässt.</> });
@@ -315,13 +319,20 @@ function Zeitplan({ plan, notfallblatt, gespeichert }: { plan: SicherungsPlan; n
 }
 
 /** Notfallblatt (#106): herunterladen, Stand, Hinweis nach einem Schlüsselwechsel. */
+/** Warum ein heruntergeladenes Notfallblatt nicht mehr gilt (#47 Schlüssel, #815 Notfallcode). */
+function NotfallblattGrund({ n }: { n: Notfallblattstand }) {
+  if (n.grund === 'benutzt') return <><strong>{t('werkbank.sicherung.notfallblatt.benutzt')}</strong> {t('werkbank.sicherung.notfallblatt.benutzt.text')}</>;
+  if (n.grund === 'ohne-code') return <><strong>{t('werkbank.sicherung.notfallblatt.ohne-code')}</strong> {t('werkbank.sicherung.notfallblatt.ohne-code.text')}</>;
+  return <><strong>Der Schlüssel hat sich seitdem geändert.</strong> Lade ein neues Notfallblatt herunter. Bewahre das alte auf, solange du ältere Sicherungen hast – sie brauchen den alten Schlüssel.</>;
+}
+
 export function Notfallblatt({ stand, schluessel, geladen }: { stand: SicherungsZustand['notfallblatt'] | null | undefined; schluessel: boolean; geladen(): void }) {
   return (
     <section className="blatt" id="notfallblatt">
       <h2 className="h3">Notfallblatt <Hilfe ort="sicherung.notfallblatt" /></h2>
       <p>{t('werkbank.notfallblatt.ui.text')}</p>
       {stand?.am && <p className="leise klein">Zuletzt heruntergeladen {zeit(stand.am)}{stand.von ? ` von ${stand.von}` : ''}.</p>}
-      {stand && !stand.aktuell && stand.am && <div className="hinweis warn"><p><strong>Der Schlüssel hat sich seitdem geändert.</strong> Lade ein neues Notfallblatt herunter. Bewahre das alte auf, solange du ältere Sicherungen hast – sie brauchen den alten Schlüssel.</p></div>}
+      {stand && !stand.aktuell && stand.am && <div className="hinweis warn"><p><NotfallblattGrund n={stand} /></p></div>}
       <div className="knoepfe">
         {schluessel
           ? <a className="knopf primaer" href={NOTFALLBLATT_URL} download onClick={(e) => void heikelHerunterladen(e, NOTFALLBLATT_URL, () => { setTimeout(geladen, 1500); setTimeout(meldeSicherung, 1500); })}>Notfallblatt herunterladen (PDF)</a>

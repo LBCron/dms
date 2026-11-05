@@ -319,15 +319,32 @@ export class Sicherung {
     try { const f = await statfs(this.ordner); return f.bavail * f.bsize >= (await this.plan()).mindestFreiGB * 1024 ** 3; } catch { return true; }
   }
 
-  /** Wurde das Notfallblatt zum aktuellen Schlüssel heruntergeladen (#106)? */
-  async notfallblatt(): Promise<{ am: string | null; von: string | null; fingerabdruck: string | null; aktuell: boolean }> {
-    const n = (await this.q.einstellungen.lies('notfallblatt')) as { am: string; von: string; fingerabdruck: string } | null;
-    return { am: n?.am ?? null, von: n?.von ?? null, fingerabdruck: n?.fingerabdruck ?? null, aktuell: !!n && !!this.q.tresor.fingerabdruck && n.fingerabdruck === this.q.tresor.fingerabdruck };
+  /**
+   * Wurde das Notfallblatt zum aktuellen Schlüssel heruntergeladen (#106)? Seit #815 steht darauf auch der Notfallcode:
+   * Ein Blatt aus der Zeit davor (`ohneCode`) und eines, dessen Code benutzt wurde (`codeBenutzt`), gelten nicht mehr
+   * als aktuell – dann ist ein neues Blatt fällig.
+   */
+  async notfallblatt(): Promise<{ am: string | null; von: string | null; fingerabdruck: string | null; aktuell: boolean; ohneCode: boolean; codeBenutzt: string | null; grund: 'fehlt' | 'schluessel' | 'ohne-code' | 'benutzt' | null }> {
+    const n = (await this.q.einstellungen.lies('notfallblatt')) as { am: string; von: string; fingerabdruck: string; notfallcode?: boolean; codeBenutzt?: string } | null;
+    const schluessel = !!n && !!this.q.tresor.fingerabdruck && n.fingerabdruck === this.q.tresor.fingerabdruck;
+    const ohneCode = !!n && n.notfallcode !== true;
+    const codeBenutzt = n?.codeBenutzt ?? null;
+    const aktuell = schluessel && !ohneCode && !codeBenutzt;
+    // Warum nicht aktuell? Für den Hinweis in der Werkbank – der Schlüssel zuerst, dann der Notfallcode.
+    const grund = aktuell ? null : !n ? 'fehlt' : !schluessel ? 'schluessel' : codeBenutzt ? 'benutzt' : 'ohne-code';
+    return { am: n?.am ?? null, von: n?.von ?? null, fingerabdruck: n?.fingerabdruck ?? null, aktuell, ohneCode, codeBenutzt, grund };
   }
 
+  /** Notfallblatt heruntergeladen – mit neuem Notfallcode (#815). */
   async notfallblattErstellt(von: string) {
-    await this.q.einstellungen.schreibe('notfallblatt', { am: this.jetzt().toISOString(), von, fingerabdruck: this.q.tresor.fingerabdruck });
+    await this.q.einstellungen.schreibe('notfallblatt', { am: this.jetzt().toISOString(), von, fingerabdruck: this.q.tresor.fingerabdruck, notfallcode: true });
     log.warn('Notfallblatt heruntergeladen', { von, fingerabdruck: this.q.tresor.fingerabdruck });
+  }
+
+  /** Der Notfallcode des Blatts wurde benutzt (#815): Das Blatt gilt nicht mehr, ein neues ist Pflicht. */
+  async notfallcodeBenutzt() {
+    const n = (await this.q.einstellungen.lies('notfallblatt')) as Record<string, unknown> | null;
+    if (n) await this.q.einstellungen.schreibe('notfallblatt', { ...n, codeBenutzt: this.jetzt().toISOString() });
   }
 
   /* ---------- Liste ---------- */

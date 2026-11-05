@@ -16,7 +16,8 @@
  *    - „Ansicht ▾“ (#498) öffnet ein Blatt im Bildschirm mit Tippzielen von mindestens 44 px;
  *    - Dokumente einer Post (#505): kein eingebetteter PDF-Rahmen, Tippziele mindestens 44 px;
  *    - erweiterte Suche (#426): Formular mit Datums-, Auswahl- und Verweisbedingung, danach die Treffer;
- *    - Zu erledigen (#528, #725): Liste als Vorgabe, Monat kompakt mit Tippzielen von mindestens 44 px, Wischen blättert.
+ *    - Zu erledigen (#528, #725): Liste als Vorgabe, Monat kompakt mit Tippzielen von mindestens 44 px, Wischen blättert;
+ *    - Notfallzugang /notfall (#815): ohne Anmeldung, Eingabe des Notfallcodes.
  *    Von jeder Seite und jedem Menü entsteht ein Bild im Bilderordner (<breite>/<name>.png).
  *
  * Läuft im Workflow „Handbuch“ nach aufnehmen.mjs (gleiche Daten, gleicher Administrator).
@@ -120,6 +121,8 @@ const HANDY = [
   // Zu erledigen (#528, #725): am Handy erst die Liste, dann der Monat kompakt mit Punkten.
   { name: 'zu-erledigen-kalender', pfad: '/ablage/eingang', kalender: true },
   { name: 'werkbank', pfad: '/werkbank/uebersicht' },
+  // Notfallzugang (#815): ohne Anmeldung, zuerst fürs Handy – Codefeld mit mindestens 16 px, nichts zu breit.
+  { name: 'notfall', pfad: '/notfall' },
 ];
 
 /** Alles, was über den Bildschirm hinausragt (ohne Inhalt eines Bereichs, der selbst waagerecht scrollt oder abschneidet). */

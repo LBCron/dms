@@ -12,16 +12,11 @@ datenbank:
   passwort: ${DMS_DB_PASSWORT}
 # Name der Ablage – Schriftzug in Kopfzeile und Browser-Tab.
 ablage: Familie Beispiel
-# Richtet Ablago ein, arbeitet aber nicht in der Ablage.
-administrator:
-  name: Admin
-  email: admin@example.org
-  passwort: ${DMS_ADMIN_PASSWORT}
-# Das Konto für die Arbeit in der Ablage.
-erster-benutzer:
+# Dein Konto: richtet Ablago ein, darf es verwalten und arbeitet auch in der Ablage.
+konto:
   name: Lena Beispiel
   email: lena@example.org
-  aufgaben-ohne-empfaenger: true
+  passwort: ${DMS_KONTO_PASSWORT}
 # Aus dem offiziellen Katalog, je die neueste passende Version; Automatisierungen: true = eingeschaltet.
 pakete:
   - id: texterkennung

@@ -8,7 +8,7 @@ Was dabei hinausgeht, steht unter [Was deine Ablage verlässt](datenschutz.md#wa
 
 ![E-Mail-Versand im Einrichtungsassistenten](bilder/einrichtung-mail.png)
 
-1. **Mit welcher E-Mail-Adresse soll Ablago schreiben?** Vorbelegt ist die Adresse deines Kontos (im Assistenten die des Administrators). Am besten nimmst du eine eigene Adresse für Ablago, etwa `ablage@example.org`.
+1. **Mit welcher E-Mail-Adresse soll Ablago schreiben?** Vorbelegt ist die Adresse deines Kontos (im Assistenten die aus dem Schritt „Dein Konto“). Am besten nimmst du eine eigene Adresse für Ablago, etwa `ablage@example.org`.
 2. **Passwort** bzw. **App-Passwort** des Postfachs eintragen.
 3. **Verbindung prüfen** (in der Werkbank). Ablago meldet sich am Server an, ohne etwas zu senden.
 

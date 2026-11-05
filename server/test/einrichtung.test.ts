@@ -153,7 +153,7 @@ describe('Einrichtungsmodus ohne Datenbank (#119)', () => {
   });
 });
 
-describe('Mandant und Administrator mit Code (#119)', () => {
+describe('Mandant und „Dein Konto“ mit Code (#119, #821)', () => {
   it('legt beides an, setzt Schriftzug, löscht den Code, merkt die weiteren Schritte', async () => {
     const o = await ordner();
     const code = new Einrichtungscode(o);
@@ -172,7 +172,9 @@ describe('Mandant und Administrator mit Code (#119)', () => {
     assert.equal(e.codeNoetig, false);
     assert.ok(!existsSync(code.datei));
     assert.deepEqual(await e.stand(), { offen: true, erledigt: [], uebersprungen: [], mandant: 'Familie Muster' });
-    await e.merke('benutzer', false, 'admin');
+    await e.merke('schluessel', false, 'admin');
+    // #821: Einen Schritt „erster Benutzer“ gibt es nicht mehr – nur „Dein Konto“, das „Jetzt einrichten“ anlegt.
+    await assert.rejects(e.merke('benutzer', false, 'admin'), /Unbekannter Schritt/);
     // Pakete dazuholen (#460): ein eigener Schritt, überspringbar.
     await e.merke('pakete', true, 'admin');
     await e.merke('optional', true, 'admin');
