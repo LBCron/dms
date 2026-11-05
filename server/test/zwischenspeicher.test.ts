@@ -234,8 +234,10 @@ describe('Zwei Prozesse auf einer Datenbank (#741, #742)', { skip: url ? false :
     try {
       // Eine Änderung, damit alle frisch zählen.
       await A.dienst.legeMappeAn({ typId: ids.rechnung, werte: { nr: 'R3' } }, ids.lena);
-      const a = await rechnungen(B, j);
-      const b = await rechnungen(B, m);
+      // Nach dem Anlegen laufen im Hintergrund noch Ereignisse und Nachträge, die den Stand weiterzählen können.
+      // Darum höchstens ein paar Runden, bis Jonas und Markus denselben Stand sehen – geteilt wird dann sicher.
+      let a = await rechnungen(B, j), b = await rechnungen(B, m);
+      for (let i = 0; i < 5 && b.zs !== 'treffer'; i++) { await new Promise((r) => setTimeout(r, 100)); a = await rechnungen(B, j); b = await rechnungen(B, m); }
       const c = await rechnungen(B, p);
       assert.equal(a.n, 3); assert.equal(b.n, 3);
       assert.equal(b.zs, 'treffer', 'Markus hat dieselben Rechte wie Jonas: dieselbe Zählung');
