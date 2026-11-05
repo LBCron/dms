@@ -2979,5 +2979,7 @@
   "speicherplatz.knapp": "knapp",
   "technik.aktuell-2": "aktuell",
   "technik.unbekannt": "unbekannt",
-  "vollexport.veraendert": "verändert {x}"
+  "vollexport.veraendert": "verändert {x}",
+  "pakete.beschriftungen_one": "{anzahl} neue Beschriftung in einer weiteren Sprache",
+  "pakete.beschriftungen_other": "{anzahl} neue Beschriftungen in weiteren Sprachen"
 }

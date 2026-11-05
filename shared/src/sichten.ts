@@ -10,6 +10,7 @@ import { GEMISCHTE_SPALTEN, istLeer, istSystemspalte, SYSTEMSPALTEN, trefferlist
 import { datumsformat } from './region';
 import { ALLE_TYPEN } from './pakete';
 import { t } from './texte';
+import { feldLabel, optionText } from './beschriftung';
 
 /* ---------- Bedingungen ---------- */
 
@@ -119,6 +120,8 @@ export interface SichtDaten {
   berechtigungen?: SichtRegelwerk | null;
   /** Symbol (#428): Lucide-Name aus `ANSICHT_SYMBOLE` (ansichtsymbole.ts); null/fehlt = ohne Symbol. */
   symbol?: string | null;
+  /** Name und Beschreibung in weiteren Sprachen (#728); fehlt etwas, gilt der Ausgangstext. */
+  beschriftungen?: import('./beschriftung').Beschriftungen<import('./beschriftung').TypTeile> | null;
 }
 export interface Sicht extends SichtDaten {
   id: string; erstellt: string; geaendert: string;
@@ -194,7 +197,7 @@ export function bedingungsfelder(typen: Array<Pick<Mappentyp, 'felder'>>): Bedin
   if (!typen.length) return SYSTEMFELDER;
   const [erster, ...rest] = typen;
   const gemeinsam = erster.felder.filter((f) => f.typ !== 'passwort' && f.zielTyp !== '*' && rest.every((t) => t.felder.some((g) => g.key === f.key && g.typ === f.typ && (f.typ !== 'referenz' || g.zielTyp === f.zielTyp))));
-  return [...gemeinsam.map((f) => ({ key: f.key, label: f.label, art: f.typ as Feldart, feld: f })), ...SYSTEMFELDER];
+  return [...gemeinsam.map((f) => ({ key: f.key, label: feldLabel(f), art: f.typ as Feldart, feld: f })), ...SYSTEMFELDER];
 }
 
 /** Warum eine Bedingung nicht (mehr) passt – z. B. weil ihr Feld entfernt wurde. null = in Ordnung. */
@@ -520,7 +523,8 @@ export function beschreibeBedingung(b: Bedingung, typen: Mappentyp[], titelVon: 
       case 'fest': {
         const v = w.wert;
         if (f?.art === 'referenz' || f?.art === 'person') return (Array.isArray(v) ? v : [String(v)]).map((x) => `„${titelVon(String(x))}“`).join(' oder ');
-        if (Array.isArray(v)) return v.map((x) => `„${x}“`).join(', ');
+        // Auswahl (#728): gespeichert ist der feste Wert, gezeigt die Beschriftung.
+        if (Array.isArray(v)) return v.map((x) => `„${f?.art === 'auswahl' && f.feld ? optionText(f.feld, String(x)) : x}“`).join(', ');
         if (f?.art === 'datum' && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v.split('-').reverse().join('.');
         return typeof v === 'string' ? `„${v}“` : String(v).replace('.', ',');
       }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Ansage, umgestellt, useZiehen, ziehTasten } from '../ziehen';
 import {
   FELDTYPEN, freierSchluessel, INDEXPLATZHALTER, istIndexplatzhalter, REGISTERARTEN, SYSTEMSPALTEN, type Systemspalte, schluesselAus, standardRegister, titelAus, trefferlistenVon, VERWEISARTEN, vorlageFelder, wirksameVorlage, pruefeTitelFilter,
-  type Feld, type Mappe, type Mappentyp, type Register, type Registerart, type Werte,
+  type Feld, type Mappe, type Mappentyp, type Register, type Registerart, type Trefferliste, type Werte,
 } from '../../../shared/src/model';
 import { FILTER } from '../../../shared/src/titelfilter';
 import { wirksameTypen } from '../../../shared/src/sichten';
@@ -25,6 +25,8 @@ import { Bereich, liesOffen, merkeOffen, TYP_BEREICHE, type Klappe, type TypBere
 import { hinweis, rueckfrage } from '../rueckfrage';
 import { FELDFORMATE, formatName, HEUTE, istFeldformat, type Feldformat } from '../../../shared/src/feldformate';
 import { abflussBestaetigen } from '../werkbank/ErkennungPaket';
+import { Beschriftungsstand, OptionenBeschriftung, SprachText } from './Beschriftung';
+import { optionText, type Beschriftungen, type TypTeile } from '../../../shared/src/beschriftung';
 import type { ErkennungStand } from '../api';
 import { artenFuer, artVon, AUS_DOKUMENT_STANDARD, BESCHRIFTUNG_MAX, ENGINE_EINGEBAUT, ERKENNUNG_FELDTYPEN, ERKENNUNG_HINWEIS_MAX, ERKENNUNGSARTEN, merkmalsfelder, type AusDokument, type Erkennungsart } from '../../../shared/src/erkennung';
 import { gebietsschema } from '../../../shared/src/sprache';
@@ -42,7 +44,7 @@ type EntwurfFeld = Omit<Feld, Zahlprop> & Record<Zahlprop, string> & { _uid: str
 /** Register im Bearbeitungszustand; welche Felder darauf liegen, steht am Feld (_register). */
 type EntwurfRegister = Omit<Register, 'felder'> & { _uid: string; _neu?: boolean; _schluesselGetippt?: boolean };
 /** Trefferliste im Entwurf (#75): Spalten als _titel usw. bzw. feld:<_uid> – damit ein umbenannter Schlüssel nichts kaputt macht. */
-interface EntwurfListe { _uid: string; _neu?: boolean; key: string; name: string; spalten: string[]; standard: boolean }
+interface EntwurfListe { _uid: string; _neu?: boolean; key: string; name: string; spalten: string[]; standard: boolean; beschriftungen?: Trefferliste['beschriftungen'] }
 interface Entwurf {
   id: string; name: string;
   /** Fester Schlüssel (#145); bei neuen Typen aus dem Namen, bis man ihn selbst tippt. */
@@ -57,6 +59,8 @@ interface Entwurf {
   ausDokument: AusDokument | null;
   /** Post automatisch zuordnen (#337). */
   autoZuordnen: boolean;
+  /** Name und Beschreibung je Sprache (#728). */
+  beschriftungen?: Beschriftungen<TypTeile>;
 }
 
 function neueId(): string {
@@ -80,6 +84,7 @@ function entwurfAus(eintrag?: Mappentyp): Entwurf {
     stempel: eintrag.stempel ?? null,
     ausDokument: eintrag.ausDokument ?? null,
     autoZuordnen: !!eintrag.autoZuordnen,
+    beschriftungen: eintrag.beschriftungen,
     register: eintrag.register.map(alsEntwurfRegister),
     felder: eintrag.felder.map((f) => ({
       ...f, _uid: neueId(),
@@ -89,7 +94,7 @@ function entwurfAus(eintrag?: Mappentyp): Entwurf {
     trefferlisten: [],
   };
   e.trefferlisten = trefferlistenVon(eintrag).map((l) => ({
-    _uid: neueId(), key: l.key, name: l.name, standard: !!l.standard,
+    _uid: neueId(), key: l.key, name: l.name, standard: !!l.standard, beschriftungen: l.beschriftungen,
     spalten: l.spalten.flatMap((k) => {
       if (k.startsWith('_')) return [k];
       const f = e.felder.find((x) => x.key === k);
@@ -247,13 +252,14 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
   async function speichern(bestaetigt = false) {
     setSendet(true); setMeldung(undefined); setGruende([]);
     const { trefferlisten: listen, _schluesselGetippt: _sg, ...ohneListen } = e;
+    // Beschriftungen (#728) immer mitschicken, leer als null – ohne die Angabe behielte der Server die bisherigen.
     const daten = {
-      ...ohneListen,
-      felder: e.felder.map(({ _uid, _neu, _schluesselGetippt, _register, ...rest }) => rest),
+      ...ohneListen, beschriftungen: e.beschriftungen ?? null,
+      felder: e.felder.map(({ _uid, _neu, _schluesselGetippt, _register, ...rest }) => ({ ...rest, beschriftungen: rest.beschriftungen ?? null })),
       register: e.register.map(({ _uid, _neu, _schluesselGetippt, ...r }) =>
-        (r.art === 'felder' ? { ...r, felder: e.felder.filter((f) => f._register === r.key).map((f) => f.key) } : r)),
+        ({ ...(r.art === 'felder' ? { ...r, felder: e.felder.filter((f) => f._register === r.key).map((f) => f.key) } : r), beschriftungen: r.beschriftungen ?? null })),
       trefferlisten: listen.map(({ _uid, _neu, ...l }) => ({
-        ...l, spalten: l.spalten.flatMap((k) => (k.startsWith('feld:') ? e.felder.filter((f) => `feld:${f._uid}` === k && f.typ !== 'passwort').map((f) => f.key) : [k])),
+        ...l, beschriftungen: l.beschriftungen ?? null, spalten: l.spalten.flatMap((k) => (k.startsWith('feld:') ? e.felder.filter((f) => `feld:${f._uid}` === k && f.typ !== 'passwort').map((f) => f.key) : [k])),
       })),
     };
     try {
@@ -335,13 +341,19 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       <Bereich id="grunddaten" titel={t('mappentypen.editor.grunddaten')} klappe={klappe('grunddaten')}
         kurz={<>{tn('mappentypen.editor.kennung', { code: <code className="mono">{e.schluessel || '–'}</code> })}{e.beschreibung ? <> · {e.beschreibung}</> : null}</>}>
         <div className="raster">
-          <label className="eigenschaft"><span>{t('mappentypen.editor.name')}</span><input value={e.name} placeholder={t('mappentypen.editor.z-b-vertrag')} autoFocus={neu}
-            onChange={(ev) => setE({ ...e, name: ev.target.value, ...(neu && !e._schluesselGetippt ? { schluessel: schluesselAus(ev.target.value) } : {}) })} /></label>
+          <div className="eigenschaft"><span><label htmlFor="typ-name">{t('mappentypen.editor.name')}</label></span>
+            <SprachText id="typ-name" wert={e.name} placeholder={t('mappentypen.editor.z-b-vertrag')} autoFocus={neu} teil="name" beschriftungen={e.beschriftungen}
+              setzeWert={(name) => setE({ ...e, name, ...(neu && !e._schluesselGetippt ? { schluessel: schluesselAus(name) } : {}) })}
+              setzeBeschriftungen={(b) => setE({ ...e, beschriftungen: b as Beschriftungen<TypTeile> | undefined })} /></div>
           <label className="eigenschaft"><span>{tn('mappentypen.editor.kennung-2', { klein: <small>{neu || !gespeichert?.schluessel ? t('mappentypen.editor.wird-nach-dem-speichern') : t('mappentypen.editor.fest-name-laesst-sich')}</small> })}</span>
             <input className="mono" value={e.schluessel} placeholder={t('mappentypen.editor.z-b-vertrag-2')} disabled={!neu && !!gespeichert?.schluessel}
               onChange={(ev) => setE({ ...e, schluessel: ev.target.value, _schluesselGetippt: true })} /></label>
         </div>
-        <label className="eigenschaft"><span>{t('mappentypen.editor.beschreibung')}</span><input value={e.beschreibung} placeholder={t('mappentypen.editor.wofuer-ist-dieser-mappentyp')} onChange={(ev) => setE({ ...e, beschreibung: ev.target.value })} /></label>
+        <div className="eigenschaft"><span><label htmlFor="typ-beschreibung">{t('mappentypen.editor.beschreibung')}</label></span>
+          <SprachText id="typ-beschreibung" wert={e.beschreibung} placeholder={t('mappentypen.editor.wofuer-ist-dieser-mappentyp')} teil="beschreibung" beschriftungen={e.beschriftungen}
+            setzeWert={(beschreibung) => setE({ ...e, beschreibung })} setzeBeschriftungen={(b) => setE({ ...e, beschriftungen: b as Beschriftungen<TypTeile> | undefined })} /></div>
+        {/* „12 von 14 Beschriftungen auf Englisch“ (#728): nur ein Hinweis, nie ein Fehler. */}
+        <Beschriftungsstand typ={{ ...e, felder: e.felder as unknown as Feld[], register: e.register as unknown as Register[], trefferlisten: e.trefferlisten }} />
         {neu && <label className="haken"><input type="checkbox" checked={sichtAnlegen} onChange={(ev) => setSichtAnlegen(ev.target.checked)} />
           <span>{tn('mappentypen.editor.eigene-ansicht-in-der', { klein: <small className="hilfe">{t('mappentypen.editor.abwaehlen-wenn-die-mappen')}</small> })}</span></label>}
         {gespeichert && <VerwendetIn typ={gespeichert} />}
@@ -533,7 +545,7 @@ function FeldZeile(p: {
     standard = <div className="eigenschaft unten"><label className="haken"><input type="checkbox" checked={f.standard === true} onChange={(e) => setze({ standard: e.target.checked })} /><span><span className="haken-titel">{t('mappentypen.editor.standardmaessig-ja')}</span></span></label></div>;
   else if (f.typ === 'auswahl' && !f.mehrfach)
     standard = <label className="eigenschaft" htmlFor={id('std')}><span>{t('mappentypen.editor.standardwert-2')}</span><select id={id('std')} value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })}>
-      <option value="">{t('mappentypen.editor.keiner')}</option>{(f.optionen ?? []).map((o) => <option key={o}>{o}</option>)}</select></label>;
+      <option value="">{t('mappentypen.editor.keiner')}</option>{(f.optionen ?? []).map((o) => <option key={o} value={o}>{optionText(f, o)}</option>)}</select></label>;
 
   return (
     <div {...p.zieh} className={`feldzeile ${offen ? 'offen' : ''} ${fehler ? 'fehlerhaft' : ''} ${p.zieh.className}`}>
@@ -556,9 +568,13 @@ function FeldZeile(p: {
           {fehler && <div className="hinweis schlecht"><p>{fehler.join(' ')}</p></div>}
           {f.system && <p className="leise klein">{t('mappentypen.editor.systemfeld-bezeichnung-hilfetext-und')}</p>}
           <div className="raster">
-            <label className="eigenschaft" htmlFor={id('label')}><span>{t('mappentypen.editor.bezeichnung')}</span><input id={id('label')} value={f.label} placeholder={t('mappentypen.editor.z-b-kuendigung-bis')} onChange={(e) => setze({ label: e.target.value })} autoFocus={f._neu} /></label>
+            <div className="eigenschaft"><span><label htmlFor={id('label')}>{t('mappentypen.editor.bezeichnung')}</label></span>
+              <SprachText id={id('label')} wert={f.label} placeholder={t('mappentypen.editor.z-b-kuendigung-bis')} autoFocus={f._neu} teil="label" beschriftungen={f.beschriftungen}
+                setzeWert={(label) => setze({ label })} setzeBeschriftungen={(b) => setze({ beschriftungen: b as Feld['beschriftungen'] })} /></div>
             {/* Hilfetext neben der Bezeichnung, bei allen Feldarten an derselben Stelle (#372). */}
-            <label className="eigenschaft" htmlFor={id('hilfe')}><span>{t('mappentypen.editor.hilfetext')}</span><input id={id('hilfe')} placeholder={t('mappentypen.editor.erklaerung-die-beim-ausfuellen')} value={f.hilfe ?? ''} onChange={(e) => setze({ hilfe: e.target.value })} /></label>
+            <div className="eigenschaft"><span><label htmlFor={id('hilfe')}>{t('mappentypen.editor.hilfetext')}</label></span>
+              <SprachText id={id('hilfe')} wert={f.hilfe ?? ''} placeholder={t('mappentypen.editor.erklaerung-die-beim-ausfuellen')} teil="hilfe" beschriftungen={f.beschriftungen}
+                setzeWert={(hilfe) => setze({ hilfe })} setzeBeschriftungen={(b) => setze({ beschriftungen: b as Feld['beschriftungen'] })} /></div>
             {p.feldregister.length > 1 && (
               <label className="eigenschaft" htmlFor={id('reg')}><span>{t('mappentypen.editor.register-2')}</span>
                 <select id={id('reg')} value={f._register} onChange={(e) => setze({ _register: e.target.value })}>
@@ -584,6 +600,8 @@ function FeldZeile(p: {
           {besonders && <><h3 className="zwischen">{t('mappentypen.editor.eigenschaften-fuer', { FELDTYPEN: FELDTYPEN[f.typ] })}</h3>{besonders}</>}
           {ERKENNUNG_FELDTYPEN.includes(f.typ) && <ErkennungEditor f={f} id={id} setze={setze} />}
           </fieldset>
+          {/* Beschriftungen der festen Werte (#728) – auch an Systemfeldern wie Stand oder Kanal der Post. */}
+          {f.typ === 'auswahl' && <OptionenBeschriftung id={id('optbeschr')} optionen={f.optionen ?? []} beschriftungen={f.beschriftungen} setze={(b) => setze({ beschriftungen: b as Feld['beschriftungen'] })} />}
           <div className="feldfuss">
             {f.system ? <span className="leise klein">{t('mappentypen.editor.systemfelder-lassen-sich-nicht')}</span> : <button type="button" className="textknopf gefahr" onClick={p.entferne}>{t('mappentypen.editor.feld-entfernen-2')}</button>}
             <button type="button" className="knopf klein" onClick={p.umschalten}>{t('mappentypen.editor.zuklappen')}</button>
@@ -811,8 +829,8 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
                   hoch: i > 0 ? () => { verschiebe(i, -1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-3', { name: r.name, i })); } : undefined,
                   runter: i < e.register.length - 1 ? () => { verschiebe(i, 1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-4', { name: r.name, wert: i + 2 })); } : undefined,
                 })}><span aria-hidden="true">⠿</span></button><span className="chip">{REGISTERARTEN[r.art]}</span></span>
-                <input aria-label={t('mappentypen.editor.name-des-registers')} value={r.name} onChange={(ev) => {
-                  const name = ev.target.value;
+                <SprachText ariaLabel={t('mappentypen.editor.name-des-registers')} wert={r.name} teil="name" beschriftungen={r.beschriftungen}
+                  setzeBeschriftungen={(b) => setzeReg(i, { beschriftungen: b as Register['beschriftungen'] })} setzeWert={(name) => {
                   if (!r._neu) { setzeReg(i, { name }); return; }
                   const key = eindeutig(schluesselAus(name), i);
                   // Felder auf diesem Register wandern mit dem neuen Schlüssel mit.
@@ -931,8 +949,8 @@ function TrefferlisteEditor({ e, setE, klappe }: { e: Entwurf; setE: (f: (x: Ent
           return (
             <section key={l._uid} className={`trefferlistenblock ${l.standard ? 'standard' : ''}`} aria-label={t('mappentypen.editor.trefferliste', { name: l.name })}>
               <div className="registerkopf">
-                <input aria-label={t('mappentypen.editor.name-der-trefferliste')} value={l.name} onChange={(ev) => {
-                  const nm = ev.target.value;
+                <SprachText ariaLabel={t('mappentypen.editor.name-der-trefferliste')} wert={l.name} teil="name" beschriftungen={l.beschriftungen}
+                  setzeBeschriftungen={(b) => setzeListe(i, { beschriftungen: b as Trefferliste['beschriftungen'] })} setzeWert={(nm) => {
                   setzeListe(i, l._neu ? { name: nm, key: eindeutig(schluesselAus(nm), i) } : { name: nm });
                 }} />
                 <code className="fkey" title={t('mappentypen.editor.kennung-3')}>{l.key}</code>

@@ -1,3 +1,4 @@
+import { optionText } from '../../../shared/src/beschriftung';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { abfrageAus, alsParameter, chipsVon, eingabeart, istGesetzt, kannLeer, liesSuche, ohneChip, suchfelder, SUCHE_PFAD, zeitraumVon, ZEITRAEUME, type Feldeingabe, type Suchformular, type Zeitraum } from '../../../shared/src/erweitertesuche';
 import { heuteIn, type Bedingungsfeld } from '../../../shared/src/sichten';
@@ -197,7 +198,7 @@ function Feldsuche({ feld, e, setze, merke, weg }: { feld: Bedingungsfeld; e: Fe
     eingabe = (
       <div className="zeile umbruch">
         {(feld.feld?.optionen ?? []).map((o) => (
-          <label key={o} className="haken klein"><input type="checkbox" checked={werte.includes(o)} onChange={(x) => setze({ ...e, werte: x.target.checked ? [...werte, o] : werte.filter((w) => w !== o) })} /><span>{o}</span></label>
+          <label key={o} className="haken klein"><input type="checkbox" checked={werte.includes(o)} onChange={(x) => setze({ ...e, werte: x.target.checked ? [...werte, o] : werte.filter((w) => w !== o) })} /><span>{feld.feld ? optionText(feld.feld, o) : o}</span></label>
         ))}
       </div>
     );

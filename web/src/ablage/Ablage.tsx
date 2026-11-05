@@ -1,3 +1,4 @@
+import { sichtBeschreibung, sichtName, typBeschreibung, typName } from '../../../shared/src/beschriftung';
 import { aufbewahrenBis, datumText, inFrist } from '../../../shared/src/archiv';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { beschreibeBedingung, kinderVon, mitNachkommen, spaltenDerSicht, wirksameTypen, type Sicht } from '../../../shared/src/sichten';
@@ -175,7 +176,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
           ? <Liste key="favoriten" sicht="favoriten" titel={t('ablage.ablage.favoriten')} offen={dritt} hilfe="ablage.favoriten"
               beschreibung={t('ablage.ablage.mappen-die-du-mit')}
               leerText={t('ablage.ablage.noch-keine-favoriten-markiere')} />
-          : verwaltet || typ ? <Liste key={sicht} sicht={sicht!} typ={typ} spaltenTyp={typ ?? sichtTypen[0]} spalten={wahl.spalten} listenSpalten={wahl.key ? wahl.spalten : []} titel={verwaltet?.name ?? typ!.name} beschreibung={verwaltet ? verwaltet.beschreibung : typ?.beschreibung}
+          : verwaltet || typ ? <Liste key={sicht} sicht={sicht!} typ={typ} spaltenTyp={typ ?? sichtTypen[0]} spalten={wahl.spalten} listenSpalten={wahl.key ? wahl.spalten : []} titel={verwaltet ? sichtName(verwaltet) : typName(typ!)} beschreibung={verwaltet ? sichtBeschreibung(verwaltet) : typ ? typBeschreibung(typ) : undefined}
               offen={dritt} neu={!!typ && darfErstellen(typ) && verwaltet?.rechte?.C !== false} post={!!typ && darfPostAnlegen(typ) && verwaltet?.rechte?.C !== false}
               leerText={typ?.system === 'post' ? t('ablage.ablage.keine-post-mit-post') : verwaltet?.bedingungen.some((x) => x.art === 'favorit') ? t('ablage.ablage.noch-keine-favoriten-markiere') : t('ablage.ablage.noch-keine-mappen-in')} hilfe={typ?.system === 'post' ? 'ablage.post' : 'ablage.sicht'} auswahl export={verwaltet ? verwaltet.rechte?.E !== false : exportOhneSicht(ich.rolle === 'admin', d.sichten)} />
           : sicht ? <div className="leer"><p>{t('ablage.ablage.diese-ansicht-gibt-es')}</p></div> : null}
@@ -714,10 +715,10 @@ function SichtBaum({ aktiv, ohne = [] }: { aktiv?: string; ohne?: string[] }) {
           <div key={s.id} className="sichtzeile" style={{ '--tiefe': tiefe } as React.CSSProperties}>
             {kinder
               ? <button type="button" className="aufklapper" aria-expanded={offen} title={offen ? t('ablage.ablage.unteransichten-zuklappen') : t('ablage.ablage.unteransichten-aufklappen', { anzahl: unter })}
-                  onClick={() => umschalten(s.id)}><span aria-hidden="true">{offen ? '▾' : '▸'}</span><span className="sr">{s.name} {offen ? t('ablage.ablage.zuklappen') : t('ablage.ablage.aufklappen')}</span></button>
+                  onClick={() => umschalten(s.id)}><span aria-hidden="true">{offen ? '▾' : '▸'}</span><span className="sr">{sichtName(s)} {offen ? t('ablage.ablage.zuklappen') : t('ablage.ablage.aufklappen')}</span></button>
               : null}
             <Link to={`/ablage/${s.id}`} className={`sicht ${aktiv === s.id ? 'an' : ''}`} title={s.beschreibung || undefined}>
-              <span className="nm">{s.symbol && <><AnsichtSymbol name={s.symbol} className="fest-sym" /> </>}{s.name}</span>{!d.zahlenDa ? <ZahlWarte /> : n !== undefined && <span className={s.id === d.zaehler.neuePost && n > 0 ? 'zaehler' : 'zahl'}>{zahl(n)}</span>}
+              <span className="nm">{s.symbol && <><AnsichtSymbol name={s.symbol} className="fest-sym" /> </>}{sichtName(s)}</span>{!d.zahlenDa ? <ZahlWarte /> : n !== undefined && <span className={s.id === d.zaehler.neuePost && n > 0 ? 'zaehler' : 'zahl'}>{zahl(n)}</span>}
             </Link>
           </div>
         );

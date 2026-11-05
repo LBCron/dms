@@ -1,3 +1,5 @@
+import { SprachText } from '../einrichtung/Beschriftung';
+import { optionText } from '../../../shared/src/beschriftung';
 import { useEffect, useMemo, useState } from 'react';
 import { Ansage, useZiehen, ziehTasten, type Ort } from '../ziehen';
 import { SYSTEMSPALTEN, istSystemspalte, type Feld, type Mappe, type Mappentyp } from '../../../shared/src/model';
@@ -133,7 +135,7 @@ export function SichtenListe({ offen }: { offen?: string }) {
 }
 
 const leer = (): SichtDaten => ({ name: '', beschreibung: '', elternId: null, position: 0, typen: [], bedingungen: [], trefferliste: null, berechtigungen: null, symbol: null });
-const datenVon = (s: Sicht): SichtDaten => ({ name: s.name, beschreibung: s.beschreibung, elternId: s.elternId, position: s.position, typen: s.typen, bedingungen: s.bedingungen, trefferliste: s.trefferliste ?? null, berechtigungen: s.berechtigungen ?? null, symbol: s.symbol ?? null });
+const datenVon = (s: Sicht): SichtDaten => ({ name: s.name, beschreibung: s.beschreibung, elternId: s.elternId, position: s.position, typen: s.typen, bedingungen: s.bedingungen, trefferliste: s.trefferliste ?? null, berechtigungen: s.berechtigungen ?? null, symbol: s.symbol ?? null, beschriftungen: s.beschriftungen ?? null });
 
 export function SichtEditor({ id }: { id: string }) {
   const d = useDaten();
@@ -226,14 +228,19 @@ export function SichtEditor({ id }: { id: string }) {
       <Bereich id="grunddaten" titel={t('werkbank.sichten.grunddaten')} klappe={klappe('grunddaten')}
         kurz={e.elternId ? t('werkbank.sichten.unter-2', { wert: d.sicht(e.elternId)?.name ?? '…' }) : t('werkbank.sichten.oberste-ebene')}>
         <div className="raster">
-          <label className="eigenschaft"><span>{t('werkbank.sichten.name')}</span><input value={e.name} placeholder={t('werkbank.sichten.z-b-vertraege-mit')} onChange={(x) => setE({ ...e, name: x.target.value })} autoFocus={neu} /></label>
+          {/* Name und Beschreibung je Sprache (#728). */}
+          <div className="eigenschaft"><span><label htmlFor="sicht-name">{t('werkbank.sichten.name')}</label></span>
+            <SprachText id="sicht-name" wert={e.name} placeholder={t('werkbank.sichten.z-b-vertraege-mit')} autoFocus={neu} teil="name" beschriftungen={e.beschriftungen ?? undefined}
+              setzeWert={(name) => setE({ ...e, name })} setzeBeschriftungen={(b) => setE({ ...e, beschriftungen: (b ?? null) as SichtDaten['beschriftungen'] })} /></div>
           <label className="eigenschaft"><span>{tn('werkbank.sichten.liegt-unter', { klein: <small>{t('werkbank.sichten.elternsicht-im-baum')}</small> })}</span>
             <select value={e.elternId ?? ''} onChange={(x) => setE({ ...e, elternId: x.target.value || null })}>
               <option value="">{t('werkbank.sichten.oberste-ebene-2')}</option>
               {elternWahl.map(({ s, tiefe }) => <option key={s.id} value={s.id}>{'  '.repeat(tiefe)}{s.name}</option>)}
             </select></label>
         </div>
-        <label className="eigenschaft"><span>{tn('werkbank.sichten.beschreibung', { klein: <small>{t('werkbank.sichten.steht-in-der-ablage')}</small> })}</span><input value={e.beschreibung} onChange={(x) => setE({ ...e, beschreibung: x.target.value })} /></label>
+        <div className="eigenschaft"><span><label htmlFor="sicht-beschreibung">{tn('werkbank.sichten.beschreibung', { klein: <small>{t('werkbank.sichten.steht-in-der-ablage')}</small> })}</label></span>
+          <SprachText id="sicht-beschreibung" wert={e.beschreibung} teil="beschreibung" beschriftungen={e.beschriftungen ?? undefined}
+            setzeWert={(beschreibung) => setE({ ...e, beschreibung })} setzeBeschriftungen={(b) => setE({ ...e, beschriftungen: (b ?? null) as SichtDaten['beschriftungen'] })} /></div>
         <SymbolWahl wert={e.symbol ?? null} setze={(symbol) => setE({ ...e, symbol })} />
         {!neu && geschwister.length > 1 && (
           <div className="knoepfe">
@@ -557,7 +564,7 @@ function Auswahl({ feld, w, setze }: { feld: Bedingungsfeld; w?: WertAngabe; set
     <span className="wertgruppe umbruch">
       {(feld.feld?.optionen ?? []).map((o) => (
         <label key={o} className="haken klein"><input type="checkbox" checked={gewaehlt.includes(o)}
-          onChange={(x) => setze({ art: 'fest', wert: x.target.checked ? [...gewaehlt, o] : gewaehlt.filter((y) => y !== o) })} /><span>{o}</span></label>
+          onChange={(x) => setze({ art: 'fest', wert: x.target.checked ? [...gewaehlt, o] : gewaehlt.filter((y) => y !== o) })} /><span>{feld.feld ? optionText(feld.feld, o) : o}</span></label>
       ))}
     </span>
   );

@@ -1,3 +1,4 @@
+import { sichtName } from '../../../shared/src/beschriftung';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ansichtAbschnitte, EINSTELLUNG_ANGEHEFTET, EINSTELLUNG_AUSGEBLENDET, EINSTELLUNG_ZULETZT, merkeZuletzt, umschalten } from '../../../shared/src/ansichtwahl';
 import type { Sicht } from '../../../shared/src/sichten';
@@ -26,7 +27,7 @@ function Zeile({ s, aktiv, angeheftet, tiefe = 0, pfad, anheften }: { s: Sicht; 
   return (
     <li className="aw-zeile" style={{ paddingLeft: `${tiefe * 16}px` }}>
       <Link to={`/ablage/${s.id}`} className={`aw-link ${aktiv === s.id ? 'an' : ''}`}>
-        <span className="aw-name">{pfad && <span className="leise klein">{pfad} › </span>}{s.symbol && <><AnsichtSymbol name={s.symbol} className="fest-sym" /> </>}{s.name}</span>
+        <span className="aw-name">{pfad && <span className="leise klein">{pfad} › </span>}{s.symbol && <><AnsichtSymbol name={s.symbol} className="fest-sym" /> </>}{sichtName(s)}</span>
         {!d.zahlenDa ? <ZahlWarte /> : n !== undefined && <span className={s.id === d.zaehler.neuePost && n > 0 ? 'zaehler' : 'zahl'}>{zahl(n)}</span>}
       </Link>
       <button type="button" className={`aw-stern ${angeheftet ? 'an' : ''}`} aria-pressed={angeheftet} onClick={() => anheften(s.id)}
@@ -87,7 +88,7 @@ export function AnsichtWahl({ aktiv, aktuell, feste, ohne = [] }: { aktiv?: stri
             <p className="leise klein">{t('ablage.ansichtwahl.ausgeblendete-ansichten-fehlen-nur')}</p>
             <ul className="aw-liste">{d.sichten.filter((s) => !suche || s.name.toLocaleLowerCase(t('ablage.ansichtwahl.de-de')).includes(suche.toLocaleLowerCase(t('ablage.ansichtwahl.de-de')))).map((s) => (
               <li key={s.id} className="aw-zeile"><label className="haken aw-haken"><input type="checkbox" checked={!wegIds.has(s.id)}
-                onChange={() => d.setzeEinstellung(EINSTELLUNG_AUSGEBLENDET, umschalten(ausgeblendet, s.id))} /><span>{s.name}</span></label></li>
+                onChange={() => d.setzeEinstellung(EINSTELLUNG_AUSGEBLENDET, umschalten(ausgeblendet, s.id))} /><span>{sichtName(s)}</span></label></li>
             ))}</ul>
             <button type="button" className="knopf aw-gross" onClick={() => setVerwalten(false)}>{t('ablage.ansichtwahl.fertig')}</button>
           </> : a.treffer ? (
@@ -131,7 +132,7 @@ export function AnsichtFilter({ aktiv, baum }: { aktiv?: string; baum: ReactNode
       {d.sichten.length > 12 && <input type="search" className="aw-filter" placeholder={t('ablage.ansichtwahl.ansicht-suchen')} aria-label={t('ablage.ansichtwahl.ansicht-suchen-2')} value={suche} onChange={(e) => setSuche(e.target.value)} />}
       {a?.treffer ? a.treffer.map((eintrag) => (
         <Link key={eintrag.sicht.id} to={`/ablage/${eintrag.sicht.id}`} className={`sicht ${aktiv === eintrag.sicht.id ? 'an' : ''}`} title={eintrag.pfad || undefined}>
-          <span className="nm">{eintrag.sicht.name}</span>{!d.zahlenDa ? <ZahlWarte /> : d.zaehler.sichten?.[eintrag.sicht.id] !== undefined && <span className="zahl">{zahl(d.zaehler.sichten[eintrag.sicht.id])}</span>}
+          <span className="nm">{sichtName(eintrag.sicht)}</span>{!d.zahlenDa ? <ZahlWarte /> : d.zaehler.sichten?.[eintrag.sicht.id] !== undefined && <span className="zahl">{zahl(d.zaehler.sichten[eintrag.sicht.id])}</span>}
         </Link>
       )) : baum}
       {a?.treffer && !a.treffer.length && <p className="leise klein">{t('ablage.ansichtwahl.keine-ansicht-heisst-so')}</p>}

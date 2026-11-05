@@ -1,3 +1,4 @@
+import { feldHilfe, feldLabel, optionText, registerName, typName } from '../../../shared/src/beschriftung';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Symbol } from '../Symbol';
 import { Stern } from './Stern';
@@ -62,7 +63,7 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
     if ((f.typ === 'text' || f.typ === 'langtext' || f.typ === 'datum' || f.typ === 'referenz') && typeof v !== 'string') continue;
     if (f.typ === 'betrag' && (typeof v !== 'object' || Array.isArray(v) || typeof (v as { betrag?: unknown }).betrag !== 'number')) continue;
     start[k] = zuRoh(f, v);
-    vorbelegt.push(f.label);
+    vorbelegt.push(feldLabel(f));
   }
   // ?verweis=feldKey:mappeId belegt ein Referenzfeld vor („+ Vertrag anlegen“ beim Vertragspartner).
   if (verweis) {
@@ -73,7 +74,7 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
   return (
     <>
       <div className="mappenkopf">
-        <p className="ueber">{typ.name}</p>
+        <p className="ueber">{typName(typ)}</p>
         <h1>{t('ablage.mappeformular.neue-mappe')}</h1>
       </div>
       {zuordnen && <div className="hinweis info"><p>{t('ablage.mappeformular.nach-dem-speichern-wird', { wert: zuordnen.dokumente.length ? t('ablage.mappeformular.ihre-dokumente-kommen-hierher', { anzahl: zuordnen.dokumente.length }) : '' })}{vorbelegt.length > 0 && <> {' '}{t('ablage.mappeformular.als-vorschlag-aus-der', { vorbelegt: vorbelegt.join(', ') })}</>}</p></div>}
@@ -122,7 +123,7 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
   return (
     <>
       <div className="mappenkopf">
-        <p className="ueber">{typ.name}</p>
+        <p className="ueber">{typName(typ)}</p>
         {/* Kopfzeile (#427): „Mappe ▾“ neben dem Stern – gehört sichtbar zur Mappe, nicht zum Aufgaben-Banner. */}
         <div className="titelzeile"><h1><Ehemalig id={mappe.id}>{titelOder(mappe.titel)}</Ehemalig></h1>
           <div className="mappenkopf-knoepfe">
@@ -585,7 +586,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         {adMeldung && <p>{adMeldung}</p>}
         {Object.entries(adNeu).map(([k, n]) => {
           const f = typ.felder.find((x) => x.key === k); const ziel = d.typ(n.typId);
-          return f && ziel ? <p key={k}>{t('ablage.mappeformular.fuer-gibt-es-noch', { label: f.label, values: Object.values(n.werte).slice(0, 3).join(', ') })}{' '}{darfErstellen(ziel) && <button type="button" className="textknopf" onClick={() => void neuAnlegen(k)}>{t('ablage.mappeformular.mit-diesen-angaben-anlegen', { name: ziel.name })}</button>}</p> : null;
+          return f && ziel ? <p key={k}>{t('ablage.mappeformular.fuer-gibt-es-noch', { label: feldLabel(f), values: Object.values(n.werte).slice(0, 3).join(', ') })}{' '}{darfErstellen(ziel) && <button type="button" className="textknopf" onClick={() => void neuAnlegen(k)}>{t('ablage.mappeformular.mit-diesen-angaben-anlegen', { name: ziel.name })}</button>}</p> : null;
         })}
         {(alternativen.length > 0 || Object.keys(vorschlaege).length > 0) && <div className="knoepfe">
           {alternativen.length > 0 && <button type="button" className="knopf klein" onClick={() => alternativen.forEach(alternativeUebernehmen)}>{t('ablage.mappeformular.alle-alternativen-uebernehmen')}</button>}
@@ -601,7 +602,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
           return (
             <button key={r.key} type="button" role="tab" aria-selected={r.key === reg?.key} className={`registertab art-${r.art} ${r.key === reg?.key ? 'an' : ''}`}
               onClick={() => setAktiv(r.key)}>
-              {r.name}
+              {registerName(r)}
               {n > 0 && <span className="fehlerpunkt" title={t('ablage.mappeformular.felder-mit-fehler', { anzahl: n })}>{n}</span>}
               {zahl !== undefined && <span className="anzahl">{zahl}</span>}
             </button>
@@ -721,7 +722,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
     }</div>;
     return (
       <div className={`feld ${f.typ === 'langtext' || f.typ === 'formatiert' ? 'breit' : ''}`}>
-        <div className="feldkopf"><span className="label">{f.label}</span></div>
+        <div className="feldkopf"><span className="label">{feldLabel(f)}</span></div>
         {ctl}
         <span className="hilfe">{gesperrt}</span>
         {fehler && <p className="fehlertext">{fehler}</p>}
@@ -760,14 +761,15 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
         mitLabelFor = false;
         const gewaehlt = (roh as string[]) ?? [];
         ctl = <div className="auswahlliste">{optionen.map((o) => (
-          <label key={o} className="haken"><input type="checkbox" checked={gewaehlt.includes(o)} onChange={(e) => setze(e.target.checked ? [...gewaehlt, o] : gewaehlt.filter((x) => x !== o))} /><span>{o}</span></label>
+          <label key={o} className="haken"><input type="checkbox" checked={gewaehlt.includes(o)} onChange={(e) => setze(e.target.checked ? [...gewaehlt, o] : gewaehlt.filter((x) => x !== o))} /><span>{optionText(f, o)}</span></label>
         ))}</div>;
       } else {
         const r = String(roh ?? '');
         ctl = <select id={id} value={r} onChange={(e) => setze(e.target.value)}>
           <option value="">{t('ablage.mappeformular.keine-angabe')}</option>
-          {optionen.map((o) => <option key={o}>{o}</option>)}
-          {r && !optionen.includes(r) && <option>{r}</option>}
+          {/* Gespeichert wird der feste Wert, gezeigt die Beschriftung (#728). */}
+          {optionen.map((o) => <option key={o} value={o}>{optionText(f, o)}</option>)}
+          {r && !optionen.includes(r) && <option value={r}>{r}</option>}
         </select>;
       }
       break;
@@ -804,12 +806,12 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
   return (
     <div className={`feld ${breit ? 'breit' : ''} ${fehler ? 'fehlerhaft' : ''}`}>
       <div className="feldkopf">
-        {mitLabelFor ? <label htmlFor={id}>{f.label}{f.pflicht && <span className="pflicht">*</span>}</label> : <span className="label">{f.label}{f.pflicht && <span className="pflicht">*</span>}</span>}
+        {mitLabelFor ? <label htmlFor={id}>{feldLabel(f)}{f.pflicht && <span className="pflicht">*</span>}</label> : <span className="label">{feldLabel(f)}{f.pflicht && <span className="pflicht">*</span>}</span>}
         {f.typ === 'referenz' && <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span>}
       </div>
       {ctl}
       {zusatz}
-      {f.hilfe && <span className="hilfe">{f.hilfe}</span>}
+      {f.hilfe && <span className="hilfe">{feldHilfe(f)}</span>}
       {fehler && <p className="fehlertext">{fehler}</p>}
     </div>
   );
@@ -955,7 +957,7 @@ function Verknuepfungen({ mappe, gruppen }: { mappe: Mappe; gruppen: ReturnType<
       {gruppen.map(({ t: mappentyp, f, treffer, liste }) => (
         <section key={`${mappentyp.id}-${f.key}`} className="gruppe">
           <header>
-            <span><strong>{mappentyp.name}</strong> <span className="leise">{t('ablage.mappeformular.ueber', { label: f.label })}</span> <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span> <span className="anzahl">{treffer.length}</span></span>
+            <span><strong>{typName(mappentyp)}</strong> <span className="leise">{t('ablage.mappeformular.ueber', { label: feldLabel(f) })}</span> <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span> <span className="anzahl">{treffer.length}</span></span>
             {darfErstellen(mappentyp) && <Link to={`/ablage/${mappentyp.id}/neu?verweis=${encodeURIComponent(`${f.key}:${mappe.id}`)}`} className="knopf klein">{t('ablage.mappeformular.anlegen-2', { name: mappentyp.name })}</Link>}
           </header>
           {!treffer.length ? <p className="leise">{t('ablage.mappeformular.noch-keine')}</p>

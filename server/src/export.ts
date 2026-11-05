@@ -2,6 +2,7 @@
  * Export mehrerer Mappen (#152, #153): Tabelle (CSV, Excel), ZIP mit Dokumenten und ein PDF.
  * Passwortfelder werden nie ausgegeben.
  */
+import { feldLabel, registerName, typName } from '../../shared/src/beschriftung';
 import { formatiere, istSystemspalte, SYSTEMSPALTEN, trefferlistenVon, type Dokument, type Feld, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { spaltenDerSicht } from '../../shared/src/sichten';
 import type { Zelle } from './xlsx';
@@ -33,7 +34,8 @@ export function exportSpalten(typen: Mappentyp[], art: Spaltenart, trefferliste?
 
 export function spaltenKopf(k: string, typen: Mappentyp[]): string {
   if (istSystemspalte(k)) return SYSTEMSPALTEN[k];
-  return typen.map((t) => t.felder.find((f) => f.key === k)?.label).find(Boolean) ?? k;
+  // Bezeichnung in der Sprache des Benutzers (#728); die Werte der Auswahlfelder formatiert `formatiere` als Beschriftung.
+  return typen.map((t) => { const f = t.felder.find((x) => x.key === k); return f ? feldLabel(f) : undefined; }).find(Boolean) ?? k;
 }
 
 const titelOder = (eintrag: string | null | undefined) => (eintrag && eintrag.trim() ? eintrag : t('meldungen.export.ohne-titel'));
@@ -48,7 +50,7 @@ export function zeile(m: Mappe, spalten: string[], q: Quelle): { text: string[];
   for (const k of spalten) {
     switch (k) {
       case '_titel': text.push(titelOder(m.titel)); werte.push(titelOder(m.titel)); continue;
-      case '_typ': text.push(typ?.name ?? ''); werte.push(typ?.name ?? ''); continue;
+      case '_typ': { const n = typ ? typName(typ) : ''; text.push(n); werte.push(n); continue; }
       case '_erstellt': text.push(zeit(m.erstellt)); werte.push({ zeitpunkt: m.erstellt }); continue;
       case '_geaendert': text.push(zeit(m.geaendert)); werte.push({ zeitpunkt: m.geaendert }); continue;
       case '_erstelltVon': { const n = m.erstelltVon ? q.titel(m.erstelltVon) : ''; text.push(n); werte.push(n); continue; }
@@ -111,7 +113,7 @@ async function mappenSeite(x: PdfMappe, q: Quelle): Promise<PdfMappenSeite> {
     const felder = (r.felder ?? []).map((k) => typ?.felder.find((f) => f.key === k)).filter((f): f is Feld => !!f && f.typ !== 'passwort');
     const mitWert = felder.filter((fd) => m.werte[fd.key] != null && m.werte[fd.key] !== '' && !(Array.isArray(m.werte[fd.key]) && !(m.werte[fd.key] as unknown[]).length));
     if (!mitWert.length) continue;
-    bloecke.push({ name: register.length > 1 && r.name ? r.name : null, felder: mitWert.map((fd) => [fd.label, formatiere(fd, m.werte[fd.key], (id) => q.titel(id))]) });
+    bloecke.push({ name: register.length > 1 && r.name ? registerName(r) : null, felder: mitWert.map((fd) => [feldLabel(fd), formatiere(fd, m.werte[fd.key], (id) => q.titel(id))]) });
   }
   const dokumente: PdfMappenSeite['dokumente'] = [];
   for (const d of x.dokumente) {

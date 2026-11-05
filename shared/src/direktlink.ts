@@ -11,6 +11,7 @@
  * - sortierung=feld bzw. -feld; Standard: nach Titel
  * Mehrere Bedingungen gelten zusammen (UND). Server und Oberfläche teilen diese Datei.
  */
+import { optionText, wertZuOption } from './beschriftung';
 import { istIndexplatzhalter, sortierbar, istSystemspalte, vorlageFelder, wirksameVorlage, type Mappe, type Mappentyp, type Sortierung } from './model';
 import { bedingungsfelder, bedingungsProblem, beschreibeBedingung, OPERATOREN, OPERATOREN_JE_ART, type Bedingung, type Bedingungsfeld, type Einheit, type Operator, type WertAngabe } from './sichten';
 import { t } from './texte';
@@ -94,8 +95,9 @@ function wertAus(f: Bedingungsfeld, op: Operator, roh: string): WertAngabe | str
       const optionen = f.feld?.optionen ?? [];
       const gewaehlt: string[] = [];
       for (const teil of s.split(',').map((x) => x.trim()).filter(Boolean)) {
-        const o = optionen.find((x) => x.toLowerCase() === teil.toLowerCase());
-        if (!o) return t('gemeinsam.direktlink.gibt-es-in-der', { teil, name, wert: optionen.length ? t('gemeinsam.direktlink.moeglich', { optionen: optionen.join(', ') }) : '' });
+        // Fester Wert oder seine Beschriftung (#728); die Ansicht vergleicht den festen Wert.
+        const o = wertZuOption(f.feld ?? {}, teil);
+        if (!o) return t('gemeinsam.direktlink.gibt-es-in-der', { teil, name, wert: optionen.length ? t('gemeinsam.direktlink.moeglich', { optionen: optionen.map((x) => (f.feld ? optionText(f.feld, x) : x)).join(', ') }) : '' });
         gewaehlt.push(o);
       }
       return { art: 'fest', wert: gewaehlt };

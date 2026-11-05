@@ -640,6 +640,18 @@ th[aria-sort] .spaltenknopf .pfeil { opacity: 1; }
 .segmente button { flex: 1; background: none; border: 0; padding: 6px 4px; cursor: pointer; color: var(--tinte); }
 .segmente button + button { border-left: 1px solid var(--linie-stark); }
 .segmente button.an { background: var(--akzent); color: var(--akzent-tinte); }
+/* Beschriftungen je Sprache (#728): Eingabe mit kleinem Sprachumschalter, Beschriftung der Auswahlwerte. */
+.sprachtext { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sprachtext > input { flex: 1; min-width: 0; }
+.sprachwahl { display: inline-flex; flex: none; }
+.sprachwahl button { flex: none; position: relative; padding: 2px 7px; font-size: calc(11px * var(--skala, 1)); font-weight: 600; line-height: 1.4; }
+.sprachwahl-luecke { position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--warn); }
+.optionsbeschriftung { border: 1px solid var(--linie); border-radius: var(--r); padding: 8px 12px 12px; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.optionsbeschriftung > legend { font-size: calc(12.5px * var(--skala, 1)); font-weight: 600; padding: 0 4px; }
+.optionsbeschriftung > .sprachwahl { align-self: flex-start; }
+.optionszeilen { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+.optionszeile { display: contents; }
+.optionszeile > code { overflow-wrap: anywhere; }
 .farbfelder { display: inline-flex; gap: 3px; vertical-align: -2px; margin-right: 4px; }
 .farbfelder span { width: 12px; height: 12px; border-radius: 3px; border: 1px solid transparent; }
 .farbwahl { display: flex; gap: 8px; align-items: center; }

@@ -1,3 +1,4 @@
+import { feldLabel } from '../../shared/src/beschriftung';
 import type { DannKarte } from '../../shared/src/automatisierung';
 import { formatiere, type AufgabenAnlass, type Feld } from '../../shared/src/model';
 import { heuteIn, verschiebe } from '../../shared/src/sichten';
@@ -42,7 +43,7 @@ DANN_AUSFUEHRER.feld = async (k: DannKarte, c: KartenKontext) => {
     if (!f || f.typ === 'passwort') continue;
     werte[key] = await wertFuer(f, roh, c);
   }
-  const zeile = Object.entries(werte).map(([key, v]) => { const f = c.typ!.felder.find((x) => x.key === key)!; return `${f.label} = ${formatiere(f, v as never) || '–'}`; }).join(', ');
+  const zeile = Object.entries(werte).map(([key, v]) => { const f = c.typ!.felder.find((x) => x.key === key)!; return `${feldLabel(f)} = ${formatiere(f, v as never) || '–'}`; }).join(', ');
   if (c.trocken) return uebersetzer2('automatisierung.karte.feld.trocken', { felder: zeile });
   await c.dienst.aendereMappe(c.mappe.id, { werte }, c.konto.id, c.z, c.anlass);
   return uebersetzer2('automatisierung.karte.feld.ergebnis', { felder: zeile });

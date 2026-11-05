@@ -307,7 +307,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     });
     const register = mappentyp.register.map((r: Register) => {
       const quellen = r.quellen?.map((q) => ({ typ: ziel(q.typId, wo(`Register „${r.name}“`)), feld: q.feldKey })).filter((q): q is { typ: string; feld: string } => !!q.typ);
-      return ohneLeere({ key: r.key, name: r.name, art: r.art, felder: r.art === 'felder' ? (r.felder ?? []).filter((k) => felder.some((f) => f.key === k)) : undefined, quellen, versionierung: r.versionierung, versionenBehalten: r.versionenBehalten });
+      return ohneLeere({ key: r.key, name: r.name, art: r.art, felder: r.art === 'felder' ? (r.felder ?? []).filter((k) => felder.some((f) => f.key === k)) : undefined, quellen, versionierung: r.versionierung, versionenBehalten: r.versionenBehalten, beschriftungen: r.beschriftungen });
     });
     // volltext: false ausdrücklich behalten (Standard ist ja); ohneLeere ließe es weg.
     mappentyp.register.forEach((r, i) => { if (r.volltext === false) (register[i] as Record<string, unknown>).volltext = false; });
@@ -319,6 +319,8 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     return {
       schluessel: schluessel[mappentyp.id], name: mappentyp.name, beschreibung: mappentyp.beschreibung ?? '',
       ...ohneLeere({ titelVorlage: mappentyp.titelVorlage || undefined }), felder, register, ...ohneLeere({ trefferliste: liste.spalten.length ? liste.spalten : undefined }),
+      // Beschriftungen je Sprache (#728) – an Feldern stecken sie schon in den Feldangaben.
+      ...ohneLeere({ beschriftungen: mappentyp.beschriftungen }),
     };
   });
 
@@ -373,7 +375,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     });
     if (s.trefferliste && s.trefferliste !== 'standard') hinweis(t('meldungen.paketerstellung.ansicht-zeigt-im-paket', { name: s.name }));
     if (s.berechtigungen) hinweis(t('meldungen.paketerstellung.ansicht-berechtigungen-an-der', { name: s.name }));
-    return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, eltern, typen, fremde_typen: fremd, bedingungen, symbol: s.symbol || undefined });
+    return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, beschriftungen: s.beschriftungen, eltern, typen, fremde_typen: fremd, bedingungen, symbol: s.symbol || undefined });
   });
   // Elternansichten zuerst (liest sich besser; das DMS sortiert ohnehin).
   const sortiert: typeof paketSichten = [];

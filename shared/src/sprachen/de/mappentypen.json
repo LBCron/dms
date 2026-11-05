@@ -280,5 +280,11 @@
   "editor.stempel-standard": "– Standard: „Kopie – {datum}“ –",
   "editor.leer.keine": "keine",
   "editor.leer.keins": "keins",
-  "editor.leer.beliebig": "beliebig"
+  "editor.leer.beliebig": "beliebig",
+  "beschriftung.sprache": "Sprache der Beschriftung",
+  "beschriftung.fehlt": "{sprache} – noch ohne Beschriftung",
+  "beschriftung.optionen": "Beschriftung der Werte",
+  "beschriftung.optionen-hilfe": "Gespeichert wird der Wert links. Gezeigt wird die Beschriftung in der Sprache des Benutzers; ohne Beschriftung der Wert selbst. Eine geänderte Beschriftung lässt die gespeicherten Mappen unverändert.",
+  "beschriftung.stand_one": "{vorhanden} von {anzahl} Beschriftung auf {sprache}",
+  "beschriftung.stand_other": "{vorhanden} von {anzahl} Beschriftungen auf {sprache}"
 }
