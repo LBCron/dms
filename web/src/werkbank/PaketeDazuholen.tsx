@@ -6,6 +6,7 @@ import { Symbol } from '../Symbol';
 import { HerkunftZeile } from './Herkunft';
 import { PaketAblauf, PaketApiKontext, sammelStand, type PaketVorgabe, type PaketWahl } from './PaketAblauf';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Pakete dazuholen (#460): Auswahl aus dem offiziellen Katalog mit Abhängigkeiten und Ergänzungen (#405, z. B. weitere
@@ -135,7 +136,7 @@ export function SammeldateiAnsicht({ s, datei, dms, installiert, fertig, abbrech
   s: Sammeldatei; datei: string; dms: string; installiert: InstalliertesPaket[]; fertig(e: AblaufErgebnis): void; abbrechen(): void; geaendert?(): void;
 }) {
   const abgeglichen = s.pakete.every((p) => p.katalog === 'gleich');
-  const datum = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso || '–' : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }); };
+  const datum = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso || '–' : d.toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }); };
   const herkunftNoetig = s.pakete.some((p) => sammelStand(p).installierbar && p.vorschau.pruefung?.bestaetigen !== false);
   return (
     <section className="blatt stapel" aria-label={t('werkbank.paketedazuholen.sammeldatei')}>

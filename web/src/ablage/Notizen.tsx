@@ -5,9 +5,10 @@ import { Formatiert, FormatiertEingabe } from './Formatiert';
 import { Person } from '../Person';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Notizen an einer Mappe (#55): lesen, anlegen, bearbeiten, löschen – jeder darf alles. Seit #427 ein System-Register. */
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 
 export function Notizen({ mappeId, notizen, neuLaden }: { mappeId: string; notizen: Notiz[]; neuLaden: () => Promise<void> }) {
   const [neu, setNeu] = useState('');

@@ -6,6 +6,7 @@ import { rueckfrage } from '../rueckfrage';
 import { fortschrittText } from '../../../shared/src/auftrag';
 import { t, tn } from '../sprache';
 import { JE_MAPPE_STUFEN, MAX_DEMO, MAX_DEMO_DOKUMENTE, MAX_DUPLIKATE, mengenWarnung, MISCHUNGEN, schaetzeMenge, stelleMischung, stelleVonBis, stufeVon } from '../../../shared/src/demodaten';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 type Uebersicht = Array<{ typId: string; name: string; demo: number; gesamt: number }>;
 
@@ -33,25 +34,25 @@ function Regler({ id, name, hinweis, wert, min, max, anzeige, onChange }: {
     </label>
   );
 }
-const dokumente = (n: number) => t('werkbank.demo.dokumente', { anzahl: n, n: n.toLocaleString('de-DE') });
+const dokumente = (n: number) => t('werkbank.demo.dokumente', { anzahl: n, n: n.toLocaleString(gebietsschema()) });
 
-const groesse = (b: number) => b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB` : `${Math.max(1, Math.round(b / 1024 ** 2)).toLocaleString('de-DE')} MB`;
+const groesse = (b: number) => b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB` : `${Math.max(1, Math.round(b / 1024 ** 2)).toLocaleString(gebietsschema())} MB`;
 const dauer = (ms: number) => ms < 60_000 ? `${Math.round(ms / 1000)} s` : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min` : `${(ms / 3_600_000).toFixed(1).replace('.', ',')} h`;
 
 /** Meldung zum Ergebnis eines beendeten Auftrags. */
 function meldungAus(a: Auftrag): Meldung {
   if (a.status === 'fehler') return { art: 'schlecht', text: `${a.titel}: ${a.fehler ?? t('werkbank.demo.fehler')}` };
-  if (a.art === 'demo-entfernen') return { art: 'gut', text: t('werkbank.demo.demo-mappen-entfernt', { entfernt: (a.ergebnis as { entfernt: number }).entfernt.toLocaleString('de-DE') }) };
+  if (a.art === 'demo-entfernen') return { art: 'gut', text: t('werkbank.demo.demo-mappen-entfernt', { entfernt: (a.ergebnis as { entfernt: number }).entfernt.toLocaleString(gebietsschema()) }) };
   const r = a.ergebnis as DemoErgebnis;
   const d = r.dokumente;
   return {
     art: r.uebersprungen.length || r.abgebrochen ? 'warn' : 'gut',
-    text: t('werkbank.demo.demo-mappen-erzeugt', { gesamt: r.gesamt.toLocaleString('de-DE'), wert: d ? t('werkbank.demo.und-dokumente', { zahl: d.anzahl.toLocaleString('de-DE'), groesse: groesse(d.bytes) }) : '', wert2: r.dauerMs ? t('werkbank.demo.in', { dauer: dauer(r.dauerMs) }) : '', wert3: r.startwert ? t('werkbank.demo.startwert', { startwert: r.startwert }) : '' }),
+    text: t('werkbank.demo.demo-mappen-erzeugt', { gesamt: r.gesamt.toLocaleString(gebietsschema()), wert: d ? t('werkbank.demo.und-dokumente', { zahl: d.anzahl.toLocaleString(gebietsschema()), groesse: groesse(d.bytes) }) : '', wert2: r.dauerMs ? t('werkbank.demo.in', { dauer: dauer(r.dauerMs) }) : '', wert3: r.startwert ? t('werkbank.demo.startwert', { startwert: r.startwert }) : '' }),
     liste: [
-      ...Object.entries(r.erzeugt).map(([k, v]) => `${k}: ${v.toLocaleString('de-DE')}`),
+      ...Object.entries(r.erzeugt).map(([k, v]) => `${k}: ${v.toLocaleString(gebietsschema())}`),
       ...(d ? [
-        t('werkbank.demo.dokumente-2', { map: DOKUMENTARTEN.filter((x) => d.jeArt[x]).map((x) => `${ARTNAME[x]} ${d.jeArt[x].toLocaleString('de-DE')}`).join(', '), wert: d.duplikate ? t('werkbank.demo.duplikate', { duplikate: d.duplikate.toLocaleString('de-DE') }) : '' }),
-        t('werkbank.demo.seiten-dokumente-in-der', { seiten: d.seiten.toLocaleString('de-DE'), texterkennung: d.texterkennung.toLocaleString('de-DE'), dauer: dauer(d.dauerMs) }),
+        t('werkbank.demo.dokumente-2', { map: DOKUMENTARTEN.filter((x) => d.jeArt[x]).map((x) => `${ARTNAME[x]} ${d.jeArt[x].toLocaleString(gebietsschema())}`).join(', '), wert: d.duplikate ? t('werkbank.demo.duplikate', { duplikate: d.duplikate.toLocaleString(gebietsschema()) }) : '' }),
+        t('werkbank.demo.seiten-dokumente-in-der', { seiten: d.seiten.toLocaleString(gebietsschema()), texterkennung: d.texterkennung.toLocaleString(gebietsschema()), dauer: dauer(d.dauerMs) }),
       ] : []),
       ...(r.ohneRastern ? [t('werkbank.demo.ohne-pdftoppm-scans-und')] : []),
       ...(r.abgebrochen ? [t('werkbank.demo.vorzeitig-beendet', { abgebrochen: r.abgebrochen })] : []),
@@ -197,12 +198,12 @@ export function DemoPanel() {
           </>}
           {menge && (
             <div className={`hinweis ${!reicht || zuViele ? 'schlecht' : warnung ? 'warn' : 'info'} stapel`} role="status" aria-live="polite">
-              <p>{tn('werkbank.demo.mappen-2', { b: <strong>{t('werkbank.demo.abschaetzung')}</strong>, wert: (menge.mappen - fehlen).toLocaleString('de-DE') })}{fehlen > 0 && <> ({t('werkbank.demo.nichtErzeugbar', { anzahl: fehlen.toLocaleString('de-DE') })})</>}
-                {menge.dokumente && <>{t('werkbank.demo.mit-seiten-zusammen-seiten', { dokumente: dokumente(menge.dokumente.dokumente), seiten: menge.dokumente.seiten.toLocaleString('de-DE'), groesse: groesse(menge.dokumente.bytes), ocrSeiten: menge.dokumente.ocrSeiten.toLocaleString('de-DE') })}</>}.
+              <p>{tn('werkbank.demo.mappen-2', { b: <strong>{t('werkbank.demo.abschaetzung')}</strong>, wert: (menge.mappen - fehlen).toLocaleString(gebietsschema()) })}{fehlen > 0 && <> ({t('werkbank.demo.nichtErzeugbar', { anzahl: fehlen.toLocaleString(gebietsschema()) })})</>}
+                {menge.dokumente && <>{t('werkbank.demo.mit-seiten-zusammen-seiten', { dokumente: dokumente(menge.dokumente.dokumente), seiten: menge.dokumente.seiten.toLocaleString(gebietsschema()), groesse: groesse(menge.dokumente.bytes), ocrSeiten: menge.dokumente.ocrSeiten.toLocaleString(gebietsschema()) })}</>}.
                 {schaetzung && schaetzung.frei !== null && <> {' '}{t('werkbank.demo.frei-frei-bleiben-muessen', { groesse: groesse(schaetzung.frei), groesse2: groesse(schaetzung.mindest) })}</>}</p>
               {warnung && <p>{warnung}</p>}
               {!reicht && <p>{t('werkbank.demo.der-speicherplatz-reicht-dafuer')}</p>}
-              {!!schaetzung?.nichtErzeugbar?.length && <ul className="klein">{schaetzung.nichtErzeugbar.map((x) => <li key={x.typ}>{x.typ}: {x.anzahl.toLocaleString('de-DE')} – {x.grund}</li>)}</ul>}
+              {!!schaetzung?.nichtErzeugbar?.length && <ul className="klein">{schaetzung.nichtErzeugbar.map((x) => <li key={x.typ}>{x.typ}: {x.anzahl.toLocaleString(gebietsschema())} – {x.grund}</li>)}</ul>}
               {mitDok && schaetzung && !schaetzung.rastern && <p className="klein">{t('werkbank.demo.ohne-pdftoppm-nur-in')}</p>}
             </div>
           )}
@@ -212,9 +213,9 @@ export function DemoPanel() {
 
       <div className="blatt">
         <h2 className="h3">{t('werkbank.demo.entfernen')}</h2>
-        <p className="leise">{t('werkbank.demo.loescht-alle-demo-mappen', { demo: demo.toLocaleString('de-DE') })}</p>
+        <p className="leise">{t('werkbank.demo.loescht-alle-demo-mappen', { demo: demo.toLocaleString(gebietsschema()) })}</p>
         <div className="knoepfe"><button className="knopf gefahr-rand" disabled={!demo || laeuft} onClick={async () => {
-          if (await rueckfrage({ titel: t('werkbank.demo.alle-demo-mappen-loeschen', { demo: demo.toLocaleString('de-DE') }), text: t('werkbank.demo.echte-mappen-bleiben-unberuehrt'), ja: t('werkbank.demo.demo-mappen-loeschen'), gefahr: true })) void starte(() => api.demoEntfernen());
+          if (await rueckfrage({ titel: t('werkbank.demo.alle-demo-mappen-loeschen', { demo: demo.toLocaleString(gebietsschema()) }), text: t('werkbank.demo.echte-mappen-bleiben-unberuehrt'), ja: t('werkbank.demo.demo-mappen-loeschen'), gefahr: true })) void starte(() => api.demoEntfernen());
         }}>{t('werkbank.demo.alle-demo-mappen-entfernen')}</button></div>
         <DemoTabelle u={u} />
       </div>
@@ -225,7 +226,7 @@ export function DemoPanel() {
 /** Mappen je Mappentyp, davon Demo (#366: früher die mittlere Spalte). */
 function DemoTabelle({ u }: { u: Uebersicht }) {
   if (!u.length) return <p className="leise klein">{t('werkbank.demo.noch-keine-mappentypen')}</p>;
-  const z = (n: number) => n.toLocaleString('de-DE');
+  const z = (n: number) => n.toLocaleString(gebietsschema());
   return (
     <div className="tabellenrahmen festhoehe">
       <table className="tabelle">

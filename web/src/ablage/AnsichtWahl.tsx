@@ -6,6 +6,7 @@ import { Link } from '../ort';
 import { AnsichtSymbol, Symbol } from '../Symbol';
 import { ZahlWarte } from './ZahlWarte';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Ansicht wählen am Handy (#498): ein Knopf „<Ansicht> ▾“ statt einer Reiterleiste mit 40 Ansichten.
@@ -14,7 +15,7 @@ import { t, tn } from '../sprache';
  * Am Rechner bleibt die Liste; darüber filtert ein kleines Suchfeld (AnsichtFilter).
  */
 
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 
 export interface FesterEintrag { pfad: string; name: ReactNode; text: string; zahl?: number; /** Zahl kommt noch (#512). */ warte?: boolean; hervor?: boolean; an: boolean }
 /** #507: Ansichten, die oben als fester Eintrag stehen (Neue Post), erscheinen nicht noch einmal in den Gruppen. */

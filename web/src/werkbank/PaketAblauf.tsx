@@ -8,6 +8,7 @@ import { t } from '../sprache';
 import { HerkunftZeile } from './Herkunft';
 import { Eingabe } from './PaketEinstellungen';
 import { PaketSymbol } from './PaketSymbol';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Mehrere Pakete in einem Ablauf (#405): Auswahl als Baum (Abhängigkeiten sichtbar, Ergänzungen wie die Zusatzsprachen
@@ -126,7 +127,7 @@ function aufloesen(q: AblaufQuelle, liste: Kandidat[], wahl: string[], versionen
 
 /** Name einer Kategorie aus dem Katalog (#645); unbekannte Kennungen zeigt Ablago, wie sie sind. */
 const kategorieName = (k: string) => { const s = `pakete.kategorie.${k}`; const x = t(s as never); return x === s ? k : x; };
-const groesseText = (b: number) => (b >= 1048576 ? `${(b / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const groesseText = (b: number) => (b >= 1048576 ? `${(b / 1048576).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
 /** Kurzer Name einer Ergänzung unter ihrem Paket: „Texterkennung – Zusatzsprache Französisch“ → „Zusatzsprache Französisch“. */
 const kurz = (name: string) => (name.includes(' – ') ? name.slice(name.lastIndexOf(' – ') + 3) : name);

@@ -6,6 +6,7 @@ import { dauerText, WARTUNG_GEAENDERT, zeitpunkt } from '../wartung';
 import { Hilfe } from '../Hilfe';
 import { istWeg } from '../erreichbar';
 import { rueckfrage } from '../rueckfrage';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Wartungsmodus (#102): ankündigen (Zeitschiene Beginn → Ende, #402), sofort sperren, alle abmelden, beenden;
@@ -49,7 +50,7 @@ const inMinuten = (min: number) => lokal(new Date(Date.now() + min * 60_000).toI
 const SCHNELL = [[15, t('werkbank.wartungsmodus.15-min')], [30, t('werkbank.wartungsmodus.30-min')], [60, t('werkbank.wartungsmodus.1-std')]] as const;
 /** Uhrzeit, bei einem anderen Tag mit Datum. */
 const uhr = (d: Date) => d.toDateString() === new Date().toDateString()
-  ? d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  ? d.toLocaleTimeString(gebietsschema(), { hour: '2-digit', minute: '2-digit' })
   : zeitpunkt(d.toISOString());
 const wann = (d: Date) => t('werkbank.wartungsmodus.uhr', { wert: d.toDateString() === new Date().toDateString() ? t('werkbank.wartungsmodus.um') : t('werkbank.wartungsmodus.am'), uhr: uhr(d) });
 

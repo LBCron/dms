@@ -6,6 +6,7 @@ import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
 import { fortschrittText } from '../../../shared/src/auftrag';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Vollexport (#254): alle Daten in offenen Formaten, lesbar ohne das DMS.
@@ -13,8 +14,8 @@ import { fortschrittText } from '../../../shared/src/auftrag';
  */
 
 const mb = (b: number) => (b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(b < 10 * 1024 ** 2 ? 1 : 0).replace('.', ',')} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-const tag = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'medium' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
+const tag = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { dateStyle: 'medium' });
 
 /** Hinweise zum Export-Ordner (#797) – oben auf der Seite und in der Übersicht der Werkbank. */
 export function exportHinweise(e: { pfad: string; imSicherungsordner: boolean; umzug: ExportUmzug | null }, tage = EXPORT_TAGE): Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean; schluessel: string }> {
@@ -75,7 +76,7 @@ export function VollexportPanel({ z }: { z: VollexportZustand }) {
       ))}
       <div className="blatt">
         <h2 className="h3">{t('werkbank.vollexport.neuer-export')}</h2>
-        <p>{t('werkbank.vollexport.mappen-dateien-noetig-etwa', { mappen: s.abschaetzung.mappen.toLocaleString('de-DE'), dokumente: s.abschaetzung.dokumente.toLocaleString('de-DE'), mb: mb(s.abschaetzung.bytes), mb2: mb(noetig) })}{s.frei !== null && <>{t('werkbank.vollexport.frei', { mb: mb(s.frei) })}</>}.</p>
+        <p>{t('werkbank.vollexport.mappen-dateien-noetig-etwa', { mappen: s.abschaetzung.mappen.toLocaleString(gebietsschema()), dokumente: s.abschaetzung.dokumente.toLocaleString(gebietsschema()), mb: mb(s.abschaetzung.bytes), mb2: mb(noetig) })}{s.frei !== null && <>{t('werkbank.vollexport.frei', { mb: mb(s.frei) })}</>}.</p>
         <p className="leise klein">{tn('werkbank.vollexport.ziel', { code: <code className="mono">{s.ordner}</code> })}</p>
         <p className="leise klein">{t('werkbank.export.ablage', { tage: s.tage })}</p>
         {s.volume === false && <p className="leise klein">{t('werkbank.export.container')}</p>}

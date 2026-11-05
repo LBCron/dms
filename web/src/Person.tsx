@@ -3,6 +3,7 @@ import type { Person as PersonDaten } from './api';
 import { abwesenheitText, useDaten } from './daten';
 import { Link } from './ort';
 import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /** In der Druckansicht stehen Namen als reiner Text (#65). */
 const OhneLinks = createContext(false);
@@ -12,7 +13,7 @@ export const NamenOhneLinks = ({ children }: { children: ReactNode }) => <OhneLi
 export const istDeaktiviert = (p: PersonDaten | undefined): boolean => !!p && p.aktiv === false && !p.art;
 
 /** Tooltip „deaktiviert seit …“ (#663). */
-export const deaktiviertTitel = (p: PersonDaten) => (p.deaktiviert ? t('konten.deaktiviert.titel.seit', { datum: new Date(p.deaktiviert).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }) : t('konten.deaktiviert.titel'));
+export const deaktiviertTitel = (p: PersonDaten) => (p.deaktiviert ? t('konten.deaktiviert.titel.seit', { datum: new Date(p.deaktiviert).toLocaleDateString(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric' }) }) : t('konten.deaktiviert.titel'));
 
 /**
  * Name eines deaktivierten Benutzers (#663): kursiv und durchgestrichen, mit Tooltip und einem Zusatz

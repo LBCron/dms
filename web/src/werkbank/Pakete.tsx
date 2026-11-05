@@ -21,6 +21,7 @@ import { t as tx, t, tn } from '../sprache';
 import { KEINE_LIZENZ, lizenzArtVon, type SelbstErstellt } from '../../../shared/src/paketerstellung';
 import { HerkunftZeile } from './Herkunft';
 import { EREIGNISKATALOG, ereignisSchluessel, istKatalogArt, KATALOG_ARTEN } from '../../../shared/src/ereignisse';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Pakete (#188): Konfigurationspakete aus dem offiziellen Katalog.
@@ -29,7 +30,7 @@ import { EREIGNISKATALOG, ereignisSchluessel, istKatalogArt, KATALOG_ARTEN } fro
  * aufklappbaren Abschnitt direkt unter den Knöpfen.
  */
 
-const datum = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+const datum = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 const host = (url: string) => { try { return new URL(url).host; } catch { return url; } };
 /** Kennung des hochgeladenen Pakets in der Adresse. */
 export const UPLOAD = t('werkbank.pakete.hochgeladen');
@@ -146,7 +147,7 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
           {(z.selbst ?? []).map((p) => (
             <li key={`selbst|${p.id}`}><Link to={`/werkbank/pakete/${SELBST}${p.id}`} className={`eintrag werk ${offen === `${SELBST}${p.id}` ? 'an' : ''}`}>
               <span className="titel">{p.name} <span className="chip" title={tx('pakete.selbst.chipTitel')}>{tx('pakete.selbst.chip')}</span>{z.konflikt(p.id) && <> <span className="chip warn" title={tx('pakete.selbst.konflikt', { id: p.id })}>{tx('pakete.selbst.konfliktChip')}</span></>}</span>
-              <span className="unter">{tx('pakete.selbst.unter', { version: p.version, datum: new Date(p.erstellt).toLocaleDateString('de-DE') })}</span>
+              <span className="unter">{tx('pakete.selbst.unter', { version: p.version, datum: new Date(p.erstellt).toLocaleDateString(gebietsschema()) })}</span>
             </Link></li>
           ))}
           {installiert.map((p) => (

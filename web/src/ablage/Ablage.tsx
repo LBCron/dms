@@ -32,6 +32,7 @@ import { ZahlWarte } from './ZahlWarte';
 import { AufgabenWeitergeben } from '../profil/Abwesenheit';
 import { ErledigenUmschalter, MeineAufgabenWeitergeben, TermineSicht, useErledigenAnsicht } from './Termine';
 import { Ehemalig } from '../Person';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Ablage in drei Spalten, von groß nach klein:
@@ -45,7 +46,7 @@ import { Ehemalig } from '../Person';
  *
  * Die Liste lädt je 100 Mappen nach Titel sortiert und beim Scrollen die nächsten.
  */
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 
 export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchParams }) {
   const d = useDaten();

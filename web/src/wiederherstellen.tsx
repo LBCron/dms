@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type SicherungSchlank, type SicherungsMeta, type WhAbgleich, type WhAbschluss, type WhLauf, type WhSchritt } from './api';
 import { t, tn } from './sprache';
 import { rueckfrage } from './rueckfrage';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Wiederherstellen (#107): Assistent (Sicherung wählen, Abgleich, Schlüssel, Start) für das
@@ -10,7 +11,7 @@ import { rueckfrage } from './rueckfrage';
  * Abschlussmeldung da ist.
  */
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 const groesse = (b: number) => (b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(0)} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
 const ART: Record<string, string> = { manuell: t('oberflaeche.wiederherstellen.von-hand'), automatisch: t('oberflaeche.wiederherstellen.art.automatisch'), 'vor-wiederherstellung': t('oberflaeche.wiederherstellen.vor-einer-wiederherstellung') };
 const ZEICHEN: Record<WhSchritt['status'], string> = { offen: '○', laeuft: '◐', ok: '✓', fehler: '✕', hinweis: '!', ausgelassen: '–' };
@@ -119,7 +120,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
             <li key={x.name}>
               <label className="haken">
                 <input type="radio" name="sicherung" checked={gewaehlt === x.name} onChange={() => { setSchluessel(''); void waehle(x.name); }} />
-                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> {' '}{t('oberflaeche.wiederherstellen.ablago-mappen', { wert: ART[x.meta.art] ?? x.meta.art, dms: x.meta.umgebung.dms, mappen: x.meta.anzahl.mappen.toLocaleString('de-DE'), groesse: groesse(x.bytes) })}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> {' '}{t('oberflaeche.wiederherstellen.metadaten-json-fehlen')}</span>}</span>
+                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> {' '}{t('oberflaeche.wiederherstellen.ablago-mappen', { wert: ART[x.meta.art] ?? x.meta.art, dms: x.meta.umgebung.dms, mappen: x.meta.anzahl.mappen.toLocaleString(gebietsschema()), groesse: groesse(x.bytes) })}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> {' '}{t('oberflaeche.wiederherstellen.metadaten-json-fehlen')}</span>}</span>
               </label>
             </li>
           ))}

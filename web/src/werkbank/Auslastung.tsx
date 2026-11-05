@@ -5,6 +5,7 @@ import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
 import { t } from '../sprache';
 import { platz } from './Speicherplatz';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Wartung und Fehlersuche → Systemzustand → Auslastung (#409, Stufe 1): CPU, Arbeitsspeicher und
@@ -28,10 +29,10 @@ export function useSystemlast(offen: boolean) {
 }
 export type SystemlastZustand = ReturnType<typeof useSystemlast>;
 
-const prozent = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 0 })} %`;
-const rate = (b: number) => t('systemzustand.netz.je-sekunde', { wert: b < 1024 ** 2 ? `${(b / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 })} KB` : `${(b / 1024 ** 2).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` });
-const ms = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 1 })} ms`;
-const uhrzeit = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { timeStyle: 'short' });
+const prozent = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 0 })} %`;
+const rate = (b: number) => t('systemzustand.netz.je-sekunde', { wert: b < 1024 ** 2 ? `${(b / 1024).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} KB` : `${(b / 1024 ** 2).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} MB` });
+const ms = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} ms`;
+const uhrzeit = (iso: string) => new Date(iso).toLocaleTimeString(gebietsschema(), { timeStyle: 'short' });
 const NV = () => <span className="leise" title={t('systemzustand.auslastung.nicht-verfuegbar.hilfe')}>{t('systemzustand.auslastung.nicht-verfuegbar')}</span>;
 
 /**
@@ -75,12 +76,12 @@ function Arbeiter({ a }: { a: SystemlastAntwort['arbeiter'] }) {
       {a.aus ? <p className="leise klein">{t('systemzustand.arbeiter.aus')}</p> : <>
         <p>{a.wartend ? t('systemzustand.arbeiter.wartend', { anzahl: a.wartend }) : t('systemzustand.arbeiter.keine-warten')}</p>
         <dl className="eigenschaften klein az-anteile">
-          <dt>{t('systemzustand.arbeiter.erledigt')}</dt><dd>{a.erledigt.toLocaleString('de-DE')}</dd>
+          <dt>{t('systemzustand.arbeiter.erledigt')}</dt><dd>{a.erledigt.toLocaleString(gebietsschema())}</dd>
           <dt>{t('systemzustand.arbeiter.dauer')}</dt><dd>{a.mittlereDauerMs === null ? '–' : ms(a.mittlereDauerMs)}</dd>
           <dt>{t('systemzustand.arbeiter.warten')}</dt><dd>{a.mittleresWartenMs === null ? '–' : t('systemzustand.arbeiter.warten.wert', { mittel: ms(a.mittleresWartenMs), max: ms(a.laengstesWartenMs) })}</dd>
           <dt>{t('systemzustand.arbeiter.fehler')}</dt><dd>{t('systemzustand.arbeiter.fehler.wert', { fehler: a.fehler, zeit: a.zeitueberschreitungen, abgewiesen: a.abgewiesen })}</dd>
         </dl>
-        <p className="leise klein">{t(a.quelle === 'umgebung' ? 'systemzustand.arbeiter.hilfe.umgebung' : 'systemzustand.arbeiter.hilfe.vorgabe', { groesse: a.groesse, kerne: a.kerne.toLocaleString('de-DE'), minuten: Math.round(a.zeitMs / 60_000) })}</p>
+        <p className="leise klein">{t(a.quelle === 'umgebung' ? 'systemzustand.arbeiter.hilfe.umgebung' : 'systemzustand.arbeiter.hilfe.vorgabe', { groesse: a.groesse, kerne: a.kerne.toLocaleString(gebietsschema()), minuten: Math.round(a.zeitMs / 60_000) })}</p>
       </>}
     </div>
   );
@@ -129,8 +130,8 @@ function Grenzen({ g }: { g: NonNullable<SystemlastAntwort['grenzen']> }) {
           const w = g[k]!;
           return (<Fragment key={k}>
             <dt>{t.frei(`systemzustand.grenzen.${k}`)}</dt>
-            <dd>{k === 'arbeiter' && w.wert === 0 ? t('systemzustand.grenzen.aus') : t(w.quelle === 'umgebung' ? 'systemzustand.grenzen.umgebung' : 'systemzustand.grenzen.vorgabe', { wert: w.wert.toLocaleString('de-DE') })}
-              {' '}<span className="leise">· <span className="mono">{t('systemzustand.grenzen.bereich', { variable: w.variable, min: w.min.toLocaleString('de-DE'), max: w.max.toLocaleString('de-DE') })}</span></span></dd>
+            <dd>{k === 'arbeiter' && w.wert === 0 ? t('systemzustand.grenzen.aus') : t(w.quelle === 'umgebung' ? 'systemzustand.grenzen.umgebung' : 'systemzustand.grenzen.vorgabe', { wert: w.wert.toLocaleString(gebietsschema()) })}
+              {' '}<span className="leise">· <span className="mono">{t('systemzustand.grenzen.bereich', { variable: w.variable, min: w.min.toLocaleString(gebietsschema()), max: w.max.toLocaleString(gebietsschema()) })}</span></span></dd>
           </Fragment>);
         })}
       </dl>
@@ -143,7 +144,7 @@ function Grenzen({ g }: { g: NonNullable<SystemlastAntwort['grenzen']> }) {
 function Engpaesse({ s }: { s: SystemlastAntwort }) {
   const e = s.engpaesse ?? [];
   if (!e.length) return null;
-  const wert = (k: Einstellbar) => (s.grenzen?.[k]?.wert ?? 0).toLocaleString('de-DE');
+  const wert = (k: Einstellbar) => (s.grenzen?.[k]?.wert ?? 0).toLocaleString(gebietsschema());
   const text = (x: (typeof e)[number]) => {
     const variable = ENGPASS_VARIABLE[x];
     if (x === 'verbindungen') return t('systemzustand.engpass.verbindungen', { variable, wert: wert('verbindungen'), ms: ms(VERBINDUNG_WARTEN_MS) });
@@ -176,7 +177,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
             <h3 className="az-titel">{t('systemzustand.cpu.titel')} <span className="az-jetzt">{s.jetzt.cpu === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(s.jetzt.cpu) })}</span></h3>
             <Kurve titel={t('systemzustand.cpu.titel')} punkte={s.verlauf} wert={(p) => p.cpu} format={prozent} max={100} />
             <p className="leise klein">{s.kerneBegrenzt ? t('systemzustand.cpu.kerne', { anzahl: s.kerne }) : t('systemzustand.cpu.kerne.ohne', { anzahl: s.kerne })}</p>
-            <p className="leise klein">{t('systemzustand.cpu.last', { eins: s.last[0].toLocaleString('de-DE'), fuenf: s.last[1].toLocaleString('de-DE'), fuenfzehn: s.last[2].toLocaleString('de-DE'), kerne: s.hostKerne })}</p>
+            <p className="leise klein">{t('systemzustand.cpu.last', { eins: s.last[0].toLocaleString(gebietsschema()), fuenf: s.last[1].toLocaleString(gebietsschema()), fuenfzehn: s.last[2].toLocaleString(gebietsschema()), kerne: s.hostKerne })}</p>
           </div>
           <div className="az-wert">
             <h3 className="az-titel">{t('systemzustand.speicher.titel')} <span className="az-jetzt">{s.jetzt.speicher === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(s.jetzt.speicher) })}</span></h3>

@@ -5,6 +5,7 @@ import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
 import { pruefwert } from '../pruefwert';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Datenschutz → Löschprotokoll (#470): Nachweis gelöschter Mappen und Dokumente – ohne Titel,
@@ -15,7 +16,7 @@ import { t, tn } from '../sprache';
 
 type Filter = Record<'von' | 'bis' | 'typId' | 'grund' | 'schritt' | 'vorgang' | 'suche', string>;
 const LEER: Filter = { von: '', bis: '', typId: '', grund: '', schritt: '', vorgang: '', suche: '' };
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 const groesse = (b: number | null) => (b === null ? '' : b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 const kurz = (id: string) => id.slice(0, 8);
 const ohneLeere = (f: Filter) => Object.fromEntries(Object.entries(f).filter(([, v]) => v)) as Record<string, string>;
@@ -68,7 +69,7 @@ export function LoeschprotokollBlatt() {
       {r && (
         <>
           <p className="zeile-zwischen">
-            <span className="leise klein">{r.gesamt === 0 ? (shaSuche ? t('werkbank.loeschprotokoll.kein-dokument-mit-dieser') : t('werkbank.loeschprotokoll.keine-eintraege')) : t('werkbank.loeschprotokoll.eintraege', { anzahl: r.gesamt, gesamt: r.gesamt.toLocaleString('de-DE'), wert: r.gesamt > r.eintraege.length ? t('werkbank.loeschprotokoll.die-neuesten-angezeigt', { eintraege: r.eintraege.length }) : '' })}</span>
+            <span className="leise klein">{r.gesamt === 0 ? (shaSuche ? t('werkbank.loeschprotokoll.kein-dokument-mit-dieser') : t('werkbank.loeschprotokoll.keine-eintraege')) : t('werkbank.loeschprotokoll.eintraege', { anzahl: r.gesamt, gesamt: r.gesamt.toLocaleString(gebietsschema()), wert: r.gesamt > r.eintraege.length ? t('werkbank.loeschprotokoll.die-neuesten-angezeigt', { eintraege: r.eintraege.length }) : '' })}</span>
             <span className="knoepfe">
               <a className="knopf klein" href={`/api/werkbank/loeschprotokoll/datei?format=pdf${query ? `&${query}` : ''}`}>{t('werkbank.loeschprotokoll.als-pdf')}</a>
               <a className="knopf klein" href={`/api/werkbank/loeschprotokoll/datei?format=csv${query ? `&${query}` : ''}`}>{t('werkbank.loeschprotokoll.als-csv')}</a>

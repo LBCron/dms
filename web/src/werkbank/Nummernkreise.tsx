@@ -9,13 +9,14 @@ import { NEUBEGINN_TEXT, pruefeMuster, formatiereNummer, datumIn, kreisVon, neub
 import { rueckfrage } from '../rueckfrage';
 import { fortschrittText } from '../../../shared/src/auftrag';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Nummernkreise (#171): fortlaufende Nummern für Textfelder.
  * Ein Feld nutzt einen Kreis über den Standardwert {nummernkreis:<schlüssel>}.
  */
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 
 export function useNummernkreise(offen: boolean) {
   const [liste, setListe] = useState<NummernkreisAnsicht[] | null>(null);

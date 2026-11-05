@@ -6,13 +6,14 @@ import { geheZu, Link } from '../ort';
 import { t, tn } from '../sprache';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Werkbank → Anmeldeschutz (#240): Fehlversuche je Konto und je IP, gesperrte IPs, Ausnahmen. */
 
 type SperrFormular = Omit<SperrEinstellung, 'ausnahmen'> & { ausnahmen: string };
 const sperrFormular = (s: SperrEinstellung): SperrFormular => ({ ...s, ausnahmen: s.ausnahmen.join(', ') });
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 
 export function useAnmeldeschutz(offen: boolean) {
   const [stand, setStand] = useState<AnmeldeschutzStand | null>(null);

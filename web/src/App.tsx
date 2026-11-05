@@ -21,6 +21,7 @@ import { Pikto } from './piktogramme';
 import { UeberDms } from './UeberDms';
 import { ADMIN_START, startseiteVon } from '../../shared/src/startseite';
 import { t, tn } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 export function App() {
   const { pfad, suche } = useOrt();
@@ -143,7 +144,7 @@ export function setzeSymbol(url: string | null) {
 }
 
 
-const uhrzeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const uhrzeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 
 /** Hinweis an den Benutzer: Ein Administrator hat als er agiert. */
 function Hinweise() {

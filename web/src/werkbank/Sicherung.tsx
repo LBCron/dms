@@ -8,6 +8,7 @@ import { Hilfe, useHandbuch } from '../Hilfe';
 import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Sicherung (#103–#106): jetzt sichern, Liste mit Prüfsumme, Zeitplan und
@@ -19,7 +20,7 @@ const GEAENDERT = 'dms:sicherung';
 export const meldeSicherung = () => dispatchEvent(new Event(GEAENDERT));
 
 export const bytes = (b: number) => (b < 1024 ** 2 ? `${Math.max(1, Math.round(b / 1024))} KB` : b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(0)} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 const ART = { manuell: t('werkbank.sicherung.von-hand'), automatisch: t('werkbank.sicherung.art.automatisch'), 'vor-wiederherstellung': t('werkbank.sicherung.vor-einer-wiederherstellung') } as Record<string, string>;
 const TAGE = ['', t('werkbank.sicherung.montag'), t('werkbank.sicherung.dienstag'), t('werkbank.sicherung.mittwoch'), t('werkbank.sicherung.donnerstag'), t('werkbank.sicherung.freitag'), t('werkbank.sicherung.samstag'), t('werkbank.sicherung.sonntag')];
 
@@ -230,7 +231,7 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
                 <td>{x.meta ? ART[x.meta.art] ?? x.meta.art : x.schlank ? <span className="leise">{t('werkbank.sicherung.extern.zurueck')}</span> : <span className="fehlertext">{t('werkbank.sicherung.metadaten-fehlen')}</span>}
                   {x.meta && s.zustand.fingerabdruck && x.meta.verschluesselung.fingerabdruck !== s.zustand.fingerabdruck && <> <span className="chip warn" title={t('werkbank.sicherung.schluessel-braucht-das-notfallblatt', { fingerabdruck: x.meta.verschluesselung.fingerabdruck })}>{t('werkbank.sicherung.frueherer-schluessel')}</span></>}</td>
                 <td className="rechts kurz">{bytes(x.bytes)}</td>
-                <td>{x.meta ? t('werkbank.sicherung.mappen-dateien', { mappen: x.meta.anzahl.mappen.toLocaleString('de-DE'), dateien: x.meta.anzahl.dateien.toLocaleString('de-DE') }) : '–'}{x.meta && <span className="leise klein"> {' '}{t('werkbank.sicherung.ablago', { dms: x.meta.umgebung.dms })}</span>}</td>
+                <td>{x.meta ? t('werkbank.sicherung.mappen-dateien', { mappen: x.meta.anzahl.mappen.toLocaleString(gebietsschema()), dateien: x.meta.anzahl.dateien.toLocaleString(gebietsschema()) }) : '–'}{x.meta && <span className="leise klein"> {' '}{t('werkbank.sicherung.ablago', { dms: x.meta.umgebung.dms })}</span>}</td>
                 {ortSpalte && <td><OrtZelle e={x} extern={s.zustand.extern} /></td>}
                 <td>{x.pruefung ? <span className={`chip ${x.pruefung.ok ? 'gut' : 'schlecht'}`} title={t('werkbank.sicherung.geprueft', { zeit: zeit(x.pruefung.am) })}>{x.pruefung.ok ? t('werkbank.sicherung.unveraendert') : t('werkbank.sicherung.weicht-ab')}</span> : <span className="leise">–</span>}</td>
                 <td>{x.probe ? <span className={`chip ${x.probe.ok ? 'gut' : 'schlecht'}`} title={`${zeit(x.probe.am)}: ${x.probe.info}`}>{x.probe.ok ? t('werkbank.sicherung.in-ordnung') : t('werkbank.sicherung.fehler')}</span> : <span className="leise">–</span>}</td>
@@ -252,7 +253,7 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
       <section className="blatt" id="speicher">
         <h2 className="h3">{tn('werkbank.sicherung.speicherplatz', { hilfe: <Hilfe ort="sicherung.speicher" /> })}</h2>
         <dl className="eigenschaften">
-          <dt>{t('werkbank.sicherung.dokumente-und-dateien-heute')}</dt><dd>{t('werkbank.sicherung.dateien', { bytes: bytes(s.speicher.dateienBytes), dateien: s.speicher.dateien.toLocaleString('de-DE') })}</dd>
+          <dt>{t('werkbank.sicherung.dokumente-und-dateien-heute')}</dt><dd>{t('werkbank.sicherung.dateien', { bytes: bytes(s.speicher.dateienBytes), dateien: s.speicher.dateien.toLocaleString(gebietsschema()) })}</dd>
           <dt>{t('werkbank.sicherung.datenbank-heute')}</dt><dd>{bytes(s.speicher.datenbankBytes)}</dd>
           <dt>{t('werkbank.sicherung.hochrechnung')}</dt><dd>{tn('werkbank.sicherung.bis-zu-sicherungen', { stueck: s.speicher.hochrechnung.stueck, bytes: bytes(s.speicher.hochrechnung.bytes), span: <span className="leise klein">{t('werkbank.sicherung.jede-ist-vollstaendig-die')}</span> })}</dd>
           <dt>{t('werkbank.sicherung.belegt-durch-sicherungen')}</dt><dd>{t('werkbank.sicherung.in-sicherungen', { anzahl: s.speicher.anzahl, bytes: bytes(s.speicher.sicherungenBytes) })}</dd>

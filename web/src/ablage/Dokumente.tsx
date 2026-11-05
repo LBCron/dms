@@ -24,6 +24,7 @@ import { PdfVerkleinern } from './PdfVerkleinern';
 import { Schwaerzen } from './Schwaerzen';
 import { kannSchwaerzen } from '../../../shared/src/schwaerzen';
 import { kannStempeln } from '../../../shared/src/stempel';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** „Verkleinern“ (#393) erst ab dieser Größe anbieten – kleinere PDFs lohnen die Mühe kaum. */
 const VERKLEINERN_AB = 500 * 1024;
@@ -37,7 +38,7 @@ const VERKLEINERN_AB = 500 * 1024;
 /** gleicherName (#194): was mit einem Dokument gleichen Namens im Register passiert. */
 export interface NeueDatei { uid: string; datei: File; register: string; gleicherName?: 'zaehler' | 'version' | 'ersetzen' }
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 export const groesse = (b: number) => (b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 
 /** Reihenfolgen der Dokumente (#86); gemerkt je Benutzer für alle Dokumentenregister. */

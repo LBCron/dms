@@ -2,12 +2,13 @@ import { KATALOG_ALT_TAGE, type HerkunftPruefung } from '../../../shared/src/pak
 import { Hilfe } from '../Hilfe';
 import { t } from '../sprache';
 import { Symbol } from '../Symbol';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Zeile „Herkunft“ (#594): was die Signatur über ein Paket sagt – signiert vom DMS-Projekt, vom Anbieter eines
  * eigenen Katalogs, nicht signiert oder ungültig. Für die Vorschau und die Sammeldatei.
  */
-const datum = (iso?: string) => { const d = new Date(iso ?? ''); return Number.isNaN(d.getTime()) ? iso ?? '–' : d.toLocaleDateString('de-DE', { dateStyle: 'medium' }); };
+const datum = (iso?: string) => { const d = new Date(iso ?? ''); return Number.isNaN(d.getTime()) ? iso ?? '–' : d.toLocaleDateString(gebietsschema(), { dateStyle: 'medium' }); };
 
 /** Herkunft in einem Satzteil, z. B. „signiert vom DMS-Projekt (Katalog vom 1. Nov. 2026)“. */
 export function herkunftPruefungText(p: HerkunftPruefung, sammel = false): string {

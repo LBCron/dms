@@ -51,6 +51,7 @@ import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from '../ablage/Papi
 import { filterAusAdresse } from '../../../shared/src/aufgabenfilter';
 import { istOffen } from '../../../shared/src/auskunft';
 import { useBeiWiederErreichbar } from '../erreichbar';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Umgezogen (#717, #725): /werkbank/darfweg → aufbewahrung, /werkbank/suche → texterkennung#suche,
@@ -370,7 +371,7 @@ function TypenListe({ offen, pakete }: { offen?: string; pakete: InstalliertesPa
                   <Link to={`/werkbank/typen/${mappentyp.id}`} className={`eintrag werk ${offen === mappentyp.id ? 'an' : ''}`}>
                     <span className="titel">{mappentyp.name}{mappentyp.system && <span className="chip" title={t('werkbank.werkbank.systemmappentyp-laesst-sich')}>{t('werkbank.werkbank.system')}</span>}
                       {(() => { const p = pakete.find((x) => Object.values(x.typen).includes(mappentyp.id)); return p ? <> <span className="chip" title={t('werkbank.werkbank.aus-dem-paket', { name: p.name, version: p.version })}>{t('werkbank.werkbank.paket', { name: p.name })}</span></> : null; })()}</span>
-                    <span className="unter">{t('werkbank.werkbank.felder-register', { felder: mappentyp.felder.length, register: mappentyp.register.length })}{d.zahlenDa && <> · {anzahl.toLocaleString('de-DE')} {t('werkbank.werkbank.mappen', { anzahl })}</>}</span>
+                    <span className="unter">{t('werkbank.werkbank.felder-register', { felder: mappentyp.felder.length, register: mappentyp.register.length })}{d.zahlenDa && <> · {anzahl.toLocaleString(gebietsschema())} {t('werkbank.werkbank.mappen', { anzahl })}</>}</span>
                     {unpassend > 0 && <span className="problem">{t('werkbank.werkbank.passen-nicht-zur-definition', { unpassend })}</span>}
                   </Link>
                 </li>

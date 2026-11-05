@@ -5,6 +5,7 @@ import { Link } from '../ort';
 import { Listenkopf } from '../Listenkopf';
 import { istWeg } from '../erreichbar';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Protokoll in der Werkbank: Mitte die Einträge (neueste oben, mit Filtern und
@@ -17,8 +18,8 @@ const STUFEN: Array<{ wert: Stufe; name: string }> = [
   { wert: 'warn', name: t('werkbank.protokoll.warnungen-und-fehler') }, { wert: 'error', name: t('werkbank.protokoll.nur-fehler') },
 ];
 const STUFENNAME: Record<Stufe, string> = { trace: t('werkbank.protokoll.trace'), debug: t('werkbank.protokoll.debug'), info: t('werkbank.protokoll.info'), warn: t('werkbank.protokoll.warnung'), error: t('werkbank.protokoll.fehler'), fatal: t('werkbank.protokoll.fatal') };
-const uhr = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const datumUhr = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'medium' });
+const uhr = (iso: string) => new Date(iso).toLocaleTimeString(gebietsschema(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const datumUhr = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'medium' });
 
 /** Verständlicher Name eines Moduls (#682); unbekannte Kürzel bleiben, wie sie sind. */
 export const modulName = (m: string): string => (t.hat(`werkbank.protokoll.modul.${m}`) ? t.frei(`werkbank.protokoll.modul.${m}`) : m);
@@ -66,7 +67,7 @@ export function ProtokollListe({ p, offen }: { p: ProtokollZustand; offen?: stri
   const benutzer = useMemo(() => [...new Set(p.eintraege.map((e) => e.benutzer).filter(Boolean) as string[])].sort(), [p.eintraege]);
   return (
     <>
-      <Listenkopf titel={t('werkbank.protokoll.protokoll')} hilfe="werkbank.protokoll" beschreibung={<>{t('werkbank.protokoll.letzte-24-stunden-hoechstens', { gespeichert: p.gespeichert.toLocaleString('de-DE') })}</>} />
+      <Listenkopf titel={t('werkbank.protokoll.protokoll')} hilfe="werkbank.protokoll" beschreibung={<>{t('werkbank.protokoll.letzte-24-stunden-hoechstens', { gespeichert: p.gespeichert.toLocaleString(gebietsschema()) })}</>} />
       <div className="protokollfilter">
         <label><span className="sr">{t('werkbank.protokoll.stufe')}</span>
           <select value={f.stufe} onChange={(e) => setze({ stufe: e.target.value as Stufe })}>{STUFEN.map((s) => <option key={s.wert} value={s.wert}>{s.name}</option>)}</select></label>
@@ -142,7 +143,7 @@ function DebugPanel({ p }: { p: ProtokollZustand }) {
       <div className="blatt">
         <h2 className="h3">{t('werkbank.protokoll.debug-modus')}</h2>
         {d?.an
-          ? <div className="hinweis warn"><p>{t('werkbank.protokoll.eingeschaltet-bis-uhr-danach', { toLocaleTimeString: new Date(d.bis!).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) })}</p></div>
+          ? <div className="hinweis warn"><p>{t('werkbank.protokoll.eingeschaltet-bis-uhr-danach', { uhrzeit: new Date(d.bis!).toLocaleTimeString(gebietsschema(), { hour: '2-digit', minute: '2-digit' }) })}</p></div>
           : <p className="leise">{t('werkbank.protokoll.aus-protokolliert-wird-ab', { wert: d?.grundstufe ?? t('werkbank.protokoll.info-2') })}</p>}
         <p className="leise">{t('werkbank.protokoll.im-debug-modus-kommen')}</p>
         <div className="knoepfe">

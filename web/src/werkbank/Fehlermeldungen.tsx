@@ -5,9 +5,10 @@ import { Person } from '../Person';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Werkbank → Wartung und Fehlersuche → Fehlermeldungen (#70). */
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 const groesse = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 
 export function useFehlermeldungen(aktiv: boolean) {
@@ -98,7 +99,7 @@ export function FehlermeldungDetail({ id, neuLaden }: { id: string; z: Fehlermel
       )}
       <section className="blatt">
         <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('werkbank.fehlermeldungen.technische-angaben')}</h2>
-          <Link to="/werkbank/protokoll" className="verweis">{t('werkbank.fehlermeldungen.zum-protokoll-eintraege-um', { toLocaleTimeString: new Date(m.erstellt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) })}</Link></div>
+          <Link to="/werkbank/protokoll" className="verweis">{t('werkbank.fehlermeldungen.zum-protokoll-eintraege-um', { uhrzeit: new Date(m.erstellt).toLocaleTimeString(gebietsschema(), { hour: '2-digit', minute: '2-digit' }) })}</Link></div>
         <Angaben wert={m.angaben} />
       </section>
       <div className="knoepfe">

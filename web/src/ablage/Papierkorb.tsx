@@ -9,6 +9,7 @@ import { Listenkopf } from '../Listenkopf';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { hinweis, rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Papierkorb (#43). In der Ablage sieht jeder, was er selbst gelöscht hat; in der Werkbank
@@ -17,7 +18,7 @@ import { t, tn } from '../sprache';
 
 const GEAENDERT = 'dms:papierkorb';
 const melde = () => dispatchEvent(new Event(GEAENDERT));
-const datumZeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const datumZeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 const basis = (werkbank: boolean) => (werkbank ? '/werkbank/papierkorb' : '/ablage/papierkorb');
 
 export function usePapierkorb(werkbank: boolean, aktiv = true) {

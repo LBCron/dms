@@ -4,14 +4,15 @@ import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Lange Datenbankzugriffe (#12) und was gerade in der Datenbank läuft – seit #407 unter
  * Einstellungen → Datenbank-Anbindung, unter der Verbindung: Einstellungen (Schwelle, Aufbewahrung)
  * direkt bei der Liste der gespeicherten Langläufer (#366), darunter „Was läuft gerade“.
  */
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
-const dauer = (ms: number) => (ms >= 10_000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${ms.toLocaleString('de-DE')} ms`);
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'medium' });
+const dauer = (ms: number) => (ms >= 10_000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${ms.toLocaleString(gebietsschema())} ms`);
 
 export function useDatenbank(sichtbar: boolean) {
   const [stand, setStand] = useState<DatenbankStand | null>(null);
@@ -128,7 +129,7 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
   const a = z.stand?.auslastung;
   if (!a) return null;
   const w = a.aktuell && (a.aktuell.seitSekunden >= 10 || !a.vorher) ? a.aktuell : a.vorher ?? a.aktuell;
-  const zahl = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 1 })} ms`;
+  const zahl = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} ms`;
   return (
     <div className="blatt">
       <h2 className="h3">{t('werkbank.datenbank.auslastung-des-servers')}</h2>
@@ -152,7 +153,7 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
 function Verbindungen({ z }: { z: DatenbankZustand }) {
   const v = z.stand?.verbindungen;
   if (!v) return null;
-  const zahl = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 1 })} ms`;
+  const zahl = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} ms`;
   return (
     <>
       <h3 className="h4">{t('systemzustand.verbindungen.titel')}</h3>

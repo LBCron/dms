@@ -23,6 +23,7 @@ import { formatiere, type Mappe, type Mappentyp } from '../../../shared/src/mode
 import { falte } from '../../../shared/src/suche';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { zeitzone } from '../../../shared/src/region';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Datenschutz (#396): Auskunft nach Art. 15 DSGVO als ZIP.
@@ -35,7 +36,7 @@ import { zeitzone } from '../../../shared/src/region';
  */
 
 const groesse = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 const heute = () => new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(new Date());
 
 export function useDatenschutz(offen: boolean) {
@@ -251,7 +252,7 @@ function PersonWahl({ typen, waehle }: { typen: Mappentyp[]; waehle(m: { id: str
         return { id: m.id, text: <span>{titelOder(m.titel)} <span className="leise klein">{typ(m.typId)?.name}{grund ? ` · ${grund}` : ''}</span></span> };
       })}
       leerText={eingabe ? t('werkbank.datenschutz.nichts-gefunden') : t('werkbank.datenschutz.noch-keine-mappe-dieser')}
-      fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{t('werkbank.datenschutz.insgesamt-tippe-um-einzugrenzen', { gesamt: gesamt.toLocaleString('de-DE') })}</p>}
+      fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{t('werkbank.datenschutz.insgesamt-tippe-um-einzugrenzen', { gesamt: gesamt.toLocaleString(gebietsschema()) })}</p>}
       waehle={(id) => { const m = treffer?.find((x) => x.id === id); if (m) waehle({ id: m.id, typId: m.typId, titel: m.titel ?? '' }); }}
       gewaehlt={[]} entferne={() => {}} />
   );

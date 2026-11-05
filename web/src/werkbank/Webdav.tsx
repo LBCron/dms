@@ -3,6 +3,7 @@ import { api, type WebdavEinstellung, type WebdavStand } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → WebDAV-Laufwerk (#346, Stufe 1): an/aus (Standard aus), Stempel beim Lesen und „nur lesend“ (#722), Adresse zum Einbinden,
@@ -10,7 +11,7 @@ import { t, tn } from '../sprache';
  * Ohne mittlere Spalte (#366): die letzten Zugriffe stehen rechts mit fester Höhe, neueste oben.
  */
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'medium' });
 
 export function useWebdav(offen: boolean) {
   const [stand, setStand] = useState<WebdavStand | null>(null);

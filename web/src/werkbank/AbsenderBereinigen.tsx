@@ -5,9 +5,10 @@ import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { titelOder } from '../seiten';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 type Posten = Awaited<ReturnType<typeof api.absenderVorschau>>['posten'];
-const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE');
+const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema());
 
 /**
  * Wartung „Absender bereinigen“ (#494): Bis 0.99 bekam eingehende Post ohne Absender den Namen dessen,

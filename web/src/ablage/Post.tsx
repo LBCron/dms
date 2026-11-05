@@ -14,6 +14,7 @@ import { Symbol } from '../Symbol';
 import { istVersendet } from '../../../shared/src/model';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Post (#192): „+ Post“ in den Sichten mit Post, die Leiste an einer Post-Mappe (Stand, Zuordnen,
@@ -114,7 +115,7 @@ function Zusammenlegen({ typ, post, neuLaden, schliessen }: { typ: Mappentyp; po
     try { await api.postZusammenlegen(post.id, q.id); schliessen(); await neuLaden(); await d.neuLaden(); }
     catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
   }
-  const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
   return (
     <section className="blatt pk-zusammen" aria-label={t('ablage.post.mit-anderer-post-zusammenlegen-2')}>
       <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.post.mit-anderer-post-zusammenlegen-2')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.post.schliessen')}</button></div>

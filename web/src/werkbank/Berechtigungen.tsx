@@ -15,6 +15,7 @@ import { FeldBedingung, MappenSuche } from './Sichten';
 import { Bereich, type Klappe } from '../einrichtung/Bereich';
 import { passendesErgebnis, testlaufSchluessel, type TestlaufErgebnis } from '../../../shared/src/testlauf';
 import { TestBenutzerWahl, TestMappeWahl, useTestlauf } from './TestlaufWahl';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Berechtigungen (#123–#127, #137, #142): je Mappentyp eine Grundeinstellung und Regeln
@@ -350,7 +351,7 @@ export function TestlaufBlatt({ typId, entwurf, klappe }: { typId: string; entwu
                   </tbody>
                 </table>
                 {/* Leserecht auf Zeit (#798) mit seinem Grund. */}
-                {erg.aufZeit && <p className="hinweis info klein">{t(erg.aufZeit.wirkt ? 'werkbank.testlauf.auf-zeit' : 'werkbank.testlauf.auf-zeit.ohnehin', { aufgabe: erg.aufZeit.aufgabe, seit: new Date(erg.aufZeit.seit).toLocaleDateString('de-DE'), von: erg.aufZeit.von ?? t('werkbank.ohne-leserecht.unbekannt') })}</p>}
+                {erg.aufZeit && <p className="hinweis info klein">{t(erg.aufZeit.wirkt ? 'werkbank.testlauf.auf-zeit' : 'werkbank.testlauf.auf-zeit.ohnehin', { aufgabe: erg.aufZeit.aufgabe, seit: new Date(erg.aufZeit.seit).toLocaleDateString(gebietsschema()), von: erg.aufZeit.von ?? t('werkbank.ohne-leserecht.unbekannt') })}</p>}
                 {RECHTE_LISTE.some((k) => erg.rechte[k] !== erg.wirksam[k]) && !erg.aufZeit?.wirkt && (
                   <p className="leise klein">{t('werkbank.berechtigungen.wirksam-weicht-ab-ohne')}</p>
                 )}
@@ -396,7 +397,7 @@ export function WasSiehtBlatt({ benutzerId, admin }: { benutzerId: string; admin
                   {erg.typen.map((eintrag) => (
                     <tr key={eintrag.typId}>
                       <td><Link to={`/werkbank/typen/${eintrag.typId}#berechtigungen`} className="verweis">{eintrag.name}</Link></td>
-                      <td>{t('werkbank.berechtigungen.von', { lesbar: eintrag.lesbar.toLocaleString('de-DE'), gesamt: eintrag.gesamt.toLocaleString('de-DE') })}</td>
+                      <td>{t('werkbank.berechtigungen.von', { lesbar: eintrag.lesbar.toLocaleString(gebietsschema()), gesamt: eintrag.gesamt.toLocaleString(gebietsschema()) })}</td>
                       <td className="klein">{eintrag.beispiele.map((x) => x.titel || t('werkbank.berechtigungen.ohne-titel')).join(' · ') || '–'}</td>
                     </tr>
                   ))}

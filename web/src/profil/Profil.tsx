@@ -22,6 +22,7 @@ import { Hilfe } from '../Hilfe';
 import { RECHTE, RECHTE_LISTE } from '../../../shared/src/rechte';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 const STUFE = { immer: t('profil.profil.stufe.immer'), nie: t('profil.profil.stufe.nie'), teils: t('profil.profil.je-nach-mappe') } as const;
 
@@ -280,7 +281,7 @@ function SchriftWahl() {
   );
 }
 
-const datumZeit = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+const datumZeit = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 
 /** Meine angemeldeten Geräte (#69): ansehen, einzeln oder alle anderen abmelden. */
 function MeineGeraete() {

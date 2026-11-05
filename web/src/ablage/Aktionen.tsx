@@ -14,6 +14,7 @@ import { VerkleinertWahl } from './VerkleinertWahl';
 import type { Stufe } from '../../../shared/src/verkleinern';
 import { FassungWahl, hatArchivfassung, type Fassung } from './FassungWahl';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Aktionen an der Mappe (#58): per E-Mail versenden, als PDF exportieren, Link kopieren (#98). */
 
@@ -157,7 +158,7 @@ export function Druckansicht({ typ, details, fertig }: { typ: Mappentyp; details
   }, [fertig]);
   const titelVon = (id: string) => titelOder(details.bezuege[id]?.titel);
   const register = typ.register?.length ? typ.register : standardRegister(typ.felder);
-  const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+  const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
   return createPortal(
     <NamenOhneLinks><article className="druckansicht">
       <p className="ueber">{typ.name}</p>
@@ -178,7 +179,7 @@ export function Druckansicht({ typ, details, fertig }: { typ: Mappentyp; details
       })}
       {details.dokumente.length > 0 && <section><h2>{t('ablage.aktionen.dokumente')}</h2><ul>{details.dokumente.map((x) => <li key={x.id}>{x.name} ({groesse(x.groesse)})</li>)}</ul></section>}
       {(details.notizen ?? []).length > 0 && <section><h2>{t('ablage.aktionen.notizen')}</h2>{details.notizen.map((n) => <div key={n.id} className="notiz"><p className="klein">{zeit(n.erstellt)} · {d.person(n.erstelltVon)}</p><Formatiert text={n.text} /></div>)}</section>}
-      <p className="klein fuss">{t('ablage.aktionen.gedruckt-am', { wert: new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) })}</p>
+      <p className="klein fuss">{t('ablage.aktionen.gedruckt-am', { wert: new Date().toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) })}</p>
     </article></NamenOhneLinks>,
     document.body,
   );

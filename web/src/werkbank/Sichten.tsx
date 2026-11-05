@@ -19,6 +19,7 @@ import { rueckfrage } from '../rueckfrage';
 import { ANSICHT_SYMBOLE } from '../../../shared/src/ansichtsymbole';
 import { AnsichtSymbol } from '../Symbol';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Sichten verwalten (#38) mit Bedingungen (#40, #41): Baum links, Bearbeitung rechts.
@@ -117,7 +118,7 @@ export function SichtenListe({ offen }: { offen?: string }) {
                       {zeigtAlleTypen(s) ? t('werkbank.sichten.alle-mappentypen') : eintrag2.length ? eintrag2.map((x) => x.name).join(', ') : t('werkbank.sichten.nur-zum-gruppieren')}
                       {s.bedingungen.length > 0 && t('werkbank.sichten.bedingungen', { anzahl: s.bedingungen.length })}
                       {kinder > 0 && t('werkbank.sichten.unteransichten', { anzahl: kinder })}
-                      {d.zahlenDa && t('werkbank.sichten.mappen', { wert: (d.zaehler.sichten?.[s.id] ?? 0).toLocaleString('de-DE') })}
+                      {d.zahlenDa && t('werkbank.sichten.mappen', { wert: (d.zaehler.sichten?.[s.id] ?? 0).toLocaleString(gebietsschema()) })}
                       {s.berechtigungen?.regeln.length ? t('werkbank.sichten.regeln-2', { anzahl: s.berechtigungen.regeln.length }) : ''}
                     </span>
                     {probleme > 0 && <span className="problem">{t('werkbank.sichten.bedingungen-ohne-wirkung-bitte', { anzahl: probleme })}</span>}
@@ -267,7 +268,7 @@ export function SichtEditor({ id }: { id: string }) {
       <SichtTestlauf id={neu ? null : id} e={e} klappe={klappe('testlauf')} />
 
       <div className="hinweis info" role="status">
-        <p>{vorschau === null ? t('werkbank.sichten.vorschau-wird-berechnet') : <>{tn('werkbank.sichten.diese-ansicht-zeigt-zurzeit', { b: <strong>{vorschau.toLocaleString('de-DE')} {t('werkbank.sichten.mappen-2', { anzahl: vorschau })}</strong>, wert: untersichten > 0 ? t('werkbank.sichten.mit-unteransichten') : '' })}</>}</p>
+        <p>{vorschau === null ? t('werkbank.sichten.vorschau-wird-berechnet') : <>{tn('werkbank.sichten.diese-ansicht-zeigt-zurzeit', { b: <strong>{vorschau.toLocaleString(gebietsschema())} {t('werkbank.sichten.mappen-2', { anzahl: vorschau })}</strong>, wert: untersichten > 0 ? t('werkbank.sichten.mit-unteransichten') : '' })}</>}</p>
       </div>
 
       <Speicherleiste ent={ent} gegenstand={t('werkbank.sichten.ansicht')} sendet={sendet} meldung={meldung}
@@ -680,7 +681,7 @@ export function AuswahlFilter({ ziel, bedingungen, setze, eigeneFelder = [], fel
       )}
       <div className="zeile">
         <button type="button" className="knopf klein" disabled={!felder.length} onClick={() => setze([...bedingungen, neu(felder[0])])}>{t('werkbank.sichten.bedingung')}</button>
-        {zahl && bedingungen.length > 0 && <span className="leise klein">{t('werkbank.sichten.von-passen', { passen: zahl.passen.toLocaleString('de-DE'), gesamt: zahl.gesamt.toLocaleString('de-DE'), name: ziel.name })}</span>}
+        {zahl && bedingungen.length > 0 && <span className="leise klein">{t('werkbank.sichten.von-passen', { passen: zahl.passen.toLocaleString(gebietsschema()), gesamt: zahl.gesamt.toLocaleString(gebietsschema()), name: ziel.name })}</span>}
       </div>
     </div>
   );

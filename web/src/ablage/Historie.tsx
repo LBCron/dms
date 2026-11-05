@@ -6,9 +6,10 @@ import { useDaten } from '../daten';
 import { Link } from '../ort';
 import { Person } from '../Person';
 import { Formatiert } from './Formatiert';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Änderungshistorie einer Mappe (#57): je Eintrag eine Zeile, Einzelheiten zum Aufklappen (#80). */
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 const groesse = (b: number) => (b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
 
@@ -180,7 +181,7 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined): { hinw
               <dt>{t('ablage.historie.weg')}</dt><dd>{wie}</dd>
               {an.length > 0 && <><dt>{t('ablage.historie.an')}</dt><dd>{an.join(', ')}</dd></>}
               {typeof d.erfolg === 'boolean' && <><dt>{t('ablage.historie.ergebnis')}</dt><dd>{d.erfolg ? t('ablage.historie.erfolgreich') : t('ablage.historie.fehlgeschlagen')}</dd></>}
-              {str(d.ablauf) && <><dt>{t('ablage.historie.gueltig-bis')}</dt><dd>{new Date(str(d.ablauf)!).toLocaleDateString('de-DE')}</dd></>}
+              {str(d.ablauf) && <><dt>{t('ablage.historie.gueltig-bis')}</dt><dd>{new Date(str(d.ablauf)!).toLocaleDateString(gebietsschema())}</dd></>}
               {n('maxAbrufe') > 0 && <><dt>{t('ablage.historie.abrufe')}</dt><dd>{t('ablage.historie.hoechstens', { n: n('maxAbrufe') })}</dd></>}
             </dl>
           ),

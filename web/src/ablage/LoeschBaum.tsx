@@ -11,6 +11,7 @@ import { mitGrund } from './Loeschgrund';
 import { hinweis } from '../rueckfrage';
 import { titelOder } from '../seiten';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Mappe mit allen verknüpften Mappen löschen (#424): Vorschau als Baum (Mappen, die auf diese Mappe
@@ -127,7 +128,7 @@ export function LoeschBaum({ mappeId, titel, sicht, schliessen, neuLaden }: { ma
           {v.baum.knoten.length === 1 && <p className="leise">{t('ablage.loeschbaum.auf-diese-mappe-verweist')}</p>}
           {(v.baum.abgeschnitten || v.baum.tieferMoeglich || v.baum.verborgen > 0) && (
             <div className="hinweis info"><p>
-              {v.baum.abgeschnitten && t('ablage.loeschbaum.sehr-viele-mappen-die', { knoten: v.baum.knoten.length.toLocaleString('de-DE') })}
+              {v.baum.abgeschnitten && t('ablage.loeschbaum.sehr-viele-mappen-die', { knoten: v.baum.knoten.length.toLocaleString(gebietsschema()) })}
               {v.baum.tieferMoeglich && t('ablage.loeschbaum.es-gibt-noch-tiefere')}
               {v.baum.verborgen > 0 && t('ablage.loeschbaum.mappen-darfst-du-nicht', { anzahl: v.baum.verborgen })}
             </p></div>

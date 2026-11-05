@@ -5,6 +5,7 @@ import { t, tn } from '../sprache';
 import { api, ApiFehler } from '../api';
 import { Hilfe } from '../Hilfe';
 import { geheZu } from '../ort';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Pakete → Paket erstellen (#374): eigene Mappentypen und Ansichten als Paket im Format der
@@ -15,7 +16,7 @@ import { geheZu } from '../ort';
 const SCHRITTE = [t('werkbank.paketerstellen.auswaehlen'), t('werkbank.paketerstellen.pruefen'), t('werkbank.paketerstellen.angaben'), t('werkbank.paketerstellen.erstellen')] as const;
 /** Probleme, die zu den Angaben gehören (Schritt 3), statt zur Auswahl. */
 const istAngabe = (p: string) => /^(Id|Name|Version|Beschreibung|Autor|GitHub|Lizenz|Ablago-Version):/.test(p);
-const groesse = (b: number) => (b < 1024 ? t('werkbank.paketerstellen.bytes', { b }) : `${(b / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 })} KB`);
+const groesse = (b: number) => (b < 1024 ? t('werkbank.paketerstellen.bytes', { b }) : `${(b / 1024).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} KB`);
 
 /** Selbst erstelltes Paket in der Paketverwaltung (#652): Kennung in der Adresse. */
 export const SELBST = t('werkbank.paketerstellen.selbst');
@@ -238,7 +239,7 @@ function NeuOderVersion({ stand, neu, version }: { stand: ErstellenStand; neu():
       <ul className="stapel">
         {liste.map((w) => (
           <li key={w.id}><button type="button" className="textknopf" onClick={() => version(w)}>{t('pakete.erstellen.frage.versionVon', { name: w.name })}</button>
-            <small className="leise"> {w.id} · {t('pakete.erstellen.frage.zuletzt', { version: w.version, datum: new Date(w.exportiert).toLocaleDateString('de-DE') })}</small></li>
+            <small className="leise"> {w.id} · {t('pakete.erstellen.frage.zuletzt', { version: w.version, datum: new Date(w.exportiert).toLocaleDateString(gebietsschema()) })}</small></li>
         ))}
       </ul>
       <p className="leise klein">{t('pakete.erstellen.frage.versionText')}</p>

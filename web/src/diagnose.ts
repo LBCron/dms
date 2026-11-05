@@ -1,4 +1,5 @@
 import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 /**
  * Sammler für „Fehler melden“ (#70): die letzten Fehler im Browser, fehlgeschlagene Anfragen
  * und besuchte Seiten dieser Sitzung – nur im Speicher, nur Pfade (ohne Suchbegriffe).
@@ -58,8 +59,8 @@ export function geraeteAngaben(skala: string): Record<string, unknown> {
       ...(n.connection ? { Typ: n.connection.effectiveType, 'Mbit/s': n.connection.downlink } : {}),
     },
     'Aktuelle Seite': location.pathname,
-    'Zuletzt besucht': seiten.map((s) => `${new Date(s.zeit).toLocaleTimeString('de-DE')} ${s.text}`),
-    'Fehler im Browser': fehler.map((s) => `${new Date(s.zeit).toLocaleTimeString('de-DE')} ${s.text}`),
-    'Fehlgeschlagene Anfragen': anfragen.map((s) => `${new Date(s.zeit).toLocaleTimeString('de-DE')} ${s.text}`),
+    'Zuletzt besucht': seiten.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
+    'Fehler im Browser': fehler.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
+    'Fehlgeschlagene Anfragen': anfragen.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
   };
 }

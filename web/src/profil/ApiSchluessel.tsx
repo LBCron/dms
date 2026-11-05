@@ -5,9 +5,10 @@ import { Link } from '../ort';
 import { useKonto } from '../konto';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** API-Schlüssel im eigenen Profil (#20): erzeugen, ändern, löschen; ganz sichtbar nur beim Erzeugen. */
-const datum = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+const datum = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 /** Stufen (#625: „nur Zähler“ für Hausautomatisierung und Anzeigen). */
 const STUFEN: ApiSchluesselRecht[] = ['lesen', 'schreiben', 'zaehler'];
 const stufe = (r: ApiSchluesselRecht) => t.frei(`api.stufe.${r}`);
@@ -49,7 +50,7 @@ export function ApiSchluesselBlatt() {
                   <strong>{s.name}</strong> <span className="mono klein">{s.praefix}</span> <span className={`chip ${s.recht === 'schreiben' ? 'warn' : ''}`}>{stufe(s.recht)}</span>
                   {s.passwoerter && <> <span className="chip warn" title={t('profil.apischluessel.darf-mit-passwoerter-anzeigen')}>{t('profil.apischluessel.passwoerter-lesen')}</span></>}
                   {s.ablauf && Date.parse(s.ablauf) < Date.now() && <> <span className="chip stufe-error">{t('profil.apischluessel.abgelaufen')}</span></>}
-                  <span className="leise klein blockzeile">{t('profil.apischluessel.erstellt-zuletzt-benutzt', { datum: datum(s.erstellt), datum2: datum(s.zuletztBenutzt), wert: s.ablauf ? t('profil.apischluessel.gueltig-bis', { toLocaleDateString: new Date(s.ablauf).toLocaleDateString('de-DE') }) : t('profil.apischluessel.ohne-ablauf') })}</span>
+                  <span className="leise klein blockzeile">{t('profil.apischluessel.erstellt-zuletzt-benutzt', { datum: datum(s.erstellt), datum2: datum(s.zuletztBenutzt), wert: s.ablauf ? t('profil.apischluessel.gueltig-bis', { datum: new Date(s.ablauf).toLocaleDateString(gebietsschema()) }) : t('profil.apischluessel.ohne-ablauf') })}</span>
                 </div>
                 <span className="zeilenaktionen">
                   <button type="button" className="textknopf" onClick={() => setBearbeite(s.id)}>{t('profil.apischluessel.aendern')}</button>

@@ -19,6 +19,7 @@ import { t } from '../sprache';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Ansage, umgestellt, useZiehen, ziehTasten } from '../ziehen';
 import { FeldBedingung } from './Sichten';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Ablage aufbauen → Automatisierungen (#675): Mitte die Liste (Name, Kurzform, an/aus, letzter Lauf,
@@ -45,7 +46,7 @@ export type AutomatisierungenZustand = ReturnType<typeof useAutomatisierungen>;
 export const automatisierungWarnungen = (s: Stand | null) => s?.automatisierungen.filter((a) => a.aktiv && (a.angehalten || a.probleme.length)).length ?? 0;
 
 const ereignisName = (art: string) => (art === 'datum' ? t('automatisierung.wenn.datum') : art === 'zeitplan' ? t('automatisierung.wenn.zeitplan') : t.frei(`ereignisse.name.${ereignisSchluessel(art as never)}`));
-const zeit = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '');
+const zeit = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' }) : '');
 const ZUSTAND_ART: Record<string, string> = { abgeschlossen: 'gut', unzutreffend: 'leise', uebersprungen: 'leise', fehlgeschlagen: 'schlecht', laeuft: 'info', wiederholt: 'leise' };
 
 function Zustandschip({ a }: { a: AutomatisierungAnsicht }) {

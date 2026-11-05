@@ -3,6 +3,7 @@ import { Link } from '../ort';
 import { pruefwert } from '../pruefwert';
 import { titelOder } from '../seiten';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Doppelte Dateien erkennen (#333): vor dem Hochladen den Prüfwert im Browser rechnen und fragen,
@@ -25,7 +26,7 @@ export async function fundstellenFuer<T extends { datei: File }>(liste: T[], ohn
   return erg;
 }
 
-const tag = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const tag = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** „Diese Datei liegt schon in Stromvertrag Haus (Register Dokumente, hochgeladen am …).“ */
 export function Fundstellen({ f, beiKlick }: { f: Fundstelle[]; beiKlick?: () => void }) {

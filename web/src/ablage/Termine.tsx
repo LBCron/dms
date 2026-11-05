@@ -9,6 +9,7 @@ import { Link } from '../ort';
 import { titelOder } from '../seiten';
 import { t } from '../sprache';
 import { Symbol, type SymbolName } from '../Symbol';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * „Zu erledigen“ mit Umschalter Liste · Monat · Jahr (#528, #725) – wie im Kalender am Handy: einfach,
@@ -99,11 +100,11 @@ const istUeberfaellig = (x: Termin, heute: string) => x.faellig && x.datum < heu
 const pfad = (x: Termin) => `/ablage/eingang/${x.mappeId}`;
 const schluessel = (x: Termin, i: number) => `${x.mappeId}-${x.feldKey ?? x.erinnerungId ?? i}-${x.datum}-${x.folgetermin ? 'f' : ''}`;
 
-const WOCHENTAG = new Intl.DateTimeFormat('de-DE', { weekday: 'short', timeZone: 'UTC' });
-const WOCHENTAG_LANG = new Intl.DateTimeFormat('de-DE', { weekday: 'long', timeZone: 'UTC' });
-const TAG_LANG = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-const MONAT = new Intl.DateTimeFormat('de-DE', { month: 'long', timeZone: 'UTC' });
-const MONAT_JAHR = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const WOCHENTAG = new Intl.DateTimeFormat(gebietsschema(), { weekday: 'short', timeZone: 'UTC' });
+const WOCHENTAG_LANG = new Intl.DateTimeFormat(gebietsschema(), { weekday: 'long', timeZone: 'UTC' });
+const TAG_LANG = new Intl.DateTimeFormat(gebietsschema(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const MONAT = new Intl.DateTimeFormat(gebietsschema(), { month: 'long', timeZone: 'UTC' });
+const MONAT_JAHR = new Intl.DateTimeFormat(gebietsschema(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const alsDatum = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const tagText = (iso: string) => `${WOCHENTAG.format(alsDatum(iso))} ${datumDe(iso)}`;
 const tagLang = (iso: string) => TAG_LANG.format(alsDatum(iso));

@@ -32,8 +32,9 @@ import { ausDokumentKnopf, type Sicherheit } from '../../../shared/src/erkennung
 import type { TypVorschlaege } from '../api';
 import { altesFeldAusblenden } from '../../../shared/src/umwandlung';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 
 /** Register des Typs; ältere Typen ohne Register bekommen die Standardregister. */
 const registerVon = (mappentyp: Mappentyp): Register[] => (mappentyp.register?.length ? mappentyp.register : standardRegister(mappentyp.felder));
@@ -635,10 +636,10 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
 /** „um 17:04“ (heute) bzw. „am 01.11.2026 um 17:04“. */
 function wann(iso: string): string {
   const d = new Date(iso);
-  const uhrzeit = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const uhrzeit = d.toLocaleTimeString(gebietsschema(), { hour: '2-digit', minute: '2-digit' });
   return d.toDateString() === new Date().toDateString()
     ? t('mappen.konflikt.heute', { uhrzeit })
-    : t('mappen.konflikt.am', { datum: d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }), uhrzeit });
+    : t('mappen.konflikt.am', { datum: d.toLocaleDateString(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric' }), uhrzeit });
 }
 
 /**
@@ -993,7 +994,7 @@ function VerweisTabelle({ mappeId, typ, feldKey, spalten, anzahl }: { mappeId: s
           })}
         </tbody>
       </table>
-      {daten.gesamt > daten.mappen.length && <p className="leise klein">{t('ablage.mappeformular.die-ersten-von', { mappen: daten.mappen.length.toLocaleString('de-DE'), gesamt: daten.gesamt.toLocaleString('de-DE') })}</p>}
+      {daten.gesamt > daten.mappen.length && <p className="leise klein">{t('ablage.mappeformular.die-ersten-von', { mappen: daten.mappen.length.toLocaleString(gebietsschema()), gesamt: daten.gesamt.toLocaleString(gebietsschema()) })}</p>}
     </div>
   );
 }
@@ -1005,7 +1006,7 @@ function Trefferliste({ treffer }: { treffer: Rueckverweis[] }) {
   return (
     <>
       <ul>{sichtbar.map((r) => <li key={r.quelleId + r.feldKey}><Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis"><Ehemalig id={r.quelleId}>{titelOder(r.titel)}</Ehemalig></Link></li>)}</ul>
-      {sichtbar.length < treffer.length && <button type="button" className="textknopf" onClick={() => setAlle(true)}>{t('ablage.mappeformular.alle-zeigen', { treffer: treffer.length.toLocaleString('de-DE') })}</button>}
+      {sichtbar.length < treffer.length && <button type="button" className="textknopf" onClick={() => setAlle(true)}>{t('ablage.mappeformular.alle-zeigen', { treffer: treffer.length.toLocaleString(gebietsschema()) })}</button>}
     </>
   );
 }
@@ -1078,7 +1079,7 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
       eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen} schliessen={() => setAendern(false)} ohneSuche={!zeigeSuche}
       vorschlaege={treffer === null ? null : auswahl.map((m) => ({ id: m.id, text: titelOder(m.titel) }))}
       leerText={eingabe ? t('felder.verweis.nichts') : leer ?? t('felder.verweis.leer', { typ: ziel.name })}
-      fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{t('felder.verweis.mehr', { zahl: gesamt.toLocaleString('de-DE') })}</p>}
+      fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{t('felder.verweis.mehr', { zahl: gesamt.toLocaleString(gebietsschema()) })}</p>}
       waehle={(mid) => { const m = auswahl.find((x) => x.id === mid); if (m) waehle(m); }}
       gewaehlt={gewaehlt.map((x) => ({
         id: x,

@@ -7,6 +7,7 @@ import type { Stufe } from '../../../shared/src/verkleinern';
 import type { Sortierung } from '../../../shared/src/model';
 import { FassungWahl, type Fassung } from './FassungWahl';
 import { t } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Export mehrerer Mappen (#152, #153): Excel, CSV, ZIP mit Dokumenten oder ein PDF –
@@ -54,8 +55,8 @@ export function ExportDialog({ sicht, link, ids, anzahl, gesamt, suche, volltext
         ...(mitDokumenten ? { stempel: alsWunsch(stempel), verkleinern: klein, fassung } : {}),
       }, t('ablage.export.export', { format }));
       const m = n - r.ausgelassen;
-      const aus = r.ausgelassen ? t('ablage.export.mappen-ohne-exportrecht-ausgelassen', { anzahl: r.ausgelassen, ausgelassen: r.ausgelassen.toLocaleString('de-DE') }) : '';
-      fertig(t('ablage.export.gespeichert-mappen', { anzahl: m, name: r.name, m: m.toLocaleString('de-DE'), aus }));
+      const aus = r.ausgelassen ? t('ablage.export.mappen-ohne-exportrecht-ausgelassen', { anzahl: r.ausgelassen, ausgelassen: r.ausgelassen.toLocaleString(gebietsschema()) }) : '';
+      fertig(t('ablage.export.gespeichert-mappen', { anzahl: m, name: r.name, m: m.toLocaleString(gebietsschema()), aus }));
     } catch (x) { setFehler((x as Error).message); }
     finally { setLaeuft(false); }
   }
@@ -64,8 +65,8 @@ export function ExportDialog({ sicht, link, ids, anzahl, gesamt, suche, volltext
       <h2 className="h3">{t('ablage.export.exportieren')}</h2>
       {ids && (
         <fieldset className="wahl"><legend className="klein">{t('ablage.export.welche-mappen')}</legend>
-          <label className="haken"><input type="radio" name="umfang" checked={umfang === 'auswahl'} onChange={() => setUmfang('auswahl')} /><span>{t('ablage.export.auswahl', { zahl: anzahl.toLocaleString('de-DE') })}</span></label>
-          <label className="haken"><input type="radio" name="umfang" checked={umfang === 'alle'} onChange={() => setUmfang('alle')} /><span>{t('ablage.export.alle-treffer-der-ansicht', { gesamt: gesamt.toLocaleString('de-DE') })}</span></label>
+          <label className="haken"><input type="radio" name="umfang" checked={umfang === 'auswahl'} onChange={() => setUmfang('auswahl')} /><span>{t('ablage.export.auswahl', { zahl: anzahl.toLocaleString(gebietsschema()) })}</span></label>
+          <label className="haken"><input type="radio" name="umfang" checked={umfang === 'alle'} onChange={() => setUmfang('alle')} /><span>{t('ablage.export.alle-treffer-der-ansicht', { gesamt: gesamt.toLocaleString(gebietsschema()) })}</span></label>
         </fieldset>
       )}
       <fieldset className="wahl"><legend className="klein">{t('ablage.export.format')}</legend>
@@ -87,7 +88,7 @@ export function ExportDialog({ sicht, link, ids, anzahl, gesamt, suche, volltext
       <p className="leise klein">{t('ablage.export.passwoerter-werden-nie-exportiert')}</p>
       {fehler && <p className="fehlertext klein">{fehler}</p>}
       <div className="knoepfe">
-        <button type="button" className="knopf primaer klein" disabled={laeuft || !n || !!stempelProblem} title={stempelProblem ?? undefined} onClick={() => void los()}>{laeuft ? t('ablage.export.exportiere') : t('ablage.export.mappen-exportieren', { anzahl: n, n: n.toLocaleString('de-DE') })}</button>
+        <button type="button" className="knopf primaer klein" disabled={laeuft || !n || !!stempelProblem} title={stempelProblem ?? undefined} onClick={() => void los()}>{laeuft ? t('ablage.export.exportiere') : t('ablage.export.mappen-exportieren', { anzahl: n, n: n.toLocaleString(gebietsschema()) })}</button>
         <button type="button" className="textknopf klein" onClick={() => fertig()}>{t('ablage.export.abbrechen')}</button>
       </div>
     </div>

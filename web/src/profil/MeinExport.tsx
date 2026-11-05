@@ -3,6 +3,7 @@ import { api } from '../api';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Profil → Meine Daten exportieren (#255): eigene Daten im Format des Vollexports. */
 export function MeinExport() {
@@ -25,7 +26,7 @@ export function MeinExport() {
         {s.laeuft && <p className="leise">{t('profil.meinexport.export-laeuft')}</p>}
         {s.fehler && <p className="fehlertext">{s.fehler}</p>}
         {fehler && <p className="fehlertext">{fehler}</p>}
-        {s.fertig && !s.laeuft && <p>{tn('profil.meinexport.fertig-am', { wert: s.fertig.erstellt ? new Date(s.fertig.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–', link: <a className="knopf klein" href="/api/konto/export/zip">{t('profil.meinexport.herunterladen-zip')}</a>, klein: <small className="hilfe">{t('profil.export.bereit', { datum: new Date(s.fertig.bis).toLocaleDateString('de-DE', { dateStyle: 'medium' }) })}</small> })}</p>}
+        {s.fertig && !s.laeuft && <p>{tn('profil.meinexport.fertig-am', { wert: s.fertig.erstellt ? new Date(s.fertig.erstellt).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–', link: <a className="knopf klein" href="/api/konto/export/zip">{t('profil.meinexport.herunterladen-zip')}</a>, klein: <small className="hilfe">{t('profil.export.bereit', { datum: new Date(s.fertig.bis).toLocaleDateString(gebietsschema(), { dateStyle: 'medium' }) })}</small> })}</p>}
         <div className="knoepfe"><button type="button" className="knopf" disabled={s.laeuft || (pw && !pwOk) || !!vertretung}
           onClick={() => { setFehler(undefined); void api.meinExportStarten(pw, pwOk).then(laden).catch((e) => setFehler((e as Error).message)); }}>{s.fertig ? t('profil.meinexport.neu-exportieren') : t('profil.meinexport.export-erstellen')}</button></div>
       </>}

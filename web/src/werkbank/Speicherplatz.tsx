@@ -7,6 +7,7 @@ import { WARTUNG_GEAENDERT } from '../wartung';
 import { einDatentraeger } from '../../../shared/src/werkbankansicht';
 import { GrossePdfsVerkleinern } from './Verkleinern';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Wartung und Fehlersuche → Systemzustand (#408, früher Einstellungen → Speicherplatz, #116):
@@ -15,7 +16,7 @@ import { t, tn } from '../sprache';
  */
 
 const GB = 1024 ** 3;
-export const platz = (b: number) => (b < GB ? `${Math.round(b / 1024 ** 2).toLocaleString('de-DE')} MB` : `${(b / GB).toFixed(1).replace('.', ',')} GB`);
+export const platz = (b: number) => (b < GB ? `${Math.round(b / 1024 ** 2).toLocaleString(gebietsschema())} MB` : `${(b / GB).toFixed(1).replace('.', ',')} GB`);
 const schwelleText = (s: Schwelle) => `${String(s.wert).replace('.', ',')} ${s.einheit === 'prozent' ? '%' : 'GB'}`;
 const ORDNERNAME: Record<string, string> = { dateien: t('werkbank.speicherplatz.dateien'), geheim: t('werkbank.speicherplatz.schluessel'), sicherung: t('werkbank.speicherplatz.sicherungen') };
 const ZUSTAND = { ok: { text: t('werkbank.speicherplatz.ausreichend'), art: 'gut' }, warnung: { text: t('werkbank.speicherplatz.knapp'), art: 'warn' }, grenze: { text: t('werkbank.speicherplatz.grenze-erreicht'), art: 'schlecht' } } as const;
@@ -160,9 +161,9 @@ export function SpeicherplatzPanel({ z, nachAenderung, auslastung, unten }: { z:
             </div>
           );
         })}
-        {s.vorschau && s.vorschau.anzahl > 0 && <p className="leise klein">{t('werkbank.speicherplatz.davon-vorschaubilder-mit-sie', { zahl: s.vorschau.anzahl.toLocaleString('de-DE'), platz: platz(s.vorschau.bytes) })}</p>}
+        {s.vorschau && s.vorschau.anzahl > 0 && <p className="leise klein">{t('werkbank.speicherplatz.davon-vorschaubilder-mit-sie', { zahl: s.vorschau.anzahl.toLocaleString(gebietsschema()), platz: platz(s.vorschau.bytes) })}</p>}
         <div className="zeile-zwischen">
-          <p className="leise klein">{t('werkbank.speicherplatz.gemessen-uhr', { toLocaleTimeString: new Date(s.gemessen).toLocaleTimeString('de-DE', { timeStyle: 'short' }) })}</p>
+          <p className="leise klein">{t('werkbank.speicherplatz.gemessen-uhr', { uhrzeit: new Date(s.gemessen).toLocaleTimeString(gebietsschema(), { timeStyle: 'short' }) })}</p>
           <button type="button" className="knopf klein" onClick={() => void z.laden()}>{t('werkbank.speicherplatz.neu-messen')}</button>
         </div>
       </section>

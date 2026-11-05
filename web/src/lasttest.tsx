@@ -5,6 +5,7 @@ import { api } from './api';
 import { rueckfrage } from './rueckfrage';
 import { t } from './sprache';
 import { Symbol } from './Symbol';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Lasttest-Modus (#612): die einzige Seite, die ein mit DMS_LASTTEST gestartetes DMS zeigt. Fortschritt und Restdauer,
@@ -14,7 +15,7 @@ import { Symbol } from './Symbol';
 
 const FORMULAR = 'https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml';
 const SAMMEL = 'https://github.com/motom001/dms/issues/576';
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 const prozent = (q: number) => `${(q * 100).toFixed(2).replace('.', ',')} %`;
 
 /** Kopieren auch ohne HTTPS (NAS im Heimnetz): Zwischenablage, sonst markieren und execCommand. */

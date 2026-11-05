@@ -17,8 +17,9 @@ import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 import { SystemkontenGruppe, SystemkontoKennzeichen } from './Systemkonten';
 import { SYSTEMKONTEN_AUF } from '../../../shared/src/systemkonten';
+import { gebietsschema } from '../../../shared/src/sprache';
 
-const datumZeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : t('werkbank.benutzer.noch-nie'));
+const datumZeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : t('werkbank.benutzer.noch-nie'));
 const status = (b: Benutzer) => (!b.aktiv ? { text: t('werkbank.benutzer.status.deaktiviert'), art: '' } : !b.hatPasswort ? { text: t('werkbank.benutzer.status.eingeladen'), art: 'warn' } : { text: t('werkbank.benutzer.status.aktiv'), art: 'gut' });
 
 type RolleEintrag = { id: string; name: string; system: boolean };
@@ -290,7 +291,7 @@ function ZweifaktorVon({ b }: { b: Benutzer }) {
     <div className="blatt">
       <h2 className="h3">{t('werkbank.benutzer.zwei-faktor-anmeldung')}</h2>
       {!stand ? !meldung && <p className="leise">{t('werkbank.benutzer.lade')}</p> : stand.aktiv ? <>
-        <p><span className="chip gut punkt">{t('werkbank.benutzer.eingerichtet')}</span>{stand.seit && <> {' '}{t('werkbank.benutzer.seit-2', { toLocaleDateString: new Date(stand.seit).toLocaleDateString('de-DE') })}</>} {' '}{t('werkbank.benutzer.wiederherstellungscodes-uebrig', { codesUebrig: stand.codesUebrig })}</p>
+        <p><span className="chip gut punkt">{t('werkbank.benutzer.eingerichtet')}</span>{stand.seit && <> {' '}{t('werkbank.benutzer.seit-2', { datum: new Date(stand.seit).toLocaleDateString(gebietsschema()) })}</>} {' '}{t('werkbank.benutzer.wiederherstellungscodes-uebrig', { codesUebrig: stand.codesUebrig })}</p>
         <div className="knoepfe"><button type="button" className="knopf gefahr-rand" onClick={async () => {
           if (await rueckfrage({ titel: t('werkbank.benutzer.zwei-faktor-anmeldung-von', { name }), text: t('werkbank.benutzer.danach-reicht-das-passwort', { name }), ja: t('werkbank.benutzer.zuruecksetzen'), gefahr: true })) {
             void api.benutzerZweifaktorZuruecksetzen(b.id).then(() => { setMeldung({ art: 'gut', text: t('werkbank.benutzer.zurueckgesetzt') }); return laden(); }).catch((e) => setMeldung({ art: 'schlecht', text: (e as Error).message }));

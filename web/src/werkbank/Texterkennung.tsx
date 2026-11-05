@@ -15,6 +15,7 @@ import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
 import { fortschrittText } from '../../../shared/src/auftrag';
 import type { Auftrag as HintergrundAuftrag } from '../api';
 import { t as tx, t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Texterkennung (#45, #459): Übersicht – welches Paket die Texterkennung übernimmt, woher der Text der
@@ -44,7 +45,7 @@ export function useTexterkennung(aktiv: boolean) {
 }
 export type TexterkennungZustand = ReturnType<typeof useTexterkennung>;
 
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 const REIHENFOLGE: OcrStandArt[] = ['wartet', 'laeuft', 'paket', 'fertig', 'fehler', 'ausgelassen', 'keiner'];
 
 function Warteschlange({ s }: { s: OcrStatus }) {
@@ -392,7 +393,7 @@ function Auftraege({ t: eintrag }: { t: TexterkennungZustand }) {
                     <td><Link to={`/ablage/${a.typId}/${a.dokument.mappeId}`} className="verweis">{a.mappeTitel || t('werkbank.texterkennung.ohne-titel')}</Link></td>
                     <td className="zahlzelle">{groesse(a.dokument.groesse)}</td>
                     <td>{stand === 'fertig' ? (o?.seiten ?? '–') : (o?.info || OCR_STAENDE[o?.stand ?? 'keiner'])}</td>
-                    <td className="leise">{o?.zeit ? new Date(o.zeit).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
+                    <td className="leise">{o?.zeit ? new Date(o.zeit).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
                   </tr>
                 );
               })}</tbody>

@@ -11,6 +11,7 @@ import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
 import { ENGPASS_VARIABLE } from '../../../shared/src/systemlast';
 import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
 import { akzeptierbar, GRUND_MAX, ordneMeldungen, type Akzeptiert, type Schwere } from '../../../shared/src/meldungen';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Übersicht (#68): was zu tun ist, auf einen Blick; Gruppen der Leiste.
@@ -20,8 +21,8 @@ import { akzeptierbar, GRUND_MAX, ordneMeldungen, type Akzeptiert, type Schwere 
 
 
 
-const zahl = (n: number) => n.toLocaleString('de-DE');
-const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'medium' });
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
+const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { dateStyle: 'medium' });
 const bytes = (b: number) => (b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(0)} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
 
 const platzText = (o: Array<{ frei: number | null }>) => {
@@ -141,7 +142,7 @@ export function useUebersicht() {
 }
 export type UebersichtZustand = ReturnType<typeof useUebersicht>;
 
-const kurzDatum = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const kurzDatum = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 
 /** „Zur Kenntnis nehmen“ (#816): nur für gelbe Warnungen und Hinweise; die Begründung ist freiwillig. */
 function Akzeptieren({ h, u }: { h: Hinweis; u: UebersichtZustand }) {

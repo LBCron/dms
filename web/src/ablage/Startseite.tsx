@@ -15,6 +15,7 @@ import { FragAblage } from './FragAblage';
 import { istTouch, postFotografieren } from './PostKamera';
 import { AnsichtSymbol, Symbol } from '../Symbol';
 import { darfPostAnlegen } from '../../../shared/src/model';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Startseite der Ablage (#334): wenige Kacheln mit je einer Zahl und einer Handlung.
@@ -26,7 +27,7 @@ import { darfPostAnlegen } from '../../../shared/src/model';
  * in dem jede Kachel einen festen Schlüssel (`data-kachel`) hat – Grundlage dafür, sie später
  * frei anzuordnen (#421). Mit geöffneter Mappe steht sie wie jede Liste in der Mitte.
  */
-const zahl = (n: number) => n.toLocaleString('de-DE');
+const zahl = (n: number) => n.toLocaleString(gebietsschema());
 
 function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null }) {
   const nichts = anzahl === 0;

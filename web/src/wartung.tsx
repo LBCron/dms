@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api, type WartungOeffentlich } from './api';
 import { Link } from './ort';
 import { istWeg, WIEDER_ERREICHBAR } from './erreichbar';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Wartungsmodus (#102) in der Oberfläche: Stand regelmäßig abfragen (auch ohne Neuladen der Seite)
@@ -50,7 +51,7 @@ export function dauerText(s: number): string {
   return t('oberflaeche.wartung.stunden', { anzahl: h, wert: r ? t('oberflaeche.wartung.minuten-2', { anzahl: r }) : '' });
 }
 
-export const zeitpunkt = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+export const zeitpunkt = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 
 /** Banner für alle Angemeldeten; Administratoren sehen zusätzlich den Weg zur Werkbank. */
 export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeldet: () => void }) {

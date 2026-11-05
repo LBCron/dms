@@ -14,6 +14,7 @@ import { SammelHaken, SammelKopf, SammelLeiste, useSammelauswahl } from '../abla
 import { t, tn } from '../sprache';
 import { FavoritenFreigabeBlock, type FavoritenFreigabeZustand } from './Benachrichtigungen';
 import { OhneLeserechtPanel } from './OhneLeserecht';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Rechts statt einer Aufgabe (#798): Aufgaben bei Personen ohne Leserecht – /werkbank/aufgaben/ohne-leserecht. */
 export const OHNE_LESERECHT = 'ohne-leserecht';
@@ -24,8 +25,8 @@ export const OHNE_LESERECHT = 'ohne-leserecht';
  * Aufgaben mit Filter (in der Adresse) und Mehrfachauswahl zum gesammelten Weitergeben (#415); rechts die Mappe
  * der gewählten Aufgabe – mit „Weitergeben an“.
  */
-const datum = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
-const tag = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('de-DE');
+const datum = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
+const tag = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString(gebietsschema());
 
 export function useAufgaben(aktiv: boolean, erledigt = false) {
   const [liste, setListe] = useState<Aufgabe[] | null>(null);

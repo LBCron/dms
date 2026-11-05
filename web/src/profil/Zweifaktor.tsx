@@ -4,13 +4,14 @@ import QRCode from 'qrcode';
 import { api, type ZweifaktorStand } from '../api';
 import { Hilfe } from '../Hilfe';
 import { useKonto } from '../konto';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Zwei-Faktor-Anmeldung (#242): Einrichten mit einer Authenticator-App, Wiederherstellungscodes,
  * Abschalten. Dieselbe Einrichtung zeigt der Pflicht-Bildschirm nach der Anmeldung.
  */
 
-const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** Zehn Einmalcodes – nur jetzt sichtbar; zum Ausdrucken oder Abspeichern. */
 export function Wiederherstellungscodes({ codes, weiter }: { codes: string[]; weiter: () => void }) {

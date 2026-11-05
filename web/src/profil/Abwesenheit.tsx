@@ -12,6 +12,7 @@ import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
 import { t, tn } from '../sprache';
 import type { Hilfeort } from '../../../shared/src/hilfe';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Abwesenheit mit Vertreter (#78): Formular für das eigene Profil und für Administratoren in der Werkbank. */
 const datum = (eintrag: string | null) => (eintrag ? eintrag.split('-').reverse().join('.') : '');
@@ -115,7 +116,7 @@ export function AufgabenWeitergeben() {
   );
 }
 
-const tag = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('de-DE');
+const tag = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString(gebietsschema());
 
 /**
  * Meine offenen Aufgaben (#419): dieselbe Liste wie in Werkbank → Aufgaben, aber nur die eigenen – mit Filter und

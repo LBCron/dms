@@ -7,13 +7,14 @@ import { api, type Systemuebersicht, type Vergleich } from '../api';
 import { Hilfe, useHandbuch } from '../Hilfe';
 import { useKonto } from '../konto';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Technik und Versionen (#15): installierte Komponenten, als Text für ein
  * GitHub-Issue kopierbar, und ein Abgleich mit neueren Versionen auf Knopfdruck.
  */
 const groesse = (b: number) => (b < 1024 ** 2 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(1).replace('.', ',')} MB` : `${(b / 1024 ** 3).toFixed(2).replace('.', ',')} GB`);
-const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
+const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 const STATUS: Record<Vergleich['status'], { text: string; art: string }> = {
   aktuell: { text: t('werkbank.technik.aktuell-2'), art: 'gut' }, neuer: { text: t('werkbank.technik.neueres-verfuegbar'), art: 'warn' },
   veraltet: { text: t('werkbank.technik.nicht-mehr-unterstuetzt'), art: 'stufe-error' }, unbekannt: { text: t('werkbank.technik.unbekannt'), art: '' },
@@ -42,8 +43,8 @@ function zeilenAus(u: Systemuebersicht): Zeilen {
       ['PostgreSQL', db.version],
       [t('werkbank.technik.ort'), u.dms.variante === 'komplett' ? t('werkbank.technik.im-container-dms-komplett') : t('werkbank.technik.eigener-datenbank-server-bzw')],
       [t('werkbank.technik.groesse'), groesse(db.groesseBytes)],
-      [t('werkbank.technik.mappen-mappentypen-benutzer'), `${db.mappen.toLocaleString('de-DE')} / ${db.typen} / ${db.benutzer}`],
-      [t('werkbank.technik.dokumente'), `${db.dokumente.toLocaleString('de-DE')} (${groesse(db.dokumenteBytes)})`],
+      [t('werkbank.technik.mappen-mappentypen-benutzer'), `${db.mappen.toLocaleString(gebietsschema())} / ${db.typen} / ${db.benutzer}`],
+      [t('werkbank.technik.dokumente'), `${db.dokumente.toLocaleString(gebietsschema())} (${groesse(db.dokumenteBytes)})`],
     ] : [[t('werkbank.technik.fehler'), (u.datenbank as { fehler: string }).fehler]]],
     [t('werkbank.technik.bibliotheken-server'), Object.entries(u.bibliotheken).map(([k, v]) => [k, v ?? t('werkbank.technik.nicht-gefunden')])],
     [t('werkbank.technik.oberflaeche'), [['React', reactVersion], [t('werkbank.technik.browser'), geraetText(navigator.userAgent)]]],
@@ -77,7 +78,7 @@ function alsText(z: Zeilen, abgleich: Vergleich[] | null): string {
       for (const v of liste) eintrag.push(`| ${v.bezeichnung ?? v.komponente} | ${v.installiert ?? '–'} | ${v.aktuell ?? '–'} | ${statusVon(v).text} |`);
     }
   }
-  eintrag.push('', t('werkbank.technik.erstellt-am', { wert: new Date().toLocaleString('de-DE') }));
+  eintrag.push('', t('werkbank.technik.erstellt-am', { wert: new Date().toLocaleString(gebietsschema()) }));
   return eintrag.join('\n');
 }
 

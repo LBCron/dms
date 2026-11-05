@@ -7,6 +7,7 @@ import { heikelHerunterladen } from '../verwaltungsmodus';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Schlüssel für verschlüsselte Zugangsdaten (#39): Status, Fingerabdruck, Erzeugen
@@ -98,7 +99,7 @@ export function TresorPanel({ t: eintrag }: { t: TresorZustand }) {
           <dt>{t('werkbank.verschluesselung.zustand')}</dt><dd><span className={`chip ${s.zustand === 'vorhanden' ? 'gut' : 'schlecht'}`}>{TEXT[s.zustand]}</span></dd>
           <dt>{t('werkbank.verschluesselung.fingerabdruck')}</dt><dd className="mono">{s.fingerabdruck ?? '–'}</dd>
           {s.erwartet && s.erwartet !== s.fingerabdruck && <><dt>{t('werkbank.verschluesselung.erwartet')}</dt><dd className="mono">{s.erwartet}</dd></>}
-          {s.erstellt && <><dt>{t('werkbank.verschluesselung.erzeugt-am')}</dt><dd>{new Date(s.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</dd></>}
+          {s.erstellt && <><dt>{t('werkbank.verschluesselung.erzeugt-am')}</dt><dd>{new Date(s.erstellt).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' })}</dd></>}
           <dt>{t('werkbank.verschluesselung.datei')}</dt><dd className="mono">{s.datei}</dd>
           <dt>{t('werkbank.verschluesselung.eigenes-volume')}</dt><dd>{s.eingebunden === null ? t('werkbank.verschluesselung.nicht-feststellbar-laeuft-nicht') : s.eingebunden ? t('werkbank.verschluesselung.ja') : t('werkbank.verschluesselung.nein')}</dd>
         </dl>
@@ -164,7 +165,7 @@ export function TresorPanel({ t: eintrag }: { t: TresorZustand }) {
             <tbody>{s.arten.map((a) => (
               <tr key={a.art}>
                 <td>{a.name}</td>
-                <td className="vs-zahl">{a.anzahl.toLocaleString('de-DE')}{a.unlesbar > 0 && <> <span className="chip schlecht" title={t('werkbank.verschluesselung.mit-dem-vorhandenen-schluessel')}>{t('werkbank.verschluesselung.nicht-lesbar', { unlesbar: a.unlesbar })}</span></>}</td>
+                <td className="vs-zahl">{a.anzahl.toLocaleString(gebietsschema())}{a.unlesbar > 0 && <> <span className="chip schlecht" title={t('werkbank.verschluesselung.mit-dem-vorhandenen-schluessel')}>{t('werkbank.verschluesselung.nicht-lesbar', { unlesbar: a.unlesbar })}</span></>}</td>
               </tr>
             ))}</tbody>
           </table>

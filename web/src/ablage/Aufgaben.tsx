@@ -11,9 +11,10 @@ import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /** Aufgaben an einer Mappe (#54): offene als Hinweis über der Mappe; eigene erledigen oder weitergeben. */
-const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'short' });
+const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { dateStyle: 'short' });
 
 export function BenutzerWahl({ wert, setze, ohne, label, fokus }: { wert: string; setze: (id: string) => void; ohne?: string | null; label: string; fokus?: boolean }) {
   const d = useDaten();

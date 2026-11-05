@@ -7,13 +7,14 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Werkbank → Postfächer (#196): Mails per IMAP abholen, jede Mail wird neue Post.
  * Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt.
  */
 
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'short', timeStyle: 'short' });
 const NEU: PostfachEingabe = {
   name: '', aktiv: true, server: '', port: 993, verschluesselung: 'ssl', benutzer: '', passwort: '', ordner: 'INBOX', abstand: 5,
   fuer: null, absender: '', nachher: 'verschieben', zielordner: 'Ablago', nurMitAnhang: false, original: true, anmeldung: 'passwort', anbieter: 'microsoft',

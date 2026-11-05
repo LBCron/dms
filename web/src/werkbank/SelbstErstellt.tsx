@@ -5,6 +5,7 @@ import { geheZu, Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
 import { ERSTELLEN } from './Pakete';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 /**
  * Selbst erstelltes Paket in der Paketverwaltung (#652): was damals erstellt wurde, der Vergleich mit heute,
@@ -17,7 +18,7 @@ export function SelbstErstelltAnsicht({ id, konflikt, onGeaendert }: { id: strin
   useEffect(() => { setD(null); api.selbstErstelltDetail(id).then(setD, (e) => setFehler((e as Error).message)); }, [id]);
   if (fehler) return <div className="einspaltig"><div className="hinweis schlecht"><p>{fehler}</p></div></div>;
   if (!d) return <div className="leer"><p>{t('werkbank.selbsterstellt.lade')}</p></div>;
-  const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE');
+  const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema());
   async function ausListe() {
     if (!d) return;
     if (!(await rueckfrage({ titel: t('pakete.selbst.ausListe'), text: t('pakete.selbst.ausListeFrage', { name: d.name }), ja: t('pakete.selbst.ausListe') }))) return;

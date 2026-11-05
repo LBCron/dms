@@ -6,8 +6,9 @@ import { useKonto } from '../konto';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
 import { Symbol } from '../Symbol';
+import { gebietsschema } from '../../../shared/src/sprache';
 
-const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'medium' });
+const datum = (iso: string) => new Date(iso).toLocaleDateString(gebietsschema(), { dateStyle: 'medium' });
 
 /**
  * Passwörter für Dokumente (#827): gemerkte Passwörter geschützter PDFs – nur für die eigene Person, nicht in einer
