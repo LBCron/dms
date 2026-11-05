@@ -12,7 +12,7 @@ To the right of a folder's title, next to the star, is the menu **Folder ▾** (
 4. Under **Attachments**, choose which documents of the folder go along. Below it, it says how large they are together; from 20 MB Ablago warns, because many mail servers don't accept larger emails; more than 50 MB cannot be sent.
 5. **Send**.
 
-![Email from a folder](bilder/e-mail.png)
+![Email from a folder](bilder/email.png)
 
 The sender is Ablago's address; the recipient's **replies** go to your email address.
 
