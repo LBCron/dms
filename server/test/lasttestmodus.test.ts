@@ -210,7 +210,10 @@ describe('Lasttest-Modus (#612): Ergebnisblock', () => {
     assert.deepEqual([g.cpuPostgres, g.cpuAblago, g.cpuContainer], [100, 150, 200]);
     assert.deepEqual(g.speicherJeProzess, [{ nr: 0, rolle: 'haupt', mb: 61, haldeMb: null }, { nr: 1, rolle: 'leiter', mb: 650, haldeMb: null }, { nr: 2, rolle: 'anfragen', mb: 480, haldeMb: null }]);
     assert.equal(g.neustarts, 1, 'nur die im Durchgang');
-    assert.equal(skript.engpassText(g), 'Warten auf DB-Verbindung p95 ≤ 10 ms, höchstens 45 ms · Verbindungen belegt bis 12 von 12 (Warteschlange bis 7) · Sperren: bis 2 Sitzungen, längste 130 ms · CPU (% eines Kerns): PostgreSQL 100 %, Ablago 150 %, Container 200 % · Neustarts von Prozessen: 1 (2 SIGKILL) · Speicher je Prozess: Haupt 61 MB, 1 650 MB, 2 480 MB');
+    assert.equal(skript.engpassText(g), 'Warten auf DB-Verbindung p95 ≤ 10 ms, höchstens 45 ms · Verbindungen belegt bis 12 von 12 (Warteschlange bis 7) · Sperren: bis 2 Sitzungen, längste 130 ms · CPU (% eines Kerns): PostgreSQL 100 %, Ablago 150 %, Container 200 % · Neustarts von Prozessen: 1 (2 SIGKILL) · Speicher je Prozess: Hauptprozess 61 MB, Prozess 1: 650 MB, Prozess 2: 480 MB');
+    // #891: Rolle und Nummer lesbar getrennt, Halde in Klammern.
+    assert.match(skript.engpassText({ ...g, speicherJeProzess: [{ nr: 0, rolle: 'haupt', mb: 32, haldeMb: null }, { nr: 1, rolle: 'leiter', mb: 1588, haldeMb: 977 }, { nr: 2, rolle: 'anfragen', mb: 862, haldeMb: 370 }] }),
+      / · Speicher je Prozess: Hauptprozess 32 MB, Prozess 1: 1588 MB \(Halde 977\), Prozess 2: 862 MB \(Halde 370\)$/);
     assert.equal(skript.fehlerText({ status: { 200: 10, 502: 3, 503: 4 }, fehlerJe: { ECONNRESET: 2 }, ohneAntwortJe: { Suche: 1 } }), '502 × 3, ECONNRESET × 2, ohne Antwort (Suche) × 1', '503 zählt als abgewiesen, nicht als Fehler');
     assert.equal(skript.fehlerText({ status: { 200: 10 }, fehlerJe: {}, ohneAntwortJe: {} }), null);
     const gross = { stufe: 'gross', art: 'messung', verfehlt: [], grenze: { gleichzeitig: 25, jeSekunde: 50, p95: 900 }, grund: 'Fehlerquote 1,10 % > 1 %', erholung: { ms: 100, p95: 300 },

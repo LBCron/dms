@@ -64,8 +64,8 @@ export interface ProzessEinstellung {
  * Container allein; unter Last wächst die Halde (vor allem Abfall, den V8 spät einsammelt) in allen zugleich. Darum
  * bekommt jeder weitere Prozess 60 % seines Anteils (Speicher − Reserve, geteilt durch die Prozesse), mindestens 1024 MB,
  * höchstens 1536 MB. Gemessen (2 Kerne, 2 Prozesse, mittel + Speichern): mit 1024 MB je Prozess 650–770 MB statt
- * 990–1060 MB, die Halde höchstens 330 statt 690 MB; im Leerlauf belegt ein Prozess rund 190 MB Halde. Der Leiter bleibt
- * ohne Grenze wie ein einzelner Prozess – er erledigt die Arbeit im Hintergrund (Sicherung, Texterkennung, Pakete).
+ * 990–1060 MB, die Halde höchstens 330 statt 690 MB; im Leerlauf belegt ein Prozess rund 190 MB Halde. Den Leiter
+ * begrenzt `haldeLeiter` (#891). Der Hauptprozess (nur Leitung) bleibt ohne Grenze.
  * null: ein Prozess oder schon von Hand gesetzt (`NODE_OPTIONS` bzw. Argumente von Node.js) – dann bleibt es dabei.
  */
 export const HALDE_MIN_MB = 1024;
@@ -75,6 +75,17 @@ export function haldeJeProzess(e: Pick<ProzessEinstellung, 'anzahl' | 'speicher'
   if (e.speicher === null) return HALDE_MAX_MB;
   const anteil = (e.speicher - SPEICHER_RESERVE) / e.anzahl / 1024 ** 2;
   return Math.max(HALDE_MIN_MB, Math.min(HALDE_MAX_MB, Math.floor(anteil * 0.6)));
+}
+
+/**
+ * Obergrenze der Halde des Leiters (Prozess 1) in MB (#891): Er beantwortet Anfragen wie die anderen und erledigt dazu die
+ * Arbeit im Hintergrund (Sicherung, Texterkennung, Pakete) – darum 512 MB mehr als die weiteren Prozesse. Ohne Grenze
+ * wuchs er auf dem NAS (2 Prozesse, groß + Speichern) auf 2,6 GB (Halde 2,3 GB), Prozess 2 mit Grenze auf 1,3 GB.
+ * null wie bei `haldeJeProzess`: ein Prozess oder von Hand gesetzt.
+ */
+export const HALDE_LEITER_MEHR_MB = 512;
+export function haldeLeiter(halde: number | null): number | null {
+  return halde === null ? null : halde + HALDE_LEITER_MEHR_MB;
 }
 
 /** So viele Prozesse tragen die Verbindungen (`DMS_DB_VERBINDUNGEN` zusammen): Leiter 6, jeder weitere 2 (#874). */
@@ -334,6 +345,7 @@ const BEENDEN_MS = 20_000;
 export function leite(e: ProzessEinstellung): Promise<never> {
   const log = protokoll.modul('system');
   const halde = haldeJeProzess(e);
+  const leiterHalde = haldeLeiter(halde);
   cluster.setupPrimary({ serialization: 'advanced' });
   const konsole = randomBytes(32).toString('base64url');
   const plaetze = new Map<number, { w: Worker; bereit: boolean; seit: number }>();
@@ -461,8 +473,9 @@ export function leite(e: ProzessEinstellung): Promise<never> {
   };
 
   const starte = (nr: number) => {
-    // Halde (#874): nur die weiteren Prozesse begrenzt, der Leiter wie ein einzelner Prozess.
-    cluster.setupPrimary({ execArgv: halde && nr > 1 ? [...process.execArgv, `--max-old-space-size=${halde}`] : process.execArgv });
+    // Halde (#874, #891): jeder Prozess begrenzt, der Leiter mit 512 MB mehr; null (ein Prozess, von Hand gesetzt): wie bisher.
+    const grenze = nr === 1 ? leiterHalde : halde;
+    cluster.setupPrimary({ execArgv: grenze ? [...process.execArgv, `--max-old-space-size=${grenze}`] : process.execArgv });
     const w = cluster.fork();
     plaetze.set(nr, { w, bereit: false, seit: Date.now() });
     w.on('message', (m: Nachricht) => nachricht(nr, w, m));
@@ -479,7 +492,7 @@ export function leite(e: ProzessEinstellung): Promise<never> {
   process.on('SIGTERM', () => beendeAlle(0));
   process.on('SIGINT', () => beendeAlle(0));
 
-  log.info(`Ablago startet mit ${e.anzahl} Prozessen (DMS_PROZESSE${e.quelle === 'auto' ? '=auto' : ''}): Prozess 1 leitet und erledigt die Arbeit im Hintergrund, alle beantworten Anfragen`, { kerne: e.kerne, ...(e.quelle === 'auto' ? { begrenzt: e.begrenzt } : {}), ...(halde ? { haldeMb: halde } : {}) });
+  log.info(`Ablago startet mit ${e.anzahl} Prozessen (DMS_PROZESSE${e.quelle === 'auto' ? '=auto' : ''}): Prozess 1 leitet und erledigt die Arbeit im Hintergrund, alle beantworten Anfragen`, { kerne: e.kerne, ...(e.quelle === 'auto' ? { begrenzt: e.begrenzt } : {}), ...(halde ? { haldeLeiterMb: leiterHalde, haldeMb: halde } : {}) });
   starte(1);
   return new Promise<never>(() => {});
 }

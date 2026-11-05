@@ -753,7 +753,8 @@ export function fehlerText(l) {
 /**
  * „Engpass: Warten auf eine DB-Verbindung p95 ≤ 20 ms, höchstens 340 ms · Verbindungen belegt bis 16 von 16 (Warteschlange
  * bis 35) · Sperren: bis 2 Sitzungen, längste 120 ms · CPU (% eines Kerns): PostgreSQL 140 %, Ablago 210 %, Container
- * 360 % · Speicher je Prozess: 1 420 MB, 2 380 MB“ (#874). Was fehlt, steht als „–“.
+ * 360 % · Speicher je Prozess: Hauptprozess 32 MB, Prozess 1: 420 MB (Halde 250), Prozess 2: 380 MB (Halde 210)“ (#874, #891).
+ * Was fehlt, steht als „–“.
  */
 export function engpassText(g) {
   const ms = (x) => (x === null || x === undefined ? '–' : `${String(x).replace('.', ',')} ms`);
@@ -764,7 +765,7 @@ export function engpassText(g) {
     `Sperren: ${g.sperrenMax === null ? '–' : g.sperrenMax === 0 ? 'keine' : `bis ${g.sperrenMax} ${g.sperrenMax === 1 ? 'Sitzung' : 'Sitzungen'}, längste ${ms(g.sperreMsMax)}`}`,
     `CPU (% eines Kerns): PostgreSQL ${pz(g.cpuPostgres)}, Ablago ${pz(g.cpuAblago)}, Container ${pz(g.cpuContainer)}`,
     `Neustarts von Prozessen: ${g.neustarts === null || g.neustarts === undefined ? '–' : g.neustarts}${g.neustartGruende?.length ? ` (${g.neustartGruende.join(', ')})` : ''}`,
-    `Speicher je Prozess: ${g.speicherJeProzess.length ? g.speicherJeProzess.map((p) => `${p.nr === 0 ? 'Haupt' : p.nr} ${p.mb} MB${typeof p.haldeMb === 'number' ? ` (Halde ${p.haldeMb})` : ''}`).join(', ') : '–'}`,
+    `Speicher je Prozess: ${g.speicherJeProzess.length ? g.speicherJeProzess.map((p) => `${p.nr === 0 ? 'Hauptprozess' : `Prozess ${p.nr}:`} ${p.mb} MB${typeof p.haldeMb === 'number' ? ` (Halde ${p.haldeMb})` : ''}`).join(', ') : '–'}`,
   ];
   return teile.join(' · ');
 }

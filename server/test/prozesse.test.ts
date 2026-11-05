@@ -26,7 +26,7 @@ import { bedieneLaeufer, Fernlaeufer } from '../src/laeufer/fern';
 import type { Paketlaeufer } from '../src/laeufer/verwaltung';
 import { Paketverwaltung } from '../src/pakete';
 import { kontext } from '../src/protokoll';
-import { einzeln, empfohleneProzesse, haldeJeProzess, prozesseAus, type Verbund } from '../src/prozesse';
+import { einzeln, empfohleneProzesse, haldeJeProzess, haldeLeiter, prozesseAus, type Verbund } from '../src/prozesse';
 import { speicherRepo } from '../src/repo-speicher';
 import { Tresor } from '../src/tresor';
 import { Haushaltsstand, MINDESTENS_MS, Zaehlerspeicher } from '../src/zaehlerspeicher';
@@ -110,6 +110,15 @@ describe('Einstellung DMS_PROZESSE (#745)', () => {
     assert.equal(haldeJeProzess({ anzahl: 2, speicher: null }, []), 1536);
     assert.equal(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, ['--max-old-space-size=3000']), null, 'von Hand gesetzt');
     assert.equal(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, ['', '--enable-source-maps --max-old-space-size=512']), null, 'NODE_OPTIONS');
+  });
+
+  it('Halde des Leiters (#891): 512 MB über der der anderen; ein Prozess oder von Hand gesetzt: nichts', () => {
+    const GB = 1024 ** 3;
+    assert.equal(haldeLeiter(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, [])), 2048);
+    assert.equal(haldeLeiter(haldeJeProzess({ anzahl: 2, speicher: 5 * GB }, [])), 1740);
+    assert.equal(haldeLeiter(haldeJeProzess({ anzahl: 4, speicher: 4 * GB }, [])), 1536);
+    assert.equal(haldeLeiter(haldeJeProzess({ anzahl: 1, speicher: 16 * GB }, [])), null, 'ein Prozess');
+    assert.equal(haldeLeiter(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, ['--max-old-space-size=3000'])), null, 'von Hand gesetzt');
   });
 
   it('Arbeiter: Vorgabe teilt sich auf die Prozesse auf, DMS_ARBEITER gilt je Prozess', () => {
