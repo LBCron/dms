@@ -289,10 +289,10 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('button', { name: w('Weiter') }).click();
   const ohneDb = await s.getByRole('heading', { name: w('Datenbank'), exact: true }).waitFor({ timeout: 5000 }).then(() => true, () => false);
   if (ohneDb) {
-    await s.getByLabel(w(/^Server/)).fill(process.env.DB_HOST ?? 'db');
+    await s.getByRole('textbox', { name: w(/^Server/) }).fill(process.env.DB_HOST ?? 'db');
     await s.getByLabel(w(/^Passwort/)).fill(process.env.DB_PASSWORT ?? 'dms');
     // Eigene Datenbank je Sprache (#730), damit jede Aufnahme mit einem leeren Ablago beginnt.
-    if (process.env.DB_NAME) await s.getByLabel(w(/^Datenbank/)).fill(process.env.DB_NAME);
+    if (process.env.DB_NAME) await s.getByRole('textbox', { name: w(/^Datenbank/) }).fill(process.env.DB_NAME);
     await s.getByRole('button', { name: w('Verbindung prüfen') }).click();
     await s.getByRole('button', { name: w('Übernehmen und weiter') }).waitFor();
     await bild(s, 'einrichtung-datenbank');
