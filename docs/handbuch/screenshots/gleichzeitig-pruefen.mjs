@@ -22,6 +22,8 @@ const ADMIN = { email: process.env.DMS_EMAIL ?? 'lena@example.org', passwort: pr
 const anm = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify(ADMIN) });
 if (!anm.ok) throw new Error(`Anmelden: ${anm.status} ${await anm.text()}`);
 const [name, wert] = (anm.headers.get('set-cookie') ?? '').split(';')[0].split('=');
+// Werkbank und Mappentypen gehen seit #819 nur im Verwaltungsmodus; direkt nach der Anmeldung ohne erneute Abfrage.
+await fetch(`${BASIS}/api/konto/verwaltung`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json', cookie: `${name}=${wert}` }, body: '{}' });
 const api = async (methode, pfad, body) => {
   const r = await fetch(`${BASIS}${pfad}`, { method: methode, headers: { 'x-dms': '1', cookie: `${name}=${wert}`, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) throw new Error(`${methode} ${pfad}: ${r.status} ${await r.text()}`);
