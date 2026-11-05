@@ -451,6 +451,30 @@ export function speicherRepo(): Repo {
       return { typen, eingang, favoriten: [...(favoriten.get(benutzerId) ?? [])].filter((id) => mappen.has(id) && lesbar(lesen ?? null, mappen.get(id)!, zaehl)).length };
     },
     async zaehleKlauseln(liste, lesen) { return liste.map((k) => [...mappen.values()].filter((m) => inSicht(m, k, zaehl) && lesbar(lesen ?? null, m, zaehl)).length); },
+    async zaehleBestand(liste, lesen) {
+      const typen = new Map<string, { anzahl: number; unpassend: number; demo: number }>();
+      const sichten = liste.map(() => 0);
+      for (const m of mappen.values()) {
+        if (!lesbar(lesen ?? null, m, zaehl)) continue;
+        const z = typen.get(m.typId) ?? { anzahl: 0, unpassend: 0, demo: 0 };
+        z.anzahl++;
+        if (m.passt !== true) z.unpassend++;
+        if (m.demo) z.demo++;
+        typen.set(m.typId, z);
+        liste.forEach((k, i) => { if (inSicht(m, k, zaehl)) sichten[i]++; });
+      }
+      return { typen, sichten };
+    },
+    async zaehlePersoenlich(benutzerId, ohneEmpfaenger, lesen, liste = []) {
+      let eingang = 0;
+      for (const m of mappen.values()) if (offenFuer(m, benutzerId, ohneEmpfaenger)) eingang++;
+      return {
+        eingang,
+        favoriten: [...(favoriten.get(benutzerId) ?? [])].filter((id) => mappen.has(id) && lesbar(lesen ?? null, mappen.get(id)!, zaehl)).length,
+        papierkorb: [...korb.values(), ...dokKorb.values()].filter((k) => k.geloeschtVon === benutzerId).length,
+        sichten: liste.map((k) => [...mappen.values()].filter((m) => inSicht(m, k, zaehl) && lesbar(lesen ?? null, m, zaehl)).length),
+      };
+    },
     async lesbare(ids, lesen) { return new Set(ids.filter((id) => mappen.has(id) && lesbar(lesen, mappen.get(id)!, zaehl))); },
     async inKlauseln(ids, klauseln) { return new Set(ids.filter((id) => mappen.has(id) && inSicht(mappen.get(id)!, klauseln, zaehl))); },
     async zaehleAusdruck(typId, x) { return [...mappen.values()].filter((m) => m.typId === typId && werte(x, m, zaehl)).length; },

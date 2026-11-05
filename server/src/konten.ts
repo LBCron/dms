@@ -364,9 +364,12 @@ export class Konten {
   async anmeldungZu(schluessel?: string): Promise<{ benutzer: Benutzer; sitzung: SitzungIntern } | undefined> {
     if (!schluessel) return undefined;
     const hash = hasheSchluessel(schluessel);
-    const s = await this.repo.holeSitzung(hash);
+    // Sitzung und Person in einer Abfrage (#741), nie aus einem Zwischenspeicher: Sperren, Abmelden und Löschen
+    // wirken mit der nächsten Anfrage – in jedem Prozess.
+    const x = this.repo.holeAnmeldung ? await this.repo.holeAnmeldung(hash)
+      : await (async () => { const s = await this.repo.holeSitzung(hash); const b = s && await this.repo.holeBenutzer(s.benutzerId); return s && b ? { sitzung: s, benutzer: b } : undefined; })();
+    const s = x?.sitzung; const b = x?.benutzer;
     if (!s || s.ablauf.getTime() < Date.now()) return undefined;
-    const b = await this.repo.holeBenutzer(s.benutzerId);
     // Systemkonten (#673) haben nie eine Sitzung – auch eine untergeschobene gilt nicht.
     if (!b || !b.aktiv || b.art === 'system') return undefined;
     if (Date.now() - s.zuletztAktiv.getTime() > BERUEHREN_MS) await this.repo.beruehreSitzung(hash);

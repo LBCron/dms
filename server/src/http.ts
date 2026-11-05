@@ -36,7 +36,36 @@ import { WEBDAV_METHODEN, WEBDAV_ZUSATZMETHODEN, type Webdav } from './webdav';
 import { anfrageStufe, dateiKoepfe, leseCookie, modulAus, pruefeZugang, routen, SITZUNG_COOKIE, sitzungsCookie, type Anfrage, type Route } from './routen';
 
 /** zeit (#477): Zeitpunkte der Anfrage (performance.now()) für Server-Timing. */
-type MitKontext = FastifyRequest & { dms?: Kontext; lesend?: boolean; zeit?: { eingang: number; start?: number; ende?: number; senden?: number } };
+type MitKontext = FastifyRequest & { dms?: Kontext; lesend?: boolean; zeit?: { eingang: number; start?: number; ende?: number; senden?: number }; nachher?: () => void };
+
+/**
+ * Arbeit nach der Antwort (#741, `Antwort.danach`): beginnt, wenn die Antwort gesendet ist (onResponse, spätestens nach
+ * `NACHLAUF_SPAETESTENS_MS`). Niemand wartet darauf – eine Anfrage derselben Person im selben Augenblick sieht
+ * „zuletzt geöffnet“ und „gesehen“ unter Umständen erst beim nächsten Mal. (Ein Warten je Person reihte im Lasttest –
+ * drei Sitzungen, 100 Anfragen gleichzeitig – die Anfragen derselben Sitzung hintereinander.)
+ */
+const NACHLAUF_SPAETESTENS_MS = 5_000;
+export class Nachlauf {
+  private laufend = new Set<Promise<void>>();
+  /** Arbeit anmelden; das Ergebnis startet sie (genau einmal). */
+  melde(k: Kontext, arbeit: Array<() => Promise<unknown>>): () => void {
+    let los!: () => void;
+    const gesendet = new Promise<void>((r) => { los = r; });
+    const zeitgeber = setTimeout(() => los(), NACHLAUF_SPAETESTENS_MS);
+    zeitgeber.unref?.();
+    const p: Promise<void> = gesendet.then(() => kontext.run(k, async () => {
+      clearTimeout(zeitgeber);
+      for (const f of arbeit) {
+        try { await f(); } catch (e) { protokoll.schreibe('warn', 'http', 'Arbeit nach der Antwort fehlgeschlagen', { fehler: (e as Error).message }); }
+      }
+    }));
+    this.laufend.add(p);
+    void p.finally(() => this.laufend.delete(p));
+    return los;
+  }
+  /** Für Tests: auf alles warten, was gerade läuft. */
+  async alle(): Promise<void> { await Promise.all([...this.laufend]); }
+}
 
 interface Optionen {
   /** Paketverwaltung mit Paket-Läufer (#338); ohne: Paketverwaltung ohne Läufer. */
@@ -111,6 +140,8 @@ interface Optionen {
   verbindungen?: import('./db').Verbindungswarten;
   /** Erweiterungen der Suche (#562). */
   erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
+  /** Arbeit nach der Antwort (#741); Tests geben einen eigenen, um darauf zu warten (`alle`). */
+  nachlauf?: Nachlauf;
 }
 
 export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}) {
@@ -153,6 +184,10 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     }
     return nutzlast;
   });
+
+  // Arbeit nach der Antwort (#741).
+  const nachlauf = opt.nachlauf ?? new Nachlauf();
+  app.addHook('onResponse', async (req) => { (req as MitKontext).nachher?.(); });
 
   // Eine Zeile je Anfrage: Methode, Pfad, Status, Dauer, Benutzer.
   app.addHook('onResponse', async (req, reply) => {
@@ -209,6 +244,8 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         (req as MitKontext).dms = k;
         const antwort = await kontext.run(k, async () => {
           await pruefeZugang(r, a, (n) => req.headers[n] as string | undefined, konten, opt.apiSchluessel, opt.konsole);
+          // Eigene Änderungen zeigen die Zahlen sofort (#742).
+          k.benutzerId = a.benutzer?.id;
           // Protokoll (#819): jede Anfrage im Verwaltungsmodus mit Person und „im Verwaltungsmodus“.
           k.benutzer = a.konsole ? `${a.benutzer?.email ?? 'ohne Verwaltungsrecht'} (Konsole)` : `${wer(a.benutzer, a.apiSchluessel)}${a.verwaltungsmodus ? ' (im Verwaltungsmodus)' : ''}`;
           // Wartungsmodus (#102): API 503, in der aktiven Stufe nur Administratoren.
@@ -218,6 +255,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         });
         // Für den Entwicklermodus: Server-Timing setzt der onSend-Hook (#477), dann mit JSON und gesamt.
         zeit.ende = performance.now();
+        if (antwort.danach?.length) (req as MitKontext).nachher = nachlauf.melde(k, antwort.danach);
         if (antwort.sitzungSetzen !== undefined || antwort.cookies?.length) {
           const sicher = typeof opt.sicher === 'function' ? kontext.run(k, opt.sicher) : opt.sicher ?? false;
           reply.header('set-cookie', [

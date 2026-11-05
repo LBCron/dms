@@ -74,6 +74,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   vektoren: 'nicht enthalten: Vektoren zu Dokumenten (#442, abgeleitet – das Paket mit dms:vektoren rechnet sie neu)',
   gesehen: 'nicht enthalten: wann ein Benutzer eine Mappe zuletzt geöffnet hat (#422, nur für die Hervorhebung geänderter Mappen)',
   zaehlerstaende: 'nicht enthalten: Stand der Zahlen je Benutzer für den Zähler-Endpunkt (#625, nur ein Hash der Zahlen, technisch)',
+  haushaltsstand: 'nicht enthalten: Stand der Zwischenspeicher (#741, #742, nur zwei Zahlen, technisch)',
   webhooks: 'nicht enthalten: Webhooks der Benutzer (#627, Adresse und verschlüsseltes Geheimnis – Zugangsdaten)',
   webhook_meldungen: 'nicht enthalten: Ausgangskorb der Webhooks (#627, nur Zahlen, technisch)',
   ereignisse: 'nicht enthalten: Ausgangskorb des Ereigniskatalogs (#670, nur Ids und Feldschlüssel, technisch)',

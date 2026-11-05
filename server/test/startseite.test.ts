@@ -19,7 +19,12 @@ async function aufbau() {
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, {});
-  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => (tabelle.find((t) => t.methode === m && t.pfad === pf)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) }) as Promise<{ body: unknown }>);
+  // Wie nach der Antwort über HTTP (#741): erst danach „zuletzt geöffnet“ merken.
+  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => {
+    const r = await tabelle.find((t) => t.methode === m && t.pfad === pf)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
+    for (const f of r.danach ?? []) await f();
+    return r as { body: unknown };
+  };
   return { d, konten, admin, anna, rufe };
 }
 type Start = { zuletzt: Array<{ id: string; titel: string }>; leer: boolean };

@@ -10,7 +10,8 @@ import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
 import { beiVerklemmungWiederholen, istVerklemmung } from './db';
-import { fingerabdruck, Haushaltsstand, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher } from './zaehlerspeicher';
+import { fingerabdruck, Haushaltsstand, MINDESTENS_MS, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher, type Gueltigkeit } from './zaehlerspeicher';
+import { jeAnfrage } from './lesespeicher';
 import { rechteMessen } from './messung';
 import { graubild } from './graubild';
 import { Fachfehler } from './fehler';
@@ -588,21 +589,40 @@ export class Dienst {
   private einstellungen?: Einstellungen;
   private konten?: KontenHaken;
 
-  /** Stand des Haushalts (#512): zählt nach jeder Änderung über das Repo hoch. */
-  readonly stand = new Haushaltsstand();
-  /** Zahlen der Ansichten je Benutzer und Rechte (#512). */
-  private readonly zahlen = new Zaehlerspeicher<Awaited<ReturnType<Dienst['zaehle']>>>(this.stand);
   /**
-   * Termine (#528, #725): eigener Stand, der zusätzlich bei Erinnerungen hochzählt – die ändern keine Zahl
-   * der Ansichten, aber den Kalender. Zwischenspeicher je Benutzer, Rechte und Zeitraum.
+   * Stand des Haushalts (#512): zählt nach jeder Änderung über das Repo hoch, seit #742 in der Datenbank
+   * (Sequenz `haushaltsstand_zahlen`), wenn das Repo eine hat. Er zählt auch bei Erinnerungen (`ZAEHLT_FUER_TERMINE`,
+   * für die Termine #528) – früher ein eigener Stand; eine Zahl in der Datenbank genügt, Erinnerungen ändern sich selten.
    */
-  readonly fristenstand = new Haushaltsstand(ZAEHLT_FUER_TERMINE);
-  private readonly termineSpeicher = new Zaehlerspeicher<Termin[]>(this.fristenstand);
+  readonly stand = new Haushaltsstand(ZAEHLT_FUER_TERMINE);
+  /** Termine (#528, #725): derselbe Stand (#742). */
+  get fristenstand() { return this.stand; }
+  /**
+   * Zahlen der Ablage, die nicht von der Person abhängen (#742): je Typ und je Ansicht. Schlüssel ist der
+   * Fingerabdruck genau der Eingaben der Zählung (Lesefilter, Klauseln der sichtbaren Ansichten, Verwaltungsmodus) –
+   * wer dieselben Eingaben hat, bekommt dieselbe Zahl; anders geht es nicht.
+   */
+  private readonly bestand = new Zaehlerspeicher<Awaited<ReturnType<Repo['zaehleBestand']>>>(this.stand);
+  /** Zahlen der Person (#742): Eingang, Favoriten, Papierkorb – je Person und Lesefilter. */
+  private readonly persoenlich = new Zaehlerspeicher<Awaited<ReturnType<Repo['zaehlePersoenlich']>>>(this.stand);
+  /** Termine (#528, #725): Zwischenspeicher je Benutzer, Rechte und Zeitraum. */
+  private readonly termineSpeicher = new Zaehlerspeicher<Termin[]>(this.stand);
   /** Zähler-Endpunkt (#625): „neue Post für mich bzw. ohne Für“ je Benutzer und Rechte, wie die Zahlen der Ansichten. */
   private readonly neuePostSpeicher = new Zaehlerspeicher<number>(this.stand);
+  /** Mindestgültigkeit der Zahlen bei Anfragen nach Änderungen anderer (#742); Tests stellen sie auf 0. */
+  mindestensMs = MINDESTENS_MS;
+  /** Gültigkeit für die laufende Anfrage: in einer Anfrage mit Person kurz, sonst (Hintergrund) immer frisch. */
+  private gueltigkeit(): Gueltigkeit {
+    const wer = kontext.getStore()?.benutzerId;
+    return wer ? { mindestensMs: this.mindestensMs, wer } : {};
+  }
 
   constructor(private grundRepo: Repo, private dateien: Dateispeicher, opt: DienstOptionen = {}) {
-    this.grundRepo = this.stand.umhuelle(this.fristenstand.umhuelle(grundRepo));
+    // Stand aus der Datenbank (#742), sonst nur dieser Prozess (speicherRepo in Tests).
+    if (typeof grundRepo.haushaltsstand === 'function' && typeof grundRepo.erhoeheHaushaltsstand === 'function') {
+      this.stand.verbinde({ lies: () => grundRepo.haushaltsstand!(), erhoehe: () => grundRepo.erhoeheHaushaltsstand!() });
+    }
+    this.grundRepo = this.stand.umhuelle(grundRepo);
     this.tresor = opt.tresor;
     this.einstellungen = opt.einstellungen;
     this.tresor?.registriere(() => this.unlesbarePasswoerter());
@@ -2325,7 +2345,7 @@ export class Dienst {
     const ohne = await this.siehtOhneEmpfaenger(z.ich);
     const schluessel = `${z.ich.id}|${z.ich.rolle}|${ohne ? 'o' : ''}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${nurFavoriten ? 'f' : 'a'}`;
     const beginn = performance.now();
-    const r = await this.termineSpeicher.hole(schluessel, async () => ({ wert: await this.sammleTermine(z, heute, von, bis, nurFavoriten), zeitabhaengig: true }));
+    const r = await this.termineSpeicher.hole(schluessel, async () => ({ wert: await this.sammleTermine(z, heute, von, bis, nurFavoriten), zeitabhaengig: true }), this.gueltigkeit());
     const k = kontext.getStore();
     if (k) k.zwischenspeicher = { art: r.art, ms: performance.now() - beginn };
     return { heute, von, bis, eintraege: r.wert, feiertage: feiertageZwischen(von, bis, land) };
@@ -2755,6 +2775,12 @@ export class Dienst {
    * `gesetzt`: Die Einstellung wurde schon einmal gespeichert (auch „niemand“) – dann setzt Ablago keine Vorgabe mehr.
    */
   async alltagsEmpfaenger(): Promise<{ benutzerId: string | null; wirksam: string | null; gesetzt: boolean; gespeichert: string | null }> {
+    // Einmal je Anfrage (#741): Zahlen, Termine und Eingang fragen es mehrfach; braucht die Liste aller Personen.
+    if (transaktionen.getStore()?.dienst === this) return this.bildeAlltagsEmpfaenger();
+    return { ...await jeAnfrage(`${this.kennung}|alltag`, () => this.bildeAlltagsEmpfaenger()) };
+  }
+
+  private async bildeAlltagsEmpfaenger(): Promise<{ benutzerId: string | null; wirksam: string | null; gesetzt: boolean; gespeichert: string | null }> {
     const e = (await this.einstellungen?.lies('aufgaben_empfaenger')) as { benutzer?: unknown } | null;
     const gespeichert = typeof e?.benutzer === 'string' ? e.benutzer : null;
     if (!gespeichert) return { benutzerId: null, wirksam: null, gesetzt: !!e, gespeichert: null };
@@ -2776,7 +2802,7 @@ export class Dienst {
       if (!taugtAlsAufgabenEmpfaenger(b)) throw new Fachfehler(422, t('werkbank.aufgabenempfaenger.fehler.inaktiv'));
     }
     await this.einstellungen.schreibe('aufgaben_empfaenger', { benutzer: id });
-    this.stand.erhoehe(); this.fristenstand.erhoehe();
+    await this.stand.erhoehe();
     protokoll.modul('werkbank').info('Empfänger für Aufgaben ohne Empfänger eingestellt', { von: await this.name(von), an: id ? await this.name(id as string) : 'nur im Verwaltungsmodus' });
     return this.alltagsEmpfaenger();
   }
@@ -2792,7 +2818,7 @@ export class Dienst {
     if (!this.einstellungen || !taugtAlsAufgabenEmpfaenger(b) || (await this.alltagsEmpfaenger()).gesetzt) return;
     const neu = { benutzer: b.id };
     if (this.einstellungen.tausche ? await this.einstellungen.tausche('aufgaben_empfaenger', null, neu) : (await this.einstellungen.schreibe('aufgaben_empfaenger', neu), true)) {
-      this.stand.erhoehe(); this.fristenstand.erhoehe();
+      await this.stand.erhoehe();
       protokoll.modul('werkbank').info('Aufgaben ohne Empfänger gehen an den ersten Benutzer', { an: b.name || b.email });
     }
   }
@@ -3111,10 +3137,10 @@ export class Dienst {
   }
 
   async holeMappe(id: string, z?: Zugriff) {
-    const mappe = await this.repo.holeMappe(id);
-    if (!mappe) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
     // Aufgaben der Mappe nur einmal lesen (#615): für die Regel „mit Aufgabe“, für die Antwort und fürs Gesehen.
-    const aufgaben = await this.repo.aufgabenVon(id);
+    // Mappe und Aufgaben gleichzeitig (#741).
+    const [mappe, aufgaben] = await Promise.all([this.repo.holeMappe(id), this.repo.aufgabenVon(id)]);
+    if (!mappe) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
     // Berechtigungen (#124): ohne Lesen nur die eigenen offenen Aufgaben – zum Erledigen oder Weitergeben.
     const rechte = z ? await this.rechteAn(z, mappe, false, aufgaben) : null;
     if (z && rechte && !rechte.R) {
@@ -3126,8 +3152,14 @@ export class Dienst {
     const alleTypen = z?.typen && !z.paket ? [...z.typen.values()] : undefined;
     const typ = (alleTypen ? z!.typen.get(mappe.typId) : undefined) ?? await this.repo.holeTyp(mappe.typId);
     const ziele = typ ? verweiseVon(typ, mappe.werte).map((v) => v.zielId) : [];
-    const alleRueck = await this.repo.rueckverweise(id);
-    const roheBezuege = await this.repo.bezuege(ziele);
+    // Was nur noch von der Mappe abhängt, gleichzeitig (#741) – erst nach der Prüfung des Leserechts.
+    const [alleRueck, roheBezuege, dokumente, notizen, erinnerungen, unpassend, datenschutz] = await Promise.all([
+      this.repo.rueckverweise(id), this.repo.bezuege(ziele),
+      this.repo.listeDokumente(id).then((d) => this.mitArchivStand(d)).then((d) => this.mitPdfSchutz(d)),
+      this.repo.notizen(id), this.repo.erinnerungen({ mappeId: id }),
+      this.unpassendeVerweise(typ, mappe.werte, z?.ich.id ?? '', alleTypen && z?.a ? { typen: alleTypen, a: z.a } : undefined),
+      z?.admin ? this.datenschutz() : Promise.resolve(null),
+    ]);
     // Lesbar (#124, #126): verweisende und verwiesene Mappen in einem Zugriff.
     const sichtbar = await this.lesbare(z, [...alleRueck.map((r) => r.quelleId), ...roheBezuege.keys()]);
     const rueckverweise = alleRueck.filter((r) => sichtbar.has(r.quelleId));
@@ -3141,21 +3173,21 @@ export class Dienst {
       rechte: rechte ?? { C: true, R: true, U: true, D: true, P: true },
       /** Ob „Mappe löschen“ geht, sonst warum nicht (#79). */
       loeschbar: p.ok ? { ok: true } : { ok: false, grund: p.grund, rueckverweise: fremd },
-      dokumente: await this.mitPdfSchutz(await this.mitArchivStand(await this.repo.listeDokumente(id))),
+      dokumente,
       /** Notizen an der Mappe (#55). */
-      notizen: await this.repo.notizen(id),
+      notizen,
       /** Aufgaben an der Mappe, offene zuerst (#54). */
       aufgaben,
       /** Noch nicht fällige Erinnerungen (#131). */
-      erinnerungen: await this.repo.erinnerungen({ mappeId: id }),
+      erinnerungen,
       /** Titel und Typ der Mappen, auf die diese verweist (nicht lesbare ohne Titel). */
       bezuege: maskiert(roheBezuege, sichtbar),
       /** Verweise, die nicht (mehr) zum Auswahlfilter ihres Felds passen (#172). */
-      unpassend: await this.unpassendeVerweise(typ, mappe.werte, z?.ich.id ?? '', alleTypen && z?.a ? { typen: alleTypen, a: z.a } : undefined),
+      unpassend,
       /** Archivmodus (#212): aufbewahren bis (JJJJ-12-31) oder null. */
       aufbewahrenBis: aufbewahrenBis(typ?.archiv, mappe),
       /** Auskunft nach Art. 15 DSGVO (#396): Administratoren, Mappentyp „betrifft eine Person“. */
-      ...(z?.admin && (await this.datenschutz()).typen[mappe.typId]?.person ? { auskunft: true } : {}),
+      ...(z?.admin && datenschutz?.typen[mappe.typId]?.person ? { auskunft: true } : {}),
     };
   }
 
@@ -3296,15 +3328,41 @@ export class Dienst {
     const alleSichten = await this.repo.listeSichten();
     // Verborgene Sichten (#148): kein Zähler, und ihre Mappen zählen auch in der Elternsicht nicht.
     const verborgen = this.verborgeneSichten(alleSichten, zg);
-    const a = await this.aufloesung(ich.id);
-    // Alles, was außer dem Stand des Haushalts in die Zählung eingeht: wer, mit welchen Rechten und Rollen.
+    const a = zg?.a && zg.ich.id === ich.id ? zg.a : await this.aufloesung(ich.id);
     const ohneEmpfaenger = await this.siehtOhneEmpfaenger(ich);
-    const schluessel = `${ich.id}|${ich.rolle}|${ohneEmpfaenger ? 'o' : ''}|${fingerabdruck({ lesen, verborgen: [...verborgen].sort(), rollen: a.meineRollen })}`;
+    const sichten = alleSichten.filter((x) => !verborgen.has(x.id));
+    const typen = zg?.typen && !zg.paket ? zg.typen : new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    const klauseln = sichten.map((x) => klauselnFuer(alleSichten, x.id, typen, a, verborgen));
+    const zeitabh = alleSichten.some((x) => zeitabhaengig(x.bedingungen));
+    // Ansichten, deren Bedingungen die Person selbst meinen (z. B. „ist mein Favorit“), zählen bei ihren eigenen Zahlen;
+    // alle anderen gemeinsam für alle mit denselben Eingaben.
+    const eigen = sichten.map((_, i) => JSON.stringify(klauseln[i]).includes(ich.id));
+    const gemeinsam = sichten.map((x, i) => ({ id: x.id, k: klauseln[i], i })).filter((x) => !eigen[x.i]);
+    const persoenlich = sichten.map((x, i) => ({ id: x.id, k: klauseln[i], i })).filter((x) => eigen[x.i]);
+    // Rechte-Fingerabdruck (#742): genau die Eingaben der Zählung. Der Lesefilter enthält die Rechte samt Rollen und
+    // Leserecht auf Zeit (wo eine Regel die Person selbst meint, steht ihre Id darin); die Klauseln enthalten Rollen
+    // und „heute“, wo eine Ansicht sie nutzt. Der Verwaltungsmodus (alles lesen) steht zusätzlich darin. Gleiche
+    // Eingaben, gleiche Abfrage, gleiche Zahl – wer etwas anderes lesen darf, hat einen anderen Schlüssel.
+    const admin = !!zg?.admin || (!zg && ich.rolle === 'admin');
+    const bestandSchluessel = fingerabdruck({ v: 2, admin, lesen, sichten: gemeinsam.map((x) => [x.id, x.k]) });
+    const ichSchluessel = `${ich.id}|${ohneEmpfaenger ? 'o' : ''}|${fingerabdruck({ v: 2, admin, lesen, sichten: persoenlich.map((x) => [x.id, x.k]) })}`;
     const beginn = performance.now();
-    const z = await this.zahlen.hole(schluessel, async () => ({ wert: await this.zaehle(ich, ohneEmpfaenger, lesen, alleSichten, verborgen, a), zeitabhaengig: alleSichten.some((x) => zeitabhaengig(x.bedingungen)) }));
+    const g = this.gueltigkeit();
+    const [b, p] = await Promise.all([
+      this.bestand.hole(bestandSchluessel, async () => ({ wert: await this.repo.zaehleBestand(gemeinsam.map((x) => x.k), lesen), zeitabhaengig: zeitabh }), g),
+      this.persoenlich.hole(ichSchluessel, async () => ({ wert: await this.repo.zaehlePersoenlich(ich.id, ohneEmpfaenger, lesen, persoenlich.map((x) => x.k)), zeitabhaengig: zeitabh }), g),
+    ]);
+    // Server-Timing `zs`: die teure Zählung über alle Mappen; die Zahlen der Person sind kleine Zählungen.
     const k = kontext.getStore();
-    if (k) k.zwischenspeicher = { art: z.art, ms: performance.now() - beginn };
-    return { ...z.wert, ...await this.zaehlerRahmen() };
+    if (k) k.zwischenspeicher = { art: b.art, ms: performance.now() - beginn };
+    const n = new Map<string, number>([...gemeinsam.map((x, i) => [x.id, b.wert.sichten[i]] as const), ...persoenlich.map((x, i) => [x.id, p.wert.sichten[i]] as const)]);
+    return {
+      typen: Object.fromEntries(b.wert.typen), eingang: p.wert.eingang, favoriten: p.wert.favoriten,
+      sichten: Object.fromEntries(sichten.map((x) => [x.id, n.get(x.id) ?? 0])),
+      // Papierkorb (#43): eigene gelöschte Mappen.
+      papierkorb: p.wert.papierkorb,
+      ...await this.zaehlerRahmen(),
+    };
   }
 
   /**
@@ -3344,7 +3402,7 @@ export class Dienst {
   }
 
   /** Webhooks (#627): nach jeder Änderung, die Zahlen der Ansichten oder die Termine ändern kann. */
-  beiAenderung(f: () => void) { this.stand.beiAenderung(f); this.fristenstand.beiAenderung(f); }
+  beiAenderung(f: () => void) { this.stand.beiAenderung(f); }
 
   /** Neue Post für den Benutzer (#625): Stand „Neu“ und „Für“ ist er selbst oder leer; nur lesbare Post. */
   private async neuePostFuer(z: Zugriff): Promise<number> {
@@ -3359,22 +3417,8 @@ export class Dienst {
         klausel({ art: 'feld', feld: 'fuer', op: 'leer' }),
       ]], z.lesen);
       return { wert: n, zeitabhaengig: false };
-    });
+    }, this.gueltigkeit());
     return r.wert;
-  }
-
-  private async zaehle(ich: { id: string; rolle: string }, ohneEmpfaenger: boolean, lesen: Lesefilter | null, alleSichten: Sicht[], verborgen: Set<string>, a: Aufloesung) {
-    const z = await this.repo.zaehler(ich.id, ohneEmpfaenger, lesen);
-    // Der Eingang zählt auch Aufgaben zu Mappen, die man nicht lesen darf (#127) – das liefert zaehler
-    // gleich mit (#477); früher lief für Mitglieder dafür ein zweiter Durchgang über alle Mappen.
-    const sichten = alleSichten.filter((x) => !verborgen.has(x.id));
-    const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
-    const n = await this.repo.zaehleKlauseln(sichten.map((x) => klauselnFuer(alleSichten, x.id, typen, a, verborgen)), lesen);
-    return {
-      typen: Object.fromEntries(z.typen), eingang: z.eingang, favoriten: z.favoriten, sichten: Object.fromEntries(sichten.map((x, i) => [x.id, n[i]])),
-      // Papierkorb (#43): eigene gelöschte Mappen.
-      papierkorb: await this.repo.zaehlePapierkorb(ich.id),
-    };
   }
 
   /* ---------- Favoriten (#62) ---------- */
@@ -3398,8 +3442,13 @@ export class Dienst {
    * lesen = null (alles). Wird je Anfrage einmal gebildet.
    */
   async zugriff(ich: { id: string; rolle: string; art?: 'dienst' | 'system'; paketId?: string; systemkonto?: string }): Promise<Zugriff> {
-    return rechteMessen(() => this.bildeZugriff(ich));
+    // Einmal je Anfrage (#741), nie über die Anfrage hinaus; nach einer Änderung in der Anfrage und in einer
+    // Transaktion (sie sieht ihre eigenen Änderungen) neu.
+    if (transaktionen.getStore()?.dienst === this) return rechteMessen(() => this.bildeZugriff(ich));
+    return jeAnfrage(`${this.kennung}|zugriff|${ich.id}|${ich.rolle}|${ich.art ?? ''}|${ich.paketId ?? ''}|${ich.systemkonto ?? ''}`, () => rechteMessen(() => this.bildeZugriff(ich)));
   }
+  /** Unterscheidet zwei Dienste in derselben Anfrage (Tests mit zwei „Prozessen“). */
+  private readonly kennung = randomUUID();
 
   private async bildeZugriff(ich: { id: string; rolle: string; art?: 'dienst' | 'system'; paketId?: string; systemkonto?: string }, o: { ohneAufZeit?: boolean } = {}): Promise<Zugriff> {
     const a = await this.aufloesung(ich.id);
@@ -3790,8 +3839,14 @@ export class Dienst {
 
   /** Dynamische Werte für den angemeldeten Benutzer: heute, er selbst, seine Rollen. */
   private async aufloesung(benutzerId: string): Promise<Aufloesung> {
-    const m = istUuid(benutzerId) ? await this.repo.holeMappe(benutzerId) : undefined;
-    return { heute: heuteIn(), ich: benutzerId, meineRollen: m ? alsListe(m.werte.rollen) : [] };
+    const bilde = async (): Promise<Aufloesung> => {
+      const m = istUuid(benutzerId) ? await this.repo.holeMappe(benutzerId) : undefined;
+      return { heute: heuteIn(), ich: benutzerId, meineRollen: m ? alsListe(m.werte.rollen) : [] };
+    };
+    // Rollen einmal je Anfrage (#741) wie der Zugriff; jeder Aufrufer bekommt eine eigene Kopie.
+    if (transaktionen.getStore()?.dienst === this) return bilde();
+    const a = await jeAnfrage(`${this.kennung}|rollen|${benutzerId}`, bilde);
+    return { ...a, meineRollen: [...a.meineRollen] };
   }
 
   /* ---------- Sichten verwalten (#38) ---------- */

@@ -99,7 +99,7 @@ Zielwert: Ein Mitglied lädt Startseite und Ablage bei gleichen Daten höchstens
 Die Zahlen neben den Ansichten (`GET /api/sichten` → `Dienst.zaehler`) zählen mit **einer** Abfrage alle sichtbaren Ansichten per `count(*) FILTER (WHERE …)` über alle Mappen des Haushalts, dazu Typen, Eingang, Favoriten und Papierkorb – bei 50.000 Mappen 120–150 ms allein, unter Last der Seite 150–260 ms. Zwei Mittel:
 
 1. **Nicht blockieren.** Die Oberfläche (`web/src/daten.tsx`) lädt Typen, Personen, Ansichten und den Rahmen (`GET /api/sichten/rahmen`: Papierkorb-Tage, Ansicht „Neue Post“ – ohne Zählen) und zeigt die Ablage; die Zahlen kommen danach (`zahlenDa`). Bis dahin steht an ihrer Stelle „…“ (`ZahlWarte`, Kacheln der Startseite ebenso), es springt nichts. Beim Neuladen bleiben die alten Zahlen stehen, bis die neuen da sind. Was aus den Zahlen etwas ableitet (Suchfeld der Liste, Belegung beim Entfernen eines Feldes), wartet nicht auf sie.
-2. **Zwischenspeichern** (`server/src/zaehlerspeicher.ts`). Der **Stand des Haushalts** (`Haushaltsstand`) zählt hoch, sobald eine ändernde Methode des Repos fertig ist – der `Dienst` umhüllt sein Repo damit (`transaktion` zählt als Ganzes). Lesende und folgenlose Methoden (Historie, Ereignisse, Texterkennung, „gesehen“ …) stehen in `OHNE_FOLGEN`; eine neue Methode zählt, bis sie dort steht. Der Schlüssel je Eintrag: Benutzer, Rolle und ein Fingerabdruck von Lesefilter, verborgenen Ansichten und eigenen Rollen; gültig bei gleichem Stand und gleichem `heute`, also höchstens bis Mitternacht. Ansichten mit Datumsbezug (`heute`, Monat, Jahr, Frist) gelten höchstens 5 Minuten (`ZEITABHAENGIG_MS`), alle anderen höchstens 30 Minuten (`HOECHSTENS_MS`, Sicherheitsnetz für Änderungen an der Datenbank vorbei, etwa von Hand). Gleichzeitige Anfragen mit gleichem Schlüssel warten auf dieselbe Zählung. Ein Treffer kostet etwa 7 ms (Sitzung, Rechte, Ansichten laden), neu zählen 110–150 ms.
+2. **Zwischenspeichern** (`server/src/zaehlerspeicher.ts`). Der **Stand des Haushalts** (`Haushaltsstand`) zählt hoch, sobald eine ändernde Methode des Repos fertig ist – der `Dienst` umhüllt sein Repo damit (`transaktion` zählt als Ganzes). Lesende und folgenlose Methoden (Historie, Ereignisse, Texterkennung, „gesehen“ …) stehen in `OHNE_FOLGEN`; eine neue Methode zählt, bis sie dort steht. Der Schlüssel je Eintrag: Benutzer, Rolle und ein Fingerabdruck von Lesefilter, verborgenen Ansichten und eigenen Rollen (seit #742 ein Fingerabdruck der Rechte ohne die Person, siehe [unten](#sparsam-gemerkt)); gültig bei gleichem Stand und gleichem `heute`, also höchstens bis Mitternacht. Ansichten mit Datumsbezug (`heute`, Monat, Jahr, Frist) gelten höchstens 5 Minuten (`ZEITABHAENGIG_MS`), alle anderen höchstens 30 Minuten (`HOECHSTENS_MS`, Sicherheitsnetz für Änderungen an der Datenbank vorbei, etwa von Hand). Gleichzeitige Anfragen mit gleichem Schlüssel warten auf dieselbe Zählung. Ein Treffer kostet etwa 7 ms (Sitzung, Rechte, Ansichten laden), neu zählen 110–150 ms.
 
 **Messung zu #512** (dieselben Daten wie #477, `server/test/ladezeiten.mjs`, Median aus 5 Ladevorgängen, davon der Median aus drei abwechselnden Durchgängen; im Lauf trifft der Zwischenspeicher bei allen Ladevorgängen nach dem ersten):
 
@@ -119,9 +119,58 @@ Die Zahlen neben den Ansichten (`GET /api/sichten` → `Dienst.zaehler`) zählen
 
 Nicht umgesetzt: **nur zählen, was zu sehen ist** (eingeklappte Gruppen, geschlossene Ansicht-Auswahl am Handy) – mit 1 und 2 wartet die Ablage nicht mehr auf die Zahlen, und ein Treffer kostet einstellige Millisekunden; ein Teilzählen würde den Zwischenspeicher nur aufsplitten. Auch ein **Index** für einzelne Bedingungen lohnt nicht: Die eine Abfrage liest ohnehin alle Mappen des Haushalts einmal (Seq Scan), und sie läuft nur noch nach Änderungen.
 
+## Weniger Abfragen je Anfrage, sparsam gemerkt (#741, #742) { #sparsam-gemerkt }
+
+Bei vielen gleichzeitigen Nutzern sind die Hin- und Rückwege zur Datenbank die eigentliche Warteschlange (10 Verbindungen). Darum zuerst **weniger fragen**, dann nur **Seltenes und für alle Gleiches merken** – Vorgabe: „nicht übertreiben und nicht zu viel in den Zwischenspeicher schreiben“.
+
+**Haushaltsstand in der Datenbank** (Migration 077, Teil von #744): zwei Zahlen.
+
+- `lesen` (Tabelle `haushaltsstand`, je Haushalt) zählt per Trigger bei jeder Änderung an `mappentypen`, `sichten`, `pakete` und `einstellungen` hoch – in derselben Transaktion, beim Abschluss (`DEFERRABLE INITIALLY DEFERRED`). Wer den neuen Stand sieht, sieht auch die neuen Daten; das gilt auch für Änderungen an Ablago vorbei. Ein neuer Eintrag beginnt bei der Uhrzeit in Mikrosekunden, damit nach einem neuen Schema kein gemerkter alter Stand trifft. Die Sicherung nimmt die Tabelle ohne Inhalt mit (`OHNE_INHALT`).
+- `zahlen` (Sequenz `haushaltsstand_zahlen`) zählt der Server nach jeder ändernden Methode des Repos hoch (`Haushaltsstand` in `zaehlerspeicher.ts`, `OHNE_FOLGEN` wie bisher) – nach dem Abschluss der Änderung, gleichzeitige Änderungen zusammen, ohne dass die Anfrage darauf wartet. Eine Sequenz statt einer Zeile: Mit einer Zeile warteten im Lasttest „mit Speichern“ die gleichzeitigen Änderungen auf ihre Sperre.
+- Die Anmeldung liest **Sitzung, Person und beide Stände in einer Abfrage** (`KontoRepo.holeAnmeldung`): Gültigkeit der Sitzung, Haushalt, „aktiv“ und Art der Person stehen im selben `WHERE`. Ein zweiter Prozess oder Server ist so höchstens langsamer, nie falsch.
+
+**Was gemerkt wird** (`server/src/lesespeicher.ts`):
+
+| Was | Wo | Warum | Verfall |
+|---|---|---|---|
+| Mappentypen (`listeTypen`) | `pgRepo`, `Lesespeicher` | jede Anfrage braucht sie für den Zugriff; große JSONB-Felder; ändern sich selten | Stand `lesen` anders |
+| Ansichten (`listeSichten`) | ebenso | mehrfach je Anfrage (Zahlen, Liste, Rechte) | Stand `lesen` anders |
+| Pakete (`listePakete`) | ebenso | bei jeder Meldung und jedem Ereignis | Stand `lesen` anders |
+| Einstellungen aus `GEMERKTE_EINSTELLUNGEN` (u. a. Zwei-Faktor-Pflicht, Post, Papierkorb, Favoriten, Stempel, Ablageort, Datenschutz) | `pgEinstellungen` | für alle gleich, ohne Geheimnisse; die Zwei-Faktor-Pflicht bei jeder Anfrage | Stand `lesen` anders |
+| Zahlen der Ablage je Typ und Ansicht | `Dienst.bestand` (`Zaehlerspeicher`) | eine Zählung über alle Mappen, 100–200 ms bei 50.000 | Stand `zahlen` anders, nach der Mindestgültigkeit; zeitabhängige nach 5 Minuten, sonst 30 Minuten, um Mitternacht |
+| Zahlen der Person (Eingang, Favoriten, Papierkorb, Ansichten mit „ich“) | `Dienst.persoenlich` | kleine Zählungen, aber bei jedem Laden der Ablage | wie oben |
+
+Jeder Abruf aus dem `Lesespeicher` bekommt eine eigene Kopie (`structuredClone`); in einer Transaktion liest das Repo nie daraus (`imTx`). Die Schlüssel sind fest – der Speicher wächst nicht mit der Zahl der Personen (höchstens 64 Einträge je Verbindung; die Zahlen höchstens 500 je Speicher). **Nie über die Anfrage hinaus gemerkt:** Sitzungen, Personen, Rollen, Zugriff und Lesefilter. Zugriff, Rollen und den Alltags-Empfänger für Aufgaben (#719) bildet `jeAnfrage` einmal je Anfrage (vorher in 16 Handlern zweimal); nach einer Änderung in derselben Anfrage, in einer Transaktion und nach 10 Sekunden (Hintergrundarbeit aus einer Anfrage) neu. Den Stand aus der Anmeldung nutzt eine Anfrage ebenso nur bis zu ihrer ersten eigenen Änderung.
+
+**Zahlen nach Rechte-Fingerabdruck** (#742): Der Schlüssel der gemeinsamen Zahlen ist ein Hash genau der Eingaben der Zählung – Lesefilter (Rechte samt Rollen und Leserecht auf Zeit), Klauseln der sichtbaren Ansichten und der Verwaltungsmodus. Gleiche Eingaben ergeben dieselbe Abfrage und dieselbe Zahl; wer etwas anderes lesen darf, hat einen anderen Schlüssel – auch im und nach dem Verwaltungsmodus. Ansichten, deren Bedingungen die Person selbst meinen („ist mein Favorit“, „Für mich“), zählen bei den Zahlen der Person. Typen und Ansichten zählt **ein** Lauf (`zaehleBestand`, vorher zwei). **Mindestgültigkeit** `MINDESTENS_MS` (3 s): Nach Änderungen anderer bleibt bei Anfragen der bisherige Wert kurz stehen; eigene Änderungen (`Kontext.benutzerId`) zeigen sofort, Hintergrundarbeit (Webhooks, Zusammenfassung) zählt immer frisch. Eigene Änderungen kennt nur der Prozess, der sie gespeichert hat. In Server-Timing steht bei `zs` die gemeinsame Zählung.
+
+**„Mappe öffnen“** liest Unabhängiges gleichzeitig (Mappe und Aufgaben; nach der Prüfung des Leserechts Rückverweise, Bezüge, Dokumente, Notizen, Erinnerungen, unpassende Verweise) und schreibt „zuletzt geöffnet“ und „gesehen“ erst nach der Antwort (`Antwort.danach`, `Nachlauf` in `http.ts`). Niemand wartet darauf: Ein Warten je Person reihte im Lasttest (drei Sitzungen, 100 Anfragen gleichzeitig) die Anfragen derselben Sitzung hintereinander. `danach` ist darum nur für Merkposten, die einen Augenblick später ankommen dürfen.
+
+**Messung zu #741 und #742** (lokal, 2 Kerne, PostgreSQL 16, Lasttest-Daten mittel: 50.000 Mappen; vorher = `main` mit #740, #743 und #746, nachher = dieser Stand). *Abfragen je Anfrage* = SQL-Anweisungen einer Anfrage nach dem ersten Laden (gezählt über `debug` von postgres.js, nur für die Messung); die Zahl `db` in Server-Timing zählt Zugriffe auf das Repo und damit auch Treffer im Lesespeicher.
+
+| Anfrage | Administrator im Modus | Mitglied mit Rolle | Mitglied ohne Rolle |
+|---|---:|---:|---:|
+| Startseite (`/api/startseite`) | 10 → 5 | 10 → 5 | 12 → 7 |
+| Zahlen (`/api/sichten`) | 12 → 2 | 15 → 4 | 16 → 5 |
+| Nächster Termin (`/api/termine/naechster`) | 5 → 2 | 8 → 4 | 9 → 5 |
+| Mappentypen (`/api/typen`) | 7 → 2 | 7 → 2 | 8 → 3 |
+| Liste einer Ansicht | 9 → 5 | 9 → 5 | 10 → 6 |
+| Mappe öffnen | 20 → 12 | 17 → 11 | 20 → 14 |
+| Zahlen nach einer Änderung des Administrators | 16 Abfragen, 421 ms → 4, 128 ms (eigene Änderung: neu gezählt) | 21, 364 ms → 4, 3 ms | 22, 126 ms → 5, 4 ms |
+
+Lasttest mittel (`server/test/lasttest.mjs mittel --dauer 30`, je drei Läufe abwechselnd vorher und nachher):
+
+| Durchgang | p50 vorher | p50 nachher | p95 vorher | p95 nachher | Anfragen/s vorher | Anfragen/s nachher | Arbeitsspeicher höchstens vorher | nachher |
+|---|---|---|---|---|---|---|---|---|
+| mittel (nur lesen) | 510 / 462 / 508 | 469 / 463 / 485 | 1.002 / 889 / 995 | 790 / 812 / 819 | 167 / 178 / 169 | 195 / 197 / 189 | 629 / 692 / 646 MB | 789 / 832 / 838 MB |
+| mittel + Speichern | 1.540 / 1.276 / 1.445 | 1.239 / 1.059 / 1.254 | 3.258 / 3.062 / 3.051 | 2.679 / 2.270 / 2.598 | 55 / 63 / 61 | 71 / 79 / 72 | 1.136 / 1.228 / 1.224 MB | 1.138 / 1.264 / 1.236 MB |
+| davon schreibend | 1.957 / 2.061 / 1.787 | 2.065 / 1.696 / 1.867 | 4.399 / 4.766 / 4.316 | 4.662 / 4.319 / 5.117 | | | | |
+
+Zeiten in ms. Lesen wird schneller (p95 −18 %, 15 % mehr Anfragen je Sekunde), mit Speichern ebenso; das Speichern selbst bleibt gleich. Der Arbeitsspeicher steigt im ersten Durchgang höher (mehr Anfragen, Kopien aus dem Lesespeicher), am Ende beider Durchgänge liegt er gleich – die Zwischenspeicher wachsen nicht mit der Last (feste Schlüssel, höchstens 64 bzw. 500 Einträge). Das Warten auf eine freie Verbindung steigt (p95 50–110 ms → 75–255 ms, mit Speichern bis 590 ms): „Mappe öffnen“ fragt jetzt gleichzeitig, und es kommen mehr Anfragen durch.
+
 ## Kalender in „Zu erledigen“ (#528, #725)
 
-Monat und Jahr in „Zu erledigen“ laden ihren Zeitraum mit **einer** Anfrage: `GET /api/termine?von=…&bis=…` (wahlweise `&favoriten=1`) (höchstens 400 Tage, `zeitraumProblem` in `shared/src/kalender.ts`). Der Server holt nur Mappen mit einem Datum im Zeitraum (`mappenMitDatum`, #477); für Felder mit **wiederkehrender** Frist zusätzlich alle Mappen mit einem Datum bis zum Ende des Zeitraums, denn deren künftige Termine (`folgetermine` in `shared/src/fristen.ts`, Datum + k · Abstand) können hineinfallen. Gespeichert werden diese Termine nie. Die Antwort liegt wie die Zahlen der Ansichten im Zwischenspeicher (`Zaehlerspeicher`), je Benutzer, Rechte und Zeitraum; ein eigener `Haushaltsstand` (`fristenstand`) zählt zusätzlich bei geänderten Erinnerungen (`ZAEHLT_FUER_TERMINE`), weil die sonst in `OHNE_FOLGEN` stehen.
+Monat und Jahr in „Zu erledigen“ laden ihren Zeitraum mit **einer** Anfrage: `GET /api/termine?von=…&bis=…` (wahlweise `&favoriten=1`) (höchstens 400 Tage, `zeitraumProblem` in `shared/src/kalender.ts`). Der Server holt nur Mappen mit einem Datum im Zeitraum (`mappenMitDatum`, #477); für Felder mit **wiederkehrender** Frist zusätzlich alle Mappen mit einem Datum bis zum Ende des Zeitraums, denn deren künftige Termine (`folgetermine` in `shared/src/fristen.ts`, Datum + k · Abstand) können hineinfallen. Gespeichert werden diese Termine nie. Die Antwort liegt wie die Zahlen der Ansichten im Zwischenspeicher (`Zaehlerspeicher`), je Benutzer, Rechte und Zeitraum; der `Haushaltsstand` zählt auch bei geänderten Erinnerungen (`ZAEHLT_FUER_TERMINE`), weil die sonst in `OHNE_FOLGEN` stehen (seit #742 ein gemeinsamer Stand in der Datenbank statt eines eigenen `fristenstand`).
 
 **Messung zu #528** (dieselben Daten wie #477: 50.000 Demo-Mappen, lokaler Rechner; Median aus 5 Anfragen; *kalt* = je Anfrage ein neuer Zeitraum, *Treffer* = derselbe Zeitraum aus dem Zwischenspeicher; Zeit bis zur vollständigen Antwort):
 
@@ -226,5 +275,6 @@ Einzelne Abfragen (`EXPLAIN ANALYZE`): Seite über alle Typen nach Titel 49 → 
 - **Große Dateien als Strom** (#746): Uploads bis 100 MB gehen in eine temporäre Datei, die Prüfsumme entsteht beim Lesen (`strom: true` an der Route, `nimmAuf`). Lange Listen (CSV, JSON Lines) schreibt der Vollexport Zeile für Zeile mit Gegendruck und Pausen nach Rechenzeit (`Zeilen` in `vollexport.ts`), statt sie als einen Text zu bauen. Große Tabellen gehen nicht als Nachricht an den Arbeiter (die Kopie hält den Hauptfaden fest), sondern als Datei, die der Arbeiter selbst liest (`exportTabelleAusDatei`).
 - **Schwere Arbeit in den Arbeiter.** Was Sekunden rechnet (PDF, große Tabellen), gehört in den [Arbeiter-Pool](aufbau.md#arbeiter-pool) (#542), nicht in den Hauptfaden – auch nicht mit Pausen.
 - **Was der Zugriff schon weiß, nicht noch einmal lesen** (#615): Mappentypen (`z.typen`, außer für Dienstkonten – die sehen nur ihre) und die Auflösung mit Rollen und Datum (`z.a`).
+- **Merken nur mit Stand aus der Datenbank** (#741): Ein neuer Zwischenspeicher über die Anfrage hinaus hängt am Haushaltsstand (`lesespeicher.ts`), gilt für alle gleich und kommt in die Tabelle oben. Nie für Sitzungen, Personen, Rollen oder Rechte – die gibt es höchstens einmal je Anfrage (`jeAnfrage`).
 - **Merkposten ohne Warten auf die Platte** (#615): Was bei einem Absturz verloren gehen darf („Zuletzt geöffnet“, „gesehen“), schreibt eine einzige Anweisung mit `ohneWarten(sql)` in `FROM`. Nie für Daten, die der Benutzer eingegeben hat, und nicht in einer Transaktion (dort wirkt es nicht).
 - **Kein `indexOf` in Sortierungen über viele Elemente.** `liste.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))` ist quadratisch: Bei 20.000 Mappen sind das Sekunden bis über eine halbe Minute im Hauptfaden (#542). Erst einen Index bauen (`inReihenfolge` in `dienst.ts`).

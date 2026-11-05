@@ -51,6 +51,17 @@ export interface Kontext {
   zwischenspeicher?: { art: 'treffer' | 'neu'; ms: number };
   /** Adresse, unter der die Anfrage kam, z. B. https://dms.example.org (für Links, solange keine Adresse gepflegt ist). */
   ursprung?: string;
+  /** Wer anfragt (#742): Id der Person – eigene Änderungen zeigen die Zahlen sofort. */
+  benutzerId?: string;
+  /**
+   * Haushaltsstand aus der Datenbank (#741), mit der Sitzung in derselben Abfrage gelesen (lesespeicher.ts). Gilt nur
+   * für dieselbe Verbindung und denselben Haushalt, kurz und bis zur nächsten Änderung in dieser Anfrage.
+   */
+  staende?: { quelle: object; haushalt: string; werte: Partial<Record<'lesen' | 'zahlen', number>>; aenderungen: number; zeit: number };
+  /** Änderungen über das Repo oder die Einstellungen in dieser Anfrage (#741): macht Gemerktes der Anfrage ungültig. */
+  aenderungen?: number;
+  /** Einmal je Anfrage gebildet (#741): Zugriff, Rollen. Gilt bis zur nächsten Änderung in dieser Anfrage. */
+  jeAnfrage?: Map<string, { aenderungen: number; zeit: number; wert: Promise<unknown> }>;
 }
 export const kontext = new AsyncLocalStorage<Kontext>();
 
