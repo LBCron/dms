@@ -256,19 +256,13 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByLabel(/Name deiner Ablage/).fill('Familie Beispiel');
   await bild(s, 'einrichtung-mandant');
   await s.getByRole('button', { name: 'Weiter' }).click();
+  // „Dein Konto“ (#821): nur das eigene Konto – Mitglieder legt das Skript danach an (vorbereiten).
+  await s.getByRole('heading', { name: 'Dein Konto' }).waitFor();
   await s.getByLabel('Name', { exact: true }).fill(ADMIN.name);
   await s.getByLabel(/E-Mail-Adresse/).fill(ADMIN.email);
   await s.getByLabel(/^Passwort mindestens/).fill(ADMIN.passwort);
   await s.getByLabel('Passwort wiederholen').fill(ADMIN.passwort);
-  await bild(s, 'einrichtung-administrator');
-  await s.getByRole('button', { name: 'Weiter' }).click();
-  // Den ersten normalen Benutzer legt das Skript danach mit Rolle an – hier nur fürs Bild ausfüllen, dann leeren.
-  await s.getByRole('heading', { name: 'Erster Benutzer' }).waitFor();
-  await s.getByLabel('Name', { exact: true }).fill(MITGLIED.name);
-  await s.getByLabel(/E-Mail-Adresse/).fill(MITGLIED.email);
-  await bild(s, 'einrichtung-benutzer');
-  await s.getByLabel('Name', { exact: true }).fill('');
-  await s.getByLabel(/E-Mail-Adresse/).fill('');
+  await bild(s, 'einrichtung-konto');
   await s.getByRole('button', { name: 'Weiter' }).click();
   // Pakete dazuholen (#460): Katalog abrufen (ohne Internet: Hinweis), dann überspringen.
   await s.getByRole('heading', { name: 'Pakete dazuholen' }).waitFor();
@@ -293,11 +287,13 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('button', { name: 'Jetzt einrichten' }).click();
   await s.getByRole('heading', { name: /ist eingerichtet/ }).waitFor({ timeout: 60_000 });
   await bild(s, 'einrichtung-fertig', { fullPage: true });
-  // Das Notfallblatt muss heruntergeladen sein, bevor „Einrichtung abschließen“ geht (#804).
+  // Das Notfallblatt muss heruntergeladen sein, bevor „Einrichtung abschließen“ geht (#804). Seit #821 ein Knopf: Die
+  // Oberfläche lädt es selbst (mit Dialog, falls eine frische Anmeldung nötig ist). Zwei-Faktor bleibt hier „Später“.
   const download = s.waitForEvent('download');
-  await s.getByRole('link', { name: 'Notfallblatt herunterladen' }).click();
+  await s.getByRole('button', { name: 'Notfallblatt herunterladen' }).click();
   await (await download).cancel().catch(() => {});
   await s.getByText(/Notfallblatt heruntergeladen/).waitFor({ timeout: 15_000 });
+  await s.getByRole('button', { name: 'Später' }).click();
   await s.getByRole('button', { name: 'Einrichtung abschließen' }).click();
   await s.waitForURL(/\/werkbank/);
   const sitzung = (await k.cookies()).find((c) => c.name === 'dms_sitzung');

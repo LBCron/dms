@@ -22,6 +22,10 @@ Wer nur den Bereich **Benutzer** hat, legt Personen an, setzt Passwörter zurüc
 
 Mindestens eine aktive Person, die sich anmelden kann (Passwort gesetzt oder schon einmal angemeldet), behält immer **Gesamte Verwaltung**. Die letzte kann sich das Recht nicht selbst nehmen, und sie lässt sich weder deaktivieren noch löschen. Gib es zuerst einer zweiten Person – am besten hat ohnehin immer eine zweite Person „Gesamte Verwaltung“, etwa für Urlaub oder Krankheit.
 
+Darum empfiehlt Ablago nach der Einrichtung in der [Übersicht](uebersicht.md#bewusst-akzeptieren) eine **zweite Person mit Verwaltungsrecht**, solange nur eine Person verwalten darf: „Gut, wenn noch jemand verwalten kann, falls du mal nicht da bist.“ Die zweite Person lädst du unter *Benutzer* ein – sie bekommt einen Einladungslink –, danach setzt du bei ihr **Darf Ablago verwalten**. Mit **Nein, danke** ist die Empfehlung dauerhaft weg.
+
+Kommt trotzdem niemand mehr hinein, führen der [Notfallcode vom Notfallblatt](was-ist-passiert.md#notfallcode) und die [RESCUE-Datei](notfall.md) zu einer Person mit Verwaltungsrecht. Der Notfallcode setzt nur das Passwort einer vorhandenen Person neu; niemandem wird dabei ein Recht entzogen.
+
 ### Was nie ein Verwaltungsrecht bekommt
 
 - **API-Schlüssel** – auch nicht die von Personen mit „Gesamte Verwaltung“. Über die Schnittstelle und das [WebDAV-Laufwerk](webdav.md) arbeitet jede Person mit ihren Alltagsrechten. Verwaltet wird nur in der Oberfläche oder mit dem Befehl [`dms`](konsole.md) im Container.
@@ -41,7 +45,7 @@ Dieser Tagesmerker hängt an der Sitzung auf dem Server, nicht an einem Cookie. 
 
 Im Modus ist die **Ablage** wie sonst zu bedienen – zum Nachsehen und für die Fehlersuche –, mit allen Mappen. Die Startseite ist dann die Werkbank, ohne Modus die Ablage.
 
-### Frische Anmeldung für heikle Handlungen
+### Frische Anmeldung für heikle Handlungen { #frische-anmeldung }
 
 Für die heikelsten Handlungen fragt Ablago **immer** das Passwort (und den Code) ab, auch mitten im Verwaltungsmodus. Danach gilt die Bestätigung 10 Minuten:
 
@@ -52,6 +56,7 @@ Für die heikelsten Handlungen fragt Ablago **immer** das Passwort (und den Code
 - Datenbank-Anbindung ändern
 - Anmeldung über einen Anbieter ändern
 - E-Mail-Versand ändern
+- Notfallzugang aus dem Internet erlauben ([Anmeldeschutz](anmeldeschutz.md#notfallzugang))
 
 Fehlversuche zählen in den [Anmeldeschutz](anmeldeschutz.md) wie bei der Anmeldung selbst. Die Zwei-Faktor-Anmeldung bleibt freiwillig; vorschreiben lässt sie sich unter *Anmeldeschutz* weiter „für alle, die verwalten dürfen“.
 

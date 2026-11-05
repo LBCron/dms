@@ -3,13 +3,16 @@
  * etwas anlegt – und was in der Konfigurationsdatei steht. Weboberfläche und Server teilen diese Form.
  *
  * Geheimnisse gehören nie hierher: Passwörter stehen höchstens als Verweis auf eine Umgebungsvariable da
- * (`${DMS_ADMIN_PASSWORT}`), für eine spätere Einrichtung ohne Oberfläche. Den Schlüssel erzeugt Ablago immer neu.
+ * (`${DMS_KONTO_PASSWORT}`), für eine spätere Einrichtung ohne Oberfläche. Den Schlüssel erzeugt Ablago immer neu.
+ *
+ * Seit #821 gibt es nur noch „Dein Konto“: die Person, die einrichtet, mit „Gesamte Verwaltung“. Ein Administrator und
+ * ein „erster Benutzer“ daneben entfallen; weitere Personen lädt man nach der Einrichtung ein.
  */
 
 /** Formatversion der Konfigurationsdatei (Kopfzeile `ablago-einrichtung: 1`). */
 export const EINRICHTUNG_FORMAT = 1;
 
-/** Verweis auf eine Umgebungsvariable statt eines Passworts, z. B. `${DMS_ADMIN_PASSWORT}`. */
+/** Verweis auf eine Umgebungsvariable statt eines Passworts, z. B. `${DMS_KONTO_PASSWORT}`. */
 export const VERWEIS_MUSTER = '^\\$\\{[A-Z][A-Z0-9_]{0,63}\\}$';
 export const istVerweis = (v: unknown): v is string => typeof v === 'string' && new RegExp(VERWEIS_MUSTER).test(v);
 
@@ -34,9 +37,8 @@ export interface Einrichtungsplan {
   datenbank: PlanDatenbank | null;
   /** Name der Ablage (Mandant). */
   ablage: string;
-  administrator: { name: string; email: string; /** nur ein Verweis */ passwort?: string };
-  /** null: kein erster Benutzer. */
-  benutzer: { name: string; email: string; /** Aufgaben ohne Empfänger an diesen Benutzer (#719). */ aufgabenOhneEmpfaenger: boolean } | null;
+  /** „Dein Konto“ (#821): die Person, die einrichtet – mit „Gesamte Verwaltung“. */
+  konto: { name: string; email: string; /** nur ein Verweis */ passwort?: string };
   /** null: noch nicht festgelegt bzw. übersprungen; []: bewusst keine. */
   pakete: PlanPaket[] | null;
   optional: {
@@ -50,11 +52,11 @@ export interface Einrichtungsplan {
   };
 }
 
-/** Ein Fehler in der Datei: Zeile (ab 1, wenn bekannt), Feld wie `administrator.email` oder `pakete[1].id`, Text. */
+/** Ein Fehler in der Datei: Zeile (ab 1, wenn bekannt), Feld wie `konto.email` oder `pakete[1].id`, Text. */
 export interface DateiFehler { zeile: number | null; feld: string; text: string }
 
 /** Die Schritte, die der Assistent sammelt – in dieser Reihenfolge. */
-export const SAMMELSCHRITTE = ['ablage', 'administrator', 'benutzer', 'pakete', 'optional'] as const;
+export const SAMMELSCHRITTE = ['ablage', 'konto', 'pakete', 'optional'] as const;
 export type Sammelschritt = (typeof SAMMELSCHRITTE)[number];
 /** Was in einem Schritt nicht passt – je Schritt die Gründe. */
 export type Planprobleme = Partial<Record<Sammelschritt, string[]>>;

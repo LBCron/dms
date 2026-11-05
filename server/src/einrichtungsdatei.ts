@@ -9,6 +9,10 @@ import { t } from './sprache';
  * Einrichtung als Konfigurationsdatei (#806): YAML (JSON geht auch – gültiges JSON ist gültiges YAML), geprüft gegen
  * ein veröffentlichtes JSON Schema. Die Datei enthält keine Geheimnisse: Passwörter höchstens als Verweis auf eine
  * Umgebungsvariable, nie den Schlüssel. Speichern und Laden ergeben dieselbe Datei (Hin und Zurück).
+ *
+ * Seit #821 heißt der Abschnitt der Person, die einrichtet, `konto` („Dein Konto“). Dateien aus 0.191 und 0.192 mit
+ * `administrator` lädt Ablago weiter (als `konto`); einen Abschnitt `erster-benutzer` übergeht es mit einem Hinweis –
+ * weitere Personen lädt man nach der Einrichtung ein.
  */
 
 export const DATEI_MAX = 64 * 1024;
@@ -34,7 +38,7 @@ export const SCHEMA: Schema = {
   $id: `${HANDBUCH_BASIS}/admin/aktuell/einrichtungsdatei/${SCHEMA_DATEI}`,
   title: 'Einrichtung von Ablago',
   description: 'Was der Einrichtungsassistent gesammelt hat – ohne Passwörter und ohne Schlüssel. Formatversion 1.',
-  type: 'object', additionalProperties: false, required: ['ablago-einrichtung', 'ablage', 'administrator'],
+  type: 'object', additionalProperties: false, required: ['ablago-einrichtung', 'ablage', 'konto'],
   properties: {
     'ablago-einrichtung': { const: EINRICHTUNG_FORMAT, description: 'Formatversion dieser Datei.' },
     datenbank: {
@@ -49,17 +53,10 @@ export const SCHEMA: Schema = {
       },
     },
     ablage: { type: 'string', minLength: 1, maxLength: 30, description: 'Name der Ablage, z. B. „Familie Beispiel“.' },
-    administrator: {
+    konto: {
       type: 'object', additionalProperties: false, required: ['email'],
-      properties: { name: { type: 'string', maxLength: 100 }, email: EMAIL, passwort: verweis('ADMIN_PASSWORT') },
-    },
-    'erster-benutzer': {
-      type: 'object', additionalProperties: false, required: ['email'],
-      description: 'Das Konto für die Arbeit in der Ablage; fehlt der Abschnitt, legt Ablago keinen an.',
-      properties: {
-        name: { type: 'string', maxLength: 100 }, email: EMAIL,
-        'aufgaben-ohne-empfaenger': { type: 'boolean', description: 'Bekommt die Aufgaben ohne eigenen Empfänger (z. B. Post ohne „Für“).' },
-      },
+      description: 'Dein Konto: die Person, die Ablago einrichtet. Sie bekommt „Gesamte Verwaltung“ und arbeitet auch in der Ablage. Bis 0.192 hieß der Abschnitt „administrator“ – das liest Ablago weiter.',
+      properties: { name: { type: 'string', maxLength: 100 }, email: EMAIL, passwort: verweis('KONTO_PASSWORT') },
     },
     pakete: {
       type: 'array', maxItems: 100, description: 'Pakete aus dem offiziellen Katalog, jeweils die neueste passende Version. Fehlt die Liste, wählst du im Assistenten.',
@@ -167,8 +164,7 @@ const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
 function planAus(o: Roh): Einrichtungsplan {
   const db = o.datenbank as Roh | undefined;
-  const admin = o.administrator as Roh;
-  const erster = o['erster-benutzer'] as Roh | undefined;
+  const konto = o.konto as Roh;
   const opt = (o.optionales ?? {}) as Roh;
   const m = opt['e-mail'] as Roh | undefined;
   const mail: PlanMail | null = m ? {
@@ -179,27 +175,52 @@ function planAus(o: Roh): Einrichtungsplan {
   return {
     datenbank: db ? { host: str(db.rechner), port: db.port as number, datenbank: str(db.name), benutzer: str(db.benutzer), ...(typeof db.passwort === 'string' ? { passwort: db.passwort } : {}) } : null,
     ablage: str(o.ablage).replace(/\s+/g, ' ').trim(),
-    administrator: { name: str(admin.name), email: str(admin.email), ...(typeof admin.passwort === 'string' ? { passwort: admin.passwort } : {}) },
-    benutzer: erster ? { name: str(erster.name), email: str(erster.email), aufgabenOhneEmpfaenger: erster['aufgaben-ohne-empfaenger'] !== false } : null,
+    konto: { name: str(konto.name), email: str(konto.email), ...(typeof konto.passwort === 'string' ? { passwort: konto.passwort } : {}) },
     pakete: Array.isArray(o.pakete) ? (o.pakete as Roh[]).map((p) => ({ id: str(p.id), beispiele: p.beispiele === true, automatisierungen: { ...((p.automatisierungen ?? {}) as Record<string, boolean>) } })) : null,
     optional: { adresse: typeof opt.adresse === 'string' ? opt.adresse : null, bundesland: typeof opt.bundesland === 'string' ? opt.bundesland : null, beispiele: opt.beispiele === true, mail },
   };
 }
 
+/**
+ * Ältere Dateien (0.191, 0.192): `administrator` gilt als `konto`, `erster-benutzer` fällt mit Hinweis weg. Liefert das
+ * umgestellte Objekt und, unter welchem Namen der Abschnitt in der Datei steht (für Zeile und Feld der Fehler).
+ */
+function aelter(wert: unknown): { wert: unknown; kontoIn: string; hinweise: string[] } {
+  if (!wert || typeof wert !== 'object' || Array.isArray(wert)) return { wert, kontoIn: 'konto', hinweise: [] };
+  const o: Roh = { ...(wert as Roh) };
+  const hinweise: string[] = [];
+  let kontoIn = 'konto';
+  if (!('konto' in o) && 'administrator' in o) { o.konto = o.administrator; delete o.administrator; kontoIn = 'administrator'; }
+  if ('erster-benutzer' in o) {
+    const e = o['erster-benutzer'] as Roh | null;
+    const wer = e && typeof e === 'object' ? str(e.name) || str(e.email) : '';
+    hinweise.push(t('einrichtung.datei.hinweis.benutzer', { wer: wer || '–' }));
+    delete o['erster-benutzer'];
+  }
+  return { wert: o, kontoIn, hinweise };
+}
+
 /** Liest eine Konfigurationsdatei; bei Fehlern kein Plan, sondern die Fehler mit Zeile und Feld. */
-export function liesEinrichtungsdatei(text: unknown): { plan: Einrichtungsplan | null; fehler: DateiFehler[] } {
-  if (typeof text !== 'string' || !text.trim()) return { plan: null, fehler: [{ zeile: null, feld: t('einrichtung.datei.ganz'), text: t('einrichtung.datei.fehler.leer.datei') }] };
+export function liesEinrichtungsdatei(text: unknown): { plan: Einrichtungsplan | null; fehler: DateiFehler[]; hinweise: string[] } {
+  if (typeof text !== 'string' || !text.trim()) return { plan: null, fehler: [{ zeile: null, feld: t('einrichtung.datei.ganz'), text: t('einrichtung.datei.fehler.leer.datei') }], hinweise: [] };
   if (Buffer.byteLength(text) > DATEI_MAX) throw new Fachfehler(413, t('einrichtung.datei.fehler.gross', { kb: DATEI_MAX / 1024 }));
   const lc = new LineCounter();
   const doc = parseDocument(text, { lineCounter: lc, prettyErrors: true, uniqueKeys: true });
   if (doc.errors.length) {
-    return { plan: null, fehler: doc.errors.map((e) => ({ zeile: e.linePos?.[0].line ?? null, feld: t('einrichtung.datei.ganz'), text: t('einrichtung.datei.fehler.syntax', { meldung: e.message.split('\n')[0].replace(/ at line \d+, column \d+:?$/, '') }) })) };
+    return { plan: null, fehler: doc.errors.map((e) => ({ zeile: e.linePos?.[0].line ?? null, feld: t('einrichtung.datei.ganz'), text: t('einrichtung.datei.fehler.syntax', { meldung: e.message.split('\n')[0].replace(/ at line \d+, column \d+:?$/, '') }) })), hinweise: [] };
   }
-  const wert = doc.toJS({ maxAliasCount: 0 }) as unknown;
+  const { wert, kontoIn, hinweise } = aelter(doc.toJS({ maxAliasCount: 0 }) as unknown);
   const v: Verstoss[] = [];
   pruefe(wert, SCHEMA, [], v);
-  if (v.length) return { plan: null, fehler: v.map((x) => ({ zeile: x.fehlt ? zeileVon(doc, lc, x.pfad.slice(0, -1), true) : zeileVon(doc, lc, x.pfad, x.schluessel), feld: feldname(x.pfad), text: x.text })) };
-  return { plan: planAus(wert as Roh), fehler: [] };
+  // Zeile und Feld so, wie es in der Datei steht (auch „administrator“ aus älteren Dateien).
+  const inDatei = (pfad: Array<string | number>) => (pfad[0] === 'konto' ? [kontoIn, ...pfad.slice(1)] : pfad);
+  if (v.length) {
+    return {
+      plan: null, hinweise,
+      fehler: v.map((x) => { const p = inDatei(x.pfad); return { zeile: x.fehlt ? zeileVon(doc, lc, p.slice(0, -1), true) : zeileVon(doc, lc, p, x.schluessel), feld: feldname(p), text: x.text }; }),
+    };
+  }
+  return { plan: planAus(wert as Roh), fehler: [], hinweise };
 }
 
 /** Kommentar über einem Abschnitt. */
@@ -216,8 +237,7 @@ export function schreibeEinrichtungsdatei(plan: Einrichtungsplan): string {
     o.datenbank = { rechner: d.host, port: d.port, name: d.datenbank, benutzer: d.benutzer, ...(d.passwort ? { passwort: d.passwort } : {}) };
   }
   o.ablage = plan.ablage;
-  o.administrator = { ...(plan.administrator.name ? { name: plan.administrator.name } : {}), email: plan.administrator.email, ...(plan.administrator.passwort ? { passwort: plan.administrator.passwort } : {}) };
-  if (plan.benutzer) o['erster-benutzer'] = { ...(plan.benutzer.name ? { name: plan.benutzer.name } : {}), email: plan.benutzer.email, 'aufgaben-ohne-empfaenger': plan.benutzer.aufgabenOhneEmpfaenger };
+  o.konto = { ...(plan.konto.name ? { name: plan.konto.name } : {}), email: plan.konto.email, ...(plan.konto.passwort ? { passwort: plan.konto.passwort } : {}) };
   if (plan.pakete) {
     o.pakete = plan.pakete.map((p) => ({
       id: p.id, ...(p.beispiele ? { beispiele: true } : {}),
@@ -240,8 +260,7 @@ export function schreibeEinrichtungsdatei(plan: Einrichtungsplan): string {
   ].join('\n');
   ueber(doc, 'datenbank', t('einrichtung.datei.kommentar.datenbank'));
   ueber(doc, 'ablage', t('einrichtung.datei.kommentar.ablage'));
-  ueber(doc, 'administrator', t('einrichtung.datei.kommentar.administrator'));
-  ueber(doc, 'erster-benutzer', t('einrichtung.datei.kommentar.benutzer'));
+  ueber(doc, 'konto', t('einrichtung.datei.kommentar.konto'));
   ueber(doc, 'pakete', t('einrichtung.datei.kommentar.pakete'));
   ueber(doc, 'optionales', t('einrichtung.datei.kommentar.optionales'));
   return doc.toString({ lineWidth: 0 });

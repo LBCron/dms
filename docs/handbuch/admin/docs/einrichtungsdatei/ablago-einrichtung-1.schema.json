@@ -8,7 +8,7 @@
   "required": [
     "ablago-einrichtung",
     "ablage",
-    "administrator"
+    "konto"
   ],
   "properties": {
     "ablago-einrichtung": {
@@ -59,12 +59,13 @@
       "maxLength": 30,
       "description": "Name der Ablage, z. B. „Familie Beispiel“."
     },
-    "administrator": {
+    "konto": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "email"
       ],
+      "description": "Dein Konto: die Person, die Ablago einrichtet. Sie bekommt „Gesamte Verwaltung“ und arbeitet auch in der Ablage. Bis 0.192 hieß der Abschnitt „administrator“ – das liest Ablago weiter.",
       "properties": {
         "name": {
           "type": "string",
@@ -79,31 +80,7 @@
         "passwort": {
           "type": "string",
           "pattern": "^\\$\\{[A-Z][A-Z0-9_]{0,63}\\}$",
-          "description": "Nie das Passwort selbst: höchstens ein Verweis auf eine Umgebungsvariable, z. B. ${DMS_ADMIN_PASSWORT}. Fehlt das Feld, fragt der Assistent das Passwort ab."
-        }
-      }
-    },
-    "erster-benutzer": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "email"
-      ],
-      "description": "Das Konto für die Arbeit in der Ablage; fehlt der Abschnitt, legt Ablago keinen an.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "maxLength": 100
-        },
-        "email": {
-          "type": "string",
-          "minLength": 3,
-          "maxLength": 254,
-          "pattern": "^[^\\s@]+@[^\\s@]+$"
-        },
-        "aufgaben-ohne-empfaenger": {
-          "type": "boolean",
-          "description": "Bekommt die Aufgaben ohne eigenen Empfänger (z. B. Post ohne „Für“)."
+          "description": "Nie das Passwort selbst: höchstens ein Verweis auf eine Umgebungsvariable, z. B. ${DMS_KONTO_PASSWORT}. Fehlt das Feld, fragt der Assistent das Passwort ab."
         }
       }
     },

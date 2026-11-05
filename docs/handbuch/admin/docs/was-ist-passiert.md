@@ -27,9 +27,26 @@ Alle Einzelheiten stehen unter [Neues NAS, alte Sicherung](wiederherstellen.md#n
 
 ## Ich komme nicht mehr hinein { #kein-zugang }
 
-- **Passwort vergessen:** Wähle auf der Anmeldeseite **Passwort vergessen** – das geht, wenn der E-Mail-Versand eingerichtet ist. Sonst erzeugt ein anderer Administrator unter **Werkbank → Benutzer** einen Passwort-Link für dich.
-- **Kein Administrator kommt mehr hinein:** Leg dir über eine Datei auf dem Gerät einen Notfallzugang an – Schritt für Schritt unter [Notfall: kein Admin mehr](notfall.md).
-- **Handy für die Zwei-Faktor-Anmeldung verloren:** Ein anderer Administrator setzt sie zurück, oder du nutzt den [Befehl `dms`](konsole.md) im Container.
+- **Passwort vergessen:** Wähle auf der Anmeldeseite **Passwort vergessen** – das geht, wenn der E-Mail-Versand eingerichtet ist. Sonst erzeugt eine andere Person, die Ablago verwalten darf, unter **Werkbank → Benutzer** einen Passwort-Link für dich.
+- **Niemand kommt mehr hinein, der verwalten darf:** Nimm den **Notfallcode** vom Notfallblatt – siehe unten. Ohne Notfallblatt hilft die [RESCUE-Datei auf dem Gerät](notfall.md).
+- **Handy für die Zwei-Faktor-Anmeldung verloren:** Eine andere Person mit „Gesamte Verwaltung“ setzt sie zurück, du nimmst einen Wiederherstellungscode – oder den Notfallcode (er setzt die Zwei-Faktor-Anmeldung zurück).
+
+### Mit dem Notfallcode wieder hinein { #notfallcode }
+
+Unten auf dem Notfallblatt steht im Kasten **Ausgesperrt?** ein langer Code in Vierergruppen und die Adresse deiner Ablage mit `/notfall` am Ende. Das geht am Handy genauso wie am Computer.
+
+1. Öffne die Adresse **im Heimnetz**, also mit einem Gerät im WLAN zu Hause, z. B. `http://nas.home.arpa:8080/notfall`. Aus dem Internet geht das nur, wenn es unter [Anmeldeschutz](anmeldeschutz.md#notfallzugang) erlaubt ist.
+2. Tippe den **Notfallcode** ein. Groß- und Kleinschreibung, Leerzeichen und Bindestriche zählen nicht. **Nicht den Schlüssel** vom Notfallblatt – der gehört nie in den Browser.
+3. Tippst du dich vertan, steht dort „Der Notfallcode war falsch“, und die Eingabe ist **30 Sekunden gesperrt** – ein Countdown zählt herunter. Das gilt nur für dein Gerät bzw. deinen Anschluss; wer anderswo Fehlversuche macht, sperrt dich damit nicht aus.
+4. Stimmt der Code, wählst du das **Konto**, für das du ein neues Passwort festlegst. Zur Wahl stehen nur Personen, die Ablago verwalten dürfen.
+5. Leg das **neue Passwort** fest. Ablago beendet dabei alle Anmeldungen dieses Kontos und setzt die Zwei-Faktor-Anmeldung zurück – richte sie danach neu ein. API-Schlüssel des Kontos bleiben gültig.
+6. Lade das **neue Notfallblatt** herunter. Der alte Code gilt nur einmal – auf dem neuen Blatt steht ein neuer. Druck es aus und vernichte das alte.
+7. **Melde dich an** – mit der E-Mail-Adresse des Kontos und dem neuen Passwort.
+
+Alle, die Ablago verwalten dürfen, und die bisherige E-Mail-Adresse des Kontos bekommen sofort eine E-Mail: „Der Notfallzugang deiner Ablage wurde … benutzt“ – schon bevor sich etwas ändert. Viele Fehlversuche melden sie gebündelt. In der Werkbank steht ein roter Hinweis, bis jemand **Gelesen** wählt, und das [Protokoll](fehlersuche.md#protokoll) hält alles fest.
+
+!!! warning "Notfallblatt verloren oder gestohlen?"
+    Wer das Blatt hat, kann über den Notfallcode ein Konto mit Verwaltungsrecht übernehmen – nicht unbemerkt, denn alle Verwaltenden bekommen dann eine E-Mail. Lade unter **Werkbank → Verschlüsselung** sofort ein neues Notfallblatt herunter: Damit gilt der alte Code nicht mehr. Wechsle außerdem den Schlüssel, denn auch er stand auf dem Blatt.
 
 ## Jemand anderes muss übernehmen { #uebernehmen }
 
@@ -37,5 +54,5 @@ Du hast das Notfallblatt gefunden, weil die Person, die Ablago eingerichtet hat,
 
 1. **Bewahre das Blatt gut auf** und gib es nicht weiter. Wer es hat, kann die Sicherungen lesen.
 2. Unter **Wen fragen?** auf dem Blatt stehen Menschen, die helfen können. Sprich zuerst mit ihnen.
-3. **Läuft Ablago noch**, melde dich mit dem Zugang eines Administrators an (oft im Passwortsafe). Fehlt er, hilft [Notfall: kein Admin mehr](notfall.md). Leg dir dann ein eigenes Konto an, siehe [Benutzer und Rollen](benutzer.md).
+3. **Läuft Ablago noch**, melde dich mit dem Zugang einer Person an, die Ablago verwalten darf (oft im Passwortsafe). Fehlt er, hilft der [Notfallcode](#notfallcode) unten auf dem Blatt. Leg dir dann ein eigenes Konto an, siehe [Benutzer und Rollen](benutzer.md).
 4. **Läuft Ablago nicht mehr**, geh vor wie unter [Mein Gerät ist kaputt](#geraet-kaputt).

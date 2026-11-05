@@ -48,8 +48,8 @@ export function MailVersand({ b }: { b: BetriebZustand }) {
 
 /**
  * Einrichtungsassistent (#803, #804, #813): dasselbe Formular, aber nur zum Sammeln. Es gibt noch keine Anmeldung –
- * darum weder `useKonto` noch Betriebsstand; vorbelegt mit dem Gesammelten (oder der Datei, #806) und der Adresse des
- * Administrators. Der Schlüssel für das Passwort entsteht bei „Jetzt einrichten“ vor dem E-Mail-Versand.
+ * darum weder `useKonto` noch Betriebsstand; vorbelegt mit dem Gesammelten (oder der Datei, #806) und der Adresse aus
+ * „Dein Konto“ (#821). Der Schlüssel für das Passwort entsteht bei „Jetzt einrichten“ vor dem E-Mail-Versand.
  */
 export function MailSammeln({ wert, passwort, email, ablage, griff }: {
   wert: Omit<MailAngaben, 'passwort'> | null; passwort: string; email: string; ablage: string; griff: MutableRefObject<MailGriff | null>;

@@ -142,6 +142,30 @@ async function anfrage<T>(methode: string, url: string, body?: unknown, nochmal 
   }
 }
 
+/**
+ * Eine heikle Datei herunterladen (#819, #821: Notfallblatt): wie `anfrage` mit Rückfrage, wenn der Verwaltungsmodus
+ * fehlt oder eine frische Anmeldung nötig ist – ein Link könnte diese Antwort des Servers nicht abfangen. Danach
+ * speichert der Browser die Datei. Höchstens zwei Rückfragen (erst der Modus, dann die frische Anmeldung).
+ */
+export async function heikleDatei(url: string, ersatzname: string, rueckfragen = 2): Promise<void> {
+  let r: Response;
+  try {
+    r = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'x-dms': '1', ...(aktiv() ? { 'x-dms-aktiv': '1' } : {}) } });
+  } catch { erreichbarkeit.ausfall(); throw new ApiFehler(0, NICHT_ERREICHBAR); }
+  if (!r.ok) {
+    const d = await r.json().catch(() => null) as { fehler?: string; details?: { verwaltungsmodus?: boolean; frisch?: boolean; heuteBestaetigt?: boolean; handlung?: string } } | null;
+    const x = r.status === 403 ? d?.details : undefined;
+    if (rueckfragen > 0 && bestaetigung && x && (x.verwaltungsmodus || x.frisch) && await bestaetigung(x.verwaltungsmodus ? 'modus' : 'frisch', x)) return heikleDatei(url, ersatzname, rueckfragen - 1);
+    if (r.status === 401) dispatchEvent(new Event(ABGEMELDET));
+    throw new ApiFehler(r.status, d?.fehler ?? `Fehler ${r.status}`, d?.details);
+  }
+  const m = /filename\*=UTF-8''([^;]+)/i.exec(r.headers.get('content-disposition') ?? '');
+  const blob = await r.blob();
+  const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: m ? decodeURIComponent(m[1]) : ersatzname });
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+}
+
 async function anfrageEinmal<T>(methode: string, url: string, body?: unknown): Promise<T> {
   let r: Response;
   const start = performance.now();
@@ -353,7 +377,7 @@ export interface EinrichtungStatus {
   quelle?: 'datei' | 'umgebung' | null;
   fehler?: string | null;
 }
-export type EinrichtungSchritt = 'benutzer' | 'schluessel' | 'pakete' | 'optional' | 'fertig';
+export type EinrichtungSchritt = 'schluessel' | 'pakete' | 'optional' | 'fertig';
 export interface EinrichtungStand { offen: boolean; erledigt: EinrichtungSchritt[]; uebersprungen: EinrichtungSchritt[]; mandant: string | null }
 export interface AnbindungStand { anbindung: AnbindungAnsicht; datei: string; umgebung: 'fehlt' | 'gleich' | 'abweichend'; neustartNoetig: boolean; /** dms-komplett (#208) */ imContainer?: boolean }
 /** Wartungsmodus (#102), wie ihn jeder sieht; sekunden = bis zur aktiven Stufe. */
@@ -382,7 +406,14 @@ export interface ExternZustand {
 export interface SicherungEintrag { name: string; meta: SicherungsMeta | null; schlank?: SicherungSchlank; bytes: number; pruefung?: { am: string; ok: boolean }; probe?: { am: string; ok: boolean; info: string }; extern?: Record<string, ExternStand> }
 export interface SicherungsPlan { aktiv: boolean; uhrzeit: string; haeufigkeit: 'taeglich' | 'woechentlich'; wochentag: number; aufbewahrung: { taeglich: number; woechentlich: number; monatlich: number }; mindestFreiGB: number; aktivSeit: string | null; /** #585 */ nurNeueste?: boolean }
 export interface SicherungsLauf { art: string; titel: string; status: 'laeuft' | 'fertig' | 'fehler'; schritt: string; bytes: number; gesamt: number; gestartet: string; beendet?: string; fehler?: string; ergebnis?: unknown }
-export interface Notfallblattstand { am: string | null; von: string | null; fingerabdruck: string | null; aktuell: boolean }
+/** Notfallblatt (#106); seit #815 mit Notfallcode: ohne (`ohneCode`) oder benutzt (`codeBenutzt`) ist es nicht mehr aktuell. */
+export interface Notfallblattstand {
+  am: string | null; von: string | null; fingerabdruck: string | null; aktuell: boolean; ohneCode?: boolean; codeBenutzt?: string | null;
+  /** Warum nicht aktuell: fehlt, früherer Schlüssel, noch ohne Notfallcode, Notfallcode benutzt. */
+  grund?: 'fehlt' | 'schluessel' | 'ohne-code' | 'benutzt' | null;
+}
+/** Werkbank → Anmeldeschutz → Notfallzugang (#815). */
+export interface NotfallzugangStand { internet: boolean; von: string | null; am: string | null; code: { vorhanden: boolean; erstellt: string | null }; heimnetz: boolean }
 export interface SicherungsZustand {
   letzte: { name: string; ende: string; art: string } | null;
   fehler: { am: string; art: string; grund: string } | null;
@@ -835,6 +866,8 @@ export const api = {
   regionSetzen: (e: Partial<Region>) => anfrage<RegionStand>('PUT', '/api/werkbank/region', e),
   anmeldeschutz: () => anfrage<AnmeldeschutzStand>('GET', '/api/werkbank/anmeldeschutz'),
   anmeldeschutzSetzen: (e: Partial<SperrEinstellung>) => anfrage<AnmeldeschutzStand>('PUT', '/api/werkbank/anmeldeschutz', e),
+  notfallzugang: () => anfrage<NotfallzugangStand>('GET', '/api/werkbank/anmeldeschutz/notfallzugang'),
+  notfallzugangSetzen: (internet: boolean) => anfrage<NotfallzugangStand>('PUT', '/api/werkbank/anmeldeschutz/notfallzugang', { internet }),
   entsperren: (ip: string) => anfrage<AnmeldeschutzStand>('POST', '/api/werkbank/anmeldeschutz/entsperren', { ip }),
   postfachAnlegen: (p: PostfachEingabe) => anfrage<PostfachAnsicht[]>('POST', '/api/werkbank/postfaecher', p),
   postfachAendern: (id: string, p: PostfachEingabe) => anfrage<PostfachAnsicht[]>('PUT', `/api/werkbank/postfaecher/${id}`, p),
@@ -858,6 +891,8 @@ export const api = {
   uebersicht: () => anfrage<WerkbankUebersicht>('GET', '/api/werkbank/uebersicht'),
   meldungAkzeptieren: (schluessel: string, art: Schwere, grund?: string) => anfrage<Akzeptiert>('POST', '/api/werkbank/uebersicht/akzeptieren', { schluessel, art, grund }),
   akzeptanzAufheben: (schluessel: string[], anlass: 'eingeblendet' | 'erledigt' | 'schwerer') => anfrage<Akzeptiert>('POST', '/api/werkbank/uebersicht/aufheben', { schluessel, anlass }),
+  /** „Nein, danke“ bzw. „Gelesen“ an einem Hinweis, der danach nicht wiederkommt (#821, #815). */
+  meldungErledigt: (schluessel: string) => anfrage<null>('POST', '/api/werkbank/uebersicht/erledigt', { schluessel }),
   // Fehler melden (#70)
   diagnose: () => anfrage<Diagnose>('GET', '/api/konto/diagnose'),
   fehlerMelden: (e: { text: string; angaben: Record<string, unknown>; bilder: Array<{ name: string; daten: string }> }) => anfrage<{ id: string }>('POST', '/api/konto/fehlermeldung', e),
@@ -1153,6 +1188,10 @@ export interface WerkbankUebersicht {
   automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }>; /** Erinnerungen am Feld beim Update übernommen (#712), bis gelesen. */ umgezogen?: { am: string; anzahl: number } | null; /** Keine Automatisierung schickt die Tägliche Zusammenfassung (#678). */ ohneBenachrichtigungen?: boolean };
   /** Notfallzugänge (#108), bis sie umbenannt oder deaktiviert sind. */
   notfallzugaenge?: Array<{ id: string; name: string; erstellt: string }>;
+  /** Notfallcode benutzt (#815), bis jemand den Hinweis als gelesen markiert. */
+  notfallcodeBenutzt?: Array<{ id: string; benutzerId: string; name: string; am: string }>;
+  /** Eine zweite Person mit Verwaltungsrecht empfehlen (#821). */
+  zweitePerson?: boolean;
   /** Wartungsmodus (#102). */
   wartung?: WartungOeffentlich | null;
   /** Sicherung (#105). */

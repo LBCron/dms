@@ -63,11 +63,17 @@ Manche Warnung nimmst du bewusst in Kauf, etwa „Der Sicherungsordner ist kein 
 
 Akzeptierte Meldungen gelten für alle, die diese Installation verwalten.
 
+Zwei Hinweise schließt du stattdessen mit einem eigenen Knopf ab – sie kommen danach nicht wieder (beides nur mit „Gesamte Verwaltung“, im Protokoll mit deinem Namen):
+
+- **„Gut, wenn noch jemand verwalten kann, falls du mal nicht da bist.“** Ablago empfiehlt nach der Einrichtung eine zweite Person mit Verwaltungsrecht, solange nur eine Person verwalten darf. **Person einladen** führt zu *Benutzer → Neu*; die Person bekommt einen Einladungslink, danach setzt du bei ihr den Haken **Darf Ablago verwalten** (siehe [Wer darf Ablago verwalten?](verwalten.md)). Willst du das nicht, wähle **Nein, danke** – dann bleibt der Hinweis dauerhaft weg.
+- **„Der Notfallzugang wurde … benutzt“** steht rot oben, nachdem jemand mit dem Notfallcode vom Notfallblatt ein neues Passwort gesetzt hat ([Ich komme nicht mehr hinein](was-ist-passiert.md#kein-zugang)). Mit **Gelesen** verschwindet er.
+
 ### Alle Meldungen der Übersicht { #meldungen }
 
 | Meldung | Schwere | Kennung im Protokoll |
 | --- | --- | --- |
-| Notfallzugang ist aktiv | rot | `notfallzugang` |
+| Notfallzugang ist aktiv (RESCUE-Datei) | rot | `notfallzugang` |
+| Der Notfallzugang wurde mit dem Notfallcode benutzt – bis „Gelesen“ | rot | `notfallzugang.benutzt` |
 | Speicherplatzlimit erreicht | rot | `speicherplatz.grenze` |
 | Der Speicherplatz wird knapp | gelb | `speicherplatz.knapp` |
 | Wieder genug Platz – Wartung beenden? | gelb | `speicherplatz.wartung-beenden` |
@@ -89,7 +95,7 @@ Akzeptierte Meldungen gelten für alle, die diese Installation verwalten.
 | Die letzte Sicherung ist fehlgeschlagen | rot | `sicherung.fehler` |
 | Es gibt noch keine Sicherung | gelb | `sicherung.keine` |
 | Die letzte Sicherung ist älter als 2 Tage | gelb | `sicherung.alt` |
-| Das Notfallblatt fehlt oder gehört zu einem früheren Schlüssel | gelb | `sicherung.notfallblatt` |
+| Das Notfallblatt fehlt, gehört zu einem früheren Schlüssel, hat noch keinen Notfallcode oder sein Notfallcode wurde benutzt | gelb | `sicherung.notfallblatt` |
 | Die letzte Probe-Wiederherstellung ist fehlgeschlagen | rot | `sicherung.probe-fehler` |
 | Probe-Wiederherstellung fehlt oder ist alt | Hinweis | `sicherung.probe` |
 | Der Sicherungsordner ist kein eigenes Volume | gelb | `sicherung.volume` |
@@ -103,6 +109,7 @@ Akzeptierte Meldungen gelten für alle, die diese Installation verwalten.
 | DMS_LASTTEST in einer echten Installation | gelb | `lasttest` |
 | Paket braucht noch Einstellungen | gelb | `paket-einstellungen` |
 | Aus der Einrichtung übersprungen | Hinweis | `einrichtung` |
+| Gut, wenn noch jemand verwalten kann – nur eine Person darf verwalten | Hinweis | `verwaltung.zweite-person` |
 | Umgebungsvariablen, die nicht mehr nötig sind (je mit Grund) | Hinweis | `variablen` |
 | Der E-Mail-Versand ist nicht eingerichtet | gelb | `mail` |
 | Offene gemeldete Fehler | gelb | `fehlermeldungen` |
@@ -113,7 +120,7 @@ Akzeptierte Meldungen gelten für alle, die diese Installation verwalten.
 | Aufgaben ohne Empfänger | Hinweis | `aufgaben.ohne-empfaenger` |
 | Mappen, die nicht zur Definition passen | Hinweis | `mappen.unpassend` |
 
-Bei Meldungen, die es je Postfach, Paket, Notfallzugang oder übersprungenem Schritt gibt, folgt im Protokoll hinter der Kennung ein Doppelpunkt und die Id, z. B. `postfach.anmelden:…`.
+Bei Meldungen, die es je Postfach, Paket, Notfallzugang, benutztem Notfallcode oder übersprungenem Schritt gibt, folgt im Protokoll hinter der Kennung ein Doppelpunkt und die Id, z. B. `postfach.anmelden:…`.
 
 ## Werkbank anpassen
 

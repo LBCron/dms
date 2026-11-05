@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { api, type AnbieterEingabe, type AnbieterStand, type AnmeldeschutzStand, type SperrEinstellung, type ZweifaktorPflicht } from '../api';
+import { api, type AnbieterEingabe, type AnbieterStand, type AnmeldeschutzStand, type NotfallzugangStand, type SperrEinstellung, type ZweifaktorPflicht } from '../api';
 import { Hilfe } from '../Hilfe';
 import { useKonto } from '../konto';
 import { geheZu, Link } from '../ort';
@@ -70,6 +70,7 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
       </form>
       <ZweifaktorPflichtBlatt />
       <AnbieterBlatt />
+      <NotfallzugangBlatt />
       {/* #366: früher die mittlere Spalte; ganz unten, mit fester Höhe – bei Dauerangriffen kommen viele zusammen. */}
       <div className="blatt" id="gesperrt">
         <h2 className="h3">Gesperrte Adressen{s.gesperrt.length > 0 && <> <span className="chip">{s.gesperrt.length}</span></>}</h2>
@@ -84,6 +85,38 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Notfallzugang mit dem Notfallcode vom Notfallblatt (#815): Vorgabe „nur aus dem Heimnetz“. Aus dem Internet erlauben
+ * ist eine heikle Handlung (frische Anmeldung) und kommt mit Warnung.
+ */
+function NotfallzugangBlatt() {
+  const [n, setN] = useState<NotfallzugangStand | null>(null);
+  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
+  const [sendet, setSendet] = useState(false);
+  useEffect(() => { api.notfallzugang().then(setN).catch((x) => setMeldung({ art: 'schlecht', text: (x as Error).message })); }, []);
+  async function setze(internet: boolean) {
+    if (internet && !(await rueckfrage({ titel: t('werkbank.notfallzugang.frage'), text: t('werkbank.notfallzugang.frage.text'), ja: t('werkbank.notfallzugang.frage.ja'), gefahr: true }))) return;
+    setSendet(true); setMeldung(undefined);
+    try { setN(await api.notfallzugangSetzen(internet)); setMeldung({ art: 'gut', text: t('werkbank.notfallzugang.gespeichert') }); }
+    catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
+  }
+  return (
+    <div className="blatt" id="notfallzugang">
+      <h2 className="h3">{t('werkbank.notfallzugang.titel')} <Hilfe ort="werkbank.notfallzugang" /></h2>
+      <p className="leise">{t('werkbank.notfallzugang.text')}</p>
+      {n && <p className="klein">{n.code.vorhanden && n.code.erstellt ? t('werkbank.notfallzugang.code', { datum: zeit(n.code.erstellt) }) : t('werkbank.notfallzugang.code.keiner')}</p>}
+      {n && <>
+        <label className="haken"><input id="notfall-internet" type="checkbox" checked={n.internet} disabled={sendet} onChange={(x) => void setze(x.target.checked)} />
+          <span>{t('werkbank.notfallzugang.internet')}<small className="hilfe">{t('werkbank.notfallzugang.internet.hilfe')}</small></span></label>
+        {n.internet && <div className="hinweis warn"><p>{t('werkbank.notfallzugang.internet.warnung')}</p></div>}
+        {n.internet && n.von && n.am && <p className="leise klein">{t('werkbank.notfallzugang.internet.von', { von: n.von, am: zeit(n.am) })}</p>}
+        {!n.heimnetz && !n.internet && <p className="leise klein">{t('werkbank.notfallzugang.nicht-heimnetz')}</p>}
+      </>}
+      {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
     </div>
   );
 }

@@ -180,6 +180,35 @@ export async function notfallblattPdf(p: NotfallblattPlan): Promise<Uint8Array> 
   text(p.hilfe.handbuch, { breite: textBreite, groesse: 8.5, farbe: LEISE, abstand: 6 });
   y = Math.min(y, qy);
 
+  // Ausgesperrt? Der Notfallcode (#815) in einem schmalen Kasten: Titel und Adresse mit /notfall, ein Satz, darunter
+  // der Code in Vierergruppen und daneben der Hinweis, dass er einmal gilt.
+  if (p.notfall) {
+    const n = p.notfall, x0 = RAND + 8;
+    y -= 6;
+    const oben = y;
+    y -= 15;
+    const tt = pdfSicher(n.titel);
+    seite.drawText(tt, { x: x0, y, size: 10.5, font: s.fett, color: BLAU });
+    if (n.adresse) {
+      const ax = x0 + s.fett.widthOfTextAtSize(tt, 10.5) + 8, at = pdfSicher(n.adresse.text), ab = s.normal.widthOfTextAtSize(at, 10);
+      seite.drawText(at, { x: ax, y, size: 10, font: n.adresse.link ? s.normal : s.fett, color: n.adresse.link ? BLAU : TINTE });
+      if (n.adresse.link) {
+        seite.drawLine({ start: { x: ax, y: y - 1.5 }, end: { x: ax + ab, y: y - 1.5 }, thickness: 0.6, color: BLAU });
+        verlinke(doc, seite, n.adresse.link, ax, y - 3, ab, 13);
+      }
+    }
+    y -= 3;
+    text(n.text, { x: x0, breite: INNEN - 16, groesse: 8.5 });
+    y -= 16;
+    const code = pdfSicher(n.code);
+    seite.drawText(code, { x: x0, y, size: 14, font: s.mono, color: TINTE });
+    const hx = x0 + s.mono.widthOfTextAtSize(code, 14) + 12;
+    let hy = y + 6;
+    for (const z of umbrechen(n.hinweis, s.normal, 7.5, RAND + INNEN - 8 - hx)) { seite.drawText(z, { x: hx, y: hy, size: 7.5, font: s.normal, color: LEISE }); hy -= 9; }
+    y = Math.min(y, hy + 9) - 6;
+    seite.drawRectangle({ x: RAND, y, width: INNEN, height: oben - y, borderColor: BERNSTEIN, borderWidth: 1.2, opacity: 0, borderOpacity: 1 });
+  }
+
   // Fuß: Linie und eine Zeile.
   seite.drawLine({ start: { x: RAND, y: RAND - 6 }, end: { x: rechts, y: RAND - 6 }, thickness: 0.5, color: LINIE });
   seite.drawText(pdfSicher(p.fuss), { x: RAND, y: RAND - 18, size: 7.5, font: s.normal, color: LEISE });

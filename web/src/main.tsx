@@ -8,12 +8,16 @@ import { starteSammler } from './diagnose';
 import { starteErreichbarkeit } from './erreichbar';
 import { Rueckfragen } from './rueckfrage';
 import { Abrufseite } from './abruf';
+import { Notfallseite } from './notfall';
 
 const wurzel = createRoot(document.getElementById('root')!);
 
 if (location.pathname === '/abruf') {
   // Öffentliche Abrufseite einer Auskunft (#455): eigenständig – ohne Anmeldung, Kontostatus und Diagnose.
   wurzel.render(<StrictMode><Abrufseite /></StrictMode>);
+} else if (location.pathname === '/notfall') {
+  // Notfallzugang mit dem Notfallcode vom Notfallblatt (#815): eigenständig – ohne Anmeldung, Kontostatus und Diagnose.
+  wurzel.render(<StrictMode><Notfallseite /></StrictMode>);
 } else {
   starteSammler();
   starteErreichbarkeit();

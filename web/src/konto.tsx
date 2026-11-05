@@ -127,7 +127,15 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   // Wiederherstellung (#107): eigener Bildschirm, auch nach Neuladen und Neustart.
   if (status.wiederherstellung?.laeuft || status.wiederherstellung?.abschluss) return <Wiederherstellungsbildschirm fertig={() => void laden()} />;
   // Einrichtungsassistent (#119, #804): ohne Datenbank, mit Code; sammeln bis „Jetzt einrichten“ …
-  if (status.einrichtungNoetig || status.einrichtung?.phase === 'datenbank' || status.einrichtung?.phase === 'startet') return <Einrichtungsassistent status={status} fertig={laden} />;
+  // Der Dialog für die erneute Anmeldung (#819) auch hier: Nach „Jetzt einrichten“ läuft der Assistent zunächst in
+  // dieser Oberfläche weiter, und das Notfallblatt kann eine frische Anmeldung verlangen (#821). Danach nicht neu
+  // laden – sonst wechselte die Oberfläche mitten im Herunterladen; das übernimmt „Einrichtung abschließen“.
+  if (status.einrichtungNoetig || status.einrichtung?.phase === 'datenbank' || status.einrichtung?.phase === 'startet') return (
+    <>
+      <Einrichtungsassistent status={status} fertig={laden} />
+      <Verwaltungsanmeldung stand={status.verwaltungsmodus ?? null} nachher={() => {}} />
+    </>
+  );
   if (!status.benutzer) return <Anmelden mail={status.mail} wartung={status.wartung} anbieter={status.anbieter ?? null} fertig={laden} />;
   // Zwei-Faktor vorgeschrieben (#242), aber noch nicht eingerichtet: erst einrichten.
   if (status.zweifaktor?.fehlt) return (

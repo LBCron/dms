@@ -1630,6 +1630,17 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .abruf-code { font-size: 1.3em; letter-spacing: .1em; text-transform: uppercase; }
 .abruf-fertig { display: flex; flex-direction: column; gap: 10px; }
 .abruf-fertig p { margin: 0; }
+/* Notfallzugang (#815): zuerst fürs Handy – volle Breite, große Ziele, Code gut lesbar. */
+.notfall-karte { max-width: 480px; }
+.notfall-karte .marke { align-self: flex-start; }
+.notfall-form { display: flex; flex-direction: column; gap: 14px; }
+.notfall-form p { margin: 0; }
+.notfall-code { font-size: 18px; letter-spacing: .06em; text-transform: uppercase; width: 100%; }
+.notfall-countdown { font-variant-numeric: tabular-nums; font-weight: 600; }
+.notfall-konten { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.notfall-konten .wahlkarte { width: 100%; min-height: 56px; }
+.notfall-karte .knopf { text-align: center; }
+@media (max-width: 480px) { .notfall-karte { padding: 20px 16px; } .notfall-code { letter-spacing: .02em; } }
 
 /* Mit verknüpften Mappen löschen (#424): Vorschau als Baum. Eigene Klassen mit Präfix lb-. */
 .lb-legende { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--leise); }

@@ -6,7 +6,7 @@ Du hast Ablago gerade installiert und den Einrichtungsassistenten durchlaufen? D
 
 Das Wichtigste zuerst: **Werkbank → Sicherung**. Lade das **Notfallblatt** herunter und leg es getrennt vom NAS ab, ausgedruckt oder in einem Passwortsafe – nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen. Danach schaltest du den **Zeitplan** ein; Ablago sichert sich ab dann selbst und prüft jede Woche, ob sich die Sicherung einspielen lässt.
 
-*Das Notfallblatt hast du am Ende des Assistenten schon heruntergeladen* – ohne geht „Einrichtung abschließen“ nicht. Es fehlt nur noch der Zeitplan.
+*Das Notfallblatt hast du am Ende des Assistenten schon heruntergeladen* – ohne geht „Einrichtung abschließen“ nicht. Darauf steht auch der **Notfallcode**, falls du dich einmal aussperrst. Es fehlt nur noch der Zeitplan.
 
 ![Sicherung in der Werkbank](bilder/werkbank-sicherung.png)
 
@@ -16,7 +16,7 @@ Mehr: [Sicherung](sicherung.md)
 
 Unter **Werkbank → Benutzer** lädst du deine Familie oder dein Team ein; jeder bekommt eine Mail mit einem Link und legt sein Passwort selbst fest. Jeder ist zunächst **Mitglied**: Er arbeitet in der Ablage und sieht alles. Wer was sehen darf, kannst du später über Rollen und [Berechtigungen](berechtigungen.md) einschränken.
 
-*Schon erledigt für den ersten Benutzer, den du im Assistenten angelegt hast.* Du selbst arbeitest mit deinem eigenen Konto in der Ablage; verwalten tust du es bewusst über **Ablago verwalten** im Benutzermenü. Am besten bekommt noch eine zweite Person das Recht, Ablago zu verwalten.
+Im Assistenten hast du nur **dein eigenes Konto** angelegt. Damit arbeitest du in der Ablage; verwalten tust du bewusst über **Ablago verwalten** im Benutzermenü. Lade jetzt die anderen ein. **Am besten bekommt eine zweite Person das Recht, Ablago zu verwalten** – falls du mal nicht da bist. Daran erinnert auch die Übersicht der Werkbank („Gut, wenn noch jemand verwalten kann …“); die Person bekommt einen Einladungslink, danach setzt du bei ihr unter *Benutzer* den Haken **Darf Ablago verwalten**.
 
 ![Benutzer in der Werkbank](bilder/werkbank-benutzer.png)
 

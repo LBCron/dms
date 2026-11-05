@@ -11,16 +11,17 @@ import { t } from './sprache';
 
 /**
  * Einrichtungsassistent (#119), sobald die Datenbank steht. Seit #804 sammelt der Assistent erst alles (Ablage,
- * Administrator, erster Benutzer, Pakete, Optionales) und legt nichts an; erst „Jetzt einrichten“ legt Ablage und
- * Administrator an (mit Einrichtungscode) und führt danach – angemeldet als Administrator – den Rest aus. Der Stand
- * der Schritte nach dem Anlegen liegt in den Einstellungen („einrichtung“).
+ * Dein Konto, Pakete, Optionales) und legt nichts an; erst „Jetzt einrichten“ legt Ablage und das eigene Konto mit
+ * „Gesamte Verwaltung“ an (mit Einrichtungscode) und führt danach – angemeldet und im Verwaltungsmodus – den Rest aus.
+ * Seit #821 gibt es nur dieses eine Konto: kein Administrator und kein „erster Benutzer“ daneben. Der Stand der
+ * Schritte nach dem Anlegen liegt in den Einstellungen („einrichtung“).
  *
  * Konfigurationsdatei (#806): Lesen, Prüfen und Schreiben nur mit gültigem Einrichtungscode und nur, solange Ablago
- * noch nicht eingerichtet ist (bzw. für den Administrator, solange der Assistent offen ist).
+ * noch nicht eingerichtet ist (bzw. für „Gesamte Verwaltung“, solange der Assistent offen ist).
  */
 
 const log = protokoll.modul('system');
-export const SCHRITTE = ['benutzer', 'schluessel', 'pakete', 'optional', 'fertig'] as const;
+export const SCHRITTE = ['schluessel', 'pakete', 'optional', 'fertig'] as const;
 export type Schritt = (typeof SCHRITTE)[number];
 export interface EinrichtungStand { offen: boolean; erledigt: Schritt[]; uebersprungen: Schritt[]; mandant: string | null }
 
@@ -48,8 +49,8 @@ const ja = (v: unknown) => v === true;
 export function planAusEingabe(x: unknown): Einrichtungsplan {
   const o = (x ?? {}) as Record<string, unknown>;
   const db = o.datenbank as Record<string, unknown> | null | undefined;
-  const ad = (o.administrator ?? {}) as Record<string, unknown>;
-  const be = o.benutzer as Record<string, unknown> | null | undefined;
+  // Bis 0.192 hieß „Dein Konto“ (#821) im Plan „administrator“.
+  const ko = (o.konto ?? o.administrator ?? {}) as Record<string, unknown>;
   const op = (o.optional ?? {}) as Record<string, unknown>;
   const m = op.mail as Record<string, unknown> | null | undefined;
   const verweis = (v: unknown) => (istVerweis(v) ? { passwort: v } : {});
@@ -58,8 +59,7 @@ export function planAusEingabe(x: unknown): Einrichtungsplan {
   return {
     datenbank: db && typeof db === 'object' ? { host: text(db.host, 255), port: zahl(db.port, 5432), datenbank: text(db.datenbank, 63), benutzer: text(db.benutzer, 63), ...verweis(db.passwort) } : null,
     ablage: text(o.ablage, 100).replace(/\s+/g, ' '),
-    administrator: { name: text(ad.name, 100), email: text(ad.email, 254), ...verweis(ad.passwort) },
-    benutzer: be && typeof be === 'object' ? { name: text(be.name, 100), email: text(be.email, 254), aufgabenOhneEmpfaenger: be.aufgabenOhneEmpfaenger !== false } : null,
+    konto: { name: text(ko.name, 100), email: text(ko.email, 254), ...verweis(ko.passwort) },
     pakete: Array.isArray(o.pakete) ? o.pakete.slice(0, 100).flatMap((p) => {
       const q = (p ?? {}) as Record<string, unknown>;
       const id = text(q.id, 64);
@@ -93,15 +93,15 @@ export class Einrichtung {
   get codeNoetig() { return !!this.d.code?.aktiv; }
 
   /**
-   * Zugang zu den Hilfen des Assistenten (Datei, Prüfung, Paketkatalog): vor der Einrichtung mit Code; danach nur der
-   * Administrator, solange der Assistent offen ist (etwa „Ändern“, wenn beim Einrichten etwas nicht klappte).
+   * Zugang zu den Hilfen des Assistenten (Datei, Prüfung, Paketkatalog): vor der Einrichtung mit Code; danach nur mit
+   * „Gesamte Verwaltung“, solange der Assistent offen ist (etwa „Ändern“, wenn beim Einrichten etwas nicht klappte).
    */
   async pruefeZugang(code: unknown, admin: boolean) {
     if (admin && !(await this.d.konten.einrichtungNoetig()) && (await this.stand()).offen) return;
     await this.pruefeCode(code);
   }
 
-  /** Ablage und Administrator (bei „Jetzt einrichten“, #804); meldet den Administrator an. */
+  /** Ablage und „Dein Konto“ (bei „Jetzt einrichten“, #804, #821); meldet die Person an. */
   async einrichten(e: Record<string, unknown>, code: unknown, info: { ip: string; geraet: string }) {
     await this.pruefeCode(code);
     const mandant = typeof e.mandant === 'string' ? e.mandant.replace(/\s+/g, ' ').trim() : '';
@@ -114,7 +114,7 @@ export class Einrichtung {
     // Neue Installationen bekommen die schlanke Werkbank (#281); bestehende behalten alles.
     await this.d.einstellungen.schreibe('werkbank_ansicht', { vorlage: 'haushalt', ein: [], aus: [] });
     await this.d.code?.entfernen();
-    log.info('Einrichtung: Ablage und Administrator angelegt', { mandant, email: r.benutzer.email });
+    log.info('Einrichtung: Ablage und eigenes Konto mit „Gesamte Verwaltung“ angelegt', { mandant, email: r.benutzer.email });
     return r;
   }
 
@@ -138,20 +138,16 @@ export class Einrichtung {
   }
 
   /**
-   * Prüft einen gesammelten Plan, ohne etwas anzulegen (#804, #806): je Schritt, was nicht passt. Das Passwort des
-   * Administrators kommt nur zum Prüfen mit und wird nicht gespeichert; fehlt es, ist das ein Grund im Schritt.
+   * Prüft einen gesammelten Plan, ohne etwas anzulegen (#804, #806): je Schritt, was nicht passt. Das Passwort für
+   * „Dein Konto“ kommt nur zum Prüfen mit und wird nicht gespeichert; fehlt es, ist das ein Grund im Schritt.
    */
-  pruefePlan(eingabe: unknown, geheim: { administrator?: unknown } = {}): Planprobleme {
+  pruefePlan(eingabe: unknown, geheim: { passwort?: unknown } = {}): Planprobleme {
     const p = planAusEingabe(eingabe);
     const probleme: Planprobleme = {};
     const dazu = (s: keyof Planprobleme, m: string | null) => { if (m) (probleme[s] ??= []).push(m); };
     dazu('ablage', !p.ablage ? t('einrichtung.plan.ablage.fehlt') : p.ablage.length > MANDANT_MAX ? t('einrichtung.plan.ablage.lang', { max: MANDANT_MAX }) : null);
-    dazu('administrator', meldung(() => pruefeEmail(p.administrator.email)));
-    dazu('administrator', typeof geheim.administrator === 'string' && geheim.administrator ? meldung(() => pruefePasswortRegeln(geheim.administrator)) : t('einrichtung.plan.passwort.fehlt'));
-    if (p.benutzer) {
-      dazu('benutzer', meldung(() => pruefeEmail(p.benutzer!.email)));
-      if (p.benutzer.email && p.benutzer.email.toLowerCase() === p.administrator.email.toLowerCase()) dazu('benutzer', t('einrichtung.plan.benutzer.gleich'));
-    }
+    dazu('konto', meldung(() => pruefeEmail(p.konto.email)));
+    dazu('konto', typeof geheim.passwort === 'string' && geheim.passwort ? meldung(() => pruefePasswortRegeln(geheim.passwort)) : t('einrichtung.plan.passwort.fehlt'));
     dazu('optional', p.optional.adresse ? meldung(() => pruefeAdresse(p.optional.adresse)) : null);
     if (p.optional.mail?.aktiv && !p.optional.mail.host) dazu('optional', t('einrichtung.plan.mail.server'));
     return probleme;
@@ -160,7 +156,7 @@ export class Einrichtung {
   /** Konfigurationsdatei lesen (#806); dazu Hinweise, etwa wenn die Datei eine andere Datenbank nennt. */
   dateiLesen(text: unknown): { plan: Einrichtungsplan | null; fehler: DateiFehler[]; hinweise: string[] } {
     const r = liesEinrichtungsdatei(text);
-    const hinweise: string[] = [];
+    const hinweise: string[] = [...r.hinweise];
     const jetzt = this.d.datenbank?.();
     const db = r.plan?.datenbank;
     if (db && jetzt && (db.host !== jetzt.host || db.port !== jetzt.port || db.datenbank !== jetzt.datenbank || db.benutzer !== jetzt.benutzer)) {

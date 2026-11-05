@@ -22,15 +22,15 @@ const ohneVersion = (id: string) => id.split('@')[0];
 const AUSFUEHREN: Record<Stufe, () => Promise<string | void | 'ausgelassen'>> = {
   async ablage() {
     const s = holeStand().sammlung;
-    if (!geheim.administrator) throw new Error(t('einrichtung.lauf.passwort.neu'));
+    if (!geheim.konto) throw new Error(t('einrichtung.lauf.passwort.neu'));
     try {
-      await api.einrichten({ mandant: s.ablage.trim(), name: s.administrator.name.trim(), email: s.administrator.email.trim(), passwort: geheim.administrator });
+      await api.einrichten({ mandant: s.ablage.trim(), name: s.konto.name.trim(), email: s.konto.email.trim(), passwort: geheim.konto });
     } catch (e) {
       // Schon angelegt (etwa Antwort verloren) und angemeldet: dann gilt die Stufe als erledigt.
       if (!(e instanceof ApiFehler && e.status === 409 && await api.einrichtungStand().then(() => true, () => false))) throw e;
     }
     setzeEinrichtungscode(null);
-    geheim.administrator = '';
+    geheim.konto = '';
   },
   async schluessel() {
     const st = await api.tresor();
@@ -54,24 +54,6 @@ const AUSFUEHREN: Record<Stufe, () => Promise<string | void | 'ausgelassen'>> = 
     if (m.mitPasswort && !geheim.mail) throw new Error(t('einrichtung.lauf.mail.passwort'));
     // Im Assistenten nur mit Passwort; OAuth richtet man danach in der Werkbank ein (#813).
     await api.mailSpeichern({ anmeldung: 'passwort', aktiv: m.aktiv, host: m.host.trim(), port: m.port, verbindung: m.verbindung, benutzer: m.benutzer.trim(), absender: m.absender.trim(), selbstsigniert: m.selbstsigniert, ...(geheim.mail ? { passwort: geheim.mail } : {}) });
-  },
-  async benutzer() {
-    const b = holeStand().sammlung.benutzer;
-    const email = b.email.trim();
-    if (!email) return 'ausgelassen';
-    // Wiederholen ohne Doppeltes: Gibt es ihn schon, ist nichts mehr zu tun.
-    const da = (await api.benutzer()).find((x) => x.email.toLowerCase() === email.toLowerCase());
-    const id = da ? da.id : await (async () => {
-      const r = await api.benutzerAnlegen({ name: b.name.trim(), email });
-      setzeLauf((l) => ({ ...l, einladung: { name: r.benutzer.name || r.benutzer.email, link: r.link ?? null, mailVerschickt: r.mailVerschickt } }));
-      return r.benutzer.id;
-    })();
-    // #719, #803: Mit Häkchen bekommt der erste Benutzer die Aufgaben ohne Empfänger. Seit #818 ist die Vorgabe die
-    // Person, die einrichtet – darum hier ausdrücklich eintragen; ohne Häkchen bleibt es bei ihr.
-    const jetzt = (await api.aufgabenEmpfaenger()).benutzerId;
-    if (b.aufgabenOhneEmpfaenger && jetzt !== id) await api.aufgabenEmpfaengerSpeichern(id);
-    else if (!b.aufgabenOhneEmpfaenger && jetzt === id) await api.aufgabenEmpfaengerSpeichern(null);
-    if (da) return t('einrichtung.lauf.benutzer.da');
   },
   async beispiele() {
     if (!holeStand().sammlung.optional.beispiele) return 'ausgelassen';
@@ -120,7 +102,6 @@ export async function ausfuehren() {
     // Unterbrochen (anderer Browser): Was schon erledigt war, bleibt erledigt.
     const schon = l.unterbrochen ? new Set((await api.einrichtungStand()).erledigt) : new Set<string>();
     await api.einrichtungSchritt('schluessel');
-    if (!schon.has('benutzer')) await api.einrichtungSchritt('benutzer', !fertig('benutzer'));
     if (!schon.has('pakete')) await api.einrichtungSchritt('pakete', !(l.pakete?.installiert.length));
     if (!schon.has('optional')) await api.einrichtungSchritt('optional', !fertig('adresse', 'region', 'mail', 'beispiele'));
   } catch { /* Der Hinweis in der Übersicht ist nicht wichtig genug, um hier aufzuhalten. */ }
@@ -134,7 +115,7 @@ export function stufenZuruecksetzen(stufen: Stufe[]) {
 
 /** Welche Stufen ein Schritt des Assistenten betrifft – und umgekehrt (für „Ändern“ nach einem Fehler). */
 export const STUFEN_JE_SCHRITT = {
-  ablage: ['ablage'], administrator: ['ablage'], benutzer: ['benutzer'], pakete: ['pakete'], optional: ['adresse', 'region', 'mail', 'beispiele'],
+  ablage: ['ablage'], konto: ['ablage'], pakete: ['pakete'], optional: ['adresse', 'region', 'mail', 'beispiele'],
 } as const satisfies Record<string, readonly Stufe[]>;
 
 /** Für die Konfigurationsdatei (#806): aktueller Plan. */

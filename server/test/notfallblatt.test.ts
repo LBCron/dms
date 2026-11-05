@@ -41,8 +41,10 @@ describe('Notfallblatt (#814): Gestaltung und Umfang', () => {
       name: 'Familie Özdemir-Beispiel mit einem recht langen Namen der Ablage',
       aussenziele: [{ name: 'Sicherungsziel WebDAV', adresse: 'https://cloud.example.org/remote.php/dav/files/sicherung', ziel: null }, { name: 'Sicherungsziel S3', adresse: null, ziel: 'https://s3.example.net/eimer' }],
       kontakte: [{ name: 'Jonas', erreichbar: '0151 0000000' }, { name: 'Petra', erreichbar: 'petra@example.org' }],
+      // #815: mit Notfallcode und einer langen Adresse ohne https.
+      adresse: 'http://nas-im-keller.home.arpa:8080', notfallcode: 'WXYZ2345ABCDEFGHJKLMNPQRSTUV',
     });
-    for (const d of [daten(), lang]) {
+    for (const d of [daten(), daten({ notfallcode: 'WXYZ2345ABCDEFGHJKLMNPQRSTUV' }), lang]) {
       const doc = await ladePdf(await notfallblatt(d));
       assert.equal(doc.getPageCount(), 1);
       const { width, height } = doc.getPage(0).getSize();
@@ -114,6 +116,8 @@ describe('Notfallblatt (#814): Links und Inhalt', () => {
     if (hatPdftotext) {
       const text = textAus(await notfallblatt(d));
       for (const s of ['Notfallblatt', 'Ablage-Id', 'Wen fragen?', 'Etwas ist passiert?', 'https://help.ablago.app/notfall', 'Familie Beispiel']) assert.ok(text.includes(s), s);
+      const mitCode = textAus(await notfallblatt(daten({ ...d, notfallcode: 'WXYZ2345ABCDEFGHJKLMNPQRSTUV' })));
+      for (const s of ['Ausgesperrt?', 'https://ablage.example.org/notfall', 'WXYZ-2345-ABCD-EFGH-JKLM-NPQR-STUV']) assert.ok(mitCode.includes(s), s);
       assert.ok(!/\bdms\b/i.test(text.replace(inGruppen(SCHLUESSEL), '')));
     }
   });

@@ -20,7 +20,7 @@ Manche Aufgaben haben keinen einzelnen Empfänger: Aufgaben ohne Empfänger, Pos
 
 - Öffne **Werkbank → Benutzer**, ohne einen Benutzer auszuwählen. Rechts steht **Aufgaben ohne Empfänger gehen an**.
 - Wähle eine Person wie in einem Verweisfeld: Tippe den Namen und wähle ihn aus. Wählbar sind alle aktiven Benutzer. **Entfernen** und **Speichern** heißt: Man sieht sie nur im Verwaltungsmodus.
-- Vorgabe ist die **erste Person** – bei einer neuen Installation die, die Ablago einrichtet. Legst du im Einrichtungsassistenten zusätzlich einen **ersten Benutzer** an, trägt der Assistent ihn ein, sofern das Häkchen „bekommt die Aufgaben ohne Empfänger“ gesetzt bleibt (vorgeschlagen). Verwaltungsrechte bekommt dadurch niemand. Hast du einmal gespeichert – auch „niemand“ –, ändert Ablago nichts mehr von selbst.
+- Vorgabe ist die **erste Person** – bei einer neuen Installation die, die Ablago einrichtet („Dein Konto“ im Einrichtungsassistenten). Verwaltungsrechte bekommt dadurch niemand. Hast du einmal gespeichert – auch „niemand“ –, ändert Ablago nichts mehr von selbst.
 - Die gewählte Person sieht die Aufgaben unter **Zu erledigen** und in den Zahlen (auch im [Zähler-Endpunkt](api.md)), kann sie erledigen und weitergeben. Im Verwaltungsmodus sieht man sie weiterhin.
 - Ist die Person abwesend oder deaktiviert, übernimmt wie bei jeder Aufgabe ihr [Vertreter](#andern-deaktivieren-loschen). Ist sie deaktiviert, wähle am besten jemand anderen – die Werkbank weist darauf hin.
 

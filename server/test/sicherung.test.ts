@@ -127,6 +127,11 @@ describe('Sicherung (#103–#105)', () => {
     await assert.rejects(s.speicherePlan({ aktiv: true }, 'admin'), /Notfallblatt/);
     await s.notfallblattErstellt('admin');
     assert.ok((await s.notfallblatt()).aktuell);
+    // #815: Notfallcode benutzt – das Blatt gilt nicht mehr, bis ein neues heruntergeladen ist.
+    await s.notfallcodeBenutzt();
+    assert.deepEqual([(await s.notfallblatt()).aktuell, !!(await s.notfallblatt()).codeBenutzt], [false, true]);
+    await s.notfallblattErstellt('admin');
+    assert.deepEqual([(await s.notfallblatt()).aktuell, (await s.notfallblatt()).codeBenutzt, (await s.notfallblatt()).ohneCode], [true, null, false]);
     await s.speicherePlan({ aktiv: true, uhrzeit: '02:00', aufbewahrung: { taeglich: 2, woechentlich: 0, monatlich: 0 } }, 'admin');
     assert.equal(await s.tick(), 'nichts', 'noch nicht 02:00');
     jetzt = new Date('2026-10-29T01:05:00Z');
