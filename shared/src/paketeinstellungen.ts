@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Einstellungen von Paketen (#197): Das Paket beschreibt sie im Manifest (code.einstellungen,
  * code.aktionen; Format: motom001/dms-registry), das DMS baut daraus ein Formular, prüft und speichert.
@@ -6,10 +7,10 @@
  */
 
 export const EINSTELLUNG_TYPEN = {
-  text: 'Text', mehrzeilig: 'Mehrzeiliger Text', zahl: 'Zahl', janein: 'Ja/Nein', datum: 'Datum',
+  text: t('gemeinsam.paketeinstellungen.text'), mehrzeilig: t('gemeinsam.paketeinstellungen.mehrzeiliger-text'), zahl: 'Zahl', janein: 'Ja/Nein', datum: 'Datum',
   auswahl: 'Auswahl', mehrfachauswahl: 'Mehrfachauswahl', geheim: 'Geheimnis',
   mappentyp: 'Mappentyp', feld: 'Feld eines Mappentyps', benutzer: 'Benutzer', rolle: 'Rolle', sicht: 'Ansicht',
-  adresse: 'Dienst-Adresse',
+  adresse: t('gemeinsam.paketeinstellungen.dienst-adresse'),
 } as const;
 export type EinstellungTyp = keyof typeof EINSTELLUNG_TYPEN;
 const VERWEISE: EinstellungTyp[] = ['mappentyp', 'feld', 'benutzer', 'rolle', 'sicht'];
@@ -38,12 +39,12 @@ export interface ZahlVorschlag { wert: number; name: string }
 export function zahlFehler(f: Pick<EinstellungFeld, 'min' | 'max' | 'schritt'>, v: unknown): string | null {
   const roh = typeof v === 'number' ? String(v) : String(v ?? '').trim();
   const n = typeof v === 'number' ? v : /^-?\d+([.,]\d+)?$/.test(roh) ? Number(roh.replace(',', '.')) : NaN;
-  const bereich = f.min !== undefined && f.max !== undefined ? `Bitte eine Zahl zwischen ${zahlText(f.min)} und ${zahlText(f.max)}.`
-    : f.min !== undefined ? `Bitte eine Zahl ab ${zahlText(f.min)}.` : f.max !== undefined ? `Bitte eine Zahl bis ${zahlText(f.max)}.` : 'Bitte eine Zahl.';
+  const bereich = f.min !== undefined && f.max !== undefined ? t('gemeinsam.paketeinstellungen.bitte-eine-zahl-zwischen', { zahlText: zahlText(f.min), zahlText2: zahlText(f.max) })
+    : f.min !== undefined ? t('gemeinsam.paketeinstellungen.bitte-eine-zahl-ab', { zahlText: zahlText(f.min) }) : f.max !== undefined ? t('gemeinsam.paketeinstellungen.bitte-eine-zahl-bis', { zahlText: zahlText(f.max) }) : t('gemeinsam.paketeinstellungen.bitte-eine-zahl');
   if (!Number.isFinite(n)) return bereich;
   if ((f.min !== undefined && n < f.min) || (f.max !== undefined && n > f.max)) return bereich;
   if (f.schritt && Math.abs(Math.round((n - (f.min ?? 0)) / f.schritt) * f.schritt - (n - (f.min ?? 0))) > 1e-9) {
-    return f.schritt === 1 ? 'Bitte eine ganze Zahl.' : `Bitte in Schritten von ${zahlText(f.schritt)}.`;
+    return t('gemeinsam.paketeinstellungen.bitte-in-schritten-von', { anzahl: f.schritt, zahlText: zahlText(f.schritt) });
   }
   return null;
 }
@@ -56,12 +57,12 @@ const zahlText = (n: number) => String(n).replace('.', ',');
  */
 export const ADRESSE_MAX = 500;
 export function pruefeAdresse(v: string): string | null {
-  if (v.length > ADRESSE_MAX) return 'Zu lang.';
+  if (v.length > ADRESSE_MAX) return t('gemeinsam.paketeinstellungen.zu-lang');
   let u: URL;
   try { u = new URL(v); } catch { return 'Keine gültige Adresse – z. B. http://ollama:11434/v1.'; }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'Nur http:// oder https://.';
-  if (u.username || u.password) return 'Bitte ohne Zugangsdaten in der Adresse – einen Schlüssel trägst du im eigenen Feld ein.';
-  if (u.search || u.hash) return 'Bitte ohne ? und # in der Adresse.';
+  if (u.username || u.password) return t('gemeinsam.paketeinstellungen.bitte-ohne-zugangsdaten-in');
+  if (u.search || u.hash) return t('gemeinsam.paketeinstellungen.bitte-ohne-und-in');
   return null;
 }
 /** Die Einstellungen vom Typ adresse (Abschnitte). */
@@ -138,29 +139,29 @@ export function liesBeschreibung(code: unknown): { beschreibung: Einstellungsbes
     if (!istObjekt(b)) continue;
     const felder = (Array.isArray(b.felder) ? b.felder : []).map((f, j) => feld(f, `einstellungen[${i + 1}].felder[${j + 1}]`)).filter((f): f is EinstellungFeld => !!f);
     if (b.liste !== undefined) {
-      if (!SCHLUESSEL.test(str(b.liste))) fehler.push(`einstellungen[${i + 1}]: ungültiger Schlüssel der Liste.`);
+      if (!SCHLUESSEL.test(str(b.liste))) fehler.push(t('gemeinsam.paketeinstellungen.einstellungen-ungueltiger-schluessel', { wert: i + 1 }));
       einmal(str(b.liste), oben, 'einstellungen');
       const innen = new Set<string>();
       for (const f of felder) einmal(f.schluessel, innen, `Liste ${str(b.liste)}`);
-      for (const f of felder) if (f.typ === 'adresse') fehler.push(`Liste ${str(b.liste)}/${f.schluessel}: adresse geht nur in einem Abschnitt, nicht in einer Liste.`);
+      for (const f of felder) if (f.typ === 'adresse') fehler.push(t('gemeinsam.paketeinstellungen.liste-adresse-geht-nur', { str: str(b.liste), schluessel: f.schluessel }));
       bloecke.push({ art: 'liste', schluessel: str(b.liste), name: str(b.name) || str(b.liste), eintrag: str(b.eintrag) || 'Eintrag', ...(b.hilfe ? { hilfe: str(b.hilfe) } : {}), sortierbar: b.sortierbar === true, felder });
     } else {
       for (const f of felder) einmal(f.schluessel, oben, 'einstellungen');
       bloecke.push({ art: 'abschnitt', titel: str(b.abschnitt), ...(b.hilfe ? { hilfe: str(b.hilfe) } : {}), felder });
     }
   }
-  if (bloecke.flatMap((x) => (x.art === 'abschnitt' ? x.felder : [])).filter((f) => f.typ === 'adresse').length > 1) fehler.push('einstellungen: höchstens eine Einstellung vom Typ adresse je Paket.');
+  if (bloecke.flatMap((x) => (x.art === 'abschnitt' ? x.felder : [])).filter((f) => f.typ === 'adresse').length > 1) fehler.push(t('gemeinsam.paketeinstellungen.einstellungen-hoechstens-eine'));
   // schliesst_aus (#658): nur zwischen Feldern eines Abschnitts mit demselben Verweistyp.
   const oberste = bloecke.flatMap((x) => (x.art === 'abschnitt' ? x.felder : []));
   for (const x of bloecke) for (const f of x.felder) {
     if (!f.schliesstAus) continue;
     const g = oberste.find((y) => y.schluessel === f.schliesstAus);
-    if (x.art !== 'abschnitt' || !g || g === f || g.typ !== f.typ || !MEHRFACH_VERWEISE.includes(f.typ)) fehler.push(`einstellungen/${f.schluessel}: schliesst_aus „${f.schliesstAus}“ muss ein anderes Feld eines Abschnitts mit demselben Verweistyp (${MEHRFACH_VERWEISE.join(', ')}) sein.`);
+    if (x.art !== 'abschnitt' || !g || g === f || g.typ !== f.typ || !MEHRFACH_VERWEISE.includes(f.typ)) fehler.push(t('gemeinsam.paketeinstellungen.einstellungen-schliesst-aus-muss', { schluessel: f.schluessel, schliesstAus: f.schliesstAus, MEHRFACH_VERWEISE: MEHRFACH_VERWEISE.join(', ') }));
   }
   const aktionen: PaketAktion[] = [];
   const ak = new Set<string>();
   for (const a of Array.isArray(code.aktionen) ? code.aktionen : []) {
-    if (!istObjekt(a) || !SCHLUESSEL.test(str(a.schluessel))) { fehler.push('aktionen: ungültige Aktion.'); continue; }
+    if (!istObjekt(a) || !SCHLUESSEL.test(str(a.schluessel))) { fehler.push(t('gemeinsam.paketeinstellungen.aktionen-ungueltige-aktion')); continue; }
     einmal(str(a.schluessel), ak, 'aktionen');
     aktionen.push({ schluessel: str(a.schluessel), name: str(a.name) || str(a.schluessel), ...(a.hilfe ? { hilfe: str(a.hilfe) } : {}), ...(a.bestaetigen === true ? { bestaetigen: true } : {}) });
   }
@@ -253,7 +254,7 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
     if (f.typ === 'geheim') {
       if (v === null || v === undefined || v === '') return null;
       if (istObjekt(v) && v.behalten === true) return { behalten: true };
-      if (typeof v !== 'string') { fehler[pfad] = 'Ungültiger Wert.'; return null; }
+      if (typeof v !== 'string') { fehler[pfad] = t('gemeinsam.paketeinstellungen.ungueltiger-wert'); return null; }
       return v;
     }
     if (leer(v)) { if (f.pflicht) fehler[pfad] = 'Pflichtfeld.'; return f.typ === 'mehrfachauswahl' || f.mehrfach ? [] : null; }
@@ -261,18 +262,18 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
     if (f.mehrfach) {
       const l = [...new Set((Array.isArray(v) ? v : [v]).map(String))].slice(0, 500);
       const gibt = (x: string) => (f.typ === 'mappentyp' ? q.typen.some((t) => t.id === x) : f.typ === 'benutzer' ? q.benutzer.includes(x) : f.typ === 'rolle' ? q.rollen.includes(x) : q.sichten.includes(x));
-      if (l.some((x) => !gibt(x))) { fehler[pfad] = { mappentyp: 'Einen der Mappentypen gibt es nicht.', benutzer: 'Einen der Benutzer gibt es nicht.', rolle: 'Eine der Rollen gibt es nicht.', sicht: 'Eine der Ansichten gibt es nicht.' }[f.typ as 'mappentyp'] ?? 'Ungültiger Wert.'; return []; }
+      if (l.some((x) => !gibt(x))) { fehler[pfad] = { mappentyp: t('gemeinsam.paketeinstellungen.einen-der-mappentypen-gibt'), benutzer: t('gemeinsam.paketeinstellungen.einen-der-benutzer-gibt'), rolle: t('gemeinsam.paketeinstellungen.eine-der-rollen-gibt'), sicht: t('gemeinsam.paketeinstellungen.eine-der-ansichten-gibt') }[f.typ as 'mappentyp'] ?? t('gemeinsam.paketeinstellungen.ungueltiger-wert'); return []; }
       return l;
     }
     switch (f.typ) {
       case 'text': case 'mehrzeilig': {
-        if (typeof v !== 'string') { fehler[pfad] = 'Text erwartet.'; return null; }
-        if (v.length > (f.typ === 'text' ? 500 : 10000)) { fehler[pfad] = 'Zu lang.'; return null; }
+        if (typeof v !== 'string') { fehler[pfad] = t('gemeinsam.paketeinstellungen.text-erwartet'); return null; }
+        if (v.length > (f.typ === 'text' ? 500 : 10000)) { fehler[pfad] = t('gemeinsam.paketeinstellungen.zu-lang'); return null; }
         return f.typ === 'text' ? v.trim() : v;
       }
       case 'adresse': {
         const a = typeof v === 'string' ? v.trim() : '';
-        const falsch = typeof v !== 'string' ? 'Text erwartet.' : pruefeAdresse(a);
+        const falsch = typeof v !== 'string' ? t('gemeinsam.paketeinstellungen.text-erwartet') : pruefeAdresse(a);
         if (falsch) { fehler[pfad] = falsch; return null; }
         return a;
       }
@@ -283,23 +284,23 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
         return typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
       }
       case 'janein': return v === true || v === 'true';
-      case 'datum': if (typeof v !== 'string' || !DATUM.test(v) || Number.isNaN(Date.parse(v))) { fehler[pfad] = 'Kein Datum.'; return null; } return v;
-      case 'auswahl': if (!f.optionen?.includes(String(v))) { fehler[pfad] = `„${String(v)}“ steht nicht zur Auswahl.`; return null; } return String(v);
+      case 'datum': if (typeof v !== 'string' || !DATUM.test(v) || Number.isNaN(Date.parse(v))) { fehler[pfad] = t('gemeinsam.paketeinstellungen.kein-datum'); return null; } return v;
+      case 'auswahl': if (!f.optionen?.includes(String(v))) { fehler[pfad] = t('gemeinsam.paketeinstellungen.steht-nicht-zur-auswahl', { v: String(v) }); return null; } return String(v);
       case 'mehrfachauswahl': {
         const l = (Array.isArray(v) ? v : [v]).map(String);
         const falsch = l.filter((x) => !f.optionen?.includes(x));
-        if (falsch.length) { fehler[pfad] = `„${falsch[0]}“ steht nicht zur Auswahl.`; return null; }
+        if (falsch.length) { fehler[pfad] = t('gemeinsam.paketeinstellungen.steht-nicht-zur-auswahl-2', { falsch: falsch[0] }); return null; }
         return [...new Set(l)];
       }
-      case 'mappentyp': if (!q.typen.some((t) => t.id === v)) { fehler[pfad] = 'Diesen Mappentyp gibt es nicht.'; return null; } return v;
-      case 'benutzer': if (!q.benutzer.includes(String(v))) { fehler[pfad] = 'Diesen Benutzer gibt es nicht.'; return null; } return v;
-      case 'rolle': if (!q.rollen.includes(String(v))) { fehler[pfad] = 'Diese Rolle gibt es nicht.'; return null; } return v;
-      case 'sicht': if (!q.sichten.includes(String(v))) { fehler[pfad] = 'Diese Ansicht gibt es nicht.'; return null; } return v;
+      case 'mappentyp': if (!q.typen.some((t) => t.id === v)) { fehler[pfad] = t('gemeinsam.paketeinstellungen.diesen-mappentyp-gibt-es'); return null; } return v;
+      case 'benutzer': if (!q.benutzer.includes(String(v))) { fehler[pfad] = t('gemeinsam.paketeinstellungen.diesen-benutzer-gibt-es'); return null; } return v;
+      case 'rolle': if (!q.rollen.includes(String(v))) { fehler[pfad] = t('gemeinsam.paketeinstellungen.diese-rolle-gibt-es'); return null; } return v;
+      case 'sicht': if (!q.sichten.includes(String(v))) { fehler[pfad] = t('gemeinsam.paketeinstellungen.diese-ansicht-gibt-es'); return null; } return v;
       case 'feld': {
         const x = v as Partial<FeldVerweis>;
         const soll = f.mappentyp ? q.typVon(f.mappentyp) : null;
         const typ = q.typen.find((t) => t.id === x?.typ);
-        if (!typ || !typ.felder.some((g) => g.key === x?.feld) || (f.mappentyp && typ.id !== soll)) { fehler[pfad] = 'Dieses Feld gibt es nicht.'; return null; }
+        if (!typ || !typ.felder.some((g) => g.key === x?.feld) || (f.mappentyp && typ.id !== soll)) { fehler[pfad] = t('gemeinsam.paketeinstellungen.dieses-feld-gibt-es'); return null; }
         return { typ: typ.id, feld: String(x.feld) };
       }
     }
@@ -311,7 +312,7 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
   for (const f of abschnittsfelder(b)) {
     const g = f.schliesstAus ? abschnittsfelder(b).find((x) => x.schluessel === f.schliesstAus) : undefined;
     if (!g || fehler[f.schluessel]) continue;
-    if (ids(werte[f.schluessel]).some((x) => ids(werte[g.schluessel]).includes(x))) fehler[f.schluessel] = `Steht auch in „${g.name}“ – beides zugleich geht nicht.`;
+    if (ids(werte[f.schluessel]).some((x) => ids(werte[g.schluessel]).includes(x))) fehler[f.schluessel] = t('gemeinsam.paketeinstellungen.steht-auch-in-beides', { name: g.name });
   }
   for (const l of listen(b)) {
     const roh = Array.isArray(e[l.schluessel]) ? (e[l.schluessel] as unknown[]).filter(istObjekt).slice(0, 500) : [];

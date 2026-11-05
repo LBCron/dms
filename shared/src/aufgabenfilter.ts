@@ -3,10 +3,11 @@
  * „Erledigte zeigen“. Der Filter steht in der Adresse, damit sich ein Link teilen lässt.
  */
 import { AUFGABENARTEN, type Aufgabe, type Aufgabenart } from './model';
+import { t } from './texte';
 
 /** Empfänger: eine Benutzer-Id, „admins“ (an Administratoren) oder „ohne-vertretung“ (abwesend, ohne Vertreter). */
 export type Faelligkeit = 'ueberfaellig' | 'woche' | 'spaeter' | 'ohne';
-export const FAELLIGKEITEN: Record<Faelligkeit, string> = { ueberfaellig: 'überfällig', woche: 'diese Woche', spaeter: 'später', ohne: 'ohne Datum' };
+export const FAELLIGKEITEN: Record<Faelligkeit, string> = { ueberfaellig: 'überfällig', woche: t('gemeinsam.aufgabenfilter.diese-woche'), spaeter: 'später', ohne: t('gemeinsam.aufgabenfilter.ohne-datum') };
 
 export interface AufgabenFilter {
   empfaenger?: string;

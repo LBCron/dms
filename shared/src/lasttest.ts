@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Lasttest-Modus (#612): Stand der Seite im Browser und der Ergebnisblock mit Gerät und Speicher. Server
  * (server/src/lasttestmodus.ts) und Oberfläche (web/src/lasttest.tsx) nutzen dieselben Typen und dieselbe Füllung,
@@ -77,9 +78,9 @@ export function bereinigeGeraet(s: unknown): string {
  * nicht zur Oberfläche: Das Formular „Messergebnis Lasttest“ erwartet sie so.
  */
 export function fuelleErgebnis(vorlage: string, a: LasttestStand['angaben'], erkannt: LasttestStand['speicherErkannt']): string {
-  const geraet = bereinigeGeraet(a.geraet) || 'bitte ergänzen';
-  const speicher = !a.speicher ? 'bitte ergänzen (HDD/SSD/NVMe)'
-    : a.speicher === 'unbekannt' ? 'weiß nicht'
+  const geraet = bereinigeGeraet(a.geraet) || t('gemeinsam.lasttest.bitte-ergaenzen');
+  const speicher = !a.speicher ? t('gemeinsam.lasttest.bitte-ergaenzen-hdd-ssd')
+    : a.speicher === 'unbekannt' ? t('gemeinsam.lasttest.weiss-nicht')
       : a.speicher === erkannt ? `${a.speicher} (erkannt)` : a.speicher;
   return vorlage.split(PLATZHALTER.geraet).join(geraet).split(PLATZHALTER.speicher).join(speicher);
 }

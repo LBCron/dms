@@ -2,6 +2,7 @@
  * Kopf und Register einer geöffneten Mappe (#427) – als reine Funktionen, damit sie testbar sind.
  */
 import type { Aufgabe, Aufgabenart, Register } from './model';
+import { t } from './texte';
 
 /** Schlüssel des System-Registers „Notizen“ (#427); beginnt mit „_“, damit er keinem Register eines Typs gleicht. */
 export const NOTIZEN_REGISTER = '_notizen';
@@ -39,10 +40,10 @@ export function startRegister(register: AnsichtsRegister[], wunsch: string | nul
  */
 export function aufgabenBeschriftung(art: Aufgabenart, fuerMich: boolean): string {
   switch (art) {
-    case 'post': return fuerMich ? 'Post für dich' : 'Post für';
-    case 'erwaehnung': return fuerMich ? 'Du wurdest erwähnt' : 'Erwähnung für';
-    case 'erinnerung': return fuerMich ? 'Deine Erinnerung' : 'Erinnerung für';
-    case 'zugeordnet': return fuerMich ? 'Bitte prüfen' : 'Zu prüfen von';
-    default: return fuerMich ? 'Deine Aufgabe' : 'Aufgabe für';
+    case 'post': return fuerMich ? t('gemeinsam.mappenansicht.post-fuer-dich') : t('gemeinsam.mappenansicht.post-fuer');
+    case 'erwaehnung': return fuerMich ? t('gemeinsam.mappenansicht.du-wurdest-erwaehnt') : t('gemeinsam.mappenansicht.erwaehnung-fuer');
+    case 'erinnerung': return fuerMich ? t('gemeinsam.mappenansicht.deine-erinnerung') : t('gemeinsam.mappenansicht.erinnerung-fuer');
+    case 'zugeordnet': return fuerMich ? t('gemeinsam.mappenansicht.bitte-pruefen') : t('gemeinsam.mappenansicht.zu-pruefen-von');
+    default: return fuerMich ? t('gemeinsam.mappenansicht.deine-aufgabe') : t('gemeinsam.mappenansicht.aufgabe-fuer');
   }
 }

@@ -13,6 +13,7 @@
  */
 import { istIndexplatzhalter, sortierbar, istSystemspalte, vorlageFelder, wirksameVorlage, type Mappe, type Mappentyp, type Sortierung } from './model';
 import { bedingungsfelder, bedingungsProblem, beschreibeBedingung, OPERATOREN, OPERATOREN_JE_ART, type Bedingung, type Bedingungsfeld, type Einheit, type Operator, type WertAngabe } from './sichten';
+import { t } from './texte';
 
 export const LINK_PFAD = '/ablage/link';
 /** Parameter mit fester Bedeutung; gleichnamige Felder erreicht man mit „feld.operator“. */
@@ -68,33 +69,33 @@ function zahl(s: string): number | null {
 function wertAus(f: Bedingungsfeld, op: Operator, roh: string): WertAngabe | string {
   const s = roh.trim();
   const name = `„${f.label}“`;
-  if (!s) return `Bei ${name} fehlt der Wert.`;
+  if (!s) return t('gemeinsam.direktlink.bei-fehlt-der-wert', { name });
   if (op === 'imZeitraum') {
     const m = ZEITRAUM.exec(s);
-    if (!m) return `Bei ${name} „im Zeitraum“ geht nur jahr oder monat, z. B. jahr-1 oder monat.`;
+    if (!m) return t('gemeinsam.direktlink.bei-im-zeitraum-geht', { name });
     return { art: m[1].toLowerCase() as 'jahr' | 'monat', versatz: versatz(m[2], m[3]) };
   }
   if (NUR_ICH.includes(f.art)) {
     if (s.toLowerCase() === 'ich') return { art: 'ich' };
-    return `${name} ist ein Verweis: Im Link geht dort nur „ich“ oder .leer bzw. .nichtLeer.`;
+    return t('gemeinsam.direktlink.ist-ein-verweis-im', { name });
   }
   switch (f.art) {
     case 'datum': case 'zeit': {
       const h = HEUTE.exec(s);
       if (h) return { art: 'heute', versatz: versatz(h[1], h[2]), einheit: h[3] ? EINHEITEN_IM_LINK[h[3].toLowerCase()] : 'tage' };
       const d = datum(s);
-      return d ? { art: 'fest', wert: d } : `„${s}“ ist kein Datum für ${name} (z. B. 2026-03-31, 31.03.2026 oder heute-30tage).`;
+      return d ? { art: 'fest', wert: d } : t('gemeinsam.direktlink.ist-kein-datum-fuer', { s, name });
     }
     case 'zahl': case 'betrag': {
       const n = zahl(s);
-      return n === null ? `„${s}“ ist keine Zahl für ${name}.` : { art: 'fest', wert: n };
+      return n === null ? t('gemeinsam.direktlink.ist-keine-zahl-fuer', { s, name }) : { art: 'fest', wert: n };
     }
     case 'auswahl': {
       const optionen = f.feld?.optionen ?? [];
       const gewaehlt: string[] = [];
       for (const teil of s.split(',').map((x) => x.trim()).filter(Boolean)) {
         const o = optionen.find((x) => x.toLowerCase() === teil.toLowerCase());
-        if (!o) return `„${teil}“ gibt es in der Auswahlliste ${name} nicht${optionen.length ? ` (möglich: ${optionen.join(', ')})` : ''}.`;
+        if (!o) return t('gemeinsam.direktlink.gibt-es-in-der', { teil, name, wert: optionen.length ? t('gemeinsam.direktlink.moeglich', { optionen: optionen.join(', ') }) : '' });
         gewaehlt.push(o);
       }
       return { art: 'fest', wert: gewaehlt };
@@ -110,7 +111,7 @@ function standardOperator(f: Bedingungsfeld, wert: string): { op: Operator; ohne
       const w = wert.trim().toLowerCase();
       if (['ja', 'true', '1'].includes(w)) return { op: 'ja', ohneWert: true };
       if (['nein', 'false', '0'].includes(w)) return { op: 'nein', ohneWert: true };
-      return `Bei „${f.label}“ geht nur ja oder nein.`;
+      return t('gemeinsam.direktlink.bei-geht-nur-ja', { label: f.label });
     }
     case 'auswahl': return { op: 'einerVon' };
     case 'langtext': case 'formatiert': return { op: 'enthaelt' };
@@ -131,9 +132,9 @@ export function typImLink(name: string, typen: Mappentyp[]): Mappentyp | undefin
 export function liesDirektlink(parameter: Linkparameter, typen: Mappentyp[]): Linkergebnis {
   const fehler: string[] = [];
   const typName = parameter.get('typ');
-  if (!typName?.trim()) return { ok: false, fehler: ['Im Link fehlt der Mappentyp, z. B. typ=Rechnung.'] };
+  if (!typName?.trim()) return { ok: false, fehler: [t('gemeinsam.direktlink.im-link-fehlt-der')] };
   const typ = typImLink(typName, typen);
-  if (!typ) return { ok: false, fehler: [`Den Mappentyp „${typName.trim()}“ gibt es nicht.`] };
+  if (!typ) return { ok: false, fehler: [t('gemeinsam.direktlink.den-mappentyp-gibt-es', { typName: typName.trim() })] };
   const felder = bedingungsfelder([typ]);
   const bedingungen: Bedingung[] = [];
   let sortierung: Sortierung | null = null;
@@ -144,21 +145,21 @@ export function liesDirektlink(parameter: Linkparameter, typen: Mappentyp[]): Li
       const absteigend = wert.trim().startsWith('-');
       const spalte = wert.trim().replace(/^[-+]/, '').trim() || '_titel';
       if ((!istSystemspalte(spalte) && !typ.felder.some((f) => f.key === spalte)) || !sortierbar(spalte, typ) || spalte === '_typ') {
-        fehler.push(`Nach „${spalte}“ lässt sich ${typ.felder.some((f) => f.key === spalte) ? 'nicht sortieren' : `nicht sortieren – das Feld gibt es bei ${typ.name} nicht`}.`);
+        fehler.push(t('gemeinsam.direktlink.nach-laesst-sich', { spalte, wert: typ.felder.some((f) => f.key === spalte) ? t('gemeinsam.direktlink.nicht-sortieren') : t('gemeinsam.direktlink.nicht-sortieren-das-feld', { name: typ.name }) }));
       } else sortierung = spalte === '_titel' && !absteigend ? null : { spalte, absteigend };
       continue;
     }
     const teile = schluessel.split('.');
-    if (teile.length > 2 || !teile[0]) { fehler.push(`„${schluessel}“ versteht Ablago nicht; erwartet ist feld oder feld.operator.`); continue; }
+    if (teile.length > 2 || !teile[0]) { fehler.push(t('gemeinsam.direktlink.versteht-ablago-nicht-erwartet', { schluessel })); continue; }
     const [feldKey, opName] = teile;
     const f = felder.find((x) => x.key === feldKey);
-    if (!f) { fehler.push(`Feld „${feldKey}“ gibt es bei ${typ.name} nicht.`); continue; }
-    if (f.art === 'passwort') { fehler.push(`Nach dem Passwortfeld „${f.label}“ lässt sich nicht suchen.`); continue; }
+    if (!f) { fehler.push(t('gemeinsam.direktlink.feld-gibt-es-bei', { feldKey, name: typ.name })); continue; }
+    if (f.art === 'passwort') { fehler.push(t('gemeinsam.direktlink.nach-dem-passwortfeld-laesst', { label: f.label })); continue; }
     let op: Operator;
     let ohneWert = false;
     if (opName !== undefined) {
       const o = OPERATOR_NAMEN.get(opName.toLowerCase());
-      if (!o) { fehler.push(`Den Operator „${opName}“ gibt es nicht (möglich: ${Object.keys(OPERATOREN).join(', ')}).`); continue; }
+      if (!o) { fehler.push(t('gemeinsam.direktlink.den-operator-gibt-es', { opName, keys: Object.keys(OPERATOREN).join(', ') })); continue; }
       op = o; ohneWert = OHNE_WERT.includes(o);
     } else {
       const s = standardOperator(f, wert);
@@ -166,7 +167,7 @@ export function liesDirektlink(parameter: Linkparameter, typen: Mappentyp[]): Li
       op = s.op; ohneWert = !!s.ohneWert;
     }
     if (!OPERATOREN_JE_ART[f.art].includes(op)) {
-      fehler.push(`„${OPERATOREN[op]}“ passt nicht zum Feld „${f.label}“ (möglich: ${OPERATOREN_JE_ART[f.art].join(', ')}).`);
+      fehler.push(t('gemeinsam.direktlink.passt-nicht-zum-feld', { OPERATOREN: OPERATOREN[op], label: f.label, OPERATOREN_JE_ART: OPERATOREN_JE_ART[f.art].join(', ') }));
       continue;
     }
     if (NUR_ICH.includes(f.art) && !ohneWert && op !== 'zeigtAuf') { fehler.push(`${f.label}: nicht möglich.`); continue; }
@@ -174,7 +175,7 @@ export function liesDirektlink(parameter: Linkparameter, typen: Mappentyp[]): Li
     if (!ohneWert) {
       if (op === 'zwischen' || op === 'ausserhalb') {
         const [von, bis, ...mehr] = wert.split('..');
-        if (bis === undefined || mehr.length) { fehler.push(`Bei „${f.label}“ ${OPERATOREN[op]} gehören zwei Werte mit .. dazwischen, z. B. 2026-01-01..2026-03-31.`); continue; }
+        if (bis === undefined || mehr.length) { fehler.push(t('gemeinsam.direktlink.bei-gehoeren-zwei-werte', { label: f.label, OPERATOREN: OPERATOREN[op] })); continue; }
         const a = wertAus(f, op, von); const z = wertAus(f, op, bis);
         if (typeof a === 'string' || typeof z === 'string') { fehler.push([a, z].filter((x) => typeof x === 'string').join(' ')); continue; }
         b.wert = a; b.bis = z;

@@ -5,6 +5,7 @@
  */
 import type { Mappe } from './model';
 import { datumsformat } from './region';
+import { t } from './texte';
 
 export interface Archiv {
   /** Aufbewahrungsfrist in Jahren. */
@@ -15,10 +16,10 @@ export interface Archiv {
 
 /** Vorschläge mit Begründung (Stand 2025). */
 export const FRISTEN = [
-  { jahre: 2, text: 'Handwerkerrechnungen privat (§ 14b UStG)' },
-  { jahre: 6, text: 'Geschäftsbriefe' },
-  { jahre: 8, text: 'Buchungsbelege (seit 2025)' },
-  { jahre: 10, text: 'Bücher und Aufzeichnungen' },
+  { jahre: 2, text: t('gemeinsam.archiv.handwerkerrechnungen-privat-14b-ustg') },
+  { jahre: 6, text: t('gemeinsam.archiv.geschaeftsbriefe') },
+  { jahre: 8, text: t('gemeinsam.archiv.buchungsbelege-seit-2025') },
+  { jahre: 10, text: t('gemeinsam.archiv.buecher-und-aufzeichnungen') },
 ] as const;
 export const JAHRE_MAX = 30;
 

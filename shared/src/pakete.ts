@@ -7,6 +7,8 @@ import { DMS_PAKET_VOLLTEXT_AB, VOLLTEXT_TYPEN_MAX } from './paketvolltext';
 import { ARCHIV_TYPEN_MAX, DMS_ARCHIVFASSUNG_AB } from './archivfassung';
 import type { Hilfeort } from './hilfe';
 import type { PaketKatalogArt, VERALTETE_EREIGNISSE } from './ereignisse';
+import { t } from './texte';
+import { gebietsschema } from './sprache';
 
 /** Der offizielle Katalog (Branch gh-pages der Registry). */
 export const OFFIZIELLER_KATALOG = 'https://catalog.ablago.app/katalog.json';
@@ -77,11 +79,11 @@ export function liesErgaenzt(v: unknown, abhaengigkeiten: Record<string, unknown
   if (!roh) return { ergaenzt: null, fehler: ['ergaenzt: der Name eines Pakets oder { paket, gruppe }.'] };
   const fehler: string[] = [];
   const paket = typeof roh.paket === 'string' ? roh.paket : '';
-  if (!PAKET_ID.test(paket)) fehler.push('ergaenzt: ungültige Paket-Id.');
-  else if (!(paket in abhaengigkeiten)) fehler.push(`ergaenzt: „${paket}“ muss auch unter abhaengigkeiten stehen.`);
+  if (!PAKET_ID.test(paket)) fehler.push(t('gemeinsam.pakete.ergaenzt-ungueltige-paket-id'));
+  else if (!(paket in abhaengigkeiten)) fehler.push(t('gemeinsam.pakete.ergaenzt-muss-auch-unter', { paket }));
   const gruppe = roh.gruppe === undefined ? undefined : typeof roh.gruppe === 'string' ? roh.gruppe.trim() : null;
-  if (gruppe === null || (gruppe !== undefined && (!gruppe || gruppe.length > ERGAENZUNG_GRUPPE_MAX))) fehler.push(`ergaenzt.gruppe: ein Text mit höchstens ${ERGAENZUNG_GRUPPE_MAX} Zeichen, z. B. „Weitere Sprachen“.`);
-  for (const k of Object.keys(roh)) if (k !== 'paket' && k !== 'gruppe') fehler.push(`ergaenzt: „${k}“ gibt es nicht (nur paket und gruppe).`);
+  if (gruppe === null || (gruppe !== undefined && (!gruppe || gruppe.length > ERGAENZUNG_GRUPPE_MAX))) fehler.push(t('gemeinsam.pakete.ergaenzt-gruppe-ein-text', { ERGAENZUNG_GRUPPE_MAX }));
+  for (const k of Object.keys(roh)) if (k !== 'paket' && k !== 'gruppe') fehler.push(t('gemeinsam.pakete.ergaenzt-gibt-es-nicht', { k }));
   return fehler.length ? { ergaenzt: null, fehler } : { ergaenzt: { paket, ...(gruppe ? { gruppe } : {}) }, fehler };
 }
 
@@ -268,15 +270,15 @@ export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: s
     const schon = plan.get(id);
     if (schon) {
       if (von && !schon.fuer.includes(von)) schon.fuer.push(von);
-      if (bereich && !passt(schon.version, bereich)) probleme.push(`„${name(von ?? id)}“ braucht „${schon.name}“ ${bereich}, gewählt ist ${schon.version}.`);
+      if (bereich && !passt(schon.version, bereich)) probleme.push(t('gemeinsam.pakete.braucht-gewaehlt-ist', { name: name(von ?? id), name2: schon.name, bereich, version: schon.version }));
       return;
     }
     const kp = k.pakete.find((p) => p.id === id);
-    if (!kp) { probleme.push(`„${name(von ?? id)}“ braucht „${id}“ – das gibt es im Katalog nicht.`); return; }
+    if (!kp) { probleme.push(t('gemeinsam.pakete.braucht-das-gibt-es', { name: name(von ?? id), id })); return; }
     const fest = !von ? versionen[id] : undefined;
     const v = [...kp.versionen].sort((a, b) => vergleicheVersion(b.version, a.version)).find((x) => (fest ? x.version === fest : !bereich || passt(x.version, bereich)) && dmsPasst(dms, x.dms));
     if (!v) {
-      probleme.push(von ? `„${name(von)}“ braucht „${kp.name}“ ${bereich}; dazu passt keine Version für Ablago ${dms}.` : `„${kp.name}“: keine Version passt zu Ablago ${dms}.`);
+      probleme.push(von ? t('gemeinsam.pakete.braucht-dazu-passt-keine', { name: name(von), name2: kp.name, bereich: String(bereich), dms }) : t('gemeinsam.pakete.keine-version-passt-zu', { name: kp.name, dms }));
       return;
     }
     plan.set(id, { id, name: kp.name, version: v.version, code: v.code, gewaehlt: !von, fuer: von ? [von] : [], abhaengigkeiten: v.abhaengigkeiten, ...(v.ergaenzt ? { ergaenzt: v.ergaenzt } : {}) });
@@ -288,7 +290,7 @@ export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: s
   }
   const liste = [...plan.values()];
   const geordnet = nachAbhaengigkeiten(liste);
-  if (!geordnet) probleme.push('Die Abhängigkeiten der gewählten Pakete bilden einen Kreis.');
+  if (!geordnet) probleme.push(t('gemeinsam.pakete.die-abhaengigkeiten-der-gewaehlten'));
   return { pakete: geordnet ?? liste, probleme };
 }
 
@@ -338,42 +340,42 @@ export function liesKatalog(j: unknown): Katalog {
 
 /** Herkunft lesbar, z. B. „offizieller Katalog“ oder „hochgeladen von … am …“. */
 export function herkunftText(h: Herkunft, person: (id: string | null) => string = (x) => x ?? '–'): string {
-  if (h.art === 'katalog') return h.url === OFFIZIELLER_KATALOG ? 'offizieller Katalog' : `Katalog ${h.url}`;
-  return `hochgeladen von ${person(h.von)} am ${new Date(h.am).toLocaleDateString('de-DE')}`;
+  if (h.art === 'katalog') return h.url === OFFIZIELLER_KATALOG ? t('gemeinsam.pakete.offizieller-katalog') : t('gemeinsam.pakete.katalog', { url: h.url });
+  return t('gemeinsam.pakete.hochgeladen-von-am', { person: person(h.von), datum: new Date(h.am).toLocaleDateString(gebietsschema()) });
 }
 
 /* ---------- Pakete mit Code (#338) ---------- */
 
 /** Volltext von einem Paket: so beginnt ocr.info; die eingebaute Texterkennung lässt ihn stehen. */
-export const PAKET_TEXT = 'Texterkennung durch Paket ';
+export const PAKET_TEXT = t('gemeinsam.pakete.texterkennung-durch-paket');
 /** Volltext von einem Paket mit `dms:volltext` (#614): ausgelesen, nicht erkannt (Frage 49) – gilt intern ebenso als „vom Paket“. */
-export const PAKET_VOLLTEXT = 'Volltext durch Paket ';
+export const PAKET_VOLLTEXT = t('gemeinsam.pakete.volltext-durch-paket');
 /** Stammt der Volltext (ocr.info) von einem Paket – erkannt oder ausgelesen? */
 export const istPaketText = (info: string | null | undefined) => !!info && (info.startsWith(PAKET_TEXT) || info.startsWith(PAKET_VOLLTEXT));
 
 /** Was ein Paket mit Dokumenten darf. */
 export type DokumentRecht = 'keine' | 'lesen' | 'schreiben';
-export const DOKUMENT_RECHTE: Record<DokumentRecht, string> = { keine: 'keine Dokumente', lesen: 'Dokumente lesen', schreiben: 'Dokumente lesen und Volltext schreiben' };
+export const DOKUMENT_RECHTE: Record<DokumentRecht, string> = { keine: t('gemeinsam.pakete.keine-dokumente'), lesen: t('gemeinsam.pakete.dokumente-lesen'), schreiben: t('gemeinsam.pakete.dokumente-lesen-und-volltext') };
 /**
  * Ereignisse, die ein Paket abonnieren kann (nicht blockierend, mit Wiederholung) – genau die des gemeinsamen
  * Ereigniskatalogs mit `paket: true` (shared/src/ereignisse.ts, #724) und die veralteten Namen im Übergang.
  */
 export const EREIGNISSE = {
-  'post.angelegt': 'Neue Post ist angelegt',
-  'dokument.hochgeladen': 'Ein Dokument wurde hochgeladen',
-  'texterkennung.fertig': 'Die Texterkennung eines Dokuments ist fertig (veraltet, wie „Volltext fertig“)',
-  'volltext.fertig': 'Der Volltext eines Dokuments ist fertig (auch ohne Text)',
-  'paket.einstellungen_geaendert': 'Die Einstellungen des Pakets wurden geändert',
-  'datei.umwandeln': 'Eine Datei soll umgewandelt werden (Dateitypen, die Ablago nicht selbst liest)',
-  'sicherung.fertig': 'Eine Sicherung ist fertig (verschlüsselt) und kann außer Haus kopiert werden',
-  'datei.volltext': 'Eine Datei braucht ihren Volltext (Dateitypen, die Ablago nicht selbst liest)',
-  'datei.archivfassung': 'Ein Dokument mit fertigem Volltext braucht seine Archivfassung (PDF/A)',
+  'post.angelegt': t('gemeinsam.pakete.neue-post-ist-angelegt'),
+  'dokument.hochgeladen': t('gemeinsam.pakete.ein-dokument-wurde-hochgeladen'),
+  'texterkennung.fertig': t('gemeinsam.pakete.die-texterkennung-eines-dokuments'),
+  'volltext.fertig': t('gemeinsam.pakete.der-volltext-eines-dokuments'),
+  'paket.einstellungen_geaendert': t('gemeinsam.pakete.die-einstellungen-des-pakets'),
+  'datei.umwandeln': t('gemeinsam.pakete.eine-datei-soll-umgewandelt'),
+  'sicherung.fertig': t('gemeinsam.pakete.eine-sicherung-ist-fertig'),
+  'datei.volltext': t('gemeinsam.pakete.eine-datei-braucht-ihren'),
+  'datei.archivfassung': t('gemeinsam.pakete.ein-dokument-mit-fertigem'),
   // Mappen-Ereignisse aus dem Ereigniskatalog (#670, shared/src/ereignisse.ts): nur zu Typen unter code.mappentypen (#686: auch fremde).
-  'mappe.angelegt': 'Eine Mappe ist angelegt',
-  'mappe.geaendert': 'Eine Mappe ist geändert (mit den Schlüsseln der geänderten Felder)',
-  'mappe.geloescht': 'Eine Mappe ist gelöscht (Papierkorb)',
-  'mappe.wiederhergestellt': 'Eine Mappe ist aus dem Papierkorb zurück',
-  'frist.erreicht': 'Eine Frist ist erreicht (zur Erinnerung und am Tag selbst)',
+  'mappe.angelegt': t('gemeinsam.pakete.eine-mappe-ist-angelegt'),
+  'mappe.geaendert': t('gemeinsam.pakete.eine-mappe-ist-geaendert'),
+  'mappe.geloescht': t('gemeinsam.pakete.eine-mappe-ist-geloescht'),
+  'mappe.wiederhergestellt': t('gemeinsam.pakete.eine-mappe-ist-aus'),
+  'frist.erreicht': t('gemeinsam.pakete.eine-frist-ist-erreicht'),
 } as const satisfies Record<PaketKatalogArt | keyof typeof VERALTETE_EREIGNISSE, string>;
 /** Ereignisse zu Mappen (#670): brauchen code.mappentypen, gelten nur für diese Typen (seit #686 auch fremde). */
 export const MAPPEN_EREIGNISSE: readonly EreignisArt[] = ['mappe.angelegt', 'mappe.geaendert', 'mappe.geloescht', 'mappe.wiederhergestellt', 'frist.erreicht'];
@@ -387,14 +389,14 @@ export type EreignisArt = keyof typeof EREIGNISSE;
  * Der Kern rechnet dabei nichts selbst: Er speichert und vergleicht nur, was das Paket liefert.
  */
 export const SCHNITTSTELLEN = {
-  'dms:vektoren': 'Vektoren zu Dokumenten speichern und ähnliche Dokumente finden',
-  'dms:antworten': 'Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die Ablago mitgibt',
-  'dms:erkennen': 'Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den Ablago mitgibt',
-  'dms:texterkennung': 'Texterkennung für Scans und Bilder übernehmen – Ablago meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt',
-  'dms:umwandeln': 'Dateien umwandeln, die Ablago nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert',
-  'dms:sicherung-lesen': 'Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte)',
-  'dms:volltext': 'Volltext für Dateien liefern, die Ablago nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht',
-  'dms:archivfassung': 'Archivfassung (PDF/A) ablegen – das Paket liest Dokumente mit ihrem Volltext und den Wortpositionen und legt daneben ein durchsuchbares PDF/A ab; das Original bleibt unverändert, ändern, ersetzen oder löschen kann es nichts',
+  'dms:vektoren': t('gemeinsam.pakete.vektoren-zu-dokumenten-speichern'),
+  'dms:antworten': t('gemeinsam.pakete.fragen-an-die-ablage'),
+  'dms:erkennen': t('gemeinsam.pakete.felder-aus-dokumenten-vorschlagen'),
+  'dms:texterkennung': t('gemeinsam.pakete.texterkennung-fuer-scans-und'),
+  'dms:umwandeln': t('gemeinsam.pakete.dateien-umwandeln-die-ablago'),
+  'dms:sicherung-lesen': t('gemeinsam.pakete.die-verschluesselte-sicherung-lesen'),
+  'dms:volltext': t('gemeinsam.pakete.volltext-fuer-dateien-liefern'),
+  'dms:archivfassung': t('gemeinsam.pakete.archivfassung-pdf-a-ablegen'),
 } as const;
 export type Schnittstelle = keyof typeof SCHNITTSTELLEN;
 /** Ab dieser Version kennt das DMS `code.rechte.schnittstellen` und das Ereignis `volltext.fertig` (#442). */
@@ -525,89 +527,89 @@ export function legtEtwasAn(v: { typen: Array<{ vorhanden: boolean; geloescht?: 
 export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: number }> = []): { code: PaketCode | null; fehler: string[] } {
   const fehler: string[] = [];
   const summe = dateien.filter((d) => d.name.startsWith('code/')).reduce((n, d) => n + d.groesse, 0);
-  if (summe > CODE_MAX) fehler.push(`code/: Die Dateien unter code/ sind zusammen ${(summe / 1048576).toFixed(1).replace('.', ',')} MB groß – erlaubt sind höchstens ${CODE_MAX / 1048576} MB je Paket (modul.wasm, daten/ und Quellcode).`);
+  if (summe > CODE_MAX) fehler.push(t('gemeinsam.pakete.code-die-dateien-unter', { replace: (summe / 1048576).toFixed(1).replace('.', ','), wert: CODE_MAX / 1048576 }));
   if (c === undefined || c === null) return { code: null, fehler };
-  if (typeof c !== 'object' || Array.isArray(c)) return { code: null, fehler: ['code: muss ein Objekt sein.'] };
+  if (typeof c !== 'object' || Array.isArray(c)) return { code: null, fehler: [t('gemeinsam.pakete.code-muss-ein-objekt')] };
   const x = c as Record<string, unknown>;
   const sprache = String(x.sprache ?? '');
-  if (!SPRACHEN.includes(sprache)) fehler.push(`code.sprache: eine von ${SPRACHEN.join(', ')}.`);
+  if (!SPRACHEN.includes(sprache)) fehler.push(t('gemeinsam.pakete.code-sprache-eine-von', { SPRACHEN: SPRACHEN.join(', ') }));
   const liste = (v: unknown, wo: string): string[] => {
     if (v === undefined) return [];
     if (!Array.isArray(v) || v.some((y) => typeof y !== 'string')) { fehler.push(`${wo}: Liste von Texten erwartet.`); return []; }
     return [...new Set(v as string[])];
   };
   const ereignisse = liste(x.ereignisse, 'code.ereignisse');
-  for (const e of ereignisse) if (!(e in EREIGNISSE)) fehler.push(`code.ereignisse: „${e}“ gibt es nicht. Möglich: ${Object.keys(EREIGNISSE).join(', ')}.`);
+  for (const e of ereignisse) if (!(e in EREIGNISSE)) fehler.push(t('gemeinsam.pakete.code-ereignisse-gibt-es', { e, keys: Object.keys(EREIGNISSE).join(', ') }));
   // Mappen-Ereignisse (#670): nur zu den Typen unter code.mappentypen (eigene Typen des Pakets, ohne Präfix).
   const mappentypen = liste(x.mappentypen, 'code.mappentypen');
   const mitMappen = ereignisse.filter((e) => MAPPEN_EREIGNISSE.includes(e as EreignisArt));
   // Fremde Mappentypen (#686): wie in code.rechte (paket:typ, dms:post …) oder „*“ für alle, die das Paket lesen darf.
-  for (const k of mappentypen) if (!TYPVERWEIS_ODER_ALLE.test(k)) fehler.push(`code.mappentypen: „${k}“ – Schlüssel eines eigenen Mappentyps, Verweis wie paket:typ bzw. dms:post oder „*“ für alle, die das Paket lesen darf.`);
-  if (mitMappen.length && !mappentypen.length) fehler.push(`code.ereignisse: ${mitMappen.join(', ')} braucht code.mappentypen – die Mappentypen, zu denen das Paket die Ereignisse bekommt.`);
-  if (!mitMappen.length && mappentypen.length) fehler.push('code.mappentypen: nur mit Mappen-Ereignissen in code.ereignisse (mappe.angelegt, mappe.geaendert, mappe.geloescht, mappe.wiederhergestellt, frist.erreicht).');
+  for (const k of mappentypen) if (!TYPVERWEIS_ODER_ALLE.test(k)) fehler.push(t('gemeinsam.pakete.code-mappentypen-schluessel-eines', { k }));
+  if (mitMappen.length && !mappentypen.length) fehler.push(t('gemeinsam.pakete.code-ereignisse-braucht-code', { mitMappen: mitMappen.join(', ') }));
+  if (!mitMappen.length && mappentypen.length) fehler.push(t('gemeinsam.pakete.code-mappentypen-nur-mit'));
   const r = (x.rechte ?? {}) as Record<string, unknown>;
-  if (typeof r !== 'object' || Array.isArray(r)) fehler.push('code.rechte: muss ein Objekt sein.');
+  if (typeof r !== 'object' || Array.isArray(r)) fehler.push(t('gemeinsam.pakete.code-rechte-muss-ein'));
   const lesen = liste(r.lesen, 'code.rechte.lesen'), schreiben = liste(r.schreiben, 'code.rechte.schreiben');
-  for (const t of [...lesen, ...schreiben]) if (!TYPVERWEIS_ODER_ALLE.test(t)) fehler.push(`code.rechte: „${t}“ ist kein gültiger Mappentyp-Verweis.`);
+  for (const text2 of [...lesen, ...schreiben]) if (!TYPVERWEIS_ODER_ALLE.test(text2)) fehler.push(t('gemeinsam.pakete.code-rechte-ist-kein', { t: text2 }));
   // Benutzer sehen Pakete nie (auch nicht mit "*"), siehe Handbuch „Pakete mit Code“.
-  for (const t of [...lesen, ...schreiben]) if (t === 'dms:benutzer') fehler.push('code.rechte: dms:benutzer ist für Pakete nicht erlaubt – Pakete sehen keine Benutzer.');
-  else if (t.startsWith('dms:') && !DMS_RECHTE_TYPEN[t.slice(4)]) fehler.push(`code.rechte: „${t}“ – diesen Mappentyp bringt Ablago nicht mit. Erlaubt sind ${Object.keys(DMS_RECHTE_TYPEN).map((k) => `dms:${k}`).join(', ')}.`);
+  for (const text2 of [...lesen, ...schreiben]) if (text2 === 'dms:benutzer') fehler.push(t('gemeinsam.pakete.code-rechte-dms-benutzer'));
+  else if (text2.startsWith('dms:') && !DMS_RECHTE_TYPEN[text2.slice(4)]) fehler.push(t('gemeinsam.pakete.code-rechte-diesen-mappentyp', { t: text2, map: Object.keys(DMS_RECHTE_TYPEN).map((k) => `dms:${k}`).join(', ') }));
   const dokumente = (r.dokumente ?? 'keine') as DokumentRecht;
-  if (!(dokumente in DOKUMENT_RECHTE)) fehler.push('code.rechte.dokumente: keine, lesen oder schreiben.');
+  if (!(dokumente in DOKUMENT_RECHTE)) fehler.push(t('gemeinsam.pakete.code-rechte-dokumente-keine'));
   // Schnittstellen des Kerns (#442), z. B. dms:vektoren; Vektoren gibt es nur zu Dokumenten, die das Paket lesen darf.
   const schnittstellen = liste(r.schnittstellen, 'code.rechte.schnittstellen');
-  for (const s of schnittstellen) if (!(s in SCHNITTSTELLEN)) fehler.push(`code.rechte.schnittstellen: „${s}“ gibt es nicht. Möglich: ${Object.keys(SCHNITTSTELLEN).join(', ')}.`);
-  if (schnittstellen.includes('dms:vektoren') && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:vektoren braucht auch code.rechte.dokumente: lesen – Vektoren gehören zu Dokumenten.');
+  for (const s of schnittstellen) if (!(s in SCHNITTSTELLEN)) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-gibt', { s, keys: Object.keys(SCHNITTSTELLEN).join(', ') }));
+  if (schnittstellen.includes('dms:vektoren') && dokumente === 'keine') fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms'));
   // Dateien umwandeln (#577): zuständige Dateitypen, nur mit dms:umwandeln, Lesen von Dokumenten und dem Ereignis.
   const umwandeln = liste(x.umwandeln, 'code.umwandeln').map((m) => m.toLowerCase());
   const willUmwandeln = schnittstellen.includes('dms:umwandeln');
   for (const m of umwandeln) {
-    if (!MIME.test(m)) fehler.push(`code.umwandeln: „${m}“ ist kein Dateityp (z. B. image/tiff).`);
-    else if (kernTyp(m)) fehler.push(`code.umwandeln: ${dateitypName(m)} (${m}) liest Ablago selbst – umwandeln lassen sich nur andere Dateitypen.`);
+    if (!MIME.test(m)) fehler.push(t('gemeinsam.pakete.code-umwandeln-ist-kein', { m }));
+    else if (kernTyp(m)) fehler.push(t('gemeinsam.pakete.code-umwandeln-liest-ablago', { dateitypName: dateitypName(m), m }));
   }
-  if (umwandeln.length > UMWANDELN_TYPEN_MAX) fehler.push(`code.umwandeln: höchstens ${UMWANDELN_TYPEN_MAX} Dateitypen.`);
-  if (willUmwandeln && !umwandeln.length) fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht code.umwandeln – die Dateitypen, die das Paket umwandelt.');
-  if (!willUmwandeln && umwandeln.length) fehler.push('code.umwandeln: braucht code.rechte.schnittstellen: [dms:umwandeln].');
-  if (willUmwandeln && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht auch code.rechte.dokumente: lesen – das Paket liest die Originaldatei.');
-  if (willUmwandeln && !ereignisse.includes('datei.umwandeln')) fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht das Ereignis datei.umwandeln in code.ereignisse.');
-  if (!willUmwandeln && ereignisse.includes('datei.umwandeln')) fehler.push('code.ereignisse: datei.umwandeln gibt es nur mit code.rechte.schnittstellen: [dms:umwandeln].');
+  if (umwandeln.length > UMWANDELN_TYPEN_MAX) fehler.push(t('gemeinsam.pakete.code-umwandeln-hoechstens-dateitypen', { UMWANDELN_TYPEN_MAX }));
+  if (willUmwandeln && !umwandeln.length) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-2'));
+  if (!willUmwandeln && umwandeln.length) fehler.push(t('gemeinsam.pakete.code-umwandeln-braucht-code'));
+  if (willUmwandeln && dokumente === 'keine') fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-3'));
+  if (willUmwandeln && !ereignisse.includes('datei.umwandeln')) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-4'));
+  if (!willUmwandeln && ereignisse.includes('datei.umwandeln')) fehler.push(t('gemeinsam.pakete.code-ereignisse-datei-umwandeln'));
   // Volltext aus Paketen (#614): wie beim Umwandeln – zuständige Dateitypen, nur mit dms:volltext, Lesen und dem Ereignis.
   const volltext = liste(x.volltext, 'code.volltext').map((m) => m.toLowerCase());
   const willVolltext = schnittstellen.includes('dms:volltext');
   for (const m of volltext) {
-    if (!MIME.test(m)) fehler.push(`code.volltext: „${m}“ ist kein Dateityp (z. B. application/msword).`);
-    else if (kernTyp(m)) fehler.push(`code.volltext: ${dateitypName(m)} (${m}) liest Ablago selbst – Volltext aus Paketen gibt es nur für andere Dateitypen (Scans erkennt dms:texterkennung).`);
+    if (!MIME.test(m)) fehler.push(t('gemeinsam.pakete.code-volltext-ist-kein', { m }));
+    else if (kernTyp(m)) fehler.push(t('gemeinsam.pakete.code-volltext-liest-ablago', { dateitypName: dateitypName(m), m }));
   }
-  if (volltext.length > VOLLTEXT_TYPEN_MAX) fehler.push(`code.volltext: höchstens ${VOLLTEXT_TYPEN_MAX} Dateitypen.`);
-  if (willVolltext && !volltext.length) fehler.push('code.rechte.schnittstellen: dms:volltext braucht code.volltext – die Dateitypen, für die das Paket den Volltext liefert.');
-  if (!willVolltext && volltext.length) fehler.push('code.volltext: braucht code.rechte.schnittstellen: [dms:volltext].');
-  if (willVolltext && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:volltext braucht auch code.rechte.dokumente: lesen – das Paket liest die Datei.');
-  if (willVolltext && !ereignisse.includes('datei.volltext')) fehler.push('code.rechte.schnittstellen: dms:volltext braucht das Ereignis datei.volltext in code.ereignisse.');
-  if (!willVolltext && ereignisse.includes('datei.volltext')) fehler.push('code.ereignisse: datei.volltext gibt es nur mit code.rechte.schnittstellen: [dms:volltext].');
+  if (volltext.length > VOLLTEXT_TYPEN_MAX) fehler.push(t('gemeinsam.pakete.code-volltext-hoechstens-dateitypen', { VOLLTEXT_TYPEN_MAX }));
+  if (willVolltext && !volltext.length) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-5'));
+  if (!willVolltext && volltext.length) fehler.push(t('gemeinsam.pakete.code-volltext-braucht-code'));
+  if (willVolltext && dokumente === 'keine') fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-6'));
+  if (willVolltext && !ereignisse.includes('datei.volltext')) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-7'));
+  if (!willVolltext && ereignisse.includes('datei.volltext')) fehler.push(t('gemeinsam.pakete.code-ereignisse-datei-volltext'));
   // Archivfassung (#631): Dateitypen (auch PDF, JPEG, PNG), nur mit dms:archivfassung, Lesen und dem Ereignis.
   const willArchiv = schnittstellen.includes('dms:archivfassung');
   let archivfassung: PaketCode['archivfassung'];
   if (x.archivfassung !== undefined) {
     const a = x.archivfassung as Record<string, unknown>;
-    if (!a || typeof a !== 'object' || Array.isArray(a)) fehler.push('code.archivfassung: ein Objekt mit typen (Dateitypen) und optional auswahl erwartet.');
+    if (!a || typeof a !== 'object' || Array.isArray(a)) fehler.push(t('gemeinsam.pakete.code-archivfassung-ein-objekt'));
     else {
       const typen = liste(a.typen, 'code.archivfassung.typen').map((m) => m.toLowerCase());
-      for (const m of typen) if (!MIME.test(m)) fehler.push(`code.archivfassung.typen: „${m}“ ist kein Dateityp (z. B. image/jpeg).`);
-      if (!typen.length) fehler.push('code.archivfassung.typen: mindestens ein Dateityp, z. B. [application/pdf, image/jpeg, image/png].');
-      if (typen.length > ARCHIV_TYPEN_MAX) fehler.push(`code.archivfassung.typen: höchstens ${ARCHIV_TYPEN_MAX} Dateitypen.`);
-      for (const k of Object.keys(a)) if (k !== 'typen' && k !== 'auswahl') fehler.push(`code.archivfassung: „${k}“ gibt es nicht (nur typen und auswahl).`);
+      for (const m of typen) if (!MIME.test(m)) fehler.push(t('gemeinsam.pakete.code-archivfassung-typen-ist', { m }));
+      if (!typen.length) fehler.push(t('gemeinsam.pakete.code-archivfassung-typen-mindestens'));
+      if (typen.length > ARCHIV_TYPEN_MAX) fehler.push(t('gemeinsam.pakete.code-archivfassung-typen-hoechstens', { ARCHIV_TYPEN_MAX }));
+      for (const k of Object.keys(a)) if (k !== 'typen' && k !== 'auswahl') fehler.push(t('gemeinsam.pakete.code-archivfassung-gibt-es', { k }));
       const auswahl: ArchivAuswahl = {};
       if (a.auswahl !== undefined) {
         // Je Art (PDFs mit Text, gescannte PDFs, Bilder) der Schlüssel einer Ja/Nein-Einstellung (Abschnitt, keine Liste): an = bekommt eine Archivfassung.
         const w = a.auswahl as Record<string, unknown>;
         const felder = (Array.isArray(x.einstellungen) ? x.einstellungen : []).flatMap((b) => (b && typeof b === 'object' && !Array.isArray(b) && Array.isArray((b as Record<string, unknown>).felder) && (b as Record<string, unknown>).liste === undefined ? (b as Record<string, unknown>).felder as unknown[] : []));
-        if (!w || typeof w !== 'object' || Array.isArray(w)) fehler.push('code.archivfassung.auswahl: ein Objekt mit pdf_text, pdf_scan und/oder bilder erwartet.');
+        if (!w || typeof w !== 'object' || Array.isArray(w)) fehler.push(t('gemeinsam.pakete.code-archivfassung-auswahl-ein'));
         else {
-          for (const k of Object.keys(w)) if (!(ARCHIV_ARTEN as readonly string[]).includes(k)) fehler.push(`code.archivfassung.auswahl: „${k}“ gibt es nicht (nur ${ARCHIV_ARTEN.join(', ')}).`);
+          for (const k of Object.keys(w)) if (!(ARCHIV_ARTEN as readonly string[]).includes(k)) fehler.push(t('gemeinsam.pakete.code-archivfassung-auswahl-gibt', { k, ARCHIV_ARTEN: ARCHIV_ARTEN.join(', ') }));
           for (const art of ARCHIV_ARTEN) {
             if (w[art] === undefined) continue;
             const f = felder.find((y): y is Record<string, unknown> => !!y && typeof y === 'object' && (y as Record<string, unknown>).schluessel === w[art]);
-            if (typeof w[art] !== 'string' || !f || f.typ !== 'janein') fehler.push(`code.archivfassung.auswahl.${art}: der Schlüssel einer Einstellung vom Typ janein (Abschnitt, keine Liste) – an: diese Dokumente bekommen eine Archivfassung.`);
+            if (typeof w[art] !== 'string' || !f || f.typ !== 'janein') fehler.push(t('gemeinsam.pakete.code-archivfassung-auswahl-der', { art }));
             else auswahl[art] = w[art] as string;
           }
         }
@@ -615,15 +617,15 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
       archivfassung = { typen: [...new Set(typen)], ...(Object.keys(auswahl).length ? { auswahl } : {}) };
     }
   }
-  if (willArchiv && !archivfassung?.typen.length) fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht code.archivfassung.typen – die Dateitypen, zu denen das Paket ein PDF/A ablegt.');
-  if (!willArchiv && x.archivfassung !== undefined) fehler.push('code.archivfassung: braucht code.rechte.schnittstellen: [dms:archivfassung].');
-  if (willArchiv && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht auch code.rechte.dokumente: lesen – das Paket liest die Datei und ihren Volltext.');
-  if (willArchiv && !ereignisse.includes('datei.archivfassung')) fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht das Ereignis datei.archivfassung in code.ereignisse.');
-  if (!willArchiv && ereignisse.includes('datei.archivfassung')) fehler.push('code.ereignisse: datei.archivfassung gibt es nur mit code.rechte.schnittstellen: [dms:archivfassung].');
+  if (willArchiv && !archivfassung?.typen.length) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-8'));
+  if (!willArchiv && x.archivfassung !== undefined) fehler.push(t('gemeinsam.pakete.code-archivfassung-braucht-code'));
+  if (willArchiv && dokumente === 'keine') fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-9'));
+  if (willArchiv && !ereignisse.includes('datei.archivfassung')) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-10'));
+  if (!willArchiv && ereignisse.includes('datei.archivfassung')) fehler.push(t('gemeinsam.pakete.code-ereignisse-datei-archivfassung'));
   // Sicherung außer Haus (#585): Lesen der verschlüsselten Sicherung nur zusammen mit dem Ereignis – und umgekehrt.
   const willSichern = schnittstellen.includes('dms:sicherung-lesen');
-  if (willSichern && !ereignisse.includes('sicherung.fertig')) fehler.push('code.rechte.schnittstellen: dms:sicherung-lesen braucht das Ereignis sicherung.fertig in code.ereignisse.');
-  if (!willSichern && ereignisse.includes('sicherung.fertig')) fehler.push('code.ereignisse: sicherung.fertig gibt es nur mit code.rechte.schnittstellen: [dms:sicherung-lesen].');
+  if (willSichern && !ereignisse.includes('sicherung.fertig')) fehler.push(t('gemeinsam.pakete.code-rechte-schnittstellen-dms-11'));
+  if (!willSichern && ereignisse.includes('sicherung.fertig')) fehler.push(t('gemeinsam.pakete.code-ereignisse-sicherung-fertig'));
   const netz = liste(x.netz, 'code.netz');
   for (const n of netz) {
     let ok = false;
@@ -639,8 +641,8 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   const lesenAlle = [...new Set([...lesen, ...schreiben])];
   // Ereignisse zu Mappen nur zu Typen, die das Paket lesen darf (#670) – sonst wüsste es von Mappen, die es nie sehen darf.
   // „*“ nur, wenn das Paket auch alle Mappentypen lesen darf; ob es eine einzelne Mappe sehen darf, prüft Ablago bei der Zustellung (#686).
-  for (const k of mappentypen) if (!lesenAlle.includes(k) && !lesenAlle.includes(ALLE_TYPEN)) fehler.push(k === ALLE_TYPEN ? 'code.mappentypen: „*“ (alle Mappentypen) geht nur mit code.rechte.lesen: ["*"].' : `code.mappentypen: „${k}“ – das Paket muss diesen Mappentyp auch lesen dürfen (code.rechte.lesen).`);
-  for (const k of mappentypen) if (k === 'dms:benutzer') fehler.push('code.mappentypen: dms:benutzer ist für Pakete nicht erlaubt – Pakete sehen keine Benutzer.');
+  for (const k of mappentypen) if (!lesenAlle.includes(k) && !lesenAlle.includes(ALLE_TYPEN)) fehler.push(k === ALLE_TYPEN ? t('gemeinsam.pakete.code-mappentypen-alle-mappentypen') : t('gemeinsam.pakete.code-mappentypen-das-paket', { k }));
+  for (const k of mappentypen) if (k === 'dms:benutzer') fehler.push(t('gemeinsam.pakete.code-mappentypen-dms-benutzer'));
   return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}), ...(umwandeln.length ? { umwandeln: [...new Set(umwandeln)] } : {}), ...(volltext.length ? { volltext: [...new Set(volltext)] } : {}), ...(archivfassung && willArchiv ? { archivfassung } : {}), ...(mappentypen.length ? { mappentypen } : {}) }, fehler };
 }
 
@@ -656,11 +658,11 @@ export function laeuferZustandText(
   zeit: (iso: string) => string,
 ): { text: string; fehler: boolean; wartet: boolean } {
   if (x.paket?.fehler) return { text: x.paket.fehler, fehler: true, wartet: false };
-  if (x.zustand === 'pausiert') return { text: 'pausiert (Wartungsmodus)', fehler: false, wartet: false };
-  if (x.zustand === 'neustart') return { text: `abgestürzt${x.absturz ? ` um ${zeit(x.absturz)}` : ''} – startet neu …`, fehler: true, wartet: true };
-  if (x.zustand !== 'bereit' || !x.paket?.geladen) return { text: 'startet …', fehler: false, wartet: true };
-  if (x.absturz) return { text: `neu gestartet nach Absturz um ${zeit(x.absturz)}`, fehler: false, wartet: false };
-  return { text: x.paket.aufrufe ? 'bereit' : 'bereit – wartet auf das erste Ereignis', fehler: false, wartet: false };
+  if (x.zustand === 'pausiert') return { text: t('gemeinsam.pakete.pausiert-wartungsmodus'), fehler: false, wartet: false };
+  if (x.zustand === 'neustart') return { text: t('gemeinsam.pakete.abgestuerzt-startet-neu', { wert: x.absturz ? t('gemeinsam.pakete.um', { zeit: zeit(x.absturz) }) : '' }), fehler: true, wartet: true };
+  if (x.zustand !== 'bereit' || !x.paket?.geladen) return { text: t('gemeinsam.pakete.startet'), fehler: false, wartet: true };
+  if (x.absturz) return { text: t('gemeinsam.pakete.neu-gestartet-nach-absturz', { zeit: zeit(x.absturz) }), fehler: false, wartet: false };
+  return { text: x.paket.aufrufe ? t('gemeinsam.pakete.bereit') : t('gemeinsam.pakete.bereit-wartet-auf-das'), fehler: false, wartet: false };
 }
 
 /**
@@ -668,9 +670,9 @@ export function laeuferZustandText(
  * adressen: Namen der Einstellungen vom Typ „adresse“ (#444), deren Wert der Administrator einträgt und bestätigt.
  */
 export function netzText(netz: string[], adressen: string[] = []): string {
-  const einst = adressen.map((a) => `der Adresse aus der Einstellung „${a}“ (trägst du ein und bestätigst sie)`);
-  if (!netz.length && !einst.length) return 'kein Zugriff auf Netzwerk und Internet';
-  return `Zugriff auf Netzwerk/Internet nur zu: ${[...netz, ...einst].join(', ')}`;
+  const einst = adressen.map((a) => t('gemeinsam.pakete.der-adresse-aus-der', { a }));
+  if (!netz.length && !einst.length) return t('gemeinsam.pakete.kein-zugriff-auf-netzwerk');
+  return t('gemeinsam.pakete.zugriff-auf-netzwerk-internet', { wert: [...netz, ...einst].join(', ') });
 }
 
 /** Hilfe-Ort im Administratorhandbuch (Pakete mit Code) je Ereignis (#449); Schlüssel wie in shared/src/hilfe.ts. */
@@ -696,10 +698,10 @@ export interface RechtePunkt { text: string; hilfe: Hilfeort; unter?: Array<{ te
 
 /** Rechte und Netzwerkzugriff für die Rückfrage bei der Installation (#338, #449): je Recht ein Punkt, Ereignisse als Unterliste. */
 export function rechtePunkte(c: PaketCode, typName: (verweis: string) => string): RechtePunkt[] {
-  const t = (l: string[]) => l.map((v) => (v === ALLE_TYPEN ? 'alle Mappentypen' : typName(v))).join(', ');
+  const eintrag = (l: string[]) => l.map((v) => (v === ALLE_TYPEN ? t('gemeinsam.pakete.alle-mappentypen') : typName(v))).join(', ');
   const z: RechtePunkt[] = [];
-  if (c.rechte.lesen.length) z.push({ text: `Mappen lesen: ${t(c.rechte.lesen)}`, hilfe: 'pakete.recht.lesen' });
-  if (c.rechte.schreiben.length) z.push({ text: `Mappen anlegen und ändern: ${t(c.rechte.schreiben)}`, hilfe: 'pakete.recht.schreiben' });
+  if (c.rechte.lesen.length) z.push({ text: t('gemeinsam.pakete.mappen-lesen', { lesen: eintrag(c.rechte.lesen) }), hilfe: 'pakete.recht.lesen' });
+  if (c.rechte.schreiben.length) z.push({ text: t('gemeinsam.pakete.mappen-anlegen-und-aendern', { schreiben: eintrag(c.rechte.schreiben) }), hilfe: 'pakete.recht.schreiben' });
   if (c.rechte.dokumente !== 'keine') z.push({ text: DOKUMENT_RECHTE[c.rechte.dokumente], hilfe: 'pakete.recht.dokumente' });
   // Dateien umwandeln (#577) und Volltext aus Paketen (#614): mit den Dateitypen, für die das Paket zuständig sein will.
   // Archivfassung (#631) ebenso.
@@ -708,8 +710,8 @@ export function rechtePunkte(c: PaketCode, typName: (verweis: string) => string)
   z.push({ text: netzText(c.netz, (c.adressen ?? []).map((a) => a.name)), hilfe: c.adressen?.length ? 'pakete.recht.adresse' : 'pakete.recht.netz' });
   // Mappen-Ereignisse (#670) mit den Mappentypen, zu denen das Paket sie bekommt.
   // #686: „*“ heißt hier „alle, die das Paket lesen darf“ – am Mappentyp lässt sich einzelnen Paketen der Zugriff verwehren.
-  const zuTypen = c.mappentypen?.length ? ` – zu: ${c.mappentypen.map((v) => (v === ALLE_TYPEN ? 'allen Mappentypen, die das Paket lesen darf' : typName(v))).join(', ')}` : '';
-  if (c.ereignisse.length) z.push({ text: 'Reagiert auf diese Ereignisse:', hilfe: 'pakete.ereignisse', unter: c.ereignisse.map((e) => ({ text: `${EREIGNISSE[e]}${MAPPEN_EREIGNISSE.includes(e) ? zuTypen : ''}`, hilfe: EREIGNIS_HILFE[e] })) });
+  const zuTypen = c.mappentypen?.length ? ` – zu: ${c.mappentypen.map((v) => (v === ALLE_TYPEN ? t('gemeinsam.pakete.allen-mappentypen-die-das') : typName(v))).join(', ')}` : '';
+  if (c.ereignisse.length) z.push({ text: t('gemeinsam.pakete.reagiert-auf-diese-ereignisse'), hilfe: 'pakete.ereignisse', unter: c.ereignisse.map((e) => ({ text: `${EREIGNISSE[e]}${MAPPEN_EREIGNISSE.includes(e) ? zuTypen : ''}`, hilfe: EREIGNIS_HILFE[e] })) });
   return z;
 }
 

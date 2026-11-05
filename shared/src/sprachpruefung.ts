@@ -35,6 +35,36 @@ function grundschluessel(datei: Record<string, unknown>): Map<string, string[]> 
 
 /** Schlüssel, die der Code ausdrücklich abruft: `t('bereich.schluessel'` bzw. `t.frei('…'`. */
 const AUFRUF = /\bt(?:\.frei)?\(\s*(['"`])([a-z0-9-]+\.[^'"`$]+)\1/g;
+/** Aufruf mit Werten: `t('bereich.schluessel', {` bzw. `tn(…, {` – die Werte prüft `werteImAufruf`. */
+const MIT_WERTEN = /\b(?:t|tn)\(\s*'([a-z0-9-]+\.[^'$]+)'\s*,\s*\{/g;
+
+/**
+ * Namen der Werte in einem Objekt-Literal ab `start` (Position der öffnenden Klammer): `{ name, wert: x }` →
+ * [name, wert]; `null`, wenn das Objekt `...` enthält (dann ist die Prüfung nicht möglich).
+ */
+export function werteImAufruf(text: string, start: number): string[] | null {
+  let tiefe = 0, i = start, teil = '';
+  const teile: string[] = [];
+  let zeichen: string | null = null;
+  for (; i < text.length; i++) {
+    const c = text[i];
+    if (zeichen) { if (c === '\\') { i++; continue; } if (c === zeichen) zeichen = null; if (tiefe === 1) teil += c; continue; }
+    if (c === "'" || c === '"' || c === '`') { zeichen = c; if (tiefe === 1) teil += c; continue; }
+    if (c === '{' || c === '(' || c === '[') { tiefe++; if (tiefe === 1) continue; }
+    if (c === '}' || c === ')' || c === ']') { tiefe--; if (tiefe === 0) break; }
+    if (tiefe === 1 && c === ',') { teile.push(teil); teil = ''; continue; }
+    if (tiefe >= 1) teil += c;
+  }
+  teile.push(teil);
+  const namen: string[] = [];
+  for (const t of teile.map((x) => x.trim()).filter(Boolean)) {
+    if (t.startsWith('...')) return null;
+    const m = /^([A-Za-z0-9_$]+)\s*(:|$)/.exec(t);
+    if (m) namen.push(m[1]);
+  }
+  return namen;
+}
+
 /** Alle Zeichenketten, die wie ein Schlüssel aussehen. */
 const ZEICHENKETTE = /(['"`])([a-z0-9-]+(?:\.[A-Za-z0-9-]+)+)\1/g;
 /** Zusammengesetzte Schlüssel: `` `werkbank.gruppe.${g}` `` → Anfang `werkbank.gruppe.` */
@@ -91,6 +121,23 @@ export function pruefeSprachdateien(stand: Sprachstand, code: Quelltext[]): stri
       if (vorhanden.has(bereich) && !BEREICHE_DIREKT.has(bereich) && !gibt(voll)) {
         const zeile = q.text.slice(0, m.index).split('\n').length;
         maengel.push(`${q.datei}:${zeile}: Schlüssel „${voll}“ fehlt in ${AUSGANGSSPRACHE}/${bereich}.json.`);
+      }
+    }
+    // Platzhalter (#727): Was der Text braucht, muss der Aufruf liefern.
+    for (const m of q.text.matchAll(MIT_WERTEN)) {
+      const voll = m[1];
+      const i = voll.indexOf('.');
+      const datei = ausgang[voll.slice(0, i)];
+      if (!datei || BEREICHE_DIREKT.has(voll.slice(0, i))) continue;
+      const k = voll.slice(i + 1);
+      const texte = Object.entries(datei).filter(([x]) => x === k || ohneMehrzahl(x) === k).map(([, v]) => String(v));
+      if (!texte.length) continue;
+      const werte = werteImAufruf(q.text, m.index! + m[0].length - 1);
+      if (!werte) continue;
+      const fehlt = [...new Set(texte.flatMap(platzhalter))].filter((p) => !werte.includes(p) && !(p === 'anzahl' && werte.includes('anzahl')));
+      if (fehlt.length) {
+        const zeile = q.text.slice(0, m.index).split('\n').length;
+        maengel.push(`${q.datei}:${zeile}: „${voll}“ braucht {${fehlt.join('} {')}}, der Aufruf liefert ${werte.length ? `nur {${werte.join('} {')}}` : 'keine Werte'}.`);
       }
     }
     for (const m of q.text.matchAll(ZEICHENKETTE)) literale.add(m[2]);

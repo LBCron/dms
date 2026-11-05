@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Dokumente schwärzen (#392): Suchbegriffe und Muster in den Wörtern einer Seite finden und daraus
  * Bereiche machen – gemeinsam für Server (API, Ergebnis) und Oberfläche (Vorschau, Vorschläge), ohne
@@ -15,7 +16,7 @@ export interface Bereich { seite: number; x: number; y: number; b: number; h: nu
 /** Muster für Vorschläge (offline, nur reguläre Ausdrücke und Prüfziffern). */
 export const MUSTER = {
   iban: 'IBAN',
-  steuerid: 'Steuer-Id',
+  steuerid: t('gemeinsam.schwaerzen.steuer-id'),
   geburtsdatum: 'Geburtsdatum',
   email: 'E-Mail',
   telefon: 'Telefon',
@@ -283,5 +284,5 @@ export function pruefeBegriffe(roh: unknown): string[] {
 /** „3 Stellen auf 2 Seiten“ */
 export function stellenText(bereiche: Bereich[]): string {
   const n = bereiche.length, s = new Set(bereiche.map((b) => b.seite)).size;
-  return `${n} ${n === 1 ? 'Stelle' : 'Stellen'} auf ${s} ${s === 1 ? 'Seite' : 'Seiten'}`;
+  return `${n} ${t('gemeinsam.schwaerzen.stellen', { anzahl: n })} auf ${s} ${t('gemeinsam.schwaerzen.seiten', { anzahl: s })}`;
 }

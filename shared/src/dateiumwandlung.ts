@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Dateien umwandeln (#577): Pakete mit dem Recht `dms:umwandeln` wandeln Dateien, die der Kern nicht selbst lesen
  * kann (z. B. TIFF, WebP, GIF, BMP), in eine **Fassung**, die er kennt (PDF, PNG oder JPEG). Daraus macht der Kern
@@ -40,12 +41,12 @@ export const DATEITYP_NAMEN: Record<string, string> = {
   'application/msword': 'Word', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
   'application/vnd.ms-excel': 'Excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
   'application/vnd.ms-powerpoint': 'PowerPoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint',
-  'application/vnd.oasis.opendocument.text': 'OpenDocument-Text', 'application/vnd.oasis.opendocument.spreadsheet': 'OpenDocument-Tabelle',
-  'application/vnd.oasis.opendocument.presentation': 'OpenDocument-Präsentation',
+  'application/vnd.oasis.opendocument.text': t('gemeinsam.dateiumwandlung.opendocument-text'), 'application/vnd.oasis.opendocument.spreadsheet': t('gemeinsam.dateiumwandlung.opendocument-tabelle'),
+  'application/vnd.oasis.opendocument.presentation': t('gemeinsam.dateiumwandlung.opendocument-praesentation'),
   'application/vnd.openxmlformats-officedocument.wordprocessingml.template': 'Word', 'application/vnd.ms-word.document.macroenabled.12': 'Word',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.template': 'Excel', 'application/vnd.ms-excel.sheet.macroenabled.12': 'Excel',
   'application/vnd.openxmlformats-officedocument.presentationml.slideshow': 'PowerPoint', 'application/vnd.ms-powerpoint.presentation.macroenabled.12': 'PowerPoint',
-  'message/rfc822': 'E-Mail', 'application/vnd.ms-outlook': 'Outlook-E-Mail', 'application/rtf': 'RTF', 'text/rtf': 'RTF', 'text/plain': 'Text',
+  'message/rfc822': 'E-Mail', 'application/vnd.ms-outlook': t('gemeinsam.dateiumwandlung.outlook-e-mail'), 'application/rtf': 'RTF', 'text/rtf': 'RTF', 'text/plain': 'Text',
 };
 export const dateitypName = (mime: string) => DATEITYP_NAMEN[mime] ?? mime;
 
@@ -83,10 +84,10 @@ export const KATALOG_UMWANDLUNG: Array<{ id: string; name: string; typen: string
 export const katalogUmwandlung = (mime: string) => KATALOG_UMWANDLUNG.find((p) => p.typen.includes(mime)) ?? null;
 
 /** Hinweis am Dokument, solange es auf die Umwandlung durch ein Paket wartet (Stand `paket`). */
-export const INFO_UMWANDLUNG = 'wartet auf Umwandlung';
+export const INFO_UMWANDLUNG = t('gemeinsam.dateiumwandlung.wartet-auf-umwandlung');
 export const infoUmwandlung = (paket: { name: string }) => `${INFO_UMWANDLUNG} (Paket ${paket.name})`;
 /** So steht im Hinweis des Volltexts, dass er aus der umgewandelten Fassung stammt. */
-export const INFO_FASSUNG = 'aus der umgewandelten Fassung';
+export const INFO_FASSUNG = t('gemeinsam.dateiumwandlung.aus-der-umgewandelten-fassung');
 export const infoFassung = (paket: { name: string; version: string }) => `${INFO_FASSUNG} (Paket ${paket.name} ${paket.version})`;
 /** Paket der Fassung aus einem Hinweis (oder null). */
 export const fassungAusInfo = (info: string | null | undefined): string | null => new RegExp(`${INFO_FASSUNG} \\(Paket ([^)]+)\\)`).exec(info ?? '')?.[1] ?? null;

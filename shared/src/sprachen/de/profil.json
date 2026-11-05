@@ -149,7 +149,7 @@
   "apischluessel.darf-mit-passwoerter-anzeigen": "Darf mit ?passwoerter=anzeigen Passwortfelder im Klartext lesen",
   "apischluessel.passwoerter-lesen": "Passwörter lesen",
   "apischluessel.abgelaufen": "abgelaufen",
-  "apischluessel.gueltig-bis": " · gültig bis {toLocaleDateString}",
+  "apischluessel.gueltig-bis": " · gültig bis {datum}",
   "apischluessel.ohne-ablauf": " · ohne Ablauf",
   "apischluessel.erstellt-zuletzt-benutzt": "Erstellt {datum} · zuletzt benutzt {datum2}{wert}",
   "apischluessel.aendern": "Ändern",

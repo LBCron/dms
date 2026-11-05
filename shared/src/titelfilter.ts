@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Filter für Platzhalter in der Titel-Vorlage (#170): `{feld|filter|filter:argument}`.
  *
@@ -19,14 +20,14 @@ export const PLATZHALTER_MIT_FILTERN = /\{([a-z][a-z0-9_]*)((?:\|[^{}|]*)*)\}/g;
 export interface Filter { name: string; arg?: string }
 
 export const FILTER = {
-  jahr: { text: 'Jahr eines Datums', arten: ['datum'] },
-  monat: { text: 'Monat eines Datums (01–12)', arten: ['datum'] },
-  datum: { text: 'Datum im eigenen Format, z. B. datum:"MM/JJJJ"', arten: ['datum'], arg: 'text' },
-  ohne_waehrung: { text: 'Betrag ohne Währungszeichen', arten: ['betrag'] },
-  gross: { text: 'in Großbuchstaben', arten: null },
-  klein: { text: 'in Kleinbuchstaben', arten: null },
-  kurz: { text: 'auf n Zeichen kürzen, z. B. kurz:30', arten: null, arg: 'zahl' },
-  sonst: { text: 'Ersatz, wenn das Feld leer ist, z. B. sonst:"ohne Nr."', arten: null, arg: 'text' },
+  jahr: { text: t('gemeinsam.titelfilter.jahr-eines-datums'), arten: ['datum'] },
+  monat: { text: t('gemeinsam.titelfilter.monat-eines-datums-01'), arten: ['datum'] },
+  datum: { text: t('gemeinsam.titelfilter.datum-im-eigenen-format'), arten: ['datum'], arg: 'text' },
+  ohne_waehrung: { text: t('gemeinsam.titelfilter.betrag-ohne-waehrungszeichen'), arten: ['betrag'] },
+  gross: { text: t('gemeinsam.titelfilter.in-grossbuchstaben'), arten: null },
+  klein: { text: t('gemeinsam.titelfilter.in-kleinbuchstaben'), arten: null },
+  kurz: { text: t('gemeinsam.titelfilter.auf-n-zeichen-kuerzen'), arten: null, arg: 'zahl' },
+  sonst: { text: t('gemeinsam.titelfilter.ersatz-wenn-das-feld'), arten: null, arg: 'text' },
 } as const satisfies Record<string, { text: string; arten: readonly string[] | null; arg?: 'text' | 'zahl' }>;
 export type FilterName = keyof typeof FILTER;
 
@@ -50,12 +51,12 @@ export function liesFilter(kette: string): Filter[] {
 export function pruefeFilter(schluessel: string, kette: string, art: string | undefined): string[] {
   const m: string[] = [];
   for (const f of liesFilter(kette)) {
-    if (!istFilter(f.name)) { m.push(`{${schluessel}|${f.name}}: unbekannter Filter „${f.name}“. Möglich: ${Object.keys(FILTER).join(', ')}.`); continue; }
+    if (!istFilter(f.name)) { m.push(t('gemeinsam.titelfilter.unbekannter-filter-moeglich', { schluessel, name: f.name, keys: Object.keys(FILTER).join(', ') })); continue; }
     const d = FILTER[f.name];
-    if (d.arten && art && !(d.arten as readonly string[]).includes(art)) m.push(`{${schluessel}|${f.name}}: „${f.name}“ geht nur bei ${d.arten.map((a) => (a === 'datum' ? 'Datumsfeldern' : 'Betragsfeldern')).join(' oder ')}.`);
-    if ('arg' in d && d.arg === 'zahl' && !/^\d{1,3}$/.test(f.arg ?? '')) m.push(`{${schluessel}|${f.name}}: Bitte eine Zahl angeben, z. B. ${f.name}:30.`);
-    if ('arg' in d && d.arg === 'text' && f.arg === undefined) m.push(`{${schluessel}|${f.name}}: Bitte einen Text in Anführungszeichen angeben, z. B. ${f.name}:"…".`);
-    if (!('arg' in d) && f.arg !== undefined) m.push(`{${schluessel}|${f.name}}: „${f.name}“ hat keinen Zusatz nach dem Doppelpunkt.`);
+    if (d.arten && art && !(d.arten as readonly string[]).includes(art)) m.push(t('gemeinsam.titelfilter.geht-nur-bei', { schluessel, name: f.name, map: d.arten.map((a) => (a === 'datum' ? 'Datumsfeldern' : 'Betragsfeldern')).join(' oder ') }));
+    if ('arg' in d && d.arg === 'zahl' && !/^\d{1,3}$/.test(f.arg ?? '')) m.push(t('gemeinsam.titelfilter.bitte-eine-zahl-angeben', { schluessel, name: f.name }));
+    if ('arg' in d && d.arg === 'text' && f.arg === undefined) m.push(t('gemeinsam.titelfilter.bitte-einen-text-in', { schluessel, name: f.name }));
+    if (!('arg' in d) && f.arg !== undefined) m.push(t('gemeinsam.titelfilter.hat-keinen-zusatz-nach', { schluessel, name: f.name }));
   }
   return m;
 }

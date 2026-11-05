@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Werkbank-Formulare (#370): ein Muster für „Anlegen“/„Speichern“ und „Verwerfen“.
  *
@@ -59,13 +60,13 @@ export interface Leistenknoepfe {
  */
 export function leistenknoepfe(s: Entwurfsstand, gegenstand?: string): Leistenknoepfe {
   const verb = s.neu ? 'anlegen' : 'speichern';
-  const text = s.sendet ? (s.neu ? 'Lege an …' : 'Speichere …') : gegenstand ? `${gegenstand} ${verb}` : verb[0].toUpperCase() + verb.slice(1);
+  const text = s.sendet ? (s.neu ? t('gemeinsam.entwurf.lege-an') : t('gemeinsam.entwurf.speichere')) : gegenstand ? `${gegenstand} ${verb}` : verb[0].toUpperCase() + verb.slice(1);
   return {
     haupt: { text, aktiv: !s.sendet && !s.ungueltig && (s.neu || s.geaendert || !!s.speicherbar) },
     verwerfen: s.neu
-      ? { text: 'Entwurf verwerfen', aktiv: !s.sendet, titel: 'Nichts anlegen und zurück zur Liste (Esc)' }
-      : { text: 'Änderungen verwerfen', aktiv: !s.sendet && s.geaendert, titel: s.geaendert ? 'Felder auf den gespeicherten Stand zurücksetzen (Esc)' : 'Nichts geändert' },
-    status: s.geaendert && !s.neu ? 'Ungespeicherte Änderungen' : '',
+      ? { text: t('gemeinsam.entwurf.entwurf-verwerfen'), aktiv: !s.sendet, titel: t('gemeinsam.entwurf.nichts-anlegen-und-zurueck') }
+      : { text: t('gemeinsam.entwurf.aenderungen-verwerfen'), aktiv: !s.sendet && s.geaendert, titel: s.geaendert ? t('gemeinsam.entwurf.felder-auf-den-gespeicherten') : t('gemeinsam.entwurf.nichts-geaendert') },
+    status: s.geaendert && !s.neu ? t('gemeinsam.entwurf.ungespeicherte-aenderungen') : '',
   };
 }
 

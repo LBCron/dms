@@ -1,3 +1,4 @@
+import { t } from './texte';
 /**
  * Volltext aus Paketen (#614): Pakete mit dem Recht `dms:volltext` liefern den Volltext für Dateitypen, die der Kern
  * nicht selbst liest (z. B. Word, Excel, E-Mails) – sie lesen die Datei und schreiben **nur** den Volltext, ohne
@@ -23,10 +24,10 @@ export const VOLLTEXT_ZEICHEN_MAX = 5_000_000;
 export const VOLLTEXT_KOERPER_MAX = 32 * 1024 * 1024;
 
 /** Hinweis am Dokument, solange es auf den Volltext eines Pakets wartet (Stand `paket`). */
-export const INFO_VOLLTEXT_PAKET = 'wartet auf Volltext';
+export const INFO_VOLLTEXT_PAKET = t('gemeinsam.paketvolltext.wartet-auf-volltext');
 export const infoVolltextPaket = (paket: { name: string }) => `${INFO_VOLLTEXT_PAKET} (Paket ${paket.name})`;
 /** So beginnt der Hinweis, wenn das Paket fertig ist, aber keinen Volltext geschrieben hat (mit seinem Grund). */
-export const INFO_VOLLTEXT_DURCH = 'Volltext durch Paket';
+export const INFO_VOLLTEXT_DURCH = t('gemeinsam.paketvolltext.volltext-durch-paket');
 
 /**
  * Pakete im offiziellen Katalog, die Volltext für Dateitypen liefern – für den Hinweis „… mit dem Paket Office und
@@ -34,7 +35,7 @@ export const INFO_VOLLTEXT_DURCH = 'Volltext durch Paket';
  */
 export const KATALOG_VOLLTEXT: Array<{ id: string; name: string; typen: string[] }> = [
   {
-    id: 'office_email', name: 'Office und E-Mail', typen: [
+    id: 'office_email', name: t('gemeinsam.paketvolltext.office-und-e-mail'), typen: [
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
       'application/vnd.ms-word.document.macroenabled.12',

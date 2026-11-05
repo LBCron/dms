@@ -15,6 +15,8 @@
 import { typImLink } from './direktlink';
 import type { Mappentyp } from './model';
 import { bedingungsfelder, bedingungsProblem, OPERATOREN_JE_ART, verschiebe, type Bedingung, type Bedingungsfeld } from './sichten';
+import { t } from './texte';
+import { gebietsschema } from './sprache';
 
 export const SUCHE_PFAD = '/ablage/suche';
 /** Parameter mit fester Bedeutung; gleichnamige Felder erreicht man mit „feld.wert“. */
@@ -68,11 +70,11 @@ export function istGesetzt(e: Feldeingabe | undefined): boolean {
 /* ---------- Schnellwahl für Datumsfelder ---------- */
 
 export const ZEITRAEUME = {
-  diesesJahr: 'dieses Jahr',
-  letztesJahr: 'letztes Jahr',
-  zwoelfMonate: 'letzte 12 Monate',
-  dieserMonat: 'dieser Monat',
-  letzterMonat: 'letzter Monat',
+  diesesJahr: t('gemeinsam.erweitertesuche.dieses-jahr'),
+  letztesJahr: t('gemeinsam.erweitertesuche.letztes-jahr'),
+  zwoelfMonate: t('gemeinsam.erweitertesuche.letzte-12-monate'),
+  dieserMonat: t('gemeinsam.erweitertesuche.dieser-monat'),
+  letzterMonat: t('gemeinsam.erweitertesuche.letzter-monat'),
 } as const;
 export type Zeitraum = keyof typeof ZEITRAEUME;
 
@@ -189,9 +191,9 @@ export function abfrageAus(f: Suchformular, alleTypen: Mappentyp[]): Abfrage {
   const fehler: string[] = [];
   const typen: Mappentyp[] = [];
   for (const name of f.typen) {
-    const t = typImLink(name, alleTypen);
-    if (!t) fehler.push(`Den Mappentyp „${name}“ gibt es nicht.`);
-    else if (!typen.includes(t)) typen.push(t);
+    const eintrag = typImLink(name, alleTypen);
+    if (!eintrag) fehler.push(t('gemeinsam.erweitertesuche.den-mappentyp-gibt-es', { name }));
+    else if (!typen.includes(eintrag)) typen.push(eintrag);
   }
   const felder = suchfelder(typen);
   const bedingungen: Bedingung[] = [];
@@ -204,20 +206,20 @@ export function abfrageAus(f: Suchformular, alleTypen: Mappentyp[]): Abfrage {
     const name = `„${feld.label}“`;
     let b: Bedingung | null = null;
     if (e.leer) {
-      if (!kannLeer(feld, e.leer)) { fehler.push(`${name} kann nicht ${e.leer === 'leer' ? 'leer' : 'nicht leer'} sein.`); continue; }
+      if (!kannLeer(feld, e.leer)) { fehler.push(t('gemeinsam.erweitertesuche.kann-nicht-sein', { name, wert: e.leer === 'leer' ? t('gemeinsam.erweitertesuche.leer') : t('gemeinsam.erweitertesuche.nicht-leer') })); continue; }
       b = { art: 'feld', feld: key, op: e.leer };
     } else if (art === 'datum' || art === 'zahl') {
       const lies = (s: string | undefined) => {
         if (!s?.trim()) return undefined;
         const v = art === 'datum' ? datumAus(s) : zahlAus(s);
-        if (v === null) fehler.push(`„${s.trim()}“ ist ${art === 'datum' ? 'kein Datum' : 'keine Zahl'} für ${name}.`);
+        if (v === null) fehler.push(t('gemeinsam.erweitertesuche.ist-fuer', { s: s.trim(), wert: art === 'datum' ? t('gemeinsam.erweitertesuche.kein-datum') : t('gemeinsam.erweitertesuche.keine-zahl'), name }));
         return v;
       };
       const von = lies(e.von), bis = lies(e.bis);
       if (von === null || bis === null) continue;
       if (von === undefined && bis === undefined) continue;
       const min = art === 'datum' ? DATUM_MIN : -ZAHL_MAX, max = art === 'datum' ? DATUM_MAX : ZAHL_MAX;
-      if (von !== undefined && bis !== undefined && von > bis) { fehler.push(`Bei ${name} liegt „von“ nach „bis“.`); continue; }
+      if (von !== undefined && bis !== undefined && von > bis) { fehler.push(t('gemeinsam.erweitertesuche.bei-liegt-von-nach', { name })); continue; }
       b = { art: 'feld', feld: key, op: 'zwischen', wert: { art: 'fest', wert: von ?? min }, bis: { art: 'fest', wert: bis ?? max } };
     } else {
       const werte = [...new Set((e.werte ?? []).map((w) => w.trim()).filter(Boolean))];
@@ -227,11 +229,11 @@ export function abfrageAus(f: Suchformular, alleTypen: Mappentyp[]): Abfrage {
         const optionen = feld.feld?.optionen ?? [];
         const gueltig = werte.map((w) => optionen.find((o) => o.toLowerCase() === w.toLowerCase())).filter((o): o is string => !!o);
         const falsch = werte.filter((w) => !optionen.some((o) => o.toLowerCase() === w.toLowerCase()));
-        if (falsch.length) { fehler.push(`„${falsch[0]}“ gibt es in der Auswahlliste ${name} nicht.`); continue; }
+        if (falsch.length) { fehler.push(t('gemeinsam.erweitertesuche.gibt-es-in-der', { falsch: falsch[0], name })); continue; }
         b = { art: 'feld', feld: key, op: 'einerVon', wert: { art: 'fest', wert: gueltig } };
       } else if (art === 'janein') {
         const w = werte[0].toLowerCase();
-        if (!['ja', 'nein'].includes(w)) { fehler.push(`Bei ${name} geht nur ja oder nein.`); continue; }
+        if (!['ja', 'nein'].includes(w)) { fehler.push(t('gemeinsam.erweitertesuche.bei-geht-nur-ja', { name })); continue; }
         b = { art: 'feld', feld: key, op: w as 'ja' | 'nein' };
       } else b = { art: 'feld', feld: key, op: 'enthaelt', wert: { art: 'fest', wert: werte[0] } };
     }
@@ -248,7 +250,7 @@ export function abfrageAus(f: Suchformular, alleTypen: Mappentyp[]): Abfrage {
 
 const zahlText = (s: string, betrag: boolean) => {
   const n = zahlAus(s);
-  return n === null ? s : n.toLocaleString('de-DE', betrag ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {});
+  return n === null ? s : n.toLocaleString(gebietsschema(), betrag ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {});
 };
 const datumText = (s: string) => { const d = datumAus(s); return d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : s; };
 
@@ -265,7 +267,7 @@ export function chipsVon(f: Suchformular, alleTypen: Mappentyp[], titelVon: (id:
     if (!feld || !istGesetzt(e)) continue;
     const art = eingabeart(feld);
     let text: string;
-    if (e.leer) text = `${feld.label} ${e.leer === 'leer' ? 'ist leer' : 'ist nicht leer'}`;
+    if (e.leer) text = `${feld.label} ${e.leer === 'leer' ? t('gemeinsam.erweitertesuche.ist-leer') : t('gemeinsam.erweitertesuche.ist-nicht-leer')}`;
     else if (art === 'datum' || art === 'zahl') {
       const z = (s: string) => (art === 'datum' ? datumText(s) : zahlText(s, feld.art === 'betrag'));
       const von = e.von?.trim(), bis = e.bis?.trim();
@@ -277,7 +279,7 @@ export function chipsVon(f: Suchformular, alleTypen: Mappentyp[], titelVon: (id:
     }
     chips.push({ key, text });
   }
-  if (a.volltext) chips.push({ key: 'volltext', text: `„${a.volltext.text}“ in ${[a.volltext.dokumente && 'Dokumenten', a.volltext.notizen && 'Notizen'].filter(Boolean).join(' oder ')}` });
+  if (a.volltext) chips.push({ key: 'volltext', text: t('gemeinsam.erweitertesuche.in', { text: a.volltext.text, filter: [a.volltext.dokumente && 'Dokumenten', a.volltext.notizen && 'Notizen'].filter(Boolean).join(' oder ') }) });
   return chips;
 }
 

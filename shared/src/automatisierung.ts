@@ -16,6 +16,7 @@ import { EREIGNISKATALOG, KATALOG_ARTEN, OHNE_WENN, type KatalogArt } from './er
 import { VORLAUF_EINHEITEN, type VorlaufEinheit } from './fristen';
 import type { Feld, Mappentyp } from './model';
 import { bedingungsProblem, bereinigeBedingungen, verschiebe, type Bedingung, type Sicht } from './sichten';
+import { t } from './texte';
 
 /** Grenzen (Zahl der Automatisierungen, Karten je Bereich, Länge der Texte, Laufzeit, Bremse). */
 export const AUTOMATISIERUNG_GRENZEN = {
@@ -212,7 +213,7 @@ export function erreichteDaten(tag: string, vorlauf: number, einheit: VorlaufEin
 export function vorlaufText(vorlauf: number, einheit: VorlaufEinheit): string {
   if (!vorlauf) return 'heute';
   const n = Math.abs(vorlauf);
-  const wort = einheit === 'tage' ? (n === 1 ? 'Tag' : 'Tagen') : einheit === 'wochen' ? (n === 1 ? 'Woche' : 'Wochen') : (n === 1 ? 'Monat' : 'Monaten');
+  const wort = einheit === 'tage' ? (t('gemeinsam.automatisierung.tagen', { anzahl: n })) : einheit === 'wochen' ? (t('gemeinsam.automatisierung.wochen', { anzahl: n })) : (t('gemeinsam.automatisierung.monaten', { anzahl: n }));
   return `${vorlauf > 0 ? 'in' : 'vor'} ${n} ${wort}`;
 }
 
@@ -221,13 +222,13 @@ export const PLATZHALTER_FEST = ['titel', 'mappentyp', 'heute', 'automatisierung
 
 /** Platzhalter, die im Kontext der Wenn-Karte zur Verfügung stehen. */
 export function platzhalterFuer(w: WennKarte, typ: Mappentyp | null): Array<{ key: string; label: string }> {
-  const fest = [{ key: 'titel', label: 'Titel der Mappe' }, { key: 'mappentyp', label: 'Mappentyp' }, { key: 'heute', label: 'Datum heute' }, { key: 'automatisierung', label: 'Name dieser Automatisierung' }];
-  if (w.art === 'datum') fest.push({ key: 'datum', label: 'Erreichtes Datum' }, { key: 'tage', label: 'Tage bis dahin' });
-  if (w.art === 'zeitplan' && w.jeBenutzer) fest.push({ key: 'benutzer', label: 'Benutzer' });
+  const fest = [{ key: 'titel', label: t('gemeinsam.automatisierung.titel-der-mappe') }, { key: 'mappentyp', label: t('gemeinsam.automatisierung.mappentyp') }, { key: 'heute', label: t('gemeinsam.automatisierung.datum-heute') }, { key: 'automatisierung', label: t('gemeinsam.automatisierung.name-dieser-automatisierung') }];
+  if (w.art === 'datum') fest.push({ key: 'datum', label: t('gemeinsam.automatisierung.erreichtes-datum') }, { key: 'tage', label: t('gemeinsam.automatisierung.tage-bis-dahin') });
+  if (w.art === 'zeitplan' && w.jeBenutzer) fest.push({ key: 'benutzer', label: t('gemeinsam.automatisierung.benutzer') });
   // Aus dem Ereignis (#678/#712): Personen mit Namen, Zeitraum einer Abwesenheit.
   for (const p of PERSONEN_IM_EREIGNIS[w.art] ?? []) fest.push({ key: p, label: EREIGNIS_PERSON[p] ?? p });
   if (w.art === 'zeitplan') return [...fest, ...(typ?.felder ?? []).filter((f) => f.typ !== 'passwort').map((f) => ({ key: f.key, label: f.label }))];
-  if (w.art === 'benutzer.abwesenheit_gesetzt') fest.push({ key: 'von', label: 'Abwesend von' }, { key: 'bis', label: 'Abwesend bis' }, { key: 'zeitraum', label: 'Zeitraum der Abwesenheit' });
+  if (w.art === 'benutzer.abwesenheit_gesetzt') fest.push({ key: 'von', label: t('gemeinsam.automatisierung.abwesend-von') }, { key: 'bis', label: t('gemeinsam.automatisierung.abwesend-bis') }, { key: 'zeitraum', label: t('gemeinsam.automatisierung.zeitraum-der-abwesenheit') });
   return [...fest, ...(typ?.felder ?? []).filter((f) => f.typ !== 'passwort').map((f) => ({ key: f.key, label: f.label }))];
 }
 
@@ -326,22 +327,22 @@ export function bereinigeAutomatisierung(e: unknown): AutomatisierungDaten {
 const feldIn = (typ: Mappentyp | null, key: string): Feld | undefined => typ?.felder.find((f) => f.key === key);
 
 function empfaengerProblem(e: Empfaenger, typ: Mappentyp | null, k: Kontextdaten): string | null {
-  if (e.art === 'person') { const b = k.benutzer.find((x) => x.id === e.id); return !b ? 'Diese Person gibt es nicht mehr.' : b.aktiv === false ? `${b.name} ist deaktiviert.` : null; }
-  if (e.art === 'rolle') return k.rollen.some((x) => x.id === e.id) ? null : 'Diese Rolle gibt es nicht mehr.';
+  if (e.art === 'person') { const b = k.benutzer.find((x) => x.id === e.id); return !b ? t('gemeinsam.automatisierung.diese-person-gibt-es') : b.aktiv === false ? t('gemeinsam.automatisierung.ist-deaktiviert', { name: b.name }) : null; }
+  if (e.art === 'rolle') return k.rollen.some((x) => x.id === e.id) ? null : t('gemeinsam.automatisierung.diese-rolle-gibt-es');
   if (e.art === 'ersteller') return null;
   // Person aus dem Ereignis: fehlt sie im einzelnen Ereignis, gibt es eben nichts zu tun (kein Fehler).
   if (e.art === 'ereignis') return null;
   const f = feldIn(typ, e.feld);
-  if (!f) return `Das Feld „${e.feld}“ gibt es im Mappentyp nicht (mehr).`;
+  if (!f) return t('gemeinsam.automatisierung.das-feld-gibt-es', { feld: e.feld });
   const benutzerTyp = k.typen.find((t) => t.system === 'benutzer');
-  return f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id) ? null : `„${f.label}“ verweist nicht auf Benutzer.`;
+  return f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id) ? null : t('gemeinsam.automatisierung.verweist-nicht-auf-benutzer', { label: f.label });
 }
 
 function undProbleme(u: UndKarte, typ: Mappentyp | null, k: Kontextdaten): string[] {
   if (u.art === 'gruppe') return u.karten.flatMap((x) => undProbleme(x, typ, k));
-  if (u.art === 'ansicht') return k.sichten.some((s) => s.id === u.sicht) ? [] : ['Die Ansicht der Bedingung gibt es nicht mehr.'];
+  if (u.art === 'ansicht') return k.sichten.some((s) => s.id === u.sicht) ? [] : [t('gemeinsam.automatisierung.die-ansicht-der-bedingung')];
   if (u.art === 'favorit') { const p = empfaengerProblem(u.von, typ, k); return p ? [p] : []; }
-  if (!typ) return ['Bedingungen auf Felder brauchen einen Mappentyp in der Wenn-Karte.'];
+  if (!typ) return [t('gemeinsam.automatisierung.bedingungen-auf-felder-brauchen')];
   const p = bedingungsProblem(u.bedingung, [typ]);
   return p ? [p] : [];
 }
@@ -349,36 +350,36 @@ function undProbleme(u: UndKarte, typ: Mappentyp | null, k: Kontextdaten): strin
 /** Was nicht (mehr) passt – leer, wenn die Automatisierung laufen kann. */
 export function automatisierungsProbleme(a: AutomatisierungDaten, k: Kontextdaten): string[] {
   const p: string[] = [];
-  if (!a.name) p.push('Bitte einen Namen angeben.');
+  if (!a.name) p.push(t('gemeinsam.automatisierung.bitte-einen-namen-angeben'));
   const w = a.wenn;
   const typ = kontextTyp(w, k.typen);
   if (w.art === 'datum') {
-    if (!typ) p.push('Den Mappentyp der Wenn-Karte gibt es nicht (mehr).');
-    else if (!w.feld) p.push('„Datum erreicht“: Bitte ein Datumsfeld wählen.');
-    else if (feldIn(typ, w.feld)?.typ !== 'datum') p.push(`Das Datumsfeld „${w.feld}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
+    if (!typ) p.push(t('gemeinsam.automatisierung.den-mappentyp-der-wenn'));
+    else if (!w.feld) p.push(t('gemeinsam.automatisierung.datum-erreicht-bitte-ein'));
+    else if (feldIn(typ, w.feld)?.typ !== 'datum') p.push(t('gemeinsam.automatisierung.das-datumsfeld-gibt-es', { feld: w.feld, name: typ.name }));
   } else if (w.art === 'zeitplan') {
-    if (w.jeBenutzer && w.rolle && !k.rollen.some((r) => r.id === w.rolle)) p.push('Die Rolle der Zeitplan-Karte gibt es nicht mehr.');
-  } else if (w.typ && !typ) p.push('Den Mappentyp der Wenn-Karte gibt es nicht (mehr).');
-  else if (w.felder?.length && typ) for (const f of w.felder) if (!feldIn(typ, f)) p.push(`Das Feld „${f}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
+    if (w.jeBenutzer && w.rolle && !k.rollen.some((r) => r.id === w.rolle)) p.push(t('gemeinsam.automatisierung.die-rolle-der-zeitplan'));
+  } else if (w.typ && !typ) p.push(t('gemeinsam.automatisierung.den-mappentyp-der-wenn'));
+  else if (w.felder?.length && typ) for (const f of w.felder) if (!feldIn(typ, f)) p.push(t('gemeinsam.automatisierung.das-feld-gibt-es-2', { f, name: typ.name }));
   for (const u of a.und.karten) p.push(...undProbleme(u, typ, k));
-  if (!a.dann.length) p.push('Bitte mindestens eine Dann-Karte hinzufügen.');
+  if (!a.dann.length) p.push(t('gemeinsam.automatisierung.bitte-mindestens-eine-dann'));
   for (const d of [...a.dann, ...a.sonst]) {
     if (d.art === 'feld') {
-      if (!typ) p.push('„Feld ändern“ braucht einen Mappentyp in der Wenn-Karte.');
-      else if (!Object.keys(d.werte).length) p.push('„Feld ändern“: bitte mindestens ein Feld wählen.');
+      if (!typ) p.push(t('gemeinsam.automatisierung.feld-aendern-braucht-einen'));
+      else if (!Object.keys(d.werte).length) p.push(t('gemeinsam.automatisierung.feld-aendern-bitte-mindestens'));
       else for (const key of Object.keys(d.werte)) {
         const f = feldIn(typ, key);
-        if (!f) p.push(`„Feld ändern“: Das Feld „${key}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
-        else if (f.typ === 'passwort') p.push(`„Feld ändern“: Passwortfelder („${f.label}“) setzt keine Automatisierung.`);
+        if (!f) p.push(t('gemeinsam.automatisierung.feld-aendern-das-feld', { key, name: typ.name }));
+        else if (f.typ === 'passwort') p.push(t('gemeinsam.automatisierung.feld-aendern-passwortfelder-setzt', { label: f.label }));
       }
     }
-    if (d.art === 'zusammenfassung' && !(w.art === 'zeitplan' && w.jeBenutzer)) p.push('„Tägliche Zusammenfassung senden“ braucht die Wenn-Karte „Zeitplan“ für jeden Benutzer.');
-    if (d.art === 'favoriten' && w.art !== 'favorit.geaendert') p.push('„Favoriten-Änderungen melden“ braucht die Wenn-Karte „Favorit geändert“.');
-    if (d.art === 'anmeldeschutz' && d.was === 'sammel' && !(w.art === 'zeitplan' && !w.jeBenutzer)) p.push('„Sammelmeldung Anmeldeschutz“ braucht die Wenn-Karte „Zeitplan“ (nicht je Benutzer).');
-    if (d.art === 'anmeldeschutz' && d.was === 'konto' && w.art !== 'benutzer.gesperrt') p.push('„Kontosperre melden“ braucht die Wenn-Karte „Benutzerkonto gesperrt“.');
+    if (d.art === 'zusammenfassung' && !(w.art === 'zeitplan' && w.jeBenutzer)) p.push(t('gemeinsam.automatisierung.taegliche-zusammenfassung-senden'));
+    if (d.art === 'favoriten' && w.art !== 'favorit.geaendert') p.push(t('gemeinsam.automatisierung.favoriten-aenderungen-melden-braucht'));
+    if (d.art === 'anmeldeschutz' && d.was === 'sammel' && !(w.art === 'zeitplan' && !w.jeBenutzer)) p.push(t('gemeinsam.automatisierung.sammelmeldung-anmeldeschutz-braucht'));
+    if (d.art === 'anmeldeschutz' && d.was === 'konto' && w.art !== 'benutzer.gesperrt') p.push(t('gemeinsam.automatisierung.kontosperre-melden-braucht-die'));
     if (d.art === 'aufgabe') {
-      if (!d.text) p.push('„Aufgabe“: bitte beschreiben, was zu tun ist.');
-      if (!d.empfaenger.length) p.push('„Aufgabe“: bitte mindestens einen Empfänger wählen.');
+      if (!d.text) p.push(t('gemeinsam.automatisierung.aufgabe-bitte-beschreiben-was'));
+      if (!d.empfaenger.length) p.push(t('gemeinsam.automatisierung.aufgabe-bitte-mindestens-einen'));
       for (const e of d.empfaenger) { const x = empfaengerProblem(e, typ, k); if (x) p.push(`„Aufgabe“: ${x}`); }
     }
   }
@@ -388,9 +389,9 @@ export function automatisierungsProbleme(a: AutomatisierungDaten, k: Kontextdate
 /* ---------- Kurzform ---------- */
 
 const NAMEN: Record<string, string> = {
-  'mappe.angelegt': 'angelegt', 'mappe.geaendert': 'gespeichert', 'mappe.verknuepft': 'verknüpft', 'dokument.hochgeladen': 'Dokument hochgeladen',
-  'mappe.notiz': 'Notiz hinzugefügt', 'mappe.geloescht': 'gelöscht', 'mappe.geloescht_verknuepft': 'mit verknüpften gelöscht',
-  'mappe.endgueltig_geloescht': 'endgültig gelöscht', 'mappe.wiederhergestellt': 'wiederhergestellt', 'frist.erreicht': 'Frist erreicht',
+  'mappe.angelegt': 'angelegt', 'mappe.geaendert': 'gespeichert', 'mappe.verknuepft': 'verknüpft', 'dokument.hochgeladen': t('gemeinsam.automatisierung.dokument-hochgeladen'),
+  'mappe.notiz': t('gemeinsam.automatisierung.notiz-hinzugefuegt'), 'mappe.geloescht': 'gelöscht', 'mappe.geloescht_verknuepft': t('gemeinsam.automatisierung.mit-verknuepften-geloescht'),
+  'mappe.endgueltig_geloescht': t('gemeinsam.automatisierung.endgueltig-geloescht'), 'mappe.wiederhergestellt': 'wiederhergestellt', 'frist.erreicht': t('gemeinsam.automatisierung.frist-erreicht'),
 };
 
 /** „Wenn Vertrag gespeichert → Aufgabe an Verantwortlich“. */
@@ -399,22 +400,22 @@ export function kurzform(a: AutomatisierungDaten, k: Pick<Kontextdaten, 'typen' 
   const w = a.wenn;
   const wenn = w.art === 'datum'
     ? `${typ?.name ?? '?'}: ${feldIn(typ, w.feld)?.label ?? (w.feld || '?')} ${vorlaufText(w.vorlauf, w.einheit)}`
-    : w.art === 'zeitplan' ? `${zeitplanText(w)}${w.jeBenutzer ? ` für jeden Benutzer${w.rolle ? ` der Rolle ${k.rollen.find((r) => r.id === w.rolle)?.name ?? '?'}` : ''}` : ''}`
+    : w.art === 'zeitplan' ? `${zeitplanText(w)}${w.jeBenutzer ? t('gemeinsam.automatisierung.fuer-jeden-benutzer', { wert: w.rolle ? t('gemeinsam.automatisierung.der-rolle', { wert: k.rollen.find((r) => r.id === w.rolle)?.name ?? '?' }) : '' }) : ''}`
     : `${typ && EREIGNISKATALOG[w.art].gruppe !== 'benutzer' ? `${typ.name} ` : ''}${ereignisName(w.art)}`;
   const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : e.art === 'ersteller' ? 'Ersteller' : e.art === 'ereignis' ? EREIGNIS_PERSON[e.feld] ?? e.feld : feldIn(typ, e.feld)?.label ?? e.feld;
-  const dann = a.dann.map((d) => d.art === 'stopp' ? 'danach keine weiteren'
-    : d.art === 'zusammenfassung' ? 'Tägliche Zusammenfassung senden' : d.art === 'favoriten' ? 'Favoriten-Änderungen melden'
-    : d.art === 'anmeldeschutz' ? (d.was === 'sammel' ? 'Sammelmeldung Anmeldeschutz senden' : 'Kontosperre an Administratoren melden')
+  const dann = a.dann.map((d) => d.art === 'stopp' ? t('gemeinsam.automatisierung.danach-keine-weiteren')
+    : d.art === 'zusammenfassung' ? t('gemeinsam.automatisierung.taegliche-zusammenfassung-senden-2') : d.art === 'favoriten' ? t('gemeinsam.automatisierung.favoriten-aenderungen-melden')
+    : d.art === 'anmeldeschutz' ? (d.was === 'sammel' ? t('gemeinsam.automatisierung.sammelmeldung-anmeldeschutz-senden') : t('gemeinsam.automatisierung.kontosperre-an-administratoren'))
     : d.art === 'feld' ? `${Object.keys(d.werte).map((x) => feldIn(typ, x)?.label ?? x).join(', ')} setzen`
       : `${d.als === 'aufgabe' ? 'Aufgabe' : 'Benachrichtigung'} an ${d.empfaenger.map(wer).join(', ') || '?'}`).join(', ');
-  return `Wenn ${wenn}${a.und.karten.length ? ` und ${a.und.karten.length === 1 ? '1 Bedingung' : `${a.und.karten.length} Bedingungen`}` : ''} → ${dann || '…'}`;
+  return t('gemeinsam.automatisierung.wenn', { wenn, wert: a.und.karten.length ? ` und ${t('gemeinsam.automatisierung.bedingungen', { anzahl: a.und.karten.length })}` : '', wert2: dann || '…' });
 }
 
 const TAG_KURZ = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 /** „werktags um 07:00“, „Mo, Mi um 18:30“, „täglich um 07:00 (nicht an Feiertagen)“; mit Profilzeit: „zur Uhrzeit im Profil“. */
 export function zeitplanText(w: Extract<WennKarte, { art: 'zeitplan' }>): string {
-  if (w.jeBenutzer && w.profilzeit) return 'zur Uhrzeit im Profil';
-  const t = w.tage.join('');
-  const tage = t === '1234567' ? 'täglich' : t === '12345' ? 'werktags' : w.tage.map((x) => TAG_KURZ[x]).join(', ');
-  return `${tage} um ${w.uhrzeit}${w.feiertage ? ' (nicht an Feiertagen)' : ''}`;
+  if (w.jeBenutzer && w.profilzeit) return t('gemeinsam.automatisierung.zur-uhrzeit-im-profil');
+  const text2 = w.tage.join('');
+  const tage = text2 === '1234567' ? 'täglich' : text2 === '12345' ? 'werktags' : w.tage.map((x) => TAG_KURZ[x]).join(', ');
+  return t('gemeinsam.automatisierung.um', { tage, uhrzeit: w.uhrzeit, wert: w.feiertage ? t('gemeinsam.automatisierung.nicht-an-feiertagen') : '' });
 }

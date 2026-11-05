@@ -5,6 +5,7 @@
  */
 import type { Feld } from './model';
 import { zeitzone } from './region';
+import { t } from './texte';
 
 
 export interface Nummernkreis {
@@ -45,12 +46,12 @@ const zwei = (n: number) => String(n).padStart(2, '0');
 
 /** Fehler im Muster, sonst null. */
 export function pruefeMuster(muster: string): string | null {
-  if (!muster.trim()) return 'Das Muster ist leer.';
-  if (muster.length > 100) return 'Das Muster ist zu lang (höchstens 100 Zeichen).';
+  if (!muster.trim()) return t('gemeinsam.nummernkreis.das-muster-ist-leer');
+  if (muster.length > 100) return t('gemeinsam.nummernkreis.das-muster-ist-zu');
   const zaehler = muster.match(/\{zaehler(?::(\d+))?\}/g) ?? [];
   if (zaehler.length !== 1) return 'Das Muster braucht genau einen Platzhalter {zaehler} (oder z. B. {zaehler:7}).';
   const n = /\{zaehler:(\d+)\}/.exec(muster)?.[1];
-  if (n !== undefined && (Number(n) < 1 || Number(n) > 18)) return 'Die Stellenzahl im Zähler muss zwischen 1 und 18 liegen.';
+  if (n !== undefined && (Number(n) < 1 || Number(n) > 18)) return t('gemeinsam.nummernkreis.die-stellenzahl-im-zaehler');
   const fremd = (muster.match(/\{[^}]*\}/g) ?? []).filter((p) => !/^\{(jjjj|jj|mm|tt|zaehler(:\d+)?)\}$/.test(p));
   if (fremd.length) return `Unbekannter Platzhalter ${fremd[0]}. Erlaubt: {jjjj} {jj} {mm} {tt} {zaehler} {zaehler:n}.`;
   return null;

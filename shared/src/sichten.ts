@@ -9,6 +9,7 @@ import type { SichtRechte, SichtRegelwerk } from './sichtrechte';
 import { GEMISCHTE_SPALTEN, istLeer, istSystemspalte, SYSTEMSPALTEN, trefferlistenVon, type Feld, type Feldtyp, type Mappe, type Mappentyp, type Quelle } from './model';
 import { datumsformat } from './region';
 import { ALLE_TYPEN } from './pakete';
+import { t } from './texte';
 
 /* ---------- Bedingungen ---------- */
 
@@ -16,19 +17,19 @@ import { ALLE_TYPEN } from './pakete';
 export type Feldart = Feldtyp | 'zeit' | 'person';
 
 export const OPERATOREN = {
-  gleich: 'ist gleich',
+  gleich: t('gemeinsam.sichten.ist-gleich'),
   enthaelt: 'enthält',
-  kleiner: 'kleiner als',
-  groesser: 'größer als',
+  kleiner: t('gemeinsam.sichten.kleiner-als'),
+  groesser: t('gemeinsam.sichten.groesser-als'),
   zwischen: 'zwischen',
-  ausserhalb: 'außerhalb von',
-  imZeitraum: 'im Zeitraum',
-  einerVon: 'ist einer von',
-  zeigtAuf: 'zeigt auf',
+  ausserhalb: t('gemeinsam.sichten.ausserhalb-von'),
+  imZeitraum: t('gemeinsam.sichten.im-zeitraum'),
+  einerVon: t('gemeinsam.sichten.ist-einer-von'),
+  zeigtAuf: t('gemeinsam.sichten.zeigt-auf'),
   ja: 'ja',
   nein: 'nein',
-  leer: 'ist leer',
-  nichtLeer: 'ist nicht leer',
+  leer: t('gemeinsam.sichten.ist-leer'),
+  nichtLeer: t('gemeinsam.sichten.ist-nicht-leer'),
 } as const;
 export type Operator = keyof typeof OPERATOREN;
 
@@ -70,13 +71,13 @@ export type WertAngabe =
 
 export const DYNAMISCH = {
   heute: 'heute',
-  jahr: 'Jahr (aktuelles ± n)',
-  monat: 'Monat (aktueller ± n)',
-  ich: 'aktueller Benutzer',
-  meineRollen: 'Rollen des aktuellen Benutzers',
+  jahr: t('gemeinsam.sichten.jahr-aktuelles-n'),
+  monat: t('gemeinsam.sichten.monat-aktueller-n'),
+  ich: t('gemeinsam.sichten.aktueller-benutzer'),
+  meineRollen: t('gemeinsam.sichten.rollen-des-aktuellen-benutzers'),
 } as const;
 
-export const ZAEHLVERGLEICHE = { mehr: 'mehr als', weniger: 'weniger als', gleich: 'genau' } as const;
+export const ZAEHLVERGLEICHE = { mehr: t('gemeinsam.sichten.mehr-als'), weniger: t('gemeinsam.sichten.weniger-als'), gleich: 'genau' } as const;
 export type Zaehlvergleich = keyof typeof ZAEHLVERGLEICHE;
 
 export type Bedingung =
@@ -200,37 +201,37 @@ export function bedingungsfelder(typen: Array<Pick<Mappentyp, 'felder'>>): Bedin
 export function bedingungsProblem(b: Bedingung, typen: Mappentyp[]): string | null {
   if (b.art === 'feld') {
     const f = bedingungsfelder(typen).find((x) => x.key === b.feld);
-    if (!f) return `Das Feld „${b.feld}“ gibt es ${typen.length > 1 ? 'nicht in allen Mappentypen dieser Ansicht' : 'nicht (mehr)'}.`;
-    if (!OPERATOREN_JE_ART[f.art].includes(b.op)) return `„${OPERATOREN[b.op] ?? b.op}“ passt nicht zum Feld „${f.label}“.`;
+    if (!f) return t('gemeinsam.sichten.das-feld-gibt-es', { feld: b.feld, wert: typen.length > 1 ? t('gemeinsam.sichten.nicht-in-allen-mappentypen') : t('gemeinsam.sichten.nicht-mehr') });
+    if (!OPERATOREN_JE_ART[f.art].includes(b.op)) return t('gemeinsam.sichten.passt-nicht-zum-feld', { wert: OPERATOREN[b.op] ?? b.op, label: f.label });
     const brauchtWert = !['leer', 'nichtLeer', 'ja', 'nein'].includes(b.op);
-    if (brauchtWert && !b.wert) return `Bei „${f.label}“ fehlt der Vergleichswert.`;
-    if ((b.op === 'zwischen' || b.op === 'ausserhalb') && !b.bis) return `Bei „${f.label}“ fehlt der zweite Wert.`;
-    if (b.op === 'imZeitraum' && b.wert?.art !== 'jahr' && b.wert?.art !== 'monat') return `„im Zeitraum“ braucht Jahr oder Monat.`;
-    if (b.wert && (b.wert.art === 'jahr' || b.wert.art === 'monat') && b.op !== 'imZeitraum') return `Jahr und Monat gehen nur mit „im Zeitraum“.`;
-    if (b.wert && (b.wert.art === 'ich' || b.wert.art === 'meineRollen') && b.op !== 'zeigtAuf') return `„${DYNAMISCH[b.wert.art]}“ geht nur mit „zeigt auf“.`;
-    if (b.wert?.art === 'heute' && f.art !== 'datum' && f.art !== 'zeit') return `„heute“ geht nur bei Datumsfeldern.`;
-    if (b.wert?.art === 'eigenesFeld' || b.bis?.art === 'eigenesFeld') return 'Werte aus der eigenen Mappe gibt es nur im Auswahlfilter eines Verweisfelds.';
-    if (b.op === 'zeigtAuf' && b.wert?.art === 'meineRollen' && f.art === 'person') return `„Rollen des aktuellen Benutzers“ geht nicht bei „${f.label}“.`;
+    if (brauchtWert && !b.wert) return t('gemeinsam.sichten.bei-fehlt-der-vergleichswert', { label: f.label });
+    if ((b.op === 'zwischen' || b.op === 'ausserhalb') && !b.bis) return t('gemeinsam.sichten.bei-fehlt-der-zweite', { label: f.label });
+    if (b.op === 'imZeitraum' && b.wert?.art !== 'jahr' && b.wert?.art !== 'monat') return t('gemeinsam.sichten.im-zeitraum-braucht-jahr');
+    if (b.wert && (b.wert.art === 'jahr' || b.wert.art === 'monat') && b.op !== 'imZeitraum') return t('gemeinsam.sichten.jahr-und-monat-gehen');
+    if (b.wert && (b.wert.art === 'ich' || b.wert.art === 'meineRollen') && b.op !== 'zeigtAuf') return t('gemeinsam.sichten.geht-nur-mit-zeigt', { DYNAMISCH: DYNAMISCH[b.wert.art] });
+    if (b.wert?.art === 'heute' && f.art !== 'datum' && f.art !== 'zeit') return t('gemeinsam.sichten.heute-geht-nur-bei');
+    if (b.wert?.art === 'eigenesFeld' || b.bis?.art === 'eigenesFeld') return t('gemeinsam.sichten.werte-aus-der-eigenen');
+    if (b.op === 'zeigtAuf' && b.wert?.art === 'meineRollen' && f.art === 'person') return t('gemeinsam.sichten.rollen-des-aktuellen-benutzers-2', { label: f.label });
     return null;
   }
   if (b.art === 'favorit') return null;
   if (b.art === 'frist') {
-    if (!Number.isInteger(b.tage) || b.tage < 0 || b.tage > FRIST_TAGE_MAX) return `Die Anzahl Tage muss zwischen 0 und ${FRIST_TAGE_MAX} liegen.`;
-    if (!typen.length) return 'Fristen brauchen mindestens einen Mappentyp.';
+    if (!Number.isInteger(b.tage) || b.tage < 0 || b.tage > FRIST_TAGE_MAX) return t('gemeinsam.sichten.die-anzahl-tage-muss', { FRIST_TAGE_MAX });
+    if (!typen.length) return t('gemeinsam.sichten.fristen-brauchen-mindestens-einen');
     if (b.feld) {
-      if (typen.some((t) => t.felder.find((f) => f.key === b.feld)?.typ !== 'datum')) return `Das Datumsfeld „${b.feld}“ gibt es ${typen.length > 1 ? 'nicht in allen Mappentypen dieser Ansicht' : 'nicht (mehr)'}.`;
+      if (typen.some((t) => t.felder.find((f) => f.key === b.feld)?.typ !== 'datum')) return t('gemeinsam.sichten.das-datumsfeld-gibt-es', { feld: b.feld, wert: typen.length > 1 ? t('gemeinsam.sichten.nicht-in-allen-mappentypen') : t('gemeinsam.sichten.nicht-mehr') });
       return null;
     }
-    if (!typen.some((t) => mitFrist(t).length)) return 'Keiner der Mappentypen hat ein Datumsfeld mit Erinnerung.';
+    if (!typen.some((t) => mitFrist(t).length)) return t('gemeinsam.sichten.keiner-der-mappentypen-hat');
     return null;
   }
-  if (!Number.isInteger(b.anzahl) || b.anzahl < 0) return 'Die Anzahl muss eine ganze Zahl ab 0 sein.';
+  if (!Number.isInteger(b.anzahl) || b.anzahl < 0) return t('gemeinsam.sichten.die-anzahl-muss-eine');
   if (b.art === 'dokumenteGesamt' || b.art === 'verknuepfungenGesamt') return null;
-  if (!typen.length) return 'Bedingungen auf Register brauchen mindestens einen Mappentyp.';
+  if (!typen.length) return t('gemeinsam.sichten.bedingungen-auf-register-brauchen');
   // Bei mehreren Typen: gleicher Schlüssel und gleiche Art in allen (#66).
   const art = b.art === 'dokumente' ? 'dokumente' : 'verknuepfungen';
   if (typen.some((t) => t.register.find((x) => x.key === b.register)?.art !== art)) {
-    return `Das ${art === 'dokumente' ? 'Dokumenten' : 'Verknüpfungs'}register „${b.register}“ gibt es ${typen.length > 1 ? 'nicht in allen Mappentypen dieser Ansicht' : 'nicht (mehr)'}.`;
+    return t('gemeinsam.sichten.das-register-gibt-es', { wert: art === 'dokumente' ? 'Dokumenten' : 'Verknüpfungs', register: b.register, wert2: typen.length > 1 ? t('gemeinsam.sichten.nicht-in-allen-mappentypen') : t('gemeinsam.sichten.nicht-mehr') });
   }
   return null;
 }
@@ -494,28 +495,28 @@ export function bereinigeBedingungen(e: unknown): Bedingung[] {
 
 /** Bedingung lesbar, z. B. „Kündigung bis zwischen heute und heute + 90 Tage“. */
 export function beschreibeBedingung(b: Bedingung, typen: Mappentyp[], titelVon: (id: string) => string = (id) => id, eigeneNamen?: Record<string, string>): string {
-  if (b.art === 'favorit') return 'ist mein Favorit';
+  if (b.art === 'favorit') return t('gemeinsam.sichten.ist-mein-favorit');
   if (b.art === 'frist') {
     const feld = b.feld ? typen.flatMap((t) => t.felder).find((f) => f.key === b.feld)?.label ?? b.feld : null;
-    return `hat Frist in den nächsten ${b.tage} ${b.tage === 1 ? 'Tag' : 'Tagen'}${feld ? ` („${feld}“)` : ''}${b.nurMeine ? ', nur meine' : ''}`;
+    return t('gemeinsam.sichten.hat-frist-in-den', { anzahl: b.tage, wert: feld ? ` („${feld}“)` : '', wert2: b.nurMeine ? t('gemeinsam.sichten.nur-meine') : '' });
   }
-  if (b.art === 'dokumenteGesamt') return `Dokumente insgesamt: ${ZAEHLVERGLEICHE[b.vergleich]} ${b.anzahl} ${b.anzahl === 1 ? 'Dokument' : 'Dokumente'}`;
-  if (b.art === 'verknuepfungenGesamt') return `Verknüpfungen insgesamt: ${ZAEHLVERGLEICHE[b.vergleich]} ${b.anzahl} ${b.anzahl === 1 ? 'Verknüpfung' : 'Verknüpfungen'}`;
+  if (b.art === 'dokumenteGesamt') return t('gemeinsam.sichten.dokumente-insgesamt-dokumente', { anzahl: b.anzahl, ZAEHLVERGLEICHE: ZAEHLVERGLEICHE[b.vergleich] });
+  if (b.art === 'verknuepfungenGesamt') return t('gemeinsam.sichten.verknuepfungen-insgesamt', { anzahl: b.anzahl, ZAEHLVERGLEICHE: ZAEHLVERGLEICHE[b.vergleich] });
   if (b.art !== 'feld') {
     const namen = [...new Set(typen.map((t) => t.register.find((x) => x.key === b.register)?.name).filter(Boolean))];
     const r = { name: namen.length ? namen.join(' / ') : undefined };
-    return `${r?.name ?? b.register}: ${ZAEHLVERGLEICHE[b.vergleich]} ${b.anzahl} ${b.art === 'dokumente' ? (b.anzahl === 1 ? 'Dokument' : 'Dokumente') : (b.anzahl === 1 ? 'Verknüpfung' : 'Verknüpfungen')}`;
+    return `${r?.name ?? b.register}: ${ZAEHLVERGLEICHE[b.vergleich]} ${b.anzahl} ${b.art === 'dokumente' ? (t('gemeinsam.sichten.dokumente', { anzahl: b.anzahl })) : (t('gemeinsam.sichten.verknuepfungen', { anzahl: b.anzahl }))}`;
   }
   const f = bedingungsfelder(typen).find((x) => x.key === b.feld);
   const wert = (w?: WertAngabe): string => {
     if (!w) return '…';
     switch (w.art) {
       case 'heute': { const n = Number(w.versatz) || 0; return n ? `heute ${n > 0 ? '+' : '−'} ${Math.abs(n)} ${EINHEITEN[w.einheit ?? 'tage']}` : 'heute'; }
-      case 'jahr': { const n = Number(w.versatz) || 0; return n === 0 ? 'aktuelles Jahr' : n === -1 ? 'letztes Jahr' : n === 1 ? 'nächstes Jahr' : `Jahr ${n > 0 ? '+' : '−'} ${Math.abs(n)}`; }
-      case 'monat': { const n = Number(w.versatz) || 0; return n === 0 ? 'aktueller Monat' : n === -1 ? 'letzter Monat' : n === 1 ? 'nächster Monat' : `Monat ${n > 0 ? '+' : '−'} ${Math.abs(n)}`; }
-      case 'ich': return 'aktueller Benutzer';
-      case 'meineRollen': return 'Rollen des aktuellen Benutzers';
-      case 'eigenesFeld': return `„${eigeneNamen?.[w.feld] ?? w.feld}“ dieser Mappe`;
+      case 'jahr': { const n = Number(w.versatz) || 0; return n === 0 ? t('gemeinsam.sichten.aktuelles-jahr') : n === -1 ? t('gemeinsam.sichten.letztes-jahr') : t('gemeinsam.sichten.jahr', { anzahl: n, wert: n > 0 ? '+' : '−', abs: Math.abs(n) }); }
+      case 'monat': { const n = Number(w.versatz) || 0; return n === 0 ? t('gemeinsam.sichten.aktueller-monat') : n === -1 ? t('gemeinsam.sichten.letzter-monat') : t('gemeinsam.sichten.monat', { anzahl: n, wert: n > 0 ? '+' : '−', abs: Math.abs(n) }); }
+      case 'ich': return t('gemeinsam.sichten.aktueller-benutzer');
+      case 'meineRollen': return t('gemeinsam.sichten.rollen-des-aktuellen-benutzers');
+      case 'eigenesFeld': return t('gemeinsam.sichten.dieser-mappe', { wert: eigeneNamen?.[w.feld] ?? w.feld });
       case 'fest': {
         const v = w.wert;
         if (f?.art === 'referenz' || f?.art === 'person') return (Array.isArray(v) ? v : [String(v)]).map((x) => `„${titelVon(String(x))}“`).join(' oder ');
@@ -578,9 +579,9 @@ export function spaltenDerSicht(typen: Mappentyp[], wahl?: string | null): Spalt
 /** Hinweis für die Werkbank, wenn die gewählte Trefferliste nicht (mehr) passt. */
 export function trefferlistenProblem(wahl: string | null | undefined, typen: Mappentyp[]): string | null {
   if (!wahl) return null;
-  if (!typen.length) return 'Die Ansicht hat keine Mappentypen; eine Trefferliste lässt sich erst mit Mappentypen wählen.';
+  if (!typen.length) return t('gemeinsam.sichten.die-ansicht-hat-keine');
   return spaltenDerSicht(typen, wahl).ungueltig
-    ? `Die Trefferliste „${wahl}“ gibt es nicht (mehr) in ${typen.length === 1 ? 'diesem Mappentyp' : 'allen Mappentypen dieser Ansicht'}. Die Ansicht zeigt stattdessen die Standardliste.`
+    ? t('gemeinsam.sichten.die-trefferliste-gibt-es', { anzahl: typen.length, wahl })
     : null;
 }
 
@@ -628,12 +629,12 @@ export function auswahlProbleme(bed: Feldbedingung[], ziel: Pick<Mappentyp, 'fel
       // Für die allgemeine Prüfung wie ein fester Wert behandeln.
       const p = bedingungsProblem({ ...b, wert: { art: 'fest', wert: b.op === 'einerVon' || b.op === 'zeigtAuf' ? [] : '' } }, [alsZiel(ziel)]);
       if (p) { erg.push(p); continue; }
-      if (!OPS_EIGENES_FELD.includes(b.op)) { erg.push(`„${OPERATOREN[b.op]}“ geht nicht mit einem Wert dieser Mappe.`); continue; }
+      if (!OPS_EIGENES_FELD.includes(b.op)) { erg.push(t('gemeinsam.sichten.geht-nicht-mit-einem', { OPERATOREN: OPERATOREN[b.op] })); continue; }
       if (!eigene) continue;
-      if (name === eigene.feldKey) { erg.push('Der Filter darf nicht auf das eigene Verweisfeld zeigen.'); continue; }
+      if (name === eigene.feldKey) { erg.push(t('gemeinsam.sichten.der-filter-darf-nicht')); continue; }
       const f = eigene.felder.find((x) => x.key === name);
-      if (!f) { erg.push(`Das Feld „${name}“ dieser Mappe gibt es nicht (mehr).`); continue; }
-      if (!passendeEigeneFelder(b, ziel.felder, eigene.felder, eigene.feldKey).some((x) => x.key === name)) erg.push(`„${f.label}“ passt nicht zum Vergleich mit „${ziel.felder.find((x) => x.key === b.feld)?.label ?? b.feld}“.`);
+      if (!f) { erg.push(t('gemeinsam.sichten.das-feld-dieser-mappe', { name })); continue; }
+      if (!passendeEigeneFelder(b, ziel.felder, eigene.felder, eigene.feldKey).some((x) => x.key === name)) erg.push(t('gemeinsam.sichten.passt-nicht-zum-vergleich', { label: f.label, wert: ziel.felder.find((x) => x.key === b.feld)?.label ?? b.feld }));
       continue;
     }
     const p = bedingungsProblem(b, [alsZiel(ziel)]);
