@@ -43,6 +43,8 @@ export const HILFE = {
   'werkbank.aufgaben': admin('aufgaben/', 'Aufgaben', 'tagliche-zusammenfassung'),
   'werkbank.favoriten': admin('aufgaben/', 'Favoriten benachrichtigen', 'favoriten-benachrichtigen'),
   'werkbank.betrieb': admin('installation/', 'E-Mail und Adresse', 'e-mail-und-adresse'),
+  'werkbank.mail': admin('e-mail-versand/', 'E-Mail-Versand'),
+  'werkbank.mail.oauth': admin('e-mail-versand/', 'Anmeldung über OAuth', 'anmeldung-uber-oauth'),
   'werkbank.verschluesselung': admin('verschluesselung/', 'Verschlüsselung'),
   'werkbank.designs': admin('designs/', 'Designs'),
   'werkbank.papierkorb': admin('papierkorb/', 'Papierkorb'),

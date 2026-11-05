@@ -34,7 +34,7 @@ import { pgRepo } from './repo-pg';
 import { Betrieb, pgBetriebSpeicher } from './betrieb';
 import { Tresor } from './tresor';
 import { pruefeOrdner, SCHLUESSELDATEI } from './ordner';
-import { alsUrl, ANBINDUNG_DATEI, AnbindungVerwaltung, ausUrl, ausVariablen, liesAnbindung, pruefeAnbindung, schreibeAnbindung, type Anbindung } from './anbindung';
+import { alsUrl, ANBINDUNG_DATEI, AnbindungVerwaltung, ausUrl, ausVariablen, datenbankVomImage, liesAnbindung, pruefeAnbindung, schreibeAnbindung, umgebungAusCompose, type Anbindung } from './anbindung';
 import { Einrichtungscode } from './einrichtungscode';
 import { einrichtungsmodus } from './einrichtungsmodus';
 import { Einrichtung } from './einrichtung';
@@ -145,7 +145,8 @@ if (kandidat) {
 if (verbunden && !anbindung && umgebung) {
   await schreibeAnbindung(ordner.geheim, umgebung);
   anbindung = umgebung;
-  if (env.DATABASE_URL) log.info(`DATABASE_URL in ${ANBINDUNG_DATEI} übernommen – die Variable ist nicht mehr nötig und kann aus der Compose-Datei entfernt werden. ${VARIABLEN_GRUND.datenbank}`);
+  if (datenbankVomImage(env)) log.info(`Datenbank im Container (dms-komplett) in ${ANBINDUNG_DATEI} übernommen`);
+  else if (env.DATABASE_URL) log.info(`DATABASE_URL in ${ANBINDUNG_DATEI} übernommen – die Variable ist nicht mehr nötig und kann aus der Compose-Datei entfernt werden. ${VARIABLEN_GRUND.datenbank}`);
   else log.info(`Datenbank-Anbindung aus DMS_DB_PASSWORT in ${ANBINDUNG_DATEI} übernommen`);
 }
 if (!verbunden) {
@@ -330,6 +331,8 @@ const eingangsordner = new Eingangsordner(env.DMS_EINGANG ?? '/eingang', {
 let postSperre: Promise<boolean> | null = null;
 // Anmeldung per OAuth 2.0 (#358): Token verschlüsselt mit dem Schlüssel des DMS.
 const postfachOAuth = new PostfachOAuth({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), anAdmins });
+// E-Mail-Versand über OAuth (#813): dieselbe Anmeldung wie bei den Postfächern.
+betrieb.verbindeOAuth(postfachOAuth);
 const postfaecher = new Postfaecher({
   dienst, einstellungen: pgEinstellungen(sql, cfg.haushalt), verbinde: verbindeImap, lies: liesMail, oauth: postfachOAuth,
   verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w),
@@ -343,7 +346,8 @@ const postfaecher = new Postfaecher({
     return r.ok as boolean;
   })()),
 });
-const anbindungVerwaltung = new AnbindungVerwaltung(ordner.geheim, db, umgebung, () => { void beenden(); });
+// Hinweise zu DATABASE_URL nur, wenn sie aus der Compose-Datei kommt, nicht vom Start-Skript von dms-komplett (#805).
+const anbindungVerwaltung = new AnbindungVerwaltung(ordner.geheim, db, umgebungAusCompose(env, umgebung), () => { void beenden(); });
 // Befehl dms im Container (#244).
 const konsole = new Konsolenzugang();
 // Anmeldung über einen Anbieter (#241); Client-Secret verschlüsselt mit dem Schlüssel des DMS.

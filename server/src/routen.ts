@@ -61,7 +61,7 @@ import { engpaesseAus, VARIABLE, type Grenzwerte } from '../../shared/src/system
 import type { Eingangsordner } from './eingangsordner';
 import type { Webdav } from './webdav';
 import type { Postfaecher } from './postfach';
-import { RueckrufFehler, type PostfachOAuth } from './postfach-oauth';
+import { RueckrufFehler, VERSAND_OAUTH_ID, type PostfachOAuth } from './postfach-oauth';
 import type { OrdnerPruefung } from './ordner';
 import type { Einrichtung } from './einrichtung';
 import type { AnbindungVerwaltung } from './anbindung';
@@ -1390,8 +1390,22 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const alte = x.sicherung ? (await x.sicherung.liste()).filter((s) => s.meta && s.meta.verschluesselung.fingerabdruck !== w.neu).length : 0;
       return ok({ ...w, alteSicherungen: alte, ...await tresor().status(), notfallblatt: x.sicherung ? await x.sicherung.notfallblatt() : null });
     } },
-    { methode: 'GET', pfad: '/api/werkbank/betrieb', zugang: 'admin', handler: async () => ok(betrieb().ansicht()) },
-    { methode: 'PUT', pfad: '/api/werkbank/betrieb/mail', zugang: 'admin', handler: async (a) => ok(await betrieb().speichereMail(b(a))) },
+    // Name der Ablage für den vorgeschlagenen Absender (#813).
+    { methode: 'GET', pfad: '/api/werkbank/betrieb', zugang: 'admin', handler: async () => ok({ ...await betrieb().stand(), ablage: x.einrichtung ? await x.einrichtung.stand().then((e) => e.mandant, () => null) : null }) },
+    { methode: 'PUT', pfad: '/api/werkbank/betrieb/mail', zugang: 'admin', handler: async (a) => ok(await betrieb().speichereMail(b(a), ich(a).email)) },
+    // Server zur Adresse finden (#813): eingebaute Liste, sonst DNS und Autoconfig der eigenen Domain; Thunderbird nur auf Knopfdruck.
+    { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/finden', zugang: 'admin', lesend: true, handler: async (a) => ok(await betrieb().findeServer(b(a))) },
+    // Anmeldung über OAuth für den Versand (#813): dieselbe App und derselbe Rückruf wie bei den Postfächern.
+    { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/oauth/start', zugang: 'admin', handler: async (a) => {
+      const s = await pfOAuth().start(betrieb().oauthZiel(), { id: ich(a).id, email: ich(a).email }, pfRueckruf());
+      return { body: { url: s.url }, cookies: [kurzCookie(POSTFACH_BINDUNG_COOKIE, s.bindung, 600, '/api/oauth/postfach')] };
+    } },
+    { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/oauth/geraet', zugang: 'admin', handler: async (a) => ok(await pfOAuth().geraetStart(betrieb().oauthZiel(), { id: ich(a).id, email: ich(a).email })) },
+    { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/oauth/geraet/pruefen', zugang: 'admin', lesend: true, handler: async (a) => ok(await pfOAuth().geraetPruefen(VERSAND_OAUTH_ID, { id: ich(a).id })) },
+    { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/oauth/abmelden', zugang: 'admin', handler: async (a) => {
+      await pfOAuth().abmelden(VERSAND_OAUTH_ID, ich(a).email);
+      return ok(await betrieb().stand());
+    } },
     { methode: 'PUT', pfad: '/api/werkbank/betrieb/adresse', zugang: 'admin', handler: async (a) => ok(await betrieb().speichereAdresse(b(a).adresse)) },
     { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/pruefen', zugang: 'admin', handler: async (a) => ok(await betrieb().pruefeVerbindung(b(a))) },
     { methode: 'POST', pfad: '/api/werkbank/betrieb/mail/testmail', zugang: 'admin', handler: async (a) => ok(await betrieb().sendeTestmail(b(a).mail, b(a).an)) },
@@ -1571,7 +1585,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/postfaecher-oauth', zugang: 'admin', handler: async () => ok({ apps: await pfOAuth().appsAnsicht(), rueckruf: pfRueckruf() }) },
     { methode: 'PUT', pfad: '/api/werkbank/postfaecher-oauth/:anbieter', zugang: 'admin', handler: async (a) => ok({
       // Neuer Mandant bzw. Token-Endpunkt: Postfächer dieses Anbieters abmelden (Sicherheits-Review #358).
-      apps: await pfOAuth().speichereApp(a.params.anbieter, a.body, ich(a).email, async (an) => (x.postfaecher ? (await x.postfaecher.liste()).filter((p) => p.anmeldung === 'oauth' && p.anbieter === an).map((p) => p.id) : [])),
+      // Auch die Anmeldung des E-Mail-Versands (#813), wenn sie diesen Anbieter nutzt.
+      apps: await pfOAuth().speichereApp(a.params.anbieter, a.body, ich(a).email, async (an) => [
+        ...(x.postfaecher ? (await x.postfaecher.liste()).filter((p) => p.anmeldung === 'oauth' && p.anbieter === an).map((p) => p.id) : []),
+        ...(x.betrieb?.ansicht?.().mail.anmeldung === 'oauth' && x.betrieb.ansicht().mail.anbieter === an ? [VERSAND_OAUTH_ID] : []),
+      ]),
       rueckruf: pfRueckruf(),
     }) },
     { methode: 'POST', pfad: '/api/werkbank/postfaecher/:id/oauth/start', zugang: 'admin', handler: async (a) => {
@@ -1592,6 +1610,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const admin = a.benutzer?.rolle === 'admin' ? { id: a.benutzer.id } : null;
       try {
         const r = await pfOAuth().rueckruf(a.query, admin, leseCookie(a.cookieKopf, POSTFACH_BINDUNG_COOKIE));
+        // E-Mail-Versand (#813): zurück zu E-Mail und Adresse.
+        if (r.postfachId === VERSAND_OAUTH_ID) return { weiterleiten: '/werkbank/betrieb?oauth=angemeldet', cookies: raus };
         return { weiterleiten: `/werkbank/postfaecher/${encodeURIComponent(r.postfachId)}?oauth=angemeldet`, cookies: raus };
       } catch (e) {
         const text = (e as Error).message;
@@ -1599,6 +1619,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         // Nur ein fester Fehlercode in der Adresse – die Texte stehen in der Oberfläche (kein fremder Text als Meldung).
         const id = e instanceof RueckrufFehler && e.postfachId && admin ? `/${encodeURIComponent(e.postfachId)}` : '';
         const code = e instanceof RueckrufFehler ? e.code : 'unbekannt';
+        if (e instanceof RueckrufFehler && e.postfachId === VERSAND_OAUTH_ID && admin) return { weiterleiten: `/werkbank/betrieb?oauthfehler=${code}`, cookies: raus };
         return { weiterleiten: `/werkbank/postfaecher${id}?oauthfehler=${code}`, cookies: raus };
       }
     } },

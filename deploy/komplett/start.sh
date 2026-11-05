@@ -50,7 +50,12 @@ abfrage() { su-exec postgres psql -h 127.0.0.1 -U postgres -tAc "$1"; }
 [ "$(abfrage "SELECT 1 FROM pg_database WHERE datname = 'dms'")" = 1 ] || { abfrage "CREATE DATABASE dms OWNER dms" >/dev/null; log "Datenbank dms angelegt."; }
 
 # Anbindung für Ablago: nur im Container, ohne Passwort. Der Einrichtungsassistent überspringt damit den Datenbank-Schritt.
+# Steht DATABASE_URL nicht in der Compose-Datei, setzt erst dieses Skript sie: dann als „vom Image“ kennzeichnen,
+# damit die Werkbank nicht rät, sie aus der Compose-Datei zu entfernen (#805).
+# anfang-datenbank-variable (für den Test in server/test/umgebungsvariablen.test.ts)
+if [ -z "${DATABASE_URL:-}" ]; then export DMS_DATENBANK_VOM_IMAGE=1; else unset DMS_DATENBANK_VOM_IMAGE; fi
 export DATABASE_URL="postgres://dms@127.0.0.1:5432/dms"
+# ende-datenbank-variable
 ${DMS_START:-node --enable-source-maps /app/server/dist/index.js} &
 DMS=$!
 

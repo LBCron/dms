@@ -81,7 +81,7 @@ Ist der Katalog nicht erreichbar (kein Internet), sagt der Schritt das deutlich:
 
 ![Optionales](bilder/einrichtung-optional.png)
 
-Adresse von Ablago (vorbelegt mit der Adresse im Browser), Beispiel-Mappentypen und der E-Mail-Versand. Das Bundesland für Feiertage stellst du bei Bedarf später unter [Werkbank → Einstellungen → Region](region.md) ein. Alles lässt sich auch später in der Werkbank einstellen.
+Adresse von Ablago (vorbelegt mit der Adresse im Browser), der E-Mail-Versand und Beispiel-Mappentypen. Für den [E-Mail-Versand](e-mail-versand.md) genügen meist deine Adresse und dein Passwort; Server, Benutzer und Absender schlägt der Assistent vor, und **Weiter** übernimmt sie. Das Bundesland für Feiertage stellst du bei Bedarf später unter [Werkbank → Einstellungen → Region](region.md) ein. Alles lässt sich auch später in der Werkbank einstellen.
 
 ### Fertig
 
@@ -132,7 +132,7 @@ Unter **Werkbank → E-Mail und Adresse** stellst du ein, was früher Umgebungsv
 ![E-Mail und Adresse in der Werkbank](bilder/werkbank-betrieb.png)
 
 - **Adresse von Ablago** – unter dieser Adresse öffnen die Benutzer Ablago, z. B. `http://nas.home.arpa:8080` oder `https://ablage.example.org`. Sie steht in den Links der E-Mails. Solange keine gepflegt ist, nimmt Ablago die Adresse, unter der es gerade aufgerufen wird; **Diese Adresse übernehmen** speichert sie. Beginnt sie mit `https://`, gilt die Anmeldung nur noch über HTTPS.
-- **E-Mail-Versand** – Server, Verbindungsart (STARTTLS, meist Port 587; SSL/TLS, meist 465; unverschlüsselt nur im Heimnetz), Benutzer, Passwort und Absender. **Verbindung prüfen** meldet sich am Server an, ohne etwas zu senden; **Testmail senden** schickt eine Mail an eine Adresse deiner Wahl – beides mit den Werten im Formular, auch bevor du speicherst. Schlägt etwas fehl, steht die Meldung des Mailservers darunter.
+- **E-Mail-Versand** – eigene Adresse und Passwort; Server, Port, Benutzer und Absender schlägt Ablago vor, alle Felder stehen unter *Erweitert*. Auch die Anmeldung über OAuth für Microsoft 365 und Google. **Verbindung prüfen** meldet sich am Server an, ohne etwas zu senden; **Testmail senden** schickt eine Mail an eine Adresse deiner Wahl – beides mit den Werten im Formular, auch bevor du speicherst. Schlägt etwas fehl, nennt Ablago die Ursache, darunter steht die Antwort des Servers. Alles dazu, mit Hinweisen je Anbieter: [E-Mail-Versand](e-mail-versand.md).
 - **Selbstsigniertes Zertifikat erlauben** – nur für einen eigenen Mailserver im Heimnetz.
 - Der **Absender** ist auch der Absender, wenn Benutzer eine Mappe [per E-Mail versenden](https://help.ablago.app/benutzer/versenden/). Ablago trägt dabei die Adresse des Benutzers als **Antworten an** ein – so kommen Antworten bei ihm an, ohne dass Ablago fremde Absender vortäuscht (das würden viele Empfänger als Spam einstufen). Dieselbe Einstellung braucht die [tägliche Zusammenfassung der Aufgaben](aufgaben.md#tagliche-zusammenfassung).
 - Ohne E-Mail-Versand (Haken „E-Mails verschicken“ aus) zeigt die Benutzerverwaltung die Einladungs- und Passwort-Links zum Kopieren an; „Passwort vergessen“ setzt dann der Administrator zurück.

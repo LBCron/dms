@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type OAuthAnbieter, type OAuthAppEingabe, type OAuthAppsStand, type PostfachAnsicht, type PostfachEingabe } from '../api';
+import { api, type OAuthAnbieter, type OAuthAppEingabe, type OAuthAppsStand, type OAuthStatus, type PostfachAnsicht, type PostfachEingabe } from '../api';
 import { useDaten } from '../daten';
 import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
+import { t } from '../sprache';
 
 /**
  * Werkbank → Postfächer (#196): Mails per IMAP abholen, jede Mail wird neue Post.
@@ -24,7 +25,7 @@ const ANBIETER: Record<OAuthAnbieter, { name: string; server: string; geraet: bo
   google: { name: 'Gmail / Google Workspace', server: 'imap.gmail.com', geraet: false },
   andere: { name: 'anderer Anbieter', server: '', geraet: true },
 };
-type Meldung = { art: 'gut' | 'schlecht' | 'info'; text: string };
+export type Meldung = { art: 'gut' | 'schlecht' | 'info'; text: string };
 /** Feste Fehlercodes der Rückkehr (#358) – Text nie aus der Adresse übernehmen. */
 const RUECKRUF_FEHLER: Record<string, string> = {
   abgelaufen: 'Die Anmeldung ist abgelaufen oder unbekannt. Bitte noch einmal beginnen.',
@@ -40,12 +41,12 @@ const gleicherServer = (a: Pick<PostfachEingabe, 'server' | 'port' | 'verschlues
   a.server.toLowerCase() === b.server.toLowerCase() && Number(a.port) === Number(b.port) && a.verschluesselung === b.verschluesselung;
 
 /** Meldung aus der Rückkehr vom Anbieter (?oauth=angemeldet bzw. ?oauthfehler=<Code>) – einmal zeigen, dann aus der Adresse nehmen. */
-function useRueckkehr(): Meldung | undefined {
+export function useRueckkehr(gut = 'Beim Anbieter angemeldet. Mit „Verbindung testen“ prüfen.'): Meldung | undefined {
   const [m] = useState<Meldung | undefined>(() => {
     const q = new URLSearchParams(location.search);
     const f = q.get('oauthfehler');
     if (f) return { art: 'schlecht', text: `Anmeldung beim Anbieter fehlgeschlagen. ${RUECKRUF_FEHLER[f] ?? 'Einzelheiten stehen im Protokoll.'}` };
-    if (q.get('oauth') === 'angemeldet') return { art: 'gut', text: 'Beim Anbieter angemeldet. Mit „Verbindung testen“ prüfen.' };
+    if (q.get('oauth') === 'angemeldet') return { art: 'gut', text: gut };
     return undefined;
   });
   useEffect(() => { if (m) history.replaceState(null, '', location.pathname); }, [m]);
@@ -210,7 +211,7 @@ export function PostfachEditor({ z, id }: { z: PostfachZustand; id: string }) {
         <Speicherleiste ent={ent} gegenstand="Postfach" sendet={sendet}
           links={vorhanden && <button type="button" className="textknopf gefahr" onClick={() => void loeschen()}>Postfach entfernen</button>} />
       </form>
-      {e.anmeldung === 'oauth' && <OAuthBereich anbieter={e.anbieter ?? 'microsoft'} postfach={vorhanden?.anmeldung === 'oauth' ? vorhanden : undefined} geaendert={ent.geaendert} z={z} setMeldung={setMeldung} />}
+      {e.anmeldung === 'oauth' && <OAuthBereich anbieter={e.anbieter ?? 'microsoft'} ziel={vorhanden?.anmeldung === 'oauth' ? postfachZiel(vorhanden, z) : undefined} geaendert={ent.geaendert} setMeldung={setMeldung} />}
       {s && (
         <div className="blatt">
           <h2 className="h3">Stand</h2>
@@ -227,11 +228,33 @@ export function PostfachEditor({ z, id }: { z: PostfachZustand; id: string }) {
   );
 }
 
+/** Was angemeldet wird: ein Postfach (#358) oder der E-Mail-Versand (#813). */
+export interface OAuthZiel {
+  oauth: OAuthStatus | null | undefined;
+  start(): Promise<{ url: string }>;
+  geraet(): Promise<{ code: string; adresse: string; bis: string; intervall: number }>;
+  geraetPruefen(): Promise<{ fertig: boolean; text: string }>;
+  abmelden(): Promise<void>;
+  neuLaden(): Promise<void>;
+}
+
+function postfachZiel(p: PostfachAnsicht, z: PostfachZustand): OAuthZiel {
+  return {
+    oauth: p.oauth,
+    start: () => api.postfachOAuthStart(p.id),
+    geraet: () => api.postfachOAuthGeraet(p.id),
+    geraetPruefen: () => api.postfachOAuthGeraetPruefen(p.id),
+    abmelden: async () => { z.setListe(await api.postfachOAuthAbmelden(p.id)); },
+    neuLaden: z.laden,
+  };
+}
+
 /**
  * OAuth 2.0 (#358): App-Registrierung des Anbieters (je Installation) und Anmeldung des Postfachs –
  * im Browser (Autorisierungscode mit PKCE) oder mit Gerätecode. Token sieht die Oberfläche nie.
+ * Seit #813 auch für den E-Mail-Versand (`versand`): dieselbe App, eigene Anmeldung.
  */
-function OAuthBereich({ anbieter, postfach, geaendert, z, setMeldung }: { anbieter: OAuthAnbieter; postfach?: PostfachAnsicht; geaendert: boolean; z: PostfachZustand; setMeldung: (m: Meldung | undefined) => void }) {
+export function OAuthBereich({ anbieter, ziel, geaendert, setMeldung, versand = false }: { anbieter: OAuthAnbieter; ziel?: OAuthZiel; geaendert: boolean; setMeldung: (m: Meldung | undefined) => void; versand?: boolean }) {
   const [stand, setStand] = useState<OAuthAppsStand>();
   const appAus = (st: OAuthAppsStand | undefined): OAuthAppEingabe => {
     const a = st?.apps[anbieter];
@@ -249,20 +272,20 @@ function OAuthBereich({ anbieter, postfach, geaendert, z, setMeldung }: { anbiet
     // eslint-disable-next-line react-hooks/exhaustive-deps -- appAus hängt nur am Anbieter
   }, [anbieter, setMeldung]);
   // Gerätecode: im angegebenen Abstand nachfragen, bis angemeldet, abgelehnt oder abgelaufen.
-  const neuLaden = z.laden;
-  const postfachId = postfach?.id;
+  const neuLaden = ziel?.neuLaden;
+  const geraetPruefen = ziel?.geraetPruefen;
   useEffect(() => {
-    if (!geraet || !postfachId) return;
+    if (!geraet || !geraetPruefen) return;
     let aus = false;
-    const t = setInterval(() => {
+    const uhr = setInterval(() => {
       if (aus) return;
       if (Date.parse(geraet.bis) < Date.now()) { setGeraet(undefined); setMeldung({ art: 'schlecht', text: 'Der Gerätecode ist abgelaufen. Bitte neu anfordern.' }); return; }
-      void api.postfachOAuthGeraetPruefen(postfachId).then(async (r) => {
-        if (r.fertig && !aus) { aus = true; setGeraet(undefined); setMeldung({ art: 'gut', text: 'Beim Anbieter angemeldet. Mit „Verbindung testen“ prüfen.' }); await neuLaden(); }
+      void geraetPruefen().then(async (r) => {
+        if (r.fertig && !aus) { aus = true; setGeraet(undefined); setMeldung({ art: 'gut', text: versand ? t('werkbank.mail.oauth.angemeldet') : 'Beim Anbieter angemeldet. Mit „Verbindung testen“ prüfen.' }); await neuLaden?.(); }
       }).catch((x) => { aus = true; setGeraet(undefined); setMeldung({ art: 'schlecht', text: (x as Error).message }); });
     }, Math.max(geraet.intervall, 2) * 1000);
-    return () => { aus = true; clearInterval(t); };
-  }, [geraet, postfachId, setMeldung, neuLaden]);
+    return () => { aus = true; clearInterval(uhr); };
+  }, [geraet, geraetPruefen, setMeldung, neuLaden, versand]);
 
   const gespeichert = stand?.apps[anbieter];
   async function appSpeichern() {
@@ -270,30 +293,31 @@ function OAuthBereich({ anbieter, postfach, geaendert, z, setMeldung }: { anbiet
     try { const st = await api.postfachOAuthApp(anbieter, app); setStand(st); setApp(appAus(st)); setMeldung({ art: 'gut', text: 'App gespeichert.' }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
   }
   async function imBrowser() {
-    if (!postfach) return;
+    if (!ziel) return;
     try {
-      const { url } = await api.postfachOAuthStart(postfach.id);
+      const { url } = await ziel.start();
       if (!/^https?:\/\//.test(url)) throw new Error('Unerwartete Adresse des Anbieters.');
       location.assign(url);
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
   async function mitGeraetecode() {
-    if (!postfach) return;
-    try { setGeraet(await api.postfachOAuthGeraet(postfach.id)); setMeldung(undefined); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
+    if (!ziel) return;
+    try { setGeraet(await ziel.geraet()); setMeldung(undefined); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
   async function abmelden() {
-    if (!postfach || !(await rueckfrage({ titel: 'Anmeldung entfernen?', text: 'Ablago löscht die gespeicherten Token und holt bis zur neuen Anmeldung keine Mails aus diesem Postfach ab.', ja: 'Abmelden', gefahr: true }))) return;
-    try { z.setListe(await api.postfachOAuthAbmelden(postfach.id)); setMeldung({ art: 'gut', text: 'Abgemeldet.' }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
+    if (!ziel || !(await rueckfrage({ titel: 'Anmeldung entfernen?', text: versand ? t('werkbank.mail.oauth.abmelden.text') : 'Ablago löscht die gespeicherten Token und holt bis zur neuen Anmeldung keine Mails aus diesem Postfach ab.', ja: 'Abmelden', gefahr: true }))) return;
+    try { await ziel.abmelden(); setMeldung({ art: 'gut', text: 'Abgemeldet.' }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
 
-  const o = postfach?.oauth;
+  const o = ziel?.oauth;
   const zeitpunkt = (iso: string | null) => (iso ? zeit(iso) : '–');
   return (
     <div className="blatt">
       <h2 className="h3">Anmeldung per OAuth 2.0 <Hilfe ort="werkbank.postfaecher.oauth" /></h2>
+      {versand && <p className="leise klein">{anbieter === 'microsoft' ? t('werkbank.mail.oauth.app.microsoft') : t('werkbank.mail.oauth.app.google')}</p>}
       {anbieter === 'google' && <div className="hinweis"><p><strong>Privates Gmail-Konto?</strong> Dann ist ein <strong>App-Passwort</strong> einfacher. Eine eigene Google-App im Status „Test“ muss alle 7 Tage neu angemeldet werden; ohne diese Grenze geht es nur innerhalb von Google Workspace („intern“) oder nach Googles Prüfung.</p></div>}
       <form onSubmit={(x) => { x.preventDefault(); void appSpeichern(); }} onKeyDown={appEnt.tasten}>
-      <h3 className="h4">App beim Anbieter <small className="leise">gilt für alle Postfächer dieses Anbieters</small></h3>
+      <h3 className="h4">App beim Anbieter <small className="leise">{versand ? t('werkbank.mail.oauth.app.gilt') : 'gilt für alle Postfächer dieses Anbieters'}</small></h3>
       <div className="raster">
         <label className="eigenschaft"><span>Client-ID <small>Anwendungs-ID</small></span><input id="pf-oauth-client" value={app.clientId} autoComplete="off" onChange={(x) => setApp({ ...app, clientId: x.target.value })} /></label>
         <label className="eigenschaft"><span>Client-Geheimnis <small>{gespeichert?.secretGesetzt ? 'gespeichert – leer lassen, um es zu behalten' : 'wird verschlüsselt gespeichert; leer bei öffentlichen Clients'}</small></span>
@@ -310,8 +334,8 @@ function OAuthBereich({ anbieter, postfach, geaendert, z, setMeldung }: { anbiet
       <Speicherleiste ent={appEnt} gegenstand="App" sendet={sendet} />
       </form>
 
-      <h3 className="h4">Postfach anmelden</h3>
-      {!postfach || geaendert ? <p className="leise">Erst das Postfach speichern, dann hier beim Anbieter anmelden.</p> : (
+      <h3 className="h4">{versand ? t('werkbank.mail.oauth.anmelden') : 'Postfach anmelden'}</h3>
+      {!ziel || geaendert ? <p className="leise">{versand ? t('werkbank.mail.oauth.erst-speichern') : 'Erst das Postfach speichern, dann hier beim Anbieter anmelden.'}</p> : (
         <>
           <dl className="eigenschaften">
             <dt>Zustand</dt><dd>{o?.zustand === 'ok' ? `angemeldet am ${zeitpunkt(o.angemeldetAm)}${o.von ? ` von ${o.von}` : ''}` : o?.zustand === 'abgelaufen' ? <strong>abgelaufen oder entzogen – bitte neu anmelden</strong> : 'nicht angemeldet'}</dd>

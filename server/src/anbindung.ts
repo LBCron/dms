@@ -35,6 +35,21 @@ export function ausUrl(url: string | undefined): Anbindung | null {
 }
 
 /**
+ * DATABASE_URL aus der Compose-Datei (#805): Bei dms-komplett setzt das Start-Skript die Variable selbst und
+ * kennzeichnet das mit DMS_DATENBANK_VOM_IMAGE=1. Dann ist sie kein Rest aus der Compose-Datei, und kein
+ * Hinweis („nicht mehr nötig“, „weicht ab“) soll dazu raten, sie zu entfernen. Steht sie wirklich in der
+ * Compose-Datei, fehlt die Kennzeichnung, und alles bleibt wie bisher.
+ */
+export function datenbankVomImage(env: Record<string, string | undefined>): boolean {
+  return env.DMS_VARIANTE === 'komplett' && env.DMS_DATENBANK_VOM_IMAGE === '1';
+}
+
+/** Die Anbindung aus Umgebungsvariablen, soweit sie aus der Compose-Datei stammt; null, wenn das Image sie setzt. */
+export function umgebungAusCompose(env: Record<string, string | undefined>, umgebung: Anbindung | null): Anbindung | null {
+  return datenbankVomImage(env) ? null : umgebung;
+}
+
+/**
  * Ohne DATABASE_URL (#184): DMS_DB_PASSWORT (und optional DMS_DB_HOST, DMS_DB_PORT) für Vorlagen, in denen
  * das Passwort nur einmal steht – ohne Sonderzeichen in einer URL maskieren zu müssen.
  */

@@ -165,6 +165,9 @@ tbody tr:last-child > * { border-bottom: 0; }
 .betrag { display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 6px; }
 .haken { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
 .haken > span { display: flex; flex-direction: column; gap: 1px; font-weight: 500; }
+/* Beschriftung samt Hilfesymbol in einer Zeile (#801); die Beschreibung (small) steht darunter. */
+.haken-titel { display: flex; align-items: baseline; }
+.haken-titel > .hilfesymbol { flex: none; }
 .trenner { display: flex; align-items: center; gap: 10px; color: var(--leise); font-size: calc(12px * var(--skala, 1)); }
 .trenner::before, .trenner::after { content: ''; flex: 1; border-top: 1px solid var(--linie); }
 .auswahlliste { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow: auto; border: 1px solid var(--linie); border-radius: 6px; padding: 8px; }
@@ -212,6 +215,19 @@ tbody tr:last-child > * { border-bottom: 0; }
 .raster > .eigenschaft:not(:has(> :nth-child(4))) { display: grid; grid-template-rows: subgrid; align-self: stretch; gap: 5px; }
 .raster > .eigenschaft:not(:has(> :nth-child(4))) > span:first-child { align-self: end; }
 .eigenschaft.unten { justify-content: flex-end; }
+/*
+ * Haken im Raster (#801): Haken und Beschriftung stehen in der Teilzeile der Eingabefelder, auf Höhe ihres Textes;
+ * die Beschreibung steht darunter in der Teilzeile der Hinweise – wie ein Hinweis unter einem Feld. So schiebt sie
+ * die Nachbarn nicht nach unten. Das Hilfesymbol bleibt in .haken-titel direkt hinter der Beschriftung.
+ */
+.raster > .eigenschaft.unten:has(> .haken:only-child) { justify-content: normal; }
+.raster > .eigenschaft.unten > .haken:only-child { grid-row: 2 / span 2; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: subgrid; column-gap: 8px; row-gap: 5px; align-items: start; }
+.raster > .eigenschaft.unten > .haken:only-child > input { grid-row: 1; grid-column: 1; margin-top: 10px; }
+.raster > .eigenschaft.unten > .haken:only-child > span { grid-row: 1 / span 2; grid-column: 2; display: grid; grid-template-rows: subgrid; row-gap: 5px; }
+.raster > .eigenschaft.unten > .haken:only-child > span > .haken-titel { grid-row: 1; padding-top: 8px; }
+.raster > .eigenschaft.unten > .haken:only-child > span > small { grid-row: 2; }
+/* Knöpfe neben Feldern stehen auf der Linie der Eingabefelder (#801). */
+.raster > .eigenschaft.unten > .knoepfe:only-child { grid-row: 2; align-self: start; }
 .wahl { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .wahl legend { font-size: calc(12.5px * var(--skala, 1)); font-weight: 600; padding: 0; margin-bottom: 6px; }
 .feldliste { display: flex; flex-direction: column; gap: 8px; }
@@ -1993,3 +2009,13 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .loeschkonzept-luecken .knoepfe { margin: 0; }
 .weitere-typen > summary { cursor: pointer; margin: .5rem 0; }
 .auskunft-verlauf li { padding: 4px 0; border-bottom: 1px solid var(--linie); }
+
+/* E-Mail-Versand einrichten (#813): Vorschläge des Assistenten sichtbar gekennzeichnet, „Erweitert“ eingeklappt. */
+.hinweis.mail-vorschlag { flex-direction: column; align-items: flex-start; gap: 4px; }
+.hinweis.mail-vorschlag p { margin: 0; }
+.vorschlag { margin-left: .45em; font-size: calc(11.5px * var(--skala, 1)); font-weight: 500; color: var(--akzent); }
+details.erweitert { margin: 12px 0; }
+details.erweitert > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+details.erweitert[open] > summary { margin-bottom: 10px; }
+.hinweis > details { flex-basis: 100%; }
+.hinweis > details .mono { overflow-wrap: anywhere; margin: 4px 0 0; }

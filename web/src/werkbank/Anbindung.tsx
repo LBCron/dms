@@ -60,7 +60,7 @@ export function AnbindungPanel({ z, nachAenderung, unten }: { z: AnbindungZustan
       </div>
       {s.umgebung === 'abweichend' && <div className="hinweis warn"><p><strong>DATABASE_URL weicht von dieser Anbindung ab und wird ignoriert.</strong> Entferne die Variable aus der Compose-Datei, damit es nicht zu Verwechslungen kommt.</p></div>}
       {s.imContainer && <div className="hinweis info"><p><strong>Die Datenbank läuft in diesem Container (dms-komplett).</strong> Hier ist nichts einzustellen. Zum Umzug auf eine eigene Datenbank: Sicherung hier anlegen und dort wiederherstellen – siehe „Wachsen und umziehen“ im Administratorhandbuch.</p></div>}
-      {s.umgebung === 'gleich' && !s.imContainer && <div className="hinweis info"><p><strong>DATABASE_URL ist nicht mehr nötig.</strong> Die Anbindung steht in der Datei; du kannst die Variable beim nächsten Update aus der Compose-Datei entfernen.</p></div>}
+      {s.umgebung === 'gleich' && <div className="hinweis info"><p><strong>DATABASE_URL ist nicht mehr nötig.</strong> Die Anbindung steht in der Datei; du kannst die Variable beim nächsten Update aus der Compose-Datei entfernen.</p></div>}
       {s.neustartNoetig && (
         <div className="hinweis warn hinweiszeile">
           <p><strong>Die Anbindung ist geändert und gilt nach dem Neustart.</strong> Im Container startet Docker Ablago gleich wieder (restart: unless-stopped).</p>

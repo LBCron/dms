@@ -1,7 +1,11 @@
 import type postgres from 'postgres';
 import nodemailer from 'nodemailer';
 import { istEmail } from '../../shared/src/model';
+import { OAUTH_VERSAND_SERVER, type OAuthVersandAnbieter } from '../../shared/src/mailanbieter';
 import { Fachfehler } from './fehler';
+import { sucheMailserver, standardSuche, type MailSuche, type SucheDeps } from './mailsuche';
+import { VERSAND_OAUTH_ID, type OAuthStatus, type PostfachOAuth } from './postfach-oauth';
+import { t } from './sprache';
 import { pgEinstellungen } from './einstellungen';
 import type { Mailer } from './mail';
 import { kontext, protokoll } from './protokoll';
@@ -33,6 +37,10 @@ export interface MailEinstellungen {
   absender: string;
   /** Selbstsigniertes Zertifikat des Mailservers erlauben (eigener Server im Heimnetz). */
   selbstsigniert: boolean;
+  /** #813: Anmeldung mit Passwort (Standard, auch für ältere Stände) oder über OAuth (Microsoft 365, Google). */
+  anmeldung: 'passwort' | 'oauth';
+  /** Bei OAuth: Anbieter; die App-Registrierung ist dieselbe wie bei den Postfächern. */
+  anbieter?: OAuthVersandAnbieter;
 }
 /** So sieht die Oberfläche die Einstellungen: ohne Passwort. */
 export type MailAnsicht = Omit<MailEinstellungen, 'passwort'> & {
@@ -43,7 +51,7 @@ export type MailAnsicht = Omit<MailEinstellungen, 'passwort'> & {
   passwortUnverschluesselt: boolean;
 };
 
-const LEER: MailEinstellungen = { aktiv: false, host: '', port: 587, verbindung: 'starttls', benutzer: '', passwort: '', absender: '', selbstsigniert: false };
+const LEER: MailEinstellungen = { aktiv: false, host: '', port: 587, verbindung: 'starttls', benutzer: '', passwort: '', absender: '', selbstsigniert: false, anmeldung: 'passwort' };
 
 export interface BetriebSpeicher {
   lies(schluessel: string): Promise<unknown>;
@@ -67,6 +75,8 @@ function bereinige(e: unknown, alt: MailEinstellungen, verschluessele: (klartext
   const text = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
   const verbindung = (Object.keys(VERBINDUNGEN) as Verbindung[]).includes(x.verbindung as Verbindung) ? (x.verbindung as Verbindung) : 'starttls';
   const port = Math.floor(Number(x.port ?? (verbindung === 'ssl' ? 465 : 587)));
+  const anmeldung = x.anmeldung === 'oauth' ? 'oauth' : 'passwort';
+  const anbieter = x.anbieter === 'microsoft' || x.anbieter === 'google' ? x.anbieter : undefined;
   const m: MailEinstellungen = {
     aktiv: x.aktiv === true,
     host: text(x.host),
@@ -77,8 +87,19 @@ function bereinige(e: unknown, alt: MailEinstellungen, verschluessele: (klartext
     passwort: x.passwortLoeschen === true ? '' : typeof x.passwort === 'string' && x.passwort !== '' ? verschluessele(x.passwort.slice(0, 500)) : alt.passwort,
     absender: text(x.absender),
     selbstsigniert: x.selbstsigniert === true,
+    anmeldung,
+    ...(anmeldung === 'oauth' ? { anbieter } : {}),
   };
   const fehler: string[] = [];
+  if (anmeldung === 'oauth') {
+    // Das Zugriffstoken geht nur an den Versandserver des Anbieters selbst, verschlüsselt und mit Zertifikat.
+    m.passwort = '';
+    m.selbstsigniert = false;
+    if (!anbieter) fehler.push(t('werkbank.mail.oauth.anbieter-fehlt'));
+    else if (!OAUTH_VERSAND_SERVER[anbieter].includes(m.host.toLowerCase())) fehler.push(t('werkbank.mail.oauth.server', { server: OAUTH_VERSAND_SERVER[anbieter].join(', ') }));
+    if (m.verbindung === 'keine') fehler.push(t('werkbank.mail.oauth.verschluesselt'));
+    if (!istEmail(m.benutzer)) fehler.push(t('werkbank.mail.oauth.benutzer'));
+  }
   if (!Number.isInteger(port) || port < 1 || port > 65535) fehler.push('Der Port muss zwischen 1 und 65535 liegen.');
   if (m.host && !/^[a-z0-9.-]+$|^\[[0-9a-f:]+\]$/i.test(m.host)) fehler.push('Der Server ist kein gültiger Rechnername, z. B. smtp.example.org.');
   if (m.absender && !istEmail(m.absender.replace(/^.*<([^>]+)>\s*$/, '$1'))) fehler.push('Der Absender ist keine gültige E-Mail-Adresse, z. B. dms@example.org oder „Ablago <dms@example.org>“.');
@@ -87,14 +108,15 @@ function bereinige(e: unknown, alt: MailEinstellungen, verschluessele: (klartext
   return m;
 }
 
-function transport(m: MailEinstellungen, passwort: string) {
+/** `zugriff`: OAuth-Zugriffstoken (#813) statt Passwort. */
+export function transport(m: MailEinstellungen, passwort: string, zugriff?: string): Pick<ReturnType<typeof nodemailer.createTransport>, 'sendMail' | 'verify'> {
   return nodemailer.createTransport({
     host: m.host,
     port: m.port,
     secure: m.verbindung === 'ssl',
     requireTLS: m.verbindung === 'starttls',
     ignoreTLS: m.verbindung === 'keine',
-    auth: m.benutzer ? { user: m.benutzer, pass: passwort } : undefined,
+    auth: zugriff ? { type: 'OAuth2', user: m.benutzer, accessToken: zugriff } : m.benutzer ? { user: m.benutzer, pass: passwort } : undefined,
     tls: { rejectUnauthorized: !m.selbstsigniert },
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
@@ -103,28 +125,62 @@ function transport(m: MailEinstellungen, passwort: string) {
 }
 const absenderVon = (m: MailEinstellungen) => m.absender || m.benutzer || `dms@${m.host}`;
 
-/** Meldung des Mailservers verständlich machen, ohne Passwörter zu zeigen. */
-function meldung(e: unknown): string {
+/**
+ * Meldung des Mailservers verständlich machen (#813), ohne Passwörter zu zeigen: `text` nennt die Ursache in
+ * einem Satz, `technisch` die Antwort des Servers zum Nachlesen.
+ */
+export function mailFehler(e: unknown, anmeldung: 'passwort' | 'oauth' = 'passwort'): { text: string; technisch: string } {
   const f = e as Error & { code?: string; responseCode?: number; response?: string };
-  const hinweis: Record<string, string> = {
-    EAUTH: 'Anmeldung abgelehnt – Benutzer oder Passwort prüfen.',
-    ECONNECTION: 'Keine Verbindung zum Server – Server, Port und Verbindungsart prüfen.',
-    ETIMEDOUT: 'Der Server antwortet nicht – Server und Port prüfen (Firewall?).',
-    ESOCKET: 'Verbindung abgebrochen – passt die Verbindungsart zum Port?',
-    EDNS: 'Den Server gibt es unter diesem Namen nicht.',
-    ETLS: 'TLS-Fehler – Verbindungsart oder Zertifikat prüfen.',
-  };
-  const kern = f.response || f.message || String(e);
-  return [f.code && hinweis[f.code], kern].filter(Boolean).join(' Server: ').slice(0, 600);
+  const technisch = String(f.response || f.message || e).replace(/[\r\n]+/g, ' ').slice(0, 500);
+  const alles = `${f.code ?? ''} ${f.responseCode ?? ''} ${technisch}`;
+  const code = f.responseCode ?? 0;
+  const k = (s: string) => t.frei(`werkbank.mail.fehler.${s}`);
+  let text: string;
+  if (/5\.7\.139|SmtpClientAuthentication is disabled|basic authentication is disabled/i.test(alles)) text = k('microsoft-oauth');
+  else if (/5\.7\.9|application-specific password|InvalidSecondFactor/i.test(alles)) text = k('app-passwort');
+  else if (f.code === 'EAUTH' || code === 535 || code === 534) text = anmeldung === 'oauth' ? k('oauth') : k('passwort');
+  else if (code === 530) text = k('anmeldung-noetig');
+  else if ((code === 550 || code === 553 || code === 554 || code === 501) && /sender|from|absender|5\.7\.1|not owned|relay/i.test(technisch)) text = k('absender');
+  else if (/wrong version number|ssl3_get_record|packet length too long|unknown protocol/i.test(alles)) text = k('verbindungsart');
+  else if (/self[- ]signed|unable to verify|certificate/i.test(alles)) text = k('zertifikat');
+  else if (f.code === 'EDNS' || /ENOTFOUND|EAI_AGAIN/.test(alles)) text = k('unbekannt');
+  else if (f.code === 'ETIMEDOUT' || /timeout|timed out/i.test(alles)) text = k('zeit');
+  else if (f.code === 'ECONNECTION' || /ECONNREFUSED|EHOSTUNREACH|ENETUNREACH/.test(alles)) text = k('verbindung');
+  else if (f.code === 'ETLS') text = k('tls');
+  else if (f.code === 'ESOCKET') text = k('abgebrochen');
+  else text = k('sonst');
+  return { text, technisch };
 }
+
+/** Für Protokoll und Fehler beim Versand: Ursache und Antwort des Servers in einem Text. */
+const meldung = (e: unknown, anmeldung?: 'passwort' | 'oauth') => { const m = mailFehler(e, anmeldung); return `${m.text} Server: ${m.technisch}`.slice(0, 600); };
+
+/** Ergebnis von „Verbindung prüfen“ und „Testmail senden“. */
+export interface MailProbe { ok: boolean; meldung: string; technisch?: string }
 
 export class Betrieb {
   private mail: MailEinstellungen = { ...LEER };
   private adresse = '';
   private aktuellerMailer: Mailer | null = null;
+  private oauth?: PostfachOAuth;
 
-  constructor(private speicher: BetriebSpeicher, private standardAdresse = 'http://localhost:3000', private tresor?: Tresor) {
+  private suche: SucheDeps;
+  private baue: typeof transport;
+
+  /** `o.suche` und `o.transport` stellen Tests nach (DNS, Autoconfig, SMTP). */
+  constructor(private speicher: BetriebSpeicher, private standardAdresse = 'http://localhost:3000', private tresor?: Tresor, o: { suche?: SucheDeps; transport?: typeof transport } = {}) {
+    this.suche = o.suche ?? standardSuche();
+    this.baue = o.transport ?? transport;
     tresor?.registriere(async () => this.betroffen(), async () => this.verschluesseleAltes(), async (um) => this.nachWechsel(um));
+  }
+
+  /** #813: Anmeldung über OAuth – dieselbe wie bei den Postfächern (App-Registrierung, Ablauf, Tresor). */
+  verbindeOAuth(oauth: PostfachOAuth) { this.oauth = oauth; }
+
+  /** Zugriffstoken für den Versand; erneuert vor Ablauf. */
+  private async zugriff(m: MailEinstellungen): Promise<string> {
+    if (!this.oauth || !m.anbieter) throw new Fachfehler(409, t('werkbank.mail.oauth.nicht-eingerichtet'));
+    return this.oauth.zugriffstoken({ id: VERSAND_OAUTH_ID, name: 'E-Mail-Versand', benutzer: m.benutzer, anbieter: m.anbieter });
   }
 
   /** Neues Passwort verschlüsseln; ohne Schlüssel wird nichts gespeichert. */
@@ -216,20 +272,24 @@ export class Betrieb {
   private baueMailer() {
     if (!this.mail.aktiv || !this.mail.host) { this.aktuellerMailer = null; return; }
     const m = { ...this.mail };
-    const t = transport(m, this.klartext(m.passwort));
+    const fest = m.anmeldung === 'oauth' ? null : this.baue(m, this.klartext(m.passwort));
+    // OAuth (#813): je Versand ein gültiges Zugriffstoken holen (erneuert vor Ablauf).
+    const holeTransport = async () => fest ?? this.baue(m, '', await this.zugriff(m));
     this.aktuellerMailer = {
       async sende(an, betreff, text, o) {
         const start = Date.now();
         try {
-          await t.sendMail({
+          const tr = await holeTransport();
+          await tr.sendMail({
             from: absenderVon(m), to: an, subject: betreff, text,
             ...(o?.antwortAn ? { replyTo: o.antwortAn } : {}),
             ...(o?.anhaenge?.length ? { attachments: o.anhaenge.map((a) => ({ filename: a.name, content: a.inhalt, contentType: a.mime })) } : {}),
           });
           log.info('E-Mail verschickt', { an, betreff, ms: Date.now() - start });
         } catch (e) {
-          log.error('E-Mail nicht verschickt', { an, betreff, fehler: meldung(e) });
-          throw new Error(meldung(e));
+          const grund = e instanceof Fachfehler ? e.message : meldung(e, m.anmeldung);
+          log.error('E-Mail nicht verschickt', { an, betreff, fehler: grund });
+          throw new Error(grund);
         }
       },
     };
@@ -253,7 +313,7 @@ export class Betrieb {
   }
 
   /** Kurzangabe für die Technikübersicht. */
-  kurz() { return { mail: this.aktuellerMailer ? `über ${this.mail.host}` : 'aus', adresse: this.adresse || '(nicht gepflegt – Adresse der Anfrage)' }; }
+  kurz() { return { mail: this.aktuellerMailer ? `über ${this.mail.host}${this.mail.anmeldung === 'oauth' ? ' (OAuth)' : ''}` : 'aus', adresse: this.adresse || '(nicht gepflegt – Adresse der Anfrage)' }; }
 
   /* ---------- für die Werkbank ---------- */
 
@@ -270,64 +330,99 @@ export class Betrieb {
     };
   }
 
-  async speichereMail(e: unknown) {
+  /** Ansicht samt Zustand der OAuth-Anmeldung (#813) – für die Werkbank. */
+  async stand(): Promise<ReturnType<Betrieb['ansicht']> & { oauth: OAuthStatus | null; oauthMoeglich: boolean }> {
+    const a = this.ansicht();
+    return { ...a, oauth: this.mail.anmeldung === 'oauth' && this.oauth ? await this.oauth.status(VERSAND_OAUTH_ID) : null, oauthMoeglich: !!this.oauth };
+  }
+
+  /** Server zur Adresse finden (#813); `thunderbird` nur auf Knopfdruck. */
+  async findeServer(e: unknown): Promise<MailSuche> {
+    const x = (e ?? {}) as Record<string, unknown>;
+    return sucheMailserver(x.email, { thunderbird: x.thunderbird === true }, this.suche);
+  }
+
+  /** Für die Anmeldung beim Anbieter: nur mit gespeicherter Einstellung „OAuth“. */
+  oauthZiel(): { id: string; anbieter: OAuthVersandAnbieter; benutzer: string } {
+    const m = this.mail;
+    if (m.anmeldung !== 'oauth' || !m.anbieter) throw new Fachfehler(409, t('werkbank.mail.oauth.erst-speichern'));
+    return { id: VERSAND_OAUTH_ID, anbieter: m.anbieter, benutzer: m.benutzer };
+  }
+
+  async speichereMail(e: unknown, von = '') {
     const neu = bereinige(e, this.mail, this.verschluessele);
     const vorher = this.mail;
     await this.speicher.schreibe('mail', neu);
     this.mail = neu;
     this.baueMailer();
+    // OAuth (#813): Anmeldeart, Anbieter, Konto oder Server geändert – die gespeicherte Anmeldung gilt nicht mehr.
+    if (vorher.anmeldung === 'oauth' && (neu.anmeldung !== 'oauth' || vorher.anbieter !== neu.anbieter || vorher.benutzer !== neu.benutzer || vorher.host !== neu.host)) {
+      await this.oauth?.abmelden(VERSAND_OAUTH_ID, von || 'Werkbank');
+    }
     const { passwort: _p, ...ohne } = neu;
     protokoll.modul('werkbank').info('E-Mail-Einstellungen geändert', {
       ...ohne, passwortGeaendert: neu.passwort !== vorher.passwort || undefined,
     });
-    return this.ansicht();
+    return this.stand();
   }
 
   async speichereAdresse(e: unknown) {
     this.adresse = pruefeAdresse(e);
     await this.speicher.schreibe('adresse', this.adresse);
     protokoll.modul('werkbank').info('Adresse von Ablago geändert', { adresse: this.adresse || '(nicht gepflegt)' });
-    return this.ansicht();
+    return this.stand();
   }
 
   /** Mit den Werten aus dem Formular (noch nicht gespeichert); leeres Passwort = gespeichertes. */
-  private probe(e: unknown): { m: MailEinstellungen; passwort: string } {
+  private async probe(e: unknown): Promise<{ m: MailEinstellungen; passwort: string; zugriff?: string }> {
     // Zum Prüfen wird nichts gespeichert: ein eingegebenes Passwort bleibt im Klartext.
     const x = (e ?? {}) as Record<string, unknown>;
     const eingegeben = typeof x.passwort === 'string' && x.passwort !== '' && x.passwortLoeschen !== true;
     const m = bereinige({ ...x, aktiv: false }, this.mail, (k) => k);
     if (!m.host) throw new Fachfehler(422, 'Bitte zuerst den Server angeben.');
+    if (m.anmeldung === 'oauth') {
+      // Das Token nur mit der gespeicherten Anmeldung (gleicher Anbieter, gleiches Konto, Server des Anbieters).
+      const g = this.mail;
+      if (g.anmeldung !== 'oauth' || g.anbieter !== m.anbieter || g.benutzer !== m.benutzer) throw new Fachfehler(409, t('werkbank.mail.oauth.erst-speichern'));
+      return { m, passwort: '', zugriff: await this.zugriff(m) };
+    }
     return { m, passwort: eingegeben ? m.passwort : this.klartext(m.passwort) };
   }
 
+  private fehlschlag(f: unknown, m: MailEinstellungen): MailProbe {
+    if (f instanceof Fachfehler) return { ok: false, meldung: f.message };
+    const x = mailFehler(f, m.anmeldung);
+    return { ok: false, meldung: x.text, technisch: x.technisch };
+  }
+
   /** Meldet sich am Mailserver an, ohne etwas zu senden. */
-  async pruefeVerbindung(e: unknown): Promise<{ ok: boolean; meldung: string }> {
-    const { m, passwort } = this.probe(e);
+  async pruefeVerbindung(e: unknown): Promise<MailProbe> {
+    const { m, passwort, zugriff } = await this.probe(e);
     const start = Date.now();
     try {
-      await transport(m, passwort).verify();
+      await this.baue(m, passwort, zugriff).verify();
       log.info('Verbindung zum Mailserver geprüft', { server: m.host, ms: Date.now() - start });
       return { ok: true, meldung: `Verbindung zu ${m.host}:${m.port} steht${m.benutzer ? `, Anmeldung als ${m.benutzer} erfolgreich` : ''} (${Date.now() - start} ms).` };
     } catch (f) {
-      log.warn('Verbindung zum Mailserver fehlgeschlagen', { server: m.host, fehler: meldung(f) });
-      return { ok: false, meldung: meldung(f) };
+      log.warn('Verbindung zum Mailserver fehlgeschlagen', { server: m.host, fehler: meldung(f, m.anmeldung) });
+      return this.fehlschlag(f, m);
     }
   }
 
-  async sendeTestmail(e: unknown, an: unknown): Promise<{ ok: boolean; meldung: string }> {
+  async sendeTestmail(e: unknown, an: unknown): Promise<MailProbe> {
     const ziel = typeof an === 'string' ? an.trim() : '';
     if (!istEmail(ziel)) throw new Fachfehler(422, 'Bitte eine gültige E-Mail-Adresse für die Testmail angeben.');
-    const { m, passwort } = this.probe(e);
+    const { m, passwort, zugriff } = await this.probe(e);
     try {
-      await transport(m, passwort).sendMail({
+      await this.baue(m, passwort, zugriff).sendMail({
         from: absenderVon(m), to: ziel, subject: 'Testmail von Ablago',
         text: `Hallo,\n\ndiese Testmail kommt aus der Werkbank deines Ablago. Der E-Mail-Versand über ${m.host} funktioniert.\n`,
       });
       log.info('Testmail verschickt', { an: ziel, server: m.host });
       return { ok: true, meldung: `Testmail an ${ziel} verschickt. Sie sollte in wenigen Minuten ankommen (auch im Spam-Ordner nachsehen).` };
     } catch (f) {
-      log.warn('Testmail nicht verschickt', { an: ziel, server: m.host, fehler: meldung(f) });
-      return { ok: false, meldung: meldung(f) };
+      log.warn('Testmail nicht verschickt', { an: ziel, server: m.host, fehler: meldung(f, m.anmeldung) });
+      return this.fehlschlag(f, m);
     }
   }
 }

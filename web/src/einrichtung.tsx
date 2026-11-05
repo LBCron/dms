@@ -1,10 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Symbol } from './Symbol';
 import { handbuchUrl, HILFE, hilfeOnlineUrl, INSTALLIEREN_URL, type Hilfeort } from '../../shared/src/hilfe';
 import { PASSWORT_MINDESTLAENGE } from '../../shared/src/model';
 import { api, ApiFehler, hatEinrichtungscode, setzeEinrichtungscode, type AnbindungEingabe, type AnbindungPruefung, type EinrichtungSchritt, type EinrichtungStand, type KontoStatus, type LinkErgebnis, type TresorStatus } from './api';
 import { WiederherstellungsAssistent } from './wiederherstellen';
-import { BetriebPanel, useBetrieb } from './werkbank/Betrieb';
+import { useBetrieb } from './werkbank/Betrieb';
+import { MailVersand, type MailGriff } from './werkbank/MailVersand';
 import { Erledigt } from './werkbank/Sicherung';
 import { useKonto } from './konto';
 import { PaketeDazuholen } from './werkbank/PaketeDazuholen';
@@ -445,6 +446,9 @@ function PaketeSchritt({ weiter, zurueck, erneut }: { weiter: (uebersprungen: bo
 
 function OptionalSchritt({ weiter, zurueck }: { weiter: (uebersprungen: boolean) => Promise<void>; zurueck?: () => void }) {
   const betrieb = useBetrieb();
+  // E-Mail-Versand (#813): eigene Adresse und Passwort genügen; „Weiter“ übernimmt (#803), ohne eigene Speichern-Knöpfe.
+  const mail = useRef<MailGriff | null>(null);
+  useEffect(() => { void betrieb.laden(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [adresse, setAdresse] = useState(location.origin);
   const [demo, setDemo] = useState(false);
   const [meldung, setMeldung] = useState<Record<string, string>>({});
@@ -460,17 +464,14 @@ function OptionalSchritt({ weiter, zurueck }: { weiter: (uebersprungen: boolean)
           <button type="button" className="knopf" disabled={s.sendet} onClick={() => void s.los(async () => { await api.adresseSpeichern(adresse); gut('adresse', 'Gespeichert.'); await betrieb.laden(); })}>Speichern</button></div>
         {meldung.adresse && <p className="gutertext klein">{meldung.adresse}</p>}
       </section>
+      {betrieb.stand ? <MailVersand key={JSON.stringify(betrieb.stand.mail)} b={betrieb} assistent griff={mail} /> : betrieb.fehler && <div className="hinweis schlecht"><p>{betrieb.fehler}</p></div>}
       <section className="blatt">
         <h2 className="h3">Beispiele</h2>
         <p className="leise klein">Ein paar fertige Mappentypen (z. B. Verträge, Rechnungen) als Ausgangspunkt. Sie lassen sich anpassen oder löschen.</p>
         {demo ? <p className="gutertext klein">Beispiel-Mappentypen geladen.</p> : <button type="button" className="knopf" disabled={s.sendet} onClick={() => void s.los(async () => { await api.beispiele(); setDemo(true); })}>Beispiel-Mappentypen laden</button>}
       </section>
-      <details className="blatt">
-        <summary><strong>E-Mail-Versand einrichten</strong> <span className="leise klein">– für Einladungen, Passwort-Links und die tägliche Zusammenfassung</span></summary>
-        <BetriebPanel b={betrieb} />
-      </details>
       {s.fehler && <p className="fehlertext">{s.fehler}</p>}
-      <Weiter weiter={weiter} kannWeiter zurueck={zurueck} />
+      <Weiter weiter={async (u) => { if (!u) await mail.current?.uebernehmen(); await weiter(u); }} kannWeiter zurueck={zurueck} />
     </Rahmen>
   );
 }

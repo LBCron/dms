@@ -84,7 +84,7 @@ export function StempelFelder({ wahl, setze, vorlagen, pflicht, mappe, empfaenge
       <legend className="sr">Stempel</legend>
       {immer ? <p className="leise klein">{pflicht ? 'Der Mappentyp verlangt beim Weitergeben einen Stempel. ' : ''}Nur die Kopie bekommt den Stempel, das gespeicherte Original bleibt unverändert. Bilder werden dabei zum PDF. <Hilfe ort="stempel.weitergeben" /></p>
       : <label className="haken"><input id={`${id}-an`} type="checkbox" checked={wahl.an || !!pflicht} disabled={pflicht} onChange={(e) => s({ an: e.target.checked })} />
-        <span>Mit Stempel <Hilfe ort="stempel.weitergeben" />
+        <span><span className="haken-titel">Mit Stempel&nbsp;<Hilfe ort="stempel.weitergeben" /></span>
           <small className="hilfe">{pflicht ? 'Der Mappentyp verlangt beim Weitergeben einen Stempel.' : 'Nur die Kopie bekommt den Stempel, das gespeicherte Original bleibt unverändert. Bilder werden dabei zum PDF.'}</small></span></label>}
       {(wahl.an || pflicht || immer) && (
         <div className="stempelfelder">
