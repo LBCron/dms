@@ -18,6 +18,8 @@ permissions:
 jobs:
   pruefen:
     runs-on: ubuntu-latest
+    # Ein hängender Test soll die Reihe nicht stundenlang blockieren (sonst läuft der Job bis 6 h).
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17

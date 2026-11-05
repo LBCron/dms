@@ -257,7 +257,8 @@ describe('Volltext-Ablauf mit Texterkennung als Paket (#458)', () => {
     assert.equal((await repo.holeDokument(alt))!.ocr?.info, 'Texterkennung (deu+eng) · Sprache: deu (90 %)');
     assert.deepEqual(volltextHerkunft((await repo.holeDokument(alt))!.ocr), { art: 'eingebaut' });
     assert.equal((await d.volltext(ebene)).text, TEXT);
-    assert.ok((await ereignisse()).some((e) => e.paketId === 'texterkennung' && e.daten.dokument === wartend));
+    // Das Ereignis für das Paket entsteht kurz nach dem Wechsel des Stands (im Hintergrund) – darauf warten statt sofort prüfen.
+    await warte(async () => (await ereignisse()).some((e) => e.paketId === 'texterkennung' && e.daten.dokument === wartend));
     assert.deepEqual(await repo.volltextHerkunft(), { pdf: 2, paket: 0, api: 0, eingebaut: 1, sonst: 0, ohneText: 0 });
   });
 
