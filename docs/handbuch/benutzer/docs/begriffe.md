@@ -19,7 +19,7 @@ Der Arbeitsbereich für alle Benutzer – mit Ansichten, Listen und Mappen. Zugl
 Siehe auch: [Werkbank](#werkbank), [Ansicht](#ansicht).
 
 <a id="ablageort"></a>**Ablageort** · ✓ Alltagswort · alle  
-Ein Platz, an dem Papier liegt – z. B. ein Ordner, eine Kiste, ein Schließfach oder „vernichtet“. Ablageorte liegen ineinander („zu Hause › Arbeitszimmer Schrank › roter Ordner“). Jedes DMS hat diesen Mappentyp; er lässt sich erweitern, aber nicht löschen.  
+Ein Platz, an dem Papier liegt – z. B. ein Ordner, eine Kiste, ein Schließfach oder „vernichtet“. Ablageorte liegen ineinander („zu Hause › Arbeitszimmer Schrank › roter Ordner“). Den Mappentyp bringt das Paket Basis mit.  
 Siehe auch: [Verbleib Originaldokumente](#verbleib-originaldokumente), [Mappentyp](#mappentyp).
 
 <a id="ablago"></a>**Ablago** · ✓ Alltagswort · alle  
@@ -488,7 +488,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Begriff | nicht verwenden | im Code |
 |---|---|---|
 | Ablage | Haushalt (für die Installation), Mandant (in der Oberfläche) | `mandant, haushalt_id` |
-| Ablageort | – | `ablageort` |
+| Ablageort | – | `basis_ablageort` |
 | Ablago | Ablago DMS, ABLAGO, „das DMS“ für das eigene Programm | – |
 | Abwesenheit | – | `Abwesenheit` |
 | Administrator | Admin (in der Oberfläche) | – |

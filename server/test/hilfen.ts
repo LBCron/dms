@@ -1,4 +1,5 @@
 /** Hilfen für Tests (keine eigenen Tests). */
+import type { Dienst } from '../src/dienst';
 
 /** Ein einfaches PDF mit Textebene (Helvetica), Text je Zeile. */
 /** Einseitiges PDF mit Textebene; drehung (z. B. 90) setzt /Rotate der Seite (#395). */
@@ -27,3 +28,50 @@ export function pdfMitText(zeilen: string[], groesse = 24, drehung = 0): Buffer 
 export const imModus = <T extends { rolle?: string }>(b: T): T & { rolle: 'admin' } => ({ ...b, rolle: 'admin' as const });
 /** Wie früher der Admin: Personen mit Verwaltungsrecht rufen Handler in diesen Tests im Verwaltungsmodus auf. */
 export const wieImModus = <T extends { rolle?: string; verwaltung?: string[] }>(b: T): T => (b?.verwaltung?.length ? imModus(b) : b);
+
+/**
+ * Der Ablageort, wie ihn der Kern vor #883 in jeder Ablage anlegte (#168): Kennung `ablageort`, eigene Ansicht,
+ * gemerkt in der Einstellung `ablageort`. Für Tests der Übernahme durch das Paket Basis und des Alias `dms:ablageort`.
+ */
+export async function frueherAblageort(d: Dienst, einstellungen?: { schreibe(k: string, w: unknown): Promise<void> }) {
+  const id = crypto.randomUUID();
+  const typ = await d.legeTypAn({
+    id, name: 'Ablageort', schluessel: 'ablageort', beschreibung: 'Wo Originale liegen – verschachtelt, z. B. zu Hause › Arbeitszimmer Schrank › roter Ordner',
+    titelVorlage: '{liegt_in} › {name}',
+    felder: [
+      { key: 'name', label: 'Name', typ: 'text', pflicht: true, maxLen: 120, hilfe: 'z. B. roter Ordner, Safe im Flur, beim Notar, vernichtet' },
+      { key: 'liegt_in', label: 'Liegt in', typ: 'referenz', zielTyp: id, verweisart: 'zugehoerigkeit' },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'langtext', maxLen: 2000 },
+    ],
+    register: [
+      { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name', 'liegt_in', 'beschreibung'] },
+      { key: 'enthaelt', name: 'Enthält', art: 'verknuepfungen', quellen: [{ typId: id, feldKey: 'liegt_in' }] },
+      { key: 'liegt_hier', name: 'Liegt hier', art: 'verknuepfungen', quellen: [] },
+      { key: 'fotos', name: 'Fotos', art: 'dokumente' },
+    ],
+    trefferliste: ['_titel', 'beschreibung'],
+  });
+  await einstellungen?.schreibe('ablageort', { id: typ.id });
+  return typ;
+}
+
+/** Mappentyp Ablageort wie in Basis 1.6.0 (#883, dms-registry #138) – mit Ansicht „Ablageorte“ und englischen Beschriftungen. */
+export const ABLAGEORT_YAML = [
+  '- schluessel: ablageort', '  name: Ablageort', '  beschreibung: Wo Originale liegen', '  beschriftungen: { en: { name: "Storage location" } }', '  titelVorlage: "{liegt_in} › {name}"', '  felder:',
+  '    - { key: name, label: Name, typ: text, pflicht: true, maxLen: 120, beschriftungen: { en: { label: "Name" } } }',
+  '    - { key: liegt_in, label: Liegt in, typ: referenz, ziel: ablageort, verweisart: zugehoerigkeit, beschriftungen: { en: { label: "Located in" } } }',
+  '    - { key: beschreibung, label: Beschreibung, typ: langtext, maxLen: 2000 }',
+  '  register:',
+  '    - { key: allgemein, name: Allgemein, art: felder, felder: [name, liegt_in, beschreibung] }',
+  '    - { key: enthaelt, name: Enthält, art: verknuepfungen, quellen: [{ typ: ablageort, feld: liegt_in }] }',
+  '    - { key: liegt_hier, name: Liegt hier, art: verknuepfungen }',
+  '    - { key: fotos, name: Fotos, art: dokumente }',
+  '  trefferliste: [_titel, beschreibung]', '',
+].join('\n');
+/** Das Test-Paket Basis (Ordner test/pakete/basis) als Version 1.6.0 mit Ablageort. */
+export const basisMitAblageort = (basis: Record<string, string>): Record<string, string> => ({
+  ...basis,
+  'manifest.yaml': basis['manifest.yaml'].replace(/^version: .*$/m, 'version: 1.6.0'),
+  'inhalt/mappentypen.yaml': `${basis['inhalt/mappentypen.yaml'].trimEnd()}\n\n${ABLAGEORT_YAML}`,
+  'inhalt/sichten.yaml': `${basis['inhalt/sichten.yaml'].trimEnd()}\n\n- { schluessel: ablageorte, name: Ablageorte, typen: [ablageort] }\n`,
+});

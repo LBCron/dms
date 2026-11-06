@@ -19,6 +19,7 @@ import { liesZip, Paketverwaltung } from '../src/pakete';
 import { dmsOptionen, mindestversion, Paketerstellung } from '../src/paketerstellung';
 import { speicherRepo } from '../src/repo-speicher';
 import { zipPuffer } from '../src/zip';
+import { basisMitAblageort, frueherAblageort } from './hilfen';
 
 const ICH = { id: '00000000-0000-4000-8000-0000000000aa', email: 'admin@example.org' };
 const BASIS = fileURLToPath(new URL('./pakete/basis', import.meta.url));
@@ -33,22 +34,26 @@ function ordner(pfad: string, vor = ''): Record<string, string> {
   }
   return erg;
 }
-const basisZip = zipPuffer(Object.entries(ordner(BASIS)).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })));
+const alsZip = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })));
+const basisZip = alsZip(ordner(BASIS));
+/** Basis 1.6.0 mit Ablageort (#883). */
+const basis16Zip = alsZip(basisMitAblageort(ordner(BASIS)));
 
 /** Ein DMS im Arbeitsspeicher mit Paketverwaltung und Paketerstellung. */
 function dms(version = '0.86.0') {
-  const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
-  return { d, p: new Paketverwaltung(d, { version: () => version, katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } }), e: new Paketerstellung(d, { version: () => version }) };
+  const einstellungen = speicherEinstellungen();
+  const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen });
+  return { d, einstellungen, p: new Paketverwaltung(d, { version: () => version, katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } }), e: new Paketerstellung(d, { version: () => version }) };
 }
 async function hochladenUndInstallieren(p: Paketverwaltung, zip: Buffer, beispiele = false) {
   const h = await p.hochladen(zip, ICH);
   return { vorschau: h.vorschau, paket: await p.installiere({ upload: h.upload, bestaetigt: true, beispiele }, ICH) };
 }
 
-/** Quell-DMS: Basis installiert, eigene Typen Vertrag und Zahlung (aufeinander verweisend), Notiz (unbeteiligt). */
+/** Quell-DMS: Basis 1.6.0 (mit Ablageort) installiert, eigene Typen Vertrag und Zahlung (aufeinander verweisend), Notiz (unbeteiligt). */
 async function quelle(version?: string) {
   const q = dms(version);
-  await hochladenUndInstallieren(q.p, basisZip);
+  await hochladenUndInstallieren(q.p, basis16Zip);
   const typen = await q.d.listeTypen();
   const org = typen.find((t) => t.schluessel === 'basis_organisation')!;
   const benutzer = typen.find((t) => t.system === 'benutzer')!;
@@ -125,7 +130,7 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.equal(r.einspielbar, false);
     assert.deepEqual(r.fehlend.map((f) => [f.art, f.name]), [['typ', 'Zahlung']]);
     assert.ok(r.probleme.some((p) => /nicht gewählt.*Zahlung/.test(p)));
-    assert.deepEqual(r.abhaengigkeiten, { basis: '>=1.0.0' });
+    assert.deepEqual(r.abhaengigkeiten, { basis: '>=1.6.0' });
     assert.ok(r.hinweise.some((h) => /Organisation“ kommt aus dem Paket „Basis“ – wird als Abhängigkeit eingetragen/.test(h)));
     await assert.rejects(q.e.exportiere(angaben({ typen: [q.vertrag.id] }), ICH), (e) => e instanceof Fachfehler && e.status === 422);
     // Ungültige Angaben.
@@ -143,6 +148,27 @@ describe('Paket selbst erstellen (#374)', () => {
     const g = await q.e.pruefe(angaben({ typen: [q.vertrag.id, q.zahlung.id] }));
     assert.ok(g.hinweise.some((h) => /Änderungen an „Organisation“ \(Basis\) gehören nicht zu deinem Paket/.test(h)), g.hinweise.join('\n'));
     assert.equal((await q.e.stand()).typen.find((t) => t.id === q.org.id)?.geaendert, true);
+  });
+
+  it('früherer Ablageort des Kerns (#883): Verweis basis:ablageort, Basis ab 1.6.0 als Abhängigkeit', async () => {
+    const q = dms();
+    await hochladenUndInstallieren(q.p, basisZip);
+    const a = await frueherAblageort(q.d, q.einstellungen);
+    const brief = await q.d.legeTypAn({ name: 'Brief', schluessel: 'brief', felder: [{ key: 'betreff', label: 'Betreff', typ: 'text', pflicht: true },
+      { key: 'original', label: 'Original liegt in', typ: 'referenz', zielTyp: a.id, verweisart: 'bezug' }] });
+    const orte = await q.d.legeSichtAn({ name: 'Briefe und Orte', typen: [brief.id, a.id] });
+    const st = await q.e.stand();
+    assert.ok(!st.typen.some((t) => t.id === a.id), 'nicht als eigener Typ zur Auswahl');
+    const z = await q.e.exportiere(angaben({ id: 'briefe', typen: [brief.id], sichten: [orte.id] }), ICH);
+    const dateien = liesZip(z.daten);
+    const manifest = parse(dateien.get('briefe/manifest.yaml')!.toString()) as Record<string, unknown>;
+    assert.deepEqual(manifest.abhaengigkeiten, { basis: '>=1.6.0' });
+    const typen = parse(dateien.get('briefe/inhalt/mappentypen.yaml')!.toString()) as Array<{ felder: Array<{ key: string; ziel?: string }> }>;
+    assert.equal(typen[0].felder.find((f) => f.key === 'original')!.ziel, 'basis:ablageort');
+    const sichten = parse(dateien.get('briefe/inhalt/sichten.yaml')!.toString()) as Array<{ typen: string[] }>;
+    assert.deepEqual(sichten[0].typen.sort(), ['basis:ablageort', 'brief']);
+    const p = await q.e.pruefe(angaben({ id: 'briefe', typen: [brief.id], sichten: [orte.id] }));
+    assert.ok(p.hinweise.some((h) => /„Ablageort“ kommt mit dem Paket Basis.*basis:ablageort.*1\.6\.0/.test(h)), p.hinweise.join(' | '));
   });
 
   it('nur Ansichten (#656): Hinweis statt Abbruch, Typ über die Kennung; beim Empfänger zugeordnet oder einzeln übersprungen', async () => {
@@ -248,11 +274,11 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.doesNotMatch(alles, /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
     assert.doesNotMatch(alles, /GEHEIM-4711|Stadtwerke|admin@example\.org/);
     const manifest = parse(dateien.get('familie_vertraege/manifest.yaml')!.toString()) as Record<string, unknown>;
-    assert.deepEqual(manifest.abhaengigkeiten, { basis: '>=1.0.0' });
+    assert.deepEqual(manifest.abhaengigkeiten, { basis: '>=1.6.0' });
     assert.equal(manifest.dms, '>=0.86.0');
     const typenYaml = parse(dateien.get('familie_vertraege/inhalt/mappentypen.yaml')!.toString()) as Array<{ schluessel: string; felder: Array<{ key: string; ziel?: string }> }>;
     const vy = typenYaml.find((t) => t.schluessel === 'vertrag')!;
-    assert.deepEqual(vy.felder.filter((f) => f.ziel).map((f) => [f.key, f.ziel]), [['partner', 'basis:organisation'], ['verantwortlich', 'dms:benutzer'], ['original', 'dms:ablageort']]);
+    assert.deepEqual(vy.felder.filter((f) => f.ziel).map((f) => [f.key, f.ziel]), [['partner', 'basis:organisation'], ['verantwortlich', 'dms:benutzer'], ['original', 'basis:ablageort']]);
     const bsp = parse(dateien.get('familie_vertraege/inhalt/beispiele.yaml')!.toString()) as Array<{ typ: string; schluessel: string; werte: Record<string, unknown> }>;
     assert.deepEqual(bsp.find((b) => b.typ === 'vertrag')!.werte, { nr: 'S-1', zahlweise: 'monatlich', monatlich: 89 });
     assert.deepEqual(bsp.find((b) => b.typ === 'zahlung')!.werte.vertrag, { beispiel: bsp.find((b) => b.typ === 'vertrag')!.schluessel });
@@ -261,7 +287,7 @@ describe('Paket selbst erstellen (#374)', () => {
 
     // Frisches DMS: erst die Abhängigkeit, dann das eigene Paket – wie beim Empfänger.
     const z = dms();
-    await hochladenUndInstallieren(z.p, basisZip);
+    await hochladenUndInstallieren(z.p, basis16Zip);
     const { vorschau, paket } = await hochladenUndInstallieren(z.p, z1.daten, true);
     assert.equal(vorschau.update, false);
     assert.deepEqual(vorschau.probleme, []);
@@ -298,7 +324,7 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.equal(st.vorschlag.id, 'familie_vertraege');
     assert.equal(st.vorschlag.version, '1.1.0');
     assert.deepEqual(st.vorschlag.typen, auswahl.typen);
-    assert.ok(!st.typen.some((t) => t.name === 'Benutzer' || t.name === 'Ablageort'), 'Systemtypen nicht zur Auswahl');
+    assert.ok(!st.typen.some((t) => t.name === 'Benutzer'), 'Systemtypen nicht zur Auswahl');
     // Gleiche Version noch einmal: nicht wählbar (#651).
     assert.equal(st.vorschlag.dms, '', 'nötige Ablago-Version setzt die Oberfläche aus der Prüfung');
     const gleich = await q.e.pruefe({ ...st.vorschlag, dms: '>=0.86.0', version: '1.0.0' });

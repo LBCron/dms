@@ -93,7 +93,7 @@ begriffe:
     beschreibung: The number on a sticker on the paper original (e.g. A-000123); the same number is on the document in Ablago. Unique per Library; comes from the number sequence "Archive number". Connects paper and document in both directions.
   Ablageort:
     begriff: Storage location
-    beschreibung: A place where paper is kept – e.g. a binder, a box, a safe deposit box or "destroyed". Storage locations lie inside each other ("at home › study cupboard › red binder"). Every DMS has this folder type; it can be extended but not deleted.
+    beschreibung: A place where paper is kept – e.g. a binder, a box, a safe deposit box or "destroyed". Storage locations lie inside each other ("at home › study cupboard › red binder"). The folder type comes with the Basis package.
   Verbleib Originaldokumente:
     begriff: Whereabouts of original documents
     beschreibung: The field on a folder that points to the paper's storage location. In all folder types with the same identifier, so that common lists and views work.

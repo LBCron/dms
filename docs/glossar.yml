@@ -217,11 +217,11 @@ begriffe:
     code: archivnummer
   - begriff: Ablageort
     bereich: grundbegriffe
-    beschreibung: Ein Platz, an dem Papier liegt – z. B. ein Ordner, eine Kiste, ein Schließfach oder „vernichtet“. Ablageorte liegen ineinander („zu Hause › Arbeitszimmer Schrank › roter Ordner“). Jedes DMS hat diesen Mappentyp; er lässt sich erweitern, aber nicht löschen.
+    beschreibung: Ein Platz, an dem Papier liegt – z. B. ein Ordner, eine Kiste, ein Schließfach oder „vernichtet“. Ablageorte liegen ineinander („zu Hause › Arbeitszimmer Schrank › roter Ordner“). Den Mappentyp bringt das Paket Basis mit.
     einsteiger: alltag
     begegnet: alle
     verwandt: [Verbleib Originaldokumente, Mappentyp]
-    code: ablageort
+    code: basis_ablageort
   - begriff: Verbleib Originaldokumente
     bereich: grundbegriffe
     beschreibung: Das Feld an einer Mappe, das auf den Ablageort des Papiers zeigt. In allen Mappentypen mit derselben Kennung, damit gemeinsame Listen und Ansichten funktionieren.

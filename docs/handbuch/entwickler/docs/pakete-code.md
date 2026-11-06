@@ -45,7 +45,7 @@ code:
   aktionen: [...]
 ```
 
-- **Mappentypen** in `rechte` schreibst du wie in Verweisen: eigene mit ihrer Kennung (`rechnung`), fremde als `paket:kennung`, Typen von Ablago als `dms:ablageort`, `dms:rolle` oder `dms:post`. `"*"` heißt alle Mappentypen außer Benutzern; `dms:benutzer` ist nicht erlaubt, andere `dms:`-Kennungen gibt es nicht.
+- **Mappentypen** in `rechte` schreibst du wie in Verweisen: eigene mit ihrer Kennung (`rechnung`), fremde als `paket:kennung`, Typen von Ablago als `dms:rolle` oder `dms:post`, den Ablageort als `basis:ablageort` (seit 0.212; das frühere `dms:ablageort` gilt als Alias bis Ablago 1.0, mit Hinweis in der Paketprüfung). `"*"` heißt alle Mappentypen außer Benutzern; `dms:benutzer` ist nicht erlaubt, andere `dms:`-Kennungen gibt es nicht.
 - **Nur Post** (seit 0.94.0): Braucht dein Paket nur die Post – etwa um eingehende Scans zu teilen –, gib `dms:post` statt `"*"` an. Mit `lesen`/`schreiben: ["dms:post"]` und `dokumente: schreiben` darf es Post lesen, **Post teilen** (`POST /dokumente/{id}/seiten` legt je Teil eine neue Post an), die **Archivnummer** und den **Volltext** ihrer Dokumente setzen – andere Mappen sieht es nicht. Die Vorschau bei der Installation zeigt dann „Post“. Anders als in Verweisen (`ziel`, `typen`) ist `dms:post` nur in `rechte` erlaubt. Ein Paket damit gibt `dms: ">=0.94.0"` an; ältere Ablago-Versionen kennen die Kennung nicht und geben dem Paket dann gar keine Post.
 
   ```yaml

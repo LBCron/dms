@@ -1,44 +1,64 @@
-/** Ablageort (#168): im Standard vorhanden, nicht löschbar, verschachtelt mit Titelpfad, Verbleib in den Beispielen. */
+/**
+ * Ablageort (#168, #883): Seit #883 legt der Kern keinen Ablageort mehr an – er kommt mit dem Paket Basis. Ältere Ablagen
+ * behalten ihren früheren Ablageort (verschachtelt mit Titelpfad, Verbleib in den Beispielen), bis Basis ihn übernimmt
+ * (Übernahme: pakete.test.ts).
+ */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ladeBeispiele } from '../src/beispiele';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
-import { Fachfehler } from '../src/fehler';
 import { speicherRepo } from '../src/repo-speicher';
+import { frueherAblageort } from './hilfen';
 
 const neu = (repo = speicherRepo(), einstellungen = speicherEinstellungen()) => ({ d: new Dienst(repo, speicherDateien(), { einstellungen }), repo, einstellungen });
 
-describe('Ablageort (#168)', () => {
-  it('gibt es in jeder Installation, einmal, mit eigener Ansicht – auch nach einem Neustart', async () => {
-    const { d, repo, einstellungen } = neu();
-    const a = await d.ablageortTyp();
-    assert.ok(a);
-    assert.equal(a.name, 'Ablageort');
-    assert.equal(a.schluessel, 'ablageort');
-    assert.equal(a.system ?? null, null, 'kein Systemmappentyp');
-    assert.deepEqual(a.register.map((r) => r.name), ['Allgemein', 'Enthält', 'Liegt hier', 'Fotos']);
-    assert.ok((await d.listeSichten()).some((s) => s.id === a.id), 'eigene Ansicht');
-    assert.deepEqual(await einstellungen.lies('ablageort'), { id: a.id });
-    // Neuer Dienst auf denselben Daten (Neustart): kein zweiter Ablageort.
-    const d2 = new Dienst(repo, speicherDateien(), { einstellungen });
-    assert.equal((await d2.ablageortTyp())!.id, a.id);
-    assert.equal((await d2.listeTypen()).filter((t) => t.schluessel?.startsWith('ablageort')).length, 1);
+describe('Ablageort (#883): nicht mehr im Kern', () => {
+  it('eine neue Ablage bringt nur Systemtypen mit – keinen Ablageort', async () => {
+    const { d, einstellungen } = neu();
+    await d.sichereSystem();
+    assert.equal(await d.ablageortTyp(), undefined);
+    assert.deepEqual((await d.listeTypen()).filter((t) => !t.system).map((t) => t.name), []);
+    assert.equal(await einstellungen.lies('ablageort'), null);
   });
 
-  it('lässt sich erweitern und umbenennen, aber nicht löschen', async () => {
+  it('Beispiel-Mappen kommen ohne Ablageort aus: kein Verbleib, keine Orte, keine Ansicht „Originale nach Ort“', async () => {
     const { d } = neu();
-    const a = (await d.ablageortTyp())!;
-    const umbenannt = await d.aendereTyp(a.id, { ...a, name: 'Wo liegt es?', felder: [...a.felder, { key: 'raum', label: 'Raum', typ: 'text' }] });
-    assert.equal(umbenannt.name, 'Wo liegt es?');
-    await assert.rejects(d.loescheTyp(a.id), (e) => e instanceof Fachfehler && e.status === 409 && /nicht löschen/.test(e.message));
-    assert.equal((await d.ablageortTyp())!.name, 'Wo liegt es?');
+    await ladeBeispiele(d);
+    const typen = await d.listeTypen();
+    assert.deepEqual(typen.filter((t) => !t.system).map((t) => t.name).sort(), ['Rechnung', 'Vertrag', 'Vertragspartner', 'Zahlung']);
+    assert.ok(!typen.some((t) => t.felder.some((f) => f.key === 'verbleib_original')));
+    assert.ok(!(await d.listeSichten()).some((s) => s.name === 'Originale nach Ort'));
+  });
+});
+
+describe('Ablageort (#168): der frühere aus einer älteren Ablage', () => {
+  it('wird gefunden – auch nach einem Neustart – und lässt sich wie jeder Mappentyp löschen', async () => {
+    const { d, repo, einstellungen } = neu();
+    const a = await frueherAblageort(d, einstellungen);
+    assert.equal((await d.ablageortTyp())!.id, a.id);
+    assert.equal((await d.frueherAblageortTyp())!.id, a.id);
+    const d2 = new Dienst(repo, speicherDateien(), { einstellungen });
+    assert.equal((await d2.ablageortTyp())!.id, a.id, 'kein zweiter, keiner neu');
+    assert.equal((await d2.listeTypen()).filter((t) => t.schluessel?.startsWith('ablageort')).length, 1);
+    // Nicht mehr „Standard“: ohne Mappen und Verweise löschbar.
+    await d2.loescheTyp(a.id);
+    assert.equal(await d2.ablageortTyp(), undefined);
+  });
+
+  it('ohne Einstellungen (z. B. alter Stand): über die Kennung „ablageort“', async () => {
+    const repo = speicherRepo();
+    const vorher = new Dienst(repo, speicherDateien(), {});
+    const a = await frueherAblageort(vorher);
+    assert.equal((await new Dienst(repo, speicherDateien(), {}).ablageortTyp())!.id, a.id);
+    // Mit Einstellungen zählt nur die gemerkte Id – ein eigener Typ mit der Kennung wird nicht zum Ablageort.
+    assert.equal(await new Dienst(repo, speicherDateien(), { einstellungen: speicherEinstellungen() }).ablageortTyp(), undefined);
   });
 
   it('zeigt den Pfad im Titel und zieht ihn beim Umzug nach – bis zu den Mappen darin', async () => {
-    const { d } = neu();
-    const a = (await d.ablageortTyp())!;
+    const { d, einstellungen } = neu();
+    const a = await frueherAblageort(d, einstellungen);
     const ort = async (name: string, liegtIn?: string) => (await d.legeMappeAn({ typId: a.id, werte: { name, ...(liegtIn ? { liegt_in: liegtIn } : {}) } })).id;
     const haus = await ort('zu Hause');
     const schrank = await ort('Arbeitszimmer Schrank', haus);
@@ -60,21 +80,9 @@ describe('Ablageort (#168)', () => {
     assert.equal(await titel(v.id), 'Strom (zu Hause › Wohnzimmer › Arbeitszimmer Schrank › roter Ordner)');
   });
 
-  it('übernimmt einen eigenen Mappentyp mit der Kennung „ablageort“ statt einen zweiten anzulegen', async () => {
-    const repo = speicherRepo();
-    const einstellungen = speicherEinstellungen();
-    const vorher = new Dienst(repo, speicherDateien(), {});
-    // Ohne Einstellungen (z. B. alter Stand): eigener Typ mit derselben Kennung.
-    await vorher.sichereSystem();
-    const eigen = (await vorher.ablageortTyp())!;
-    const d = new Dienst(repo, speicherDateien(), { einstellungen });
-    assert.equal((await d.ablageortTyp())!.id, eigen.id);
-    assert.deepEqual(await einstellungen.lies('ablageort'), { id: eigen.id });
-  });
-
   it('Beispiele: Verbleib in Vertrag und Rechnung, verschachtelte Orte, Ansicht „Originale nach Ort“', async () => {
-    const { d } = neu();
-    const a = (await d.ablageortTyp())!;
+    const { d, einstellungen } = neu();
+    const a = await frueherAblageort(d, einstellungen);
     await ladeBeispiele(d);
     const typen = await d.listeTypen();
     for (const name of ['Vertrag', 'Rechnung']) {

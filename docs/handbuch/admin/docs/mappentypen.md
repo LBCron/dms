@@ -280,14 +280,18 @@ Mehr dazu in [Benutzer und Rollen](benutzer.md).
 
 ## Ablageort: wo die Originale liegen
 
-Jede Ablago-Installation hat seit 0.74 den Mappentyp **Ablageort** (Kennung `ablageort`). Damit hält man fest, wo das Papier zu einem eingescannten Dokument liegt – oder dass es vernichtet ist. Er ist kein Systemmappentyp: Du kannst ihn umbenennen, um Felder und Register erweitern und seine Berechtigungen ändern wie bei jedem Mappentyp. **Löschen lässt er sich nicht**, weil Pakete und Beispiele auf ihn verweisen.
+Den Mappentyp **Ablageort** bringt das Paket **Basis** mit (ab Basis 1.6.0, neben Organisation, Niederlassung und Person). Damit hält man fest, wo das Papier zu einem eingescannten Dokument liegt – oder dass es vernichtet ist. Er ist ein normaler Mappentyp aus einem Paket: Du kannst ihn umbenennen, um Felder und Register erweitern und seine Berechtigungen ändern wie bei jedem Mappentyp.
+
+- **Ohne Basis gibt es keinen Ablageort** – das ist gewollt. Eine neue Ablage bringt nur die [Systemmappentypen](#systemmappentypen-benutzer-rolle-und-post) mit; Fachliches wählst du über [Pakete](pakete.md). Pakete wie Haushalt, Haus, Vermietung und Fahrzeuge brauchen Basis ohnehin und verweisen im Feld *Verbleib Originaldokumente* auf den Ablageort von Basis.
+- **Ältere Ablagen** (vor 0.212) haben noch den Ablageort, den Ablago früher selbst angelegt hat (Kennung `ablageort`). Beim Installieren bzw. Aktualisieren von Basis auf 1.6.0 **übernimmt** Basis ihn: gleiche Mappentyp-Id, alle Ablageorte, Verweise und die Ansicht bleiben, nur die Herkunft heißt danach „Basis“. Es entsteht kein zweiter Ablageort; die Vorschau nennt die Übernahme. Bis dahin lässt er sich wie jeder eigene Mappentyp bearbeiten und – ohne Mappen und Verweise – auch löschen.
+- **Für Paket-Autoren:** Verweise heißen `basis:ablageort` (Abhängigkeit `basis: ">=1.6.0"`). Das frühere `dms:ablageort` gilt bis Ablago 1.0 weiter und zeigt auf denselben Mappentyp; die Paketprüfung gibt dazu einen Hinweis.
 
 - **Felder:** *Name*, *Liegt in* (ein Verweis auf einen anderen Ablageort) und *Beschreibung*.
 - **Register:** *Allgemein*, *Enthält* (die Ablageorte, die hier liegen), *Liegt hier* (alle Mappen, die auf diesen Ort verweisen) und *Fotos*.
 - **Titel:** `{liegt_in} › {name}`. So heißt der rote Ordner z. B. „zu Hause › Arbeitszimmer Schrank › roter Ordner“. Ganz oben (ohne *Liegt in*) bleibt nur der Name.
 - **Umzug in einem Schritt:** Kommt der Schrank ins Wohnzimmer, änderst du nur *Liegt in* am Schrank. Die Titel der Orte darunter und aller Mappen, die den Ort im Titel zeigen, zieht Ablago nach – über höchstens sechs Ebenen.
 
-**Verbleib in deinen Mappentypen:** Gib Mappentypen mit Papier (Vertrag, Rechnung, Versicherung, Urkunde …) ein Verweisfeld auf *Ablageort* mit der Kennung **`verbleib_original`** und der Bezeichnung *Verbleib Originaldokumente*. Die gleiche Kennung in allen Mappentypen ist wichtig: Nur dann gibt es die Spalte in gemeinsamen Trefferlisten und die Bedingung in Ansichten über mehrere Mappentypen. Die [Beispiele](demo.md) bringen das Feld bei *Vertrag* und *Rechnung* mit, dazu ein paar Ablageorte und die Ansicht *Originale nach Ort*.
+**Verbleib in deinen Mappentypen:** Gib Mappentypen mit Papier (Vertrag, Rechnung, Versicherung, Urkunde …) ein Verweisfeld auf *Ablageort* mit der Kennung **`verbleib_original`** und der Bezeichnung *Verbleib Originaldokumente*. Die gleiche Kennung in allen Mappentypen ist wichtig: Nur dann gibt es die Spalte in gemeinsamen Trefferlisten und die Bedingung in Ansichten über mehrere Mappentypen. Gibt es einen Ablageort, bringen die [Beispiele](demo.md) das Feld bei *Vertrag* und *Rechnung* mit, dazu ein paar Ablageorte und die Ansicht *Originale nach Ort*.
 
 !!! note "Bewusst einfach"
     Der Verbleib gilt für die ganze Mappe, nicht für jeden einzelnen Scan. *Liegt hier* zeigt nur, was direkt an diesem Ort liegt; was in Orten darunter liegt, siehst du über *Enthält* Ebene für Ebene. Wann man das Papier überhaupt aufheben sollte, steht im Benutzerhandbuch unter [Original behalten oder vernichten?](https://help.ablago.app/benutzer/aktuell/original/).
@@ -321,4 +325,4 @@ Unter Registern und Archivmodus legst du fest, wer Mappen dieses Mappentyps anle
 
 ## Mappentyp löschen
 
-**Mappentyp löschen** geht nur, solange es keine Mappen dieses Mappentyps gibt – auch keine im [Papierkorb](papierkorb.md) – und kein anderer Mappentyp auf ihn verweist. Sonst nennt Ablago die Gründe. [Systemmappentypen](#systemmappentypen-benutzer-rolle-und-post) und der [Ablageort](#ablageort-wo-die-originale-liegen) lassen sich nie löschen.
+**Mappentyp löschen** geht nur, solange es keine Mappen dieses Mappentyps gibt – auch keine im [Papierkorb](papierkorb.md) – und kein anderer Mappentyp auf ihn verweist. Sonst nennt Ablago die Gründe. [Systemmappentypen](#systemmappentypen-benutzer-rolle-und-post) lassen sich nie löschen.

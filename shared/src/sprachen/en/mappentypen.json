@@ -84,7 +84,6 @@
   "editor.im-archivmodus-nicht-moeglich": "Not possible in archive mode – post for this type is only assigned by hand.",
   "editor.sicher-heisst-absender-eindeutig": "Certain means: sender recognised unambiguously (e.g. customer number, IBAN) and exactly one matching folder of this type. The recipient gets the task “Assigned automatically – please check” with undo. Ablago never creates new folders by itself.",
   "editor.post-automatisch-zuordnen-wenn": "Assign post automatically when recognition is certain{klein}",
-  "editor.gehoert-zum-standard-ablageorte": "Part of the default (storage locations) – can be extended but not deleted.",
   "editor.mappentyp-loeschen": "Delete folder type",
   "editor.noch-keine-felder": "no fields yet",
   "editor.felder-2_one": "{anzahl} field",

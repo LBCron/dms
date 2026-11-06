@@ -1231,7 +1231,7 @@
   "demo.laeuft-im-hintergrund-du": "{b} … runs in the background; you can also leave the page.",
   "demo.mappen": "Folders",
   "demo.beispiel-mappentypen": "Example folder types",
-  "demo.vertragspartner-vertrag-rechnung-und": "Contract partner, contract, invoice and payment with tabs and a few folders. Only possible as long as there are no folder types other than the storage location. Contracts and invoices get the field “Whereabouts of original documents” and a few storage locations.",
+  "demo.vertragspartner-vertrag-rechnung-und": "Contract partner, contract, invoice and payment with tabs and a few folders. Only possible as long as there are no folder types of your own yet. If there is a storage location (e.g. from an older Library), contracts and invoices get the field “Whereabouts of original documents” and a few storage locations.",
   "demo.beispiele-geladen": "Examples loaded.",
   "demo.beispiele-laden": "Load examples",
   "demo.erzeugen": "Create",

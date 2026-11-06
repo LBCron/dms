@@ -84,7 +84,6 @@
   "editor.im-archivmodus-nicht-moeglich": "Im Archivmodus nicht möglich – Post für diesen Typ wird nur von Hand zugeordnet.",
   "editor.sicher-heisst-absender-eindeutig": "Sicher heißt: Absender eindeutig erkannt (z. B. Kundennummer, IBAN) und genau eine passende Mappe dieses Typs. Der Empfänger bekommt die Aufgabe „Automatisch zugeordnet – bitte prüfen“ mit Rückgängig. Neue Mappen legt Ablago nie selbst an.",
   "editor.post-automatisch-zuordnen-wenn": "Post automatisch zuordnen, wenn die Erkennung sicher ist{klein}",
-  "editor.gehoert-zum-standard-ablageorte": "Gehört zum Standard (Ablageorte) – lässt sich erweitern, aber nicht löschen.",
   "editor.mappentyp-loeschen": "Mappentyp löschen",
   "editor.noch-keine-felder": "noch keine Felder",
   "editor.felder-2_one": "{anzahl} Feld",

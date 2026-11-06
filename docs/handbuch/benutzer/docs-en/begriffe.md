@@ -107,7 +107,7 @@ See also: [Unique](#eindeutig).
 Sets which columns a list shows. A folder type has one or more result lists; one of them is the default. A view or a links tab chooses one of them, otherwise the default applies. If a view shows several folder types, only result lists with the same identifier in all of them can be chosen, with the common columns.
 
 <a id="ablageort"></a>**Storage location** (*Ablageort*) · ✓ everyday word · everyone  
-A place where paper is kept – e.g. a binder, a box, a safe deposit box or "destroyed". Storage locations lie inside each other ("at home › study cupboard › red binder"). Every DMS has this folder type; it can be extended but not deleted.  
+A place where paper is kept – e.g. a binder, a box, a safe deposit box or "destroyed". Storage locations lie inside each other ("at home › study cupboard › red binder"). The folder type comes with the Basis package.  
 See also: [Whereabouts of original documents](#verbleib-originaldokumente), [Folder type](#mappentyp).
 
 <a id="unteransicht"></a>**Sub-view** (*Unteransicht*) · ~ with explanation · administrators  

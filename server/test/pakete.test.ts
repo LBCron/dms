@@ -16,6 +16,7 @@ import { ARCHIV_MAX, holeDaten, liesPaket, liesZip, Paketverwaltung, SAMMEL_MAX,
 import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { zipPuffer } from '../src/zip';
+import { basisMitAblageort, frueherAblageort } from './hilfen';
 
 const ICH = { id: '00000000-0000-4000-8000-0000000000aa', email: 'admin@example.org' };
 const BASIS = fileURLToPath(new URL('./pakete/basis', import.meta.url));
@@ -155,6 +156,16 @@ const ordnerpaket = {
   'inhalt/sichten.yaml': '- { schluessel: orte, name: Orte und Urkunden, typen: ["dms:ablageort", urkunde] }\n',
 };
 
+/** Basis 1.6.0 (#883, dms-registry #138): bringt den Ablageort mit. */
+const basis16 = basisMitAblageort(basis);
+/** Haushalt-ähnliches Paket nach #883: verweist auf basis:ablageort und braucht Basis ab 1.6.0. */
+const ordnerpaketNeu = {
+  ...ordnerpaket,
+  'manifest.yaml': ordnerpaket['manifest.yaml'].replace('dms: ">=0.75.0"\n', 'dms: ">=0.75.0"\nabhaengigkeiten: { basis: ">=1.6.0" }\n'),
+  'inhalt/mappentypen.yaml': ordnerpaket['inhalt/mappentypen.yaml'].replace('ziel: "dms:ablageort"', 'ziel: "basis:ablageort"'),
+  'inhalt/sichten.yaml': ordnerpaket['inhalt/sichten.yaml'].replace('"dms:ablageort"', '"basis:ablageort"'),
+};
+
 /** Mappentypen ohne die, die das DMS selbst mitbringt (Systemtypen, Ablageort #168). */
 const paketTypen = async (d: Dienst) => {
   const a = await d.ablageortTyp();
@@ -164,9 +175,10 @@ const paketTypen = async (d: Dienst) => {
 function faelle(pg: boolean) {
   describe(`Paketverwaltung (#188)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
     async function aufbau(eintraege: Parameters<typeof katalog>[0], version = '0.63.0') {
-      const d = new Dienst(await repo(pg), speicherDateien(), { einstellungen: speicherEinstellungen() });
+      const einstellungen = speicherEinstellungen();
+      const d = new Dienst(await repo(pg), speicherDateien(), { einstellungen });
       const p = new Paketverwaltung(d, { version: () => version, abruf: katalog(eintraege), katalogUrl: KATALOG });
-      return { d, p };
+      return { d, p, einstellungen };
     }
 
     it('installiert das Basis-Paket (Abnahme), aktualisiert und entfernt es', async () => {
@@ -349,12 +361,18 @@ function faelle(pg: boolean) {
       assert.deepEqual(gruende('- { typ: vertrag, schluessel: v, werte: { nr: V } }\n- { typ: zahlung, werte: { datum: "2026-01-01", vertrag: { beispiel: "vertraege:v" } } }\n'), [], 'eigene Paket-Id als Präfix ist erlaubt');
     });
 
-    it('verweist mit dms:… auf Mappentypen von Ablago (#310)', async () => {
-      const { d, p } = await aufbau([{ dateien: ordnerpaket }], '0.75.0');
-      const ablageort = (await d.ablageortTyp())!;
+    it('verweist mit dms:… auf Mappentypen von Ablago (#310); dms:ablageort ist ein veralteter Alias (#883)', async () => {
+      const { d, p, einstellungen } = await aufbau([{ dateien: ordnerpaket }], '0.75.0');
+      // Ohne Ablageort (neue Ablage ohne Basis): Hinweis auf Basis statt eines Updates von Ablago.
+      const ohne = await p.vorschau({ id: 'ordnerpaket' });
+      assert.ok(ohne.probleme.some((x) => /„dms:ablageort“ steht für „basis:ablageort“.*Basis ab 1\.6\.0/.test(x)), ohne.probleme.join(' | '));
+      await assert.rejects(p.installiere({ id: 'ordnerpaket' }, ICH), /Basis ab 1\.6\.0/);
+      // Mit dem früheren Ablageort des Kerns: der Alias zeigt auf ihn, mit Hinweis in der Prüfung.
+      const ablageort = await frueherAblageort(d, einstellungen);
       const v = await p.vorschau({ id: 'ordnerpaket' });
       assert.deepEqual(v.probleme, []);
-      assert.ok(v.hinweise.some((h) => /Ablageort \(aus Ablago\)/.test(h) && /Benutzer \(aus Ablago\)/.test(h)), v.hinweise.join(' | '));
+      assert.ok(v.hinweise.some((h) => /Benutzer \(aus Ablago\)/.test(h) && !/Ablageort/.test(h)), v.hinweise.join(' | '));
+      assert.ok(v.hinweise.some((h) => /„dms:ablageort“ ist veraltet.*„basis:ablageort“/.test(h)), v.hinweise.join(' | '));
       const ok = await p.installiere({ id: 'ordnerpaket' }, ICH);
       const urkunde = (await d.listeTypen()).find((t) => t.id === ok.typen.urkunde)!;
       assert.equal(urkunde.felder.find((f) => f.key === 'verbleib_original')!.zielTyp, ablageort.id);
@@ -365,6 +383,63 @@ function faelle(pg: boolean) {
       assert.throws(() => liesPaket(liesZip(archiv(falsch))), (e) => e instanceof Fachfehler && (e.details as { gruende: string[] }).gruende.some((g) => /dms:post.*nicht mit/.test(g)));
       const dmsId = { ...ordnerpaket, 'manifest.yaml': ordnerpaket['manifest.yaml'].replace('id: ordnerpaket', 'id: dms') };
       assert.throws(() => liesPaket(liesZip(archiv(dmsId))), (e) => e instanceof Fachfehler && (e.details as { gruende: string[] }).gruende.some((g) => /reserviert/.test(g)));
+    });
+
+    it('Basis 1.6.0 übernimmt den früheren Ablageort: gleiche Id, Mappen, Verweise und Ansicht bleiben (#883)', async () => {
+      const { d, p, einstellungen } = await aufbau([{ dateien: basis16 }, { dateien: ordnerpaketNeu }], '0.212.0');
+      await d.sichereSystem();
+      const a = await frueherAblageort(d, einstellungen);
+      const ort = await d.legeMappeAn({ typId: a.id, werte: { name: 'roter Ordner' } });
+      const vertrag = await d.legeTypAn({ name: 'Vertrag', felder: [{ key: 'name', label: 'Name', typ: 'text', pflicht: true },
+        { key: 'verbleib_original', label: 'Verbleib Originaldokumente', typ: 'referenz', zielTyp: a.id, verweisart: 'bezug' }] });
+      const v1 = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', verbleib_original: ort.id } });
+      const typenVorher = (await d.listeTypen()).length;
+      const sichtenVorher = (await d.listeSichten()).length;
+      const plan = await p.vorschau({ id: 'basis' });
+      assert.deepEqual(plan.probleme, []);
+      assert.equal(plan.typen.find((x) => x.schluessel === 'ablageort')!.vorhanden, true, 'gilt als vorhanden, nicht neu');
+      assert.equal(plan.sichten.find((x) => x.schluessel === 'ablageorte')!.vorhanden, true);
+      assert.ok(plan.hinweise.some((h) => /„Ablageort“ \(Ablageort\) übernimmt das Paket/.test(h)), plan.hinweise.join(' | '));
+      const inst = await p.installiere({ id: 'basis' }, ICH);
+      assert.equal(inst.typen.ablageort, a.id, 'gleiche Id, Herkunft danach Basis');
+      assert.equal(inst.sichten.ablageorte, a.id, 'die vorhandene Ansicht gehört jetzt zu Basis');
+      assert.equal((await d.listeTypen()).length, typenVorher + 1, 'nur Organisation kommt dazu – kein zweiter Ablageort');
+      assert.equal((await d.listeSichten()).length, sichtenVorher + 5, 'nur die Ansichten der Organisation');
+      assert.equal((await d.listeMappen(a.id)).length, 1, 'Mappen bleiben');
+      assert.equal((await d.holeMappe(v1.id)).mappe.werte.verbleib_original, ort.id, 'Verweise bleiben');
+      const jetzt = (await d.ablageortTyp())!;
+      assert.equal(jetzt.id, a.id);
+      assert.equal(jetzt.beschriftungen?.en?.name, 'Storage location', 'Beschriftungen von Basis ergänzt');
+      assert.equal(await d.frueherAblageortTyp(), undefined, 'kein früherer mehr');
+      // Pakete mit basis:ablageort zeigen auf denselben Typ.
+      const o = await p.installiere({ id: 'ordnerpaket' }, ICH);
+      assert.equal((await d.listeTypen()).find((t) => t.id === o.typen.urkunde)!.felder.find((f) => f.key === 'verbleib_original')!.zielTyp, a.id);
+      // Herkunft „Basis“: Erneute Vorschau übernimmt nichts mehr.
+      assert.ok(!(await p.vorschau({ id: 'basis' })).hinweise.some((h) => /übernimmt das Paket/.test(h)));
+    });
+
+    it('Update von Basis auf 1.6.0 übernimmt den früheren Ablageort genauso (#883)', async () => {
+      const { d, p, einstellungen } = await aufbau([{ dateien: basis }, { dateien: basis16 }], '0.212.0');
+      await p.installiere({ id: 'basis', version: '1.0.0' }, ICH);
+      const a = await frueherAblageort(d, einstellungen);
+      const neu = await p.aktualisiere('basis', {}, ICH);
+      assert.equal(neu.version, '1.6.0');
+      assert.equal(neu.typen.ablageort, a.id);
+      assert.equal((await d.listeTypen()).filter((t) => t.name === 'Ablageort').length, 1);
+    });
+
+    it('neue Ablage: Basis 1.6.0 legt den Ablageort an; dms:ablageort zeigt als Alias darauf (#883)', async () => {
+      const { d, p } = await aufbau([{ dateien: basis16 }, { dateien: ordnerpaket }], '0.212.0');
+      assert.equal(await d.ablageortTyp(), undefined);
+      const inst = await p.installiere({ id: 'basis' }, ICH);
+      const a = (await d.ablageortTyp())!;
+      assert.equal(a.id, inst.typen.ablageort);
+      assert.equal(a.schluessel, 'basis_ablageort');
+      assert.deepEqual(a.register.map((r) => r.name), ['Allgemein', 'Enthält', 'Liegt hier', 'Fotos']);
+      assert.deepEqual(a.register.find((r) => r.key === 'enthaelt')!.quellen, [{ typId: a.id, feldKey: 'liegt_in' }]);
+      assert.equal(a.felder.find((f) => f.key === 'liegt_in')!.zielTyp, a.id);
+      const o = await p.installiere({ id: 'ordnerpaket' }, ICH);
+      assert.equal((await d.listeTypen()).find((t) => t.id === o.typen.urkunde)!.felder.find((f) => f.key === 'verbleib_original')!.zielTyp, a.id);
     });
 
     it('Paket hochladen: Prüfung, Bestätigung, Herkunft, Update durch erneutes Hochladen (#189)', async () => {

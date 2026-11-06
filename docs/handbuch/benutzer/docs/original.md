@@ -73,9 +73,9 @@ Brauchst du doch einmal ein Original, findest du es in Ablago. Am Datum siehst d
 
 ### Festhalten, wo das Original liegt
 
-Jede Ablago-Installation hat die Ansicht **Ablageort**. Ein Ablageort ist eine kleine Mappe für einen Platz, an dem Papier liegt – und er kann in einem anderen liegen: „zu Hause › Arbeitszimmer Schrank › roter Ordner“, „Kiste 2026“, „Bankschließfach Sparkasse“, „beim Notar“ oder einfach „vernichtet“.
+Ist das Paket **Basis** installiert (oder hat deine Ablage den Ablageort aus einer älteren Version), gibt es die Ansicht **Ablageorte** (in älteren Ablagen *Ablageort*). Ein Ablageort ist eine kleine Mappe für einen Platz, an dem Papier liegt – und er kann in einem anderen liegen: „zu Hause › Arbeitszimmer Schrank › roter Ordner“, „Kiste 2026“, „Bankschließfach Sparkasse“, „beim Notar“ oder einfach „vernichtet“.
 
-1. In der Ansicht *Ablageort* mit **+ Neu** einen Ort anlegen: *Name* eintragen und bei *Liegt in* den Ort wählen, in dem er liegt (z. B. der Schrank für den Ordner). Ganz oben bleibt *Liegt in* leer.
+1. In der Ansicht *Ablageorte* mit **+ Neu** einen Ort anlegen: *Name* eintragen und bei *Liegt in* den Ort wählen, in dem er liegt (z. B. der Schrank für den Ordner). Ganz oben bleibt *Liegt in* leer.
 2. In der Mappe, deren Papier du aufhebst, im Feld **Verbleib Originaldokumente** den Ort wählen – sofern dein Administrator das Feld eingerichtet hat.
 3. Zieht der Ordner um, änderst du nur *Liegt in* am Ordner. Alle Mappen darin zeigen danach den neuen Ort.
 

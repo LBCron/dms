@@ -26,6 +26,17 @@ Petra is to get a task 30 days before the notice period of a contract runs out �
 
 You **expand** a card with a click on its name (settings) and **collapse** it again (short line like "Task → Person in the field "Responsible""). Below the text are the **placeholders** that match the If card: the fields of the folder type as well as `{titel}`, `{mappentyp}`, `{heute}`, `{automatisierung}` and with a date `{datum}` and `{tage}`. A click inserts the placeholder.
 
+## Example: reporting new documents to the administration {#beispiel-neue-dokumente-an-die-verwaltung-melden}
+
+The administration is to learn when a document is added anywhere – bundled, not for every single file.
+
+1. **+ New**, name "Report new documents".
+2. **If:** **Document uploaded**. Without a folder type it applies to all; with a folder type (e.g. *Invoice*) or a field condition under **And** you narrow it down.
+3. **Then:** **+ Card → Task / notification**, as *Notification*, recipient the role *Administrator* (or a role of your own such as *Office*), text `New document on {titel}.`
+4. **Save**.
+
+Ablago itself no longer brings ready-made automations (since 0.212): subject-specific automations come from [packages](#aus-paketen), everything else you build as in these examples.
+
 ## Date reached {#datum-erreicht}
 
 The card **Date reached** checks once a day at the chosen time for which folders a date field is reached after the **advance notice**.
@@ -123,7 +134,13 @@ Up to version 0.176, advance notice, recipient and text of a reminder were set d
 
 ## Examples {#beispiele}
 
-Ablago brings a few **switched-off examples** (origin "from Ablago"): *Remind of the notice period*, *Report account block* and *Report new documents*. Examples can be switched on and adjusted but not deleted; with **Copy** you make one of your own from them (the copy is off at first).
+Up to version 0.211, Ablago created three **switched-off examples** (origin "from Ablago"): *Remind of the notice period*, *Report account block* and *Report new documents*. Since 0.212 there are no automations from the core any more (issue #883):
+
+- An example you have **never switched on and never changed** is removed silently by the update.
+- An example that is **switched on or changed** stays and becomes a normal automation of **your own** – you can now delete it as well.
+- On the first start, the [log](fehlersuche.md#protokoll) names what was removed and what was taken over.
+
+The reminder of the notice period comes with the **Household** package ("Cancellation due soon"); reporting new documents is shown above as an [example](#beispiel-neue-dokumente-an-die-verwaltung-melden). For locked accounts there is [sign-in protection](anmeldeschutz.md) and the **Notifications** package.
 
 ![Editor in dark appearance](bilder/werkbank-automatisierung-dunkel.png)
 

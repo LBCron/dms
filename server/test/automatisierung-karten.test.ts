@@ -129,18 +129,40 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
   });
 });
 
-describe('Beispiele (#675)', () => {
-  it('legt drei ausgeschaltete Beispiele von Ablago an – einmal, auch bei mehrfachem Start', async () => {
-    const { vertrag, motor } = await aufbau();
-    assert.equal(await motor.legeBeispiele(), 3);
-    assert.equal(await motor.legeBeispiele(), 0, 'feste Ids: kein zweites Mal');
-    const { automatisierungen } = await motor.uebersicht();
-    assert.equal(automatisierungen.length, 3);
-    assert.ok(automatisierungen.every((a) => !a.aktiv && a.herkunft === 'dms'));
-    const kuendigung = automatisierungen.find((a) => a.wenn.art === 'datum')!;
-    assert.deepEqual([kuendigung.wenn.art === 'datum' && kuendigung.wenn.typ, kuendigung.wenn.art === 'datum' && kuendigung.wenn.feld], [vertrag.id, 'kuendbar_bis'], 'passender Mappentyp gefunden');
-    assert.deepEqual(kuendigung.dann[0].art === 'aufgabe' && kuendigung.dann[0].empfaenger, [{ art: 'feld', feld: 'verantwortlich' }]);
-    assert.deepEqual(kuendigung.probleme, []);
-    await assert.rejects(motor.loesche(kuendigung.id), /nur ausschalten/);
+describe('Keine Beispiel-Automatisierungen im Kern (#883)', () => {
+  it('eine frische Ablage bekommt keine Automatisierungen von Ablago', async () => {
+    const { motor } = await aufbau();
+    await motor.zeitplan();
+    assert.deepEqual(await motor.raeumeBeispieleAuf(), { entfernt: [], uebernommen: [] });
+    assert.equal((await motor.uebersicht()).automatisierungen.length, 0);
+  });
+
+  it('Umzug: unverändert und nie eingeschaltet → entfernt; eingeschaltet oder geändert → eigene, löschbar', async () => {
+    const { admin, vertrag, motor } = await aufbau();
+    const karte = { wenn: { art: 'dokument.hochgeladen', typ: null }, dann: [{ art: 'aufgabe', als: 'benachrichtigung', empfaenger: [{ art: 'ersteller' }], text: 'Neu: {titel}' }] };
+    const unveraendert = await motor.lege({ name: 'Beispiel: Kontosperre melden', ...karte }, null, 'dms');
+    const eingeschaltet = await motor.lege({ name: 'Beispiel: Neue Dokumente melden', ...karte }, null, 'dms');
+    await motor.schalte(eingeschaltet.id, true, admin.id);
+    const geaendert = await motor.lege({ name: 'Beispiel: An die Kündigungsfrist erinnern', wenn: { art: 'datum', typ: vertrag.id, feld: 'kuendbar_bis', vorlauf: 30, einheit: 'tage', uhrzeit: '07:00' },
+      dann: [{ art: 'aufgabe', als: 'aufgabe', empfaenger: [{ art: 'ersteller' }], text: 'Kündigen?' }] }, null, 'dms');
+    await motor.aendere(geaendert.id, { ...geaendert, name: 'Kündigung prüfen' }, admin.id);
+    // Ein- und wieder ausgeschaltet zählt als „eingeschaltet“.
+    const einmalAn = await motor.lege({ name: 'Beispiel: einmal an', ...karte }, null, 'dms');
+    await motor.schalte(einmalAn.id, true, admin.id);
+    await motor.schalte(einmalAn.id, false, admin.id);
+    const eigen = await motor.lege({ name: 'Eigene', ...karte }, admin.id);
+
+    const erg = await motor.raeumeBeispieleAuf();
+    assert.deepEqual(erg.entfernt, ['Beispiel: Kontosperre melden']);
+    assert.deepEqual(erg.uebernommen.sort(), ['Beispiel: Neue Dokumente melden', 'Beispiel: einmal an', 'Kündigung prüfen'].sort());
+    const liste = (await motor.uebersicht()).automatisierungen;
+    assert.ok(!liste.some((a) => a.id === unveraendert.id), 'still entfernt');
+    assert.ok(liste.every((a) => a.herkunft === 'eigen'), 'keine mehr „von Ablago“');
+    assert.equal(liste.find((a) => a.id === eingeschaltet.id)!.aktiv, true, 'eingeschaltet bleibt an');
+    assert.equal(liste.find((a) => a.id === geaendert.id)!.name, 'Kündigung prüfen');
+    assert.ok(liste.some((a) => a.id === eigen.id));
+    assert.deepEqual(await motor.raeumeBeispieleAuf(), { entfernt: [], uebernommen: [] }, 'nur einmal');
+    await motor.loesche(geaendert.id);
+    assert.ok(!(await motor.uebersicht()).automatisierungen.some((a) => a.id === geaendert.id), 'jetzt löschbar');
   });
 });

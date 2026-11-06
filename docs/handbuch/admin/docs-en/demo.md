@@ -10,7 +10,7 @@ Under **Workbench → Demo data** you fill a DMS with content for trying out or 
 
 **Load examples** creates the folder types *Contract partner*, *Contract*, *Invoice* and *Payment* with fields, tabs, title templates and result lists – plus a few folders. That is a good starting point for basing your own folder types on.
 
-This only works as long as there are no folder types yet apart from the system folder types *User*, *Role* and *Post* and the [storage location](mappentypen.md#ablageort-wo-die-originale-liegen). *Contract* and *Invoice* get the field *Whereabouts of original documents*; in addition come a few storage locations (at home › study cupboard › red binder, safe in the hallway, at the notary's, destroyed) and the view *Originals by location*.
+This only works as long as there are no folder types yet apart from the system folder types *User*, *Role* and *Post* (and an earlier [storage location](mappentypen.md#ablageort-wo-die-originale-liegen)). If there is a storage location, *Contract* and *Invoice* get the field *Whereabouts of original documents*; in addition come a few storage locations (at home › study cupboard › red binder, safe in the hallway, at the notary's, destroyed) and the view *Originals by location*. A new Library has none – the examples then come without this field.
 
 ## Creating demo folders {#demo-mappen-erzeugen}
 
