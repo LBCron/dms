@@ -183,6 +183,12 @@ export interface Route {
   bereichVon?: { methode: string; pfad: string };
   /** Keine automatische HEAD-Route (z. B. Einmal-Download: ein HEAD würde das Ticket verbrauchen). */
   ohneHead?: boolean;
+  /**
+   * Abfrage im Hintergrund (#919, #921): Die Oberfläche fragt sie von selbst nach (alle 10–15 s, nur im sichtbaren Tab).
+   * Sie zählt nie als Aktivität – verlängert den Verwaltungsmodus nicht (auch nicht mit `x-dms-aktiv`) und setzt
+   * „zuletzt aktiv“ der Sitzung nicht.
+   */
+  still?: boolean;
   handler(a: Anfrage): Promise<Antwort>;
 }
 
@@ -1731,6 +1737,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'PUT', pfad: '/api/werkbank/ansicht', zugang: 'admin', handler: async (a) => ok(await dienst.setzeWerkbankAnsicht(ich(a), b(a))) },
     // Übersicht als Startseite der Werkbank (#68): was zu tun ist, auf einen Blick.
+    // Werkbank (#921): wer außer mir gerade im Verwaltungsmodus ist – nur im Modus (zugang „admin“, Bereich für alle,
+    // die verwalten), nie mit API-Schlüssel, nicht in /api/v1. Nachgefragt im Takt (`still`: verlängert den Modus nicht).
+    { methode: 'GET', pfad: '/api/werkbank/gerade-im-modus', zugang: 'admin', still: true, handler: async (a) => ok(await konten.andereImVerwaltungsmodus(ich(a))) },
     { methode: 'GET', pfad: '/api/werkbank/uebersicht', zugang: 'admin', handler: async (a) => {
       const sicher = async <T>(f: () => Promise<T>): Promise<T | null> => { try { return await f(); } catch { return null; } };
       const ts = x.tresor ? await sicher(() => x.tresor!.status()) : null;
@@ -2077,6 +2086,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/mappen/:id/favorit/benachrichtigen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.setzeFavoritBenachrichtigen(ich(a), a.params.id, b(a).an)) },
     { methode: 'POST', pfad: '/api/gesehen', zugang: 'angemeldet', handler: async (a) => { await dienst.gesehen(ich(a), b(a).ids); return leer; } },
     { methode: 'GET', pfad: '/api/sichten', zugang: 'angemeldet', handler: async (a) => ok(await dienst.zaehler(ich(a), await zg(a))) },
+    // Stand der Ablage (#919): ein Fingerabdruck ohne Inhalt; die Oberfläche lädt Startseite und Zähler nur bei Änderung.
+    // Nur für die eigene Oberfläche (nicht in /api/v1); zählt nicht als Aktivität (`still`).
+    { methode: 'GET', pfad: '/api/ablage/stand', zugang: 'angemeldet', still: true, handler: async (a) => ok({ stand: await dienst.ablageStand(ich(a)) }) },
     // Ohne Zählen (#512): Papierkorb-Tage und „Neue Post“ – die Ablage erscheint damit sofort, die Zahlen kommen danach.
     { methode: 'GET', pfad: '/api/sichten/rahmen', zugang: 'angemeldet', handler: async () => ok(await dienst.zaehlerRahmen()) },
     // Zähler-Endpunkt (#625): nur Zahlen; ETag und 304, damit häufiges Nachfragen nichts kostet.
@@ -2924,14 +2936,15 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     const s = await schluessel.pruefe(auth).catch(() => undefined);
     if (s?.recht === NUR_ZAEHLER) throw new Fachfehler(403, t('api.schluessel.nur-zaehler'));
   }
-  const anmeldung = await konten.anmeldungZu(a.sitzung);
+  const anmeldung = await konten.anmeldungZu(a.sitzung, { still: r.still });
   a.benutzer = anmeldung?.benutzer;
   a.sitzungsDaten = anmeldung?.sitzung;
   if (r.methode !== 'GET' && kopf('x-dms') !== '1') throw new Fachfehler(403, t('meldungen.routen.anfrage-ohne-kennung-der'));
   // Verwaltungsmodus (#819): Zustand der Sitzung auf dem Server. Aktivität = jede ändernde Anfrage oder eine, die die
   // Oberfläche nach einer Eingabe als „aktiv“ kennzeichnet – Abfragen im Hintergrund verlängern den Modus nicht.
   if (a.benutzer) {
-    const aktiv = (r.methode !== 'GET' && !r.lesend && !r.pfad.startsWith('/api/konto/verwaltung')) || kopf('x-dms-aktiv') === '1';
+    // Abfragen im Hintergrund (#919, `still`) nie – auch nicht kurz nach einer Eingabe.
+    const aktiv = !r.still && ((r.methode !== 'GET' && !r.lesend && !r.pfad.startsWith('/api/konto/verwaltung')) || kopf('x-dms-aktiv') === '1');
     a.verwaltungsmodus = await konten.modusPruefen(a.benutzer, a.sitzung, a.sitzungsDaten, aktiv);
     a.benutzer = { ...a.benutzer, rolle: a.verwaltungsmodus ? 'admin' : 'mitglied' };
   }

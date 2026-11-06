@@ -12,6 +12,7 @@ import { logoUrl, Marke, schriftzugVon } from './Marke';
 import { ApiDoku } from './profil/ApiDoku';
 import { Profil } from './profil/Profil';
 import { Werkbank } from './werkbank/Werkbank';
+import { GeradeImModus } from './werkbank/GeradeImModus';
 import { WartungsBanner } from './wartung';
 import { NeuKnopf, PostAblage } from './ablage/NeuePost';
 import { PostKamera } from './ablage/PostKamera';
@@ -94,6 +95,8 @@ export function App() {
           <button type="button" id="verwaltung-beenden" className="knopf klein" onClick={() => void verwaltungBeenden()}>{t('konten.verwaltung.beenden')}</button>
         </section>
       )}
+      {/* #921: nur in der Werkbank und nur im Modus – wer außer mir gerade auch verwaltet. */}
+      {admin && !vertretung && bereich === 'werkbank' && <GeradeImModus />}
       <header className="kopf">
         <Link to={startseiteVon(vertretung ? undefined : ich.rolle, d.einstellungen.startseite === false)} className="marke" title={t('oberflaeche.app.zur-startseite')}>
           <Marke logo={logoUrl(d.meinDesign)} schriftzug={schriftzugVon(d.meinDesign)} /><span className="sr-only">{t('oberflaeche.app.startseite', { wert: schriftzugVon(d.meinDesign) ? '' : schriftzugVon(null) })}</span>

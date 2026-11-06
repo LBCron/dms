@@ -4,6 +4,7 @@ import { wirksameTypen, type Sicht } from '../../shared/src/sichten';
 import { api, type Person, type Zaehler } from './api';
 import { rettungsweg, wendeAn, type Design } from './design';
 import { t } from './sprache';
+import { useNachladen } from './nachladen-hook';
 
 /**
  * Gemeinsame Daten der Oberfläche: Mappentypen, Personen und die Zähler der Sichten.
@@ -28,6 +29,13 @@ interface Daten {
   /** Zählt jedes Neuladen hoch; Ansichten können darauf reagieren. */
   stand: number;
   neuLaden(): Promise<void>;
+  /**
+   * Von selbst nachgeladen (#919): zählt hoch, wenn sich der Stand der Ablage geändert hat (`useAblageStand`). Die
+   * Startseite lädt dann Termine und „Zuletzt geöffnet“ neu – anders als `stand` ohne Listen und Mappentypen.
+   */
+  frisch: number;
+  /** Nur die Zahlen der Ansichten neu holen und `frisch` hochzählen (#919) – leise, die alten bleiben bis dahin stehen. */
+  auffrischen(): void;
   typ(id: string | undefined): Mappentyp | undefined;
   /** Anzahl Mappen eines Typs (laut Server). */
   anzahl(typId: string): number;
@@ -61,6 +69,7 @@ export function DatenProvider({ children }: { children: ReactNode }) {
   const [geladen, setGeladen] = useState(false);
   const [fehler, setFehler] = useState<string>();
   const [stand, setStand] = useState(0);
+  const [frisch, setFrisch] = useState(0);
   const [einstellungen, setEinstellungen] = useState<Record<string, unknown>>({});
   const setzeEinstellung = useCallback((k: string, w: unknown) => {
     setEinstellungen((e) => { const n = { ...e }; if (w === null) delete n[k]; else n[k] = w; return n; });
@@ -91,6 +100,11 @@ export function DatenProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   useEffect(() => { void neuLaden(); }, [neuLaden]);
+  const auffrischen = useCallback(() => {
+    const nr = ++zahlenNr.current;
+    api.sichten().then((z) => { if (nr === zahlenNr.current) setZaehler((alt) => ({ ...alt, ...z })); }, () => {});
+    setFrisch((n) => n + 1);
+  }, []);
 
   const wert = useMemo<Daten>(() => {
     const typNachId = new Map<string, Mappentyp>(typen.map((mappentyp) => [mappentyp.id, mappentyp] as const));
@@ -103,7 +117,7 @@ export function DatenProvider({ children }: { children: ReactNode }) {
         if (!sichtNachId.has(id)) return typNachId.get(id);
         const w = wirksameTypen(sichten, id, typNachId.keys());
         return w.length === 1 ? typNachId.get(w[0]) : undefined;
-      }, geladen, fehler, stand, neuLaden, einstellungen, setzeEinstellung,
+      }, geladen, fehler, stand, neuLaden, frisch, auffrischen, einstellungen, setzeEinstellung,
       designs: designs.designs, standardDesign: designs.standard, meinDesign, designsLaden,
       typ: (id) => (id ? typNachId.get(id) : undefined),
       anzahl: (typId) => zaehler.typen[typId]?.anzahl ?? 0,
@@ -111,7 +125,7 @@ export function DatenProvider({ children }: { children: ReactNode }) {
       person: (id) => (id ? personen.find((p) => p.id === id)?.name ?? t('oberflaeche.daten.geloeschter-benutzer') : 'unbekannt'),
       pruefe: (mappentyp, werte, typVon) => pruefeMappe(mappentyp, werte, { typVon, doppelt: () => undefined }),
     };
-  }, [typen, sichten, zaehler, zahlenDa, personen, geladen, fehler, stand, neuLaden, einstellungen, setzeEinstellung, designs, meinDesign, designsLaden]);
+  }, [typen, sichten, zaehler, zahlenDa, personen, geladen, fehler, stand, neuLaden, frisch, auffrischen, einstellungen, setzeEinstellung, designs, meinDesign, designsLaden]);
 
   return <Ctx.Provider value={wert}>{children}</Ctx.Provider>;
 }
@@ -120,6 +134,15 @@ export function useDaten(): Daten {
   const d = useContext(Ctx);
   if (!d) throw new Error(t('oberflaeche.daten.datenprovider-fehlt'));
   return d;
+}
+
+/**
+ * Solange die Ablage zu sehen ist (Seitenleiste mit Neue Post und Zu erledigen, Startseite): den Stand der Ablage
+ * nachfragen und bei Änderung leise auffrischen (#919). Nur im sichtbaren Tab; zählt nicht als Aktivität.
+ */
+export function useAblageStand() {
+  const d = useDaten();
+  useNachladen(api.ablageStand, () => d.auffrischen());
 }
 
 const tag = (text: string) => { const [, m, d] = text.split('-'); return `${d}.${m}.`; };

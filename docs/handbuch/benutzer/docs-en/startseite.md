@@ -40,6 +40,8 @@ The answer is written by an AI service. It can be wrong or fail to find somethin
 
 If a tile is empty, a green tick appears instead of a zero, e.g. "✓ Nothing to do". *To do* is highlighted as long as there is something to do. All numbers only count what you may see.
 
+**The numbers update by themselves.** If you leave the home page open, it fetches new numbers, dates and recently opened folders as soon as something has changed in the Library – you don't need to reload the page. The same goes for the numbers next to *New post* and *To do* on the left. Changes by others appear after a few seconds (at most about half a minute), your own straight away. Ablago only asks while the tab is visible; this does not count as activity. The values change quietly in place, without announcements for screen readers; the list of recently opened folders does not reorder while the mouse pointer or the focus is on it.
+
 Below them are the **recently opened** folders – the last five you opened and may still see. A click opens the folder on the right; the home page then moves to the middle like any list, so you can switch between the recently opened folders. **Start** on the left shows it at full width again. On the phone the tiles are listed one below the other, each a row with the number on the right. Above them, on the phone, is the large button **Photograph post** – it opens the camera directly ([Capturing post with your phone](post.md#post-erfassen-am-handy)).
 
 ![Home page with an open folder](bilder/startseite-mappe.png)

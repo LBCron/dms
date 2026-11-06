@@ -346,6 +346,31 @@ export class Konten {
     return this.verwaltungsstand(b, { ...s, verwaltungSeit: jetzt, verwaltungAktiv: jetzt, ...(wie === 'bestaetigt' ? { frisch: jetzt, verwaltungBestaetigt: jetzt } : {}) });
   }
 
+  /**
+   * Werkbank (#921): Wer außer `ich` ist gerade im Verwaltungsmodus? Je Person der Name und der früheste Beginn eines
+   * laufenden Modus (mehrere Sitzungen zählen einmal). Damit sich Verwaltende absprechen, bevor sie dieselbe
+   * Konfiguration ändern – **kein Schutz** (den gibt der Konfliktschutz beim Speichern, #917).
+   *
+   * Quelle sind nur die Sitzungen mit laufendem Modus (#818/#819, Spalten aus Migration 073): Beendet endet er sofort,
+   * abgelaufen gilt `modusAktiv` mit der Uhr – die Werkbank fragt alle 10–15 s nach, nach spätestens einer Minute ist
+   * der Name weg. Dienst- und Systemkonten nie, Vertretungen nie, die eigene Person nie. Nichts wird gemerkt: keine
+   * Historie der Anwesenheit (Beginn und Ende des Modus stehen wie bisher im Protokoll).
+   *
+   * Abgrenzung: Das ist nur „gerade auch im Verwaltungsmodus“ – nicht „schaut gerade die Mappe an“ (Anwesenheit an
+   * Mappen ist ein eigenes Thema und wird hiermit nicht vermischt).
+   */
+  async andereImVerwaltungsmodus(ich: { id: string }): Promise<Array<{ name: string; seit: string }>> {
+    const jetzt = this.uhr();
+    const je = new Map<string, { name: string; seit: number }>();
+    for (const { benutzer: b, sitzung: s } of await this.repo.sitzungenImVerwaltungsmodus()) {
+      if (b.id === ich.id || b.art || !b.aktiv || !this.modusAktiv(b, s, jetzt)) continue;
+      const seit = s.verwaltungSeit!.getTime();
+      const da = je.get(b.id);
+      if (!da || seit < da.seit) je.set(b.id, { name: b.name || b.email, seit });
+    }
+    return [...je.values()].sort((a, b) => a.seit - b.seit || a.name.localeCompare(b.name, 'de')).map((x) => ({ name: x.name, seit: new Date(x.seit).toISOString() }));
+  }
+
   /** „Verwaltung beenden“ (#819). Der Tagesmerker bleibt – der Wiedereinstieg heute geht mit einem Klick. */
   async beendeVerwaltung(b: Benutzer, schluessel: string | undefined, s: SitzungIntern | undefined) {
     if (!schluessel || !s?.verwaltungSeit) return;
@@ -375,7 +400,7 @@ export class Konten {
   }
 
   /** Benutzer und Sitzung zum Schlüssel, oder undefined, wenn sie ungültig, abgelaufen oder der Benutzer deaktiviert ist. */
-  async anmeldungZu(schluessel?: string): Promise<{ benutzer: Benutzer; sitzung: SitzungIntern } | undefined> {
+  async anmeldungZu(schluessel?: string, o: { still?: boolean } = {}): Promise<{ benutzer: Benutzer; sitzung: SitzungIntern } | undefined> {
     if (!schluessel) return undefined;
     const hash = hasheSchluessel(schluessel);
     // Sitzung und Person in einer Abfrage (#741), nie aus einem Zwischenspeicher: Sperren, Abmelden und Löschen
@@ -386,7 +411,8 @@ export class Konten {
     if (!s || s.ablauf.getTime() < Date.now()) return undefined;
     // Systemkonten (#673) haben nie eine Sitzung – auch eine untergeschobene gilt nicht.
     if (!b || !b.aktiv || b.art === 'system') return undefined;
-    if (Date.now() - s.zuletztAktiv.getTime() > BERUEHREN_MS) await this.repo.beruehreSitzung(hash);
+    // Abfragen im Hintergrund (#919, `still`) zählen nicht als Aktivität: „zuletzt aktiv“ bleibt, wie es war.
+    if (!o.still && Date.now() - s.zuletztAktiv.getTime() > BERUEHREN_MS) await this.repo.beruehreSitzung(hash);
     return { benutzer: b, sitzung: s };
   }
 

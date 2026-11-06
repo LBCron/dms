@@ -48,6 +48,8 @@
   "verwaltung.fehler.schluessel": "API-Schlüssel bekommen nie Verwaltungsrechte. Verwaltet wird nur in der Oberfläche oder mit dem Befehl dms im Container.",
   "verwaltung.balken.titel": "Du verwaltest gerade Ablago.",
   "verwaltung.balken.text": "So solltest du nicht täglich arbeiten. Du siehst alle Mappen, auch gesperrte.",
+  "verwaltung.andere.text": "Gerade auch im Verwaltungsmodus: {namen}",
+  "verwaltung.andere.person": "{name} (seit {uhrzeit})",
   "verwaltung.beenden": "Verwaltung beenden",
   "verwaltung.menue.verwalten": "Ablago verwalten",
   "verwaltung.menue.aktiv": "im Verwaltungsmodus",

@@ -29,6 +29,7 @@ import { sichtName } from '../../../shared/src/beschriftung';
  * frei anzuordnen (#421). Mit geöffneter Mappe steht sie wie jede Liste in der Mitte.
  */
 const zahl = (n: number) => n.toLocaleString(gebietsschema());
+type Startdaten = { zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean };
 
 function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null }) {
   const nichts = anzahl === 0;
@@ -66,20 +67,36 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
   const d = useDaten();
   const { ich } = useKonto();
   const handbuch = useHandbuch();
-  const [daten, setDaten] = useState<{ zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean } | null>(null);
+  const [daten, setDaten] = useState<Startdaten | null>(null);
   const datei = useRef<HTMLInputElement>(null);
+  // Von selbst nachgeladen (#919, `d.frisch`): ruhig wechseln. Die alten Werte bleiben stehen, bis die neuen da sind;
+  // ein Fehler beim Nachladen lässt sie stehen. „Zuletzt geöffnet“ sortiert nicht unter dem Mauszeiger oder dem Fokus um.
+  const zuletzt = useRef<HTMLElement>(null);
+  const zurueck = useRef<Startdaten | null>(null);
+  const startStand = useRef(-1);
   useEffect(() => {
     let aktuell = true;
-    api.startseite().then((x) => { if (aktuell) setDaten(x); }, () => { if (aktuell) setDaten({ zuletzt: [], leer: false }); });
+    // Gleicher `stand`, anderes `frisch`: nachgeladen, nicht neu aufgebaut.
+    const nachgeladen = startStand.current === d.stand;
+    startStand.current = d.stand;
+    api.startseite().then((x) => {
+      if (!aktuell) return;
+      if (nachgeladen && zuletzt.current?.matches(':hover, :focus-within')) zurueck.current = x;
+      else { zurueck.current = null; setDaten(x); }
+    }, () => { if (aktuell && !nachgeladen) setDaten({ zuletzt: [], leer: false }); });
     return () => { aktuell = false; };
-  }, [d.stand]);
+  }, [d.stand, d.frisch]);
+  const loslassen = () => { if (zurueck.current) { setDaten(zurueck.current); zurueck.current = null; } };
   // Nächster Termin (#725): eigene Aufgaben mit Datum, Erinnerungen, Fristen an lesbaren Mappen.
   const [termin, setTermin] = useState<{ termin: Termin | null; ueberfaellig: number } | null>(null);
+  const terminStand = useRef(-1);
   useEffect(() => {
     let aktuell = true;
-    api.naechsterTermin().then((x) => { if (aktuell) setTermin(x); }, () => { if (aktuell) setTermin({ termin: null, ueberfaellig: 0 }); });
+    const nachgeladen = terminStand.current === d.stand;
+    terminStand.current = d.stand;
+    api.naechsterTermin().then((x) => { if (aktuell) setTermin(x); }, () => { if (aktuell && !nachgeladen) setTermin({ termin: null, ueberfaellig: 0 }); });
     return () => { aktuell = false; };
-  }, [d.stand]);
+  }, [d.stand, d.frisch]);
 
   const postSicht = d.zaehler.neuePost ? d.sicht(d.zaehler.neuePost) : undefined;
   // Zahlen kommen nach (#512): bis dahin „…“ in der Kachel.
@@ -127,7 +144,8 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
           </div>
         )}
         {daten && daten.zuletzt.length > 0 && (
-          <section className="zuletzt" data-kachel="zuletzt">
+          <section className="zuletzt" data-kachel="zuletzt" ref={zuletzt} onPointerLeave={loslassen}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) loslassen(); }}>
             <h2 className="h3">{t('ablage.startseite.zuletzt-geoeffnet')}</h2>
             <ul className="mappenliste">
               {daten.zuletzt.map((m) => (

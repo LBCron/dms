@@ -40,6 +40,8 @@ Die Antwort schreibt ein KI-Dienst. Er kann sich irren oder etwas nicht finden �
 
 Ist eine Kachel leer, steht dort statt einer Null ein grünes Häkchen, z. B. „✓ Nichts zu erledigen“. *Zu erledigen* ist hervorgehoben, solange es etwas zu tun gibt. Alle Zahlen zählen nur, was du sehen darfst.
 
+**Die Zahlen aktualisieren sich von selbst.** Lässt du die Startseite offen, holt sie neue Zahlen, Termine und die zuletzt geöffneten Mappen, sobald sich in der Ablage etwas geändert hat – du musst die Seite nicht neu laden. Ebenso die Zahlen bei *Neue Post* und *Zu erledigen* links. Änderungen anderer erscheinen nach einigen Sekunden (höchstens etwa einer halben Minute), deine eigenen sofort. Ablago fragt dafür nur nach, solange der Tab zu sehen ist; das zählt nicht als Aktivität. Die Werte wechseln ruhig an ihrer Stelle, ohne Ansage für Screenreader; die Liste der zuletzt geöffneten Mappen sortiert nicht um, solange der Mauszeiger oder der Fokus darauf steht.
+
 Darunter stehen die **zuletzt geöffneten** Mappen – die letzten fünf, die du geöffnet hast und noch sehen darfst. Ein Klick öffnet die Mappe rechts; die Startseite rückt dann wie jede Liste in die Mitte, sodass du zwischen den zuletzt geöffneten Mappen wechseln kannst. **Start** links zeigt sie wieder in voller Breite. Am Handy stehen die Kacheln untereinander, je eine Zeile mit der Zahl rechts. Darüber steht am Handy der große Knopf **Post fotografieren** – er öffnet direkt die Kamera ([Post erfassen am Handy](post.md#post-erfassen-am-handy)).
 
 ![Startseite mit geöffneter Mappe](bilder/startseite-mappe.png)

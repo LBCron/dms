@@ -80,6 +80,11 @@ export interface KontoRepo {
   setzeSitzungsVerwaltung(hash: string, d: Partial<SitzungsVerwaltung>): Promise<void>;
   /** Modus, Tagesmerker und frische Anmeldung in allen Sitzungen des Benutzers aufheben (#819: Rechteentzug, Zwei-Faktor). */
   vergissVerwaltungVon(benutzerId: string): Promise<void>;
+  /**
+   * Werkbank (#921): gültige Sitzungen mit begonnenem Verwaltungsmodus, nur von aktiven Personen dieses Haushalts (keine
+   * Dienst- oder Systemkonten) und nicht in einer Vertretung. Ob der Modus noch läuft, prüft `Konten.modusAktiv`.
+   */
+  sitzungenImVerwaltungsmodus(): Promise<Array<{ benutzer: Benutzer; sitzung: SitzungIntern }>>;
   /** Gültige Sitzungen eines Benutzers, neueste Aktivität zuerst. */
   listeSitzungen(benutzerId: string): Promise<Array<Sitzung & { hash: string }>>;
   loescheSitzung(hash: string): Promise<void>;
@@ -205,6 +210,13 @@ export function speicherKontoRepo(): KontoRepo {
       return x && b && b.aktiv && b.art !== 'system' ? { sitzung: { ...x }, benutzer: ohneHash(b) } : undefined;
     },
     async beruehreSitzung(hash) { const x = sitzungen.get(hash); if (x) x.zuletztAktiv = new Date(); },
+    async sitzungenImVerwaltungsmodus() {
+      return [...sitzungen.values()].flatMap((x) => {
+        const b = benutzer.get(x.benutzerId);
+        if (!b || b.art || !b.aktiv || !x.verwaltungSeit || x.vertretungId || x.ablauf.getTime() <= Date.now()) return [];
+        return [{ benutzer: ohneHash(b), sitzung: { ...x } }];
+      });
+    },
     async setzeSitzungsVerwaltung(hash, d) { const x = sitzungen.get(hash); if (x) Object.assign(x, d); },
     async vergissVerwaltungVon(id) { for (const x of sitzungen.values()) if (x.benutzerId === id) Object.assign(x, OHNE_MODUS); },
     async listeSitzungen(benutzerId) {
@@ -432,6 +444,18 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
       return { sitzung: alsSitzung(s), benutzer: alsBenutzer(r) };
     },
     async beruehreSitzung(hash) { await sql`UPDATE sitzungen SET zuletzt_aktiv = now() WHERE schluessel_hash = ${hash}`; },
+    async sitzungenImVerwaltungsmodus() {
+      // Wenige Zeilen (nur Sitzungen mit Modus); keine Historie – gelesen wird nur der Zustand der Sitzungen.
+      const r = await sql`
+        SELECT b.*, s.id AS s_id, s.benutzer_id AS s_benutzer_id, s.ablauf AS s_ablauf, s.zuletzt_aktiv AS s_zuletzt_aktiv,
+          s.vertretung_id AS s_vertretung_id, s.verwaltung_seit AS s_verwaltung_seit, s.verwaltung_aktiv AS s_verwaltung_aktiv
+        FROM sitzungen s JOIN benutzer b ON b.id = s.benutzer_id AND b.haushalt_id = ${haushaltId}
+        WHERE s.verwaltung_seit IS NOT NULL AND s.vertretung_id IS NULL AND s.ablauf > now() AND b.aktiv AND b.art = 'person'`;
+      return r.map((z) => {
+        const s = Object.fromEntries(Object.entries(z).filter(([k]) => k.startsWith('s_')).map(([k, v]) => [k.slice(2), v]));
+        return { benutzer: alsBenutzer(z), sitzung: alsSitzung(s) };
+      });
+    },
     async setzeSitzungsVerwaltung(hash, d) {
       const setze = (k: keyof SitzungsVerwaltung) => k in d;
       await sql`

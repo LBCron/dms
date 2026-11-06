@@ -170,7 +170,14 @@ export async function heikleDatei(url: string, ersatzname: string, rueckfragen =
   setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
 }
 
-async function anfrageEinmal<T>(methode: string, url: string, body?: unknown): Promise<T> {
+/**
+ * Abfrage im Hintergrund (#919, #921): ohne Kennzeichen „aktiv“ (zählt nie als Aktivität, auch kurz nach einer Eingabe)
+ * und ohne Rückfrage nach der Anmeldung, wenn der Verwaltungsmodus inzwischen abgelaufen ist – fragt die Oberfläche von
+ * selbst, darf sie niemanden unterbrechen. Der Server behandelt die Route ebenso (`still`).
+ */
+export const stilleAnfrage = <T>(url: string) => anfrageEinmal<T>('GET', url, undefined, true);
+
+async function anfrageEinmal<T>(methode: string, url: string, body?: unknown, still = false): Promise<T> {
   let r: Response;
   const start = performance.now();
   const seite = messung.seite;
@@ -183,7 +190,7 @@ async function anfrageEinmal<T>(methode: string, url: string, body?: unknown): P
         'x-dms': '1', 'x-sprache': sprache(),
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(einrichtungscode ? { 'x-einrichtungscode': einrichtungscode } : {}),
-        ...(aktiv() ? { 'x-dms-aktiv': '1' } : {}),
+        ...(aktiv() && !still ? { 'x-dms-aktiv': '1' } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -638,6 +645,10 @@ export const api = {
   designStandard: (id: string) => anfrage<{ designs: Design[]; standard: string | null }>('PUT', '/api/designs-standard', { id }),
   einstellungSetzen: (schluessel: string, wert: unknown) => anfrage<null>('PUT', `/api/konto/einstellungen/${encodeURIComponent(schluessel)}`, { wert }),
   sichten: () => anfrage<Zaehler>('GET', '/api/sichten'),
+  /** Stand der Ablage (#919): ein Fingerabdruck ohne Inhalt; ändert er sich, lädt die Oberfläche Zahlen und Startseite neu. */
+  ablageStand: () => stilleAnfrage<{ stand: string }>('/api/ablage/stand').then((x) => x.stand),
+  /** Werkbank (#921): wer außer mir gerade im Verwaltungsmodus ist (Name und Beginn), nur im Verwaltungsmodus. */
+  geradeImModus: () => stilleAnfrage<Array<{ name: string; seit: string }>>('/api/werkbank/gerade-im-modus'),
   /** Ohne Zählen (#512): Papierkorb-Tage und „Neue Post“ – vor den Zahlen. */
   sichtenRahmen: () => anfrage<Pick<Zaehler, 'papierkorbTage' | 'neuePost' | 'favoritenSicht'>>('GET', '/api/sichten/rahmen'),
   /* Sichten verwalten (#38) */

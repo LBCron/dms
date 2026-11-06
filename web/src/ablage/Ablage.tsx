@@ -7,7 +7,7 @@ import { auswahlText, darfErstellen, POST_RICHTUNG, darfPostAnlegen, formatiere,
 import { api, verborgeneAufgaben, type Bezuege, type MappeDetails } from '../api';
 import type { Aufgabe } from '../../../shared/src/model';
 import { AufgabenHinweis } from './Aufgaben';
-import { useDaten } from '../daten';
+import { useAblageStand, useDaten } from '../daten';
 import { useKonto } from '../konto';
 import { geheZu, Link } from '../ort';
 import { Dreiteilung } from '../bereiche';
@@ -53,6 +53,8 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   const d = useDaten();
   const { ich } = useKonto();
   const [, sicht, dritt] = teile;
+  // #919: Zähler der Seitenleiste (Neue Post, Zu erledigen) und Startseite holen sich den neuen Stand selbst.
+  useAblageStand();
 
   // Startseite (#334): Standard, außer der Benutzer hat sie im Profil abgeschaltet.
   const mitStart = d.einstellungen.startseite !== false;
