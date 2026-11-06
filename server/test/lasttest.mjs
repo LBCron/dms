@@ -46,9 +46,16 @@
  * einrichten), --mappen <n> (extrem: 500000 oder 1000000; kleinere Zahlen nur zum Ausprobieren), --ohne-speichern.
  *
  * Gemischtes Profil wie im Alltag: Startseite, Liste einer Ansicht, Mappe öffnen, Suche, Vorschaubild,
- * Dokument herunterladen – Administrator und Mitglieder gemischt. Jede „Person“ des Tests schickt eine
- * Anfrage nach der anderen; „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt sie 503,
- * wartet sie, wie `Retry-After` sagt (wie ein ordentliches Programm), und macht dann weiter.
+ * Dokument herunterladen. Jede „Person“ des Tests schickt eine Anfrage nach der anderen; „100 gleichzeitig“ heißt:
+ * 100 Anfragen sind ständig unterwegs. Bekommt sie 503, wartet sie, wie `Retry-After` sagt (wie ein ordentliches
+ * Programm), und macht dann weiter.
+ *
+ * Eigene Konten (#920): Jede Person meldet sich mit einem eigenen Konto an und hat eine eigene Sitzung – wie echte
+ * Nutzer. Bis #920 teilten sich alle Personen drei Konten; gleichzeitige Änderungen warteten dann auf dieselbe Zeile
+ * (Merker „eigene Änderung“, Sitzung), was echte Nutzer nicht tun. Der Test legt dafür PERSONEN_MAX Konten mit
+ * erfundenen Namen an (zwei von drei mit der Rolle „Steuern und Finanzen“ wie Jonas, eines von drei ohne Rolle wie
+ * Petra); bei mehr Personen teilen sie sich die Konten reihum. Am Ende meldet er sie wieder ab. Werkbank-Abfragen
+ * (Messwerte, System, Export nebenher, Aufräumen) bleiben bei der Mess-Sitzung des Administrators im Verwaltungsmodus.
  * Grenzen und ihre Begründung: Entwicklerhandbuch → Leistung → Lasttest.
  */
 import { randomInt } from 'node:crypto';
@@ -69,6 +76,16 @@ const BENUTZER = {
   mitRolle: ['jonas@example.org', 'lasttest-passwort-2'],
   ohneRolle: ['petra@example.org', 'lasttest-passwort-3'],
 };
+/**
+ * Konten der simulierten Personen (#920): so viele höchstens; bei mehr gleichzeitigen Personen reihum. Erfundene Namen,
+ * reservierte Domain, nur in einer Test-Installation des Lasttests.
+ */
+export const PERSONEN_MAX = 30;
+/** Konto Nummer `nr` (1 …): jedes dritte ohne Rolle (wie Petra), die übrigen mit Rolle (wie Jonas). */
+export function personKonto(nr) {
+  const nn = String(nr).padStart(2, '0');
+  return { nr, email: `lasttest-person-${nn}@example.org`, name: `Person ${nn} (Lasttest)`, passwort: `lasttest-person-passwort-${nn}`, art: nr % 3 === 0 ? 'ohneRolle' : 'mitRolle' };
+}
 /** Konto nur für die Prüfung des Anmeldeschutzes. */
 const SPERRKONTO = ['markus@example.org', 'lasttest-passwort-4'];
 /** Name des Haushalts, den der Test anlegt. */
@@ -174,14 +191,69 @@ async function verwaltungNeu(cookie) {
   return true;
 }
 
-export async function anmelden([email, passwort]) {
-  const { cookie } = await json('POST', '/api/konto/anmelden', { body: { email, passwort } });
+export async function anmelden([email, passwort], { verwaltung = true } = {}) {
+  const { cookie, daten } = await json('POST', '/api/konto/anmelden', { body: { email, passwort } });
   if (!cookie) throw new Error(`Anmeldung ${email}: kein Sitzungs-Cookie`);
   kontoDerSitzung.set(cookie, [email, passwort]);
+  benutzerDerSitzung.set(cookie, daten?.benutzer?.id ?? null);
   // Verwaltungsmodus (#819): Wer verwalten darf, wechselt gleich hinein – die Anmeldung ist frisch, also ohne Abfrage.
-  // Für alle anderen lehnt der Server ab; das ist hier kein Fehler.
-  await anfrage('POST', '/api/konto/verwaltung', { cookie, body: {} }).catch(() => undefined);
+  // Für alle anderen lehnt der Server ab; das ist hier kein Fehler. Die Personen (#920) fragen gar nicht erst.
+  if (verwaltung) await anfrage('POST', '/api/konto/verwaltung', { cookie, body: {} }).catch(() => undefined);
   return cookie;
+}
+/** Id des angemeldeten Benutzers je Sitzung (#920: Aufgaben an die eigene Person). */
+const benutzerDerSitzung = new Map();
+
+/**
+ * Konten der simulierten Personen (#920) anlegen, soweit sie fehlen (frische Installation oder eine Test-Installation
+ * von vor #920), als Administrator der Mess-Sitzung. Die Rolle nehmen sie von Jonas. Ein Konto ohne Passwort (etwa nach
+ * einem abgebrochenen Lauf) bekommt einen neuen Link.
+ */
+async function personenAnlegen(admin) {
+  const c = { cookie: admin };
+  const { daten: liste } = await json('GET', '/api/benutzer', c);
+  const rollen = liste.find((b) => b.email === BENUTZER.mitRolle[0])?.rollen ?? [];
+  let neu = 0;
+  for (let nr = 1; nr <= PERSONEN_MAX; nr++) {
+    const k = personKonto(nr);
+    const da = liste.find((b) => b.email === k.email);
+    if (da?.hatPasswort) continue;
+    const { daten: e } = da
+      ? await json('POST', `/api/benutzer/${da.id}/link`, { ...c, body: {} })
+      : await json('POST', '/api/benutzer', { ...c, body: { email: k.email, name: k.name, rolle: 'mitglied', rollen: k.art === 'mitRolle' ? rollen : [] } });
+    await json('POST', '/api/konto/passwort-setzen', { body: { schluessel: e.link.split('/passwort/')[1], passwort: k.passwort } });
+    neu++;
+  }
+  if (neu) console.log(`${neu} Konten für simulierte Personen angelegt.`);
+}
+
+/** Alle Personen anmelden (#920), je fünf gleichzeitig; jede mit eigener Sitzung. */
+async function personenAnmelden(admin) {
+  await personenAnlegen(admin);
+  const personen = [];
+  const offen = Array.from({ length: PERSONEN_MAX }, (_, i) => personKonto(i + 1));
+  await Promise.all(Array.from({ length: 5 }, async () => {
+    for (let k = offen.shift(); k; k = offen.shift()) {
+      const cookie = await anmelden([k.email, k.passwort], { verwaltung: false });
+      personen.push({ nr: k.nr, art: k.art, cookie, id: benutzerDerSitzung.get(cookie) ?? null });
+    }
+  }));
+  return personen.sort((a, b) => a.nr - b.nr);
+}
+
+/** Personen wieder abmelden (#920) – ihre Sitzungen bleiben nicht liegen. */
+async function personenAbmelden(v) {
+  if (!v?.personen?.length || !v.eigeneKonten) return;
+  await nebenher(v.personen.map((p) => () => anfrage('POST', '/api/konto/abmelden', { cookie: p.cookie, body: {}, zeit: 30_000 }).then(ohneInhalt)), 5);
+}
+
+/**
+ * Personen eines Durchgangs (#920): die eigenen Konten; ohne (Tests mit fertigen Sitzungen) die drei Sitzungen von
+ * früher, je eine Person reihum.
+ */
+export function personenVon(v) {
+  if (v.personen?.length) return v.personen;
+  return ['admin', 'mitRolle', 'ohneRolle'].map((art, i) => ({ nr: i + 1, art, cookie: v.sitzungen[art], id: null }));
 }
 
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -359,26 +431,42 @@ async function vorbereiten() {
   const sitzungen = {};
   for (const [k, z] of Object.entries(BENUTZER)) sitzungen[k] = await anmelden(z);
   const admin = { cookie: sitzungen.admin };
+  // #920: je simulierter Person ein eigenes Konto mit eigener Sitzung.
+  const personen = await personenAnmelden(sitzungen.admin);
   const { daten: typen } = await json('GET', '/api/typen', admin);
   const ansichten = typen.filter((t) => !t.system).map((t) => t.id);
-  const mappen = [];
+  const mappen = []; const mappenJeTyp = new Map();
   for (const id of ansichten) {
     const { daten } = await json('GET', `/api/mappen?sicht=${id}&von=0&anzahl=200`, admin);
     for (const m of daten.mappen) mappen.push(m.id);
+    mappenJeTyp.set(id, daten.mappen.map((m) => m.id));
   }
   // Dokumente: alle PDFs (ab 0 MB), wie Werkbank → Systemzustand → Verkleinern sie listet.
   const { daten: gross } = await json('GET', '/api/werkbank/verkleinern?ab=0', { ...admin, zeit: 300_000 });
   const dokumente = (gross.eintraege ?? gross.dokumente ?? []).map((d) => ({ id: d.id, mappe: d.mappeId, typ: d.typId }));
   const groesste = ansichten.map((id) => ({ id, n: 0 }));
-  for (const g of groesste) g.n = (await json('GET', `/api/mappen?sicht=${g.id}&von=0&anzahl=1`, admin)).daten.gesamt ?? 0;
+  // Mappentypen, die Personen ohne Rolle ganz sehen (#920): dort holen sie Vorschaubild, Dokument und Historie – so
+  // gibt es dafür kein 404, wie früher mit dem Administrator.
+  const frei = new Set();
+  for (const g of groesste) {
+    g.n = (await json('GET', `/api/mappen?sicht=${g.id}&von=0&anzahl=1`, admin)).daten.gesamt ?? 0;
+    const ohne = (await json('GET', `/api/mappen?sicht=${g.id}&von=0&anzahl=1`, { cookie: sitzungen.ohneRolle })).daten.gesamt ?? 0;
+    if (g.n > 0 && ohne === g.n) frei.add(g.id);
+  }
   groesste.sort((a, b) => b.n - a.n);
+  const dokumenteFrei = dokumente.filter((d) => frei.has(d.typ));
+  const mappenFrei = [...frei].flatMap((id) => mappenJeTyp.get(id) ?? []);
   // Großer Export: PDF der ersten 1000 Mappen der größten Ansicht (je Mappe eine Seite, Übersicht als Tabelle),
   // PDF der Mappen mit Dokumenten aus der Ansicht mit den meisten (Dokumente eingebunden), ZIP der größten Ansicht.
   const exportPdf = (await json('GET', `/api/mappen?sicht=${groesste[0].id}&von=0&anzahl=1000`, admin)).daten.mappen.map((m) => m.id);
   const jeTyp = new Map();
   for (const d of dokumente) { if (!jeTyp.has(d.typ)) jeTyp.set(d.typ, new Set()); jeTyp.get(d.typ).add(d.mappe); }
   const [dokSicht, dokMappen] = [...jeTyp.entries()].sort((a, b) => b[1].size - a[1].size)[0] ?? [null, new Set()];
-  return { sitzungen, ansichten, mappen, dokumente, exportSicht: groesste[0], exportPdf, dokSicht, dokMappen: [...dokMappen] };
+  return {
+    sitzungen, personen, eigeneKonten: true, ansichten, mappen, dokumente, exportSicht: groesste[0], exportPdf, dokSicht, dokMappen: [...dokMappen],
+    // Ohne frei sichtbare Mappentypen wie bisher alle (dann zählt ein 404 als abgelehnt).
+    dokumenteFrei: dokumenteFrei.length ? dokumenteFrei : dokumente, mappenFrei: mappenFrei.length ? mappenFrei : mappen,
+  };
 }
 
 /* ---------- Profil ---------- */
@@ -402,29 +490,30 @@ export const PROFIL_SPEICHERN = [...PROFIL.map(([a, g]) => [a, g * 0.85]), ...HI
 const SCHREIBARTEN = new Set(SCHREIBEN.map(([a]) => a));
 
 /**
- * Nächste Anfrage einer Person. Ohne `p` genau wie bisher (nur lesen); mit `p` (Zustand der Person im Durchgang
- * „mit Speichern“) nach PROFIL_SPEICHERN.
+ * Nächste Anfrage der Person `wer` (#920: eigenes Konto; ohne Angabe eine beliebige). Ohne `p` nur lesen; mit `p`
+ * (Zustand der Person im Durchgang „mit Speichern“) nach PROFIL_SPEICHERN.
  */
-function naechsteAnfrage(v, p = null) {
-  // Administrator und Mitglieder gemischt: ein Drittel Administrator.
-  const wer = zufall(['admin', 'mitRolle', 'ohneRolle']);
-  const cookie = v.sitzungen[wer];
+function naechsteAnfrage(v, p = null, wer = zufall(personenVon(v))) {
+  const cookie = wer.cookie;
   const profil = p ? PROFIL_SPEICHERN : PROFIL;
   let x = Math.random() * 100;
   let art = profil[0][0];
   for (const [a, g] of profil) { if ((x -= g) < 0) { art = a; break; } }
   if (p && SCHREIBARTEN.has(art)) return schreibAnfrage(v, p, art, wer);
-  const doc = v.dokumente.length ? zufall(v.dokumente) : null;
+  // Dokumente und Historie: Personen ohne Rolle nur in Mappentypen, die sie ganz sehen (#920) – wie früher mit dem
+  // Administrator gibt es dafür kein 404. Personen mit Rolle (und die Sitzungen von früher) sehen alle.
+  const alles = wer.art !== 'ohneRolle';
+  const dokumente = alles ? v.dokumente : v.dokumenteFrei ?? v.dokumente;
+  const doc = dokumente.length ? zufall(dokumente) : null;
   switch (art) {
     case 'Startseite': return { art, cookie, pfad: zufall(['/api/startseite', '/api/sichten', '/api/termine/naechster', '/api/typen']) };
     case 'Liste': return { art, cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=${50 * Math.floor(Math.random() * 10)}&anzahl=50` };
     case 'Mappe öffnen': return { art, cookie, pfad: `/api/mappen/${zufall(v.mappen)}` };
-    // Historie (#800): wie das Register – erste Seite; als Administrator (Mitglieder sehen manche Mappen nicht).
-    case 'Historie': return { art, cookie: v.sitzungen.admin, pfad: `/api/mappen/${zufall(v.mappen)}/historie?max=100` };
+    // Historie (#800): wie das Register – erste Seite.
+    case 'Historie': return { art, cookie, pfad: `/api/mappen/${zufall(alles ? v.mappen : v.mappenFrei ?? v.mappen)}/historie?max=100` };
     case 'Suche': return { art, cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&suche=${encodeURIComponent(zufall(WOERTER))}&von=0&anzahl=50` };
-    // Dokumente: als Administrator (Mitglieder sehen manche Mappen nicht – das wäre ein 404, kein Fehler des Servers).
-    case 'Vorschaubild': return doc ? { art, cookie: v.sitzungen.admin, pfad: `/api/dokumente/${doc.id}/vorschau` } : { art: 'Liste', cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=0&anzahl=50` };
-    default: return doc ? { art, cookie: v.sitzungen.admin, pfad: `/api/dokumente/${doc.id}/inhalt` } : { art: 'Mappe öffnen', cookie, pfad: `/api/mappen/${zufall(v.mappen)}` };
+    case 'Vorschaubild': return doc ? { art, cookie, pfad: `/api/dokumente/${doc.id}/vorschau` } : { art: 'Liste', cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=0&anzahl=50` };
+    default: return doc ? { art, cookie, pfad: `/api/dokumente/${doc.id}/inhalt` } : { art: 'Mappe öffnen', cookie, pfad: `/api/mappen/${zufall(v.mappen)}` };
   }
 }
 
@@ -438,12 +527,13 @@ function geaendert(z, nr) {
 }
 
 /**
- * Schreibende Anfrage. Ziele sind Mappen, die alle drei Konten lesen und ändern dürfen. Was angelegt oder geändert
- * wird, merkt sich `s.spur`, damit `aufraeumen` es danach zurücknimmt. `danach` bekommt die Antwort (nur bei 2xx).
+ * Schreibende Anfrage der Person `wer` (#920: eigenes Konto). Ziele sind Mappen, die alle Konten lesen und ändern
+ * dürfen. Was angelegt oder geändert wird, merkt sich `s.spur`, damit `aufraeumen` es danach zurücknimmt. `danach`
+ * bekommt die Antwort (nur bei 2xx).
  */
 function schreibAnfrage(v, p, art, wer) {
   const s = p.s;
-  const cookie = v.sitzungen[wer];
+  const cookie = wer.cookie;
   switch (art) {
     case 'Mappe ändern': {
       const z = zufall(s.aendern);
@@ -453,30 +543,30 @@ function schreibAnfrage(v, p, art, wer) {
     case 'Stern': {
       const z = zufall(s.ziele);
       const an = Math.random() < 0.5;
-      if (an) s.spur.sterne.add(`${wer} ${z.id}`);
+      if (an) s.spur.sterne.add(`${cookie} ${z.id}`);
       return { art, cookie, methode: an ? 'PUT' : 'DELETE', pfad: `/api/mappen/${z.id}/favorit` };
     }
     case 'Notiz': {
       if (p.notizen.length && Math.random() < 0.5) {
         const n = p.notizen.shift();
-        return { art, cookie: v.sitzungen[n.wer], methode: 'DELETE', pfad: `/api/notizen/${n.id}`, danach: () => s.spur.notizen.delete(n.id) };
+        return { art, cookie: n.cookie, methode: 'DELETE', pfad: `/api/notizen/${n.id}`, danach: () => s.spur.notizen.delete(n.id) };
       }
       const z = zufall(s.ziele);
       return {
         art, cookie, methode: 'POST', pfad: `/api/mappen/${z.id}/notizen`, body: { text: 'Lasttest: kurze Notiz beim Speichern' },
-        danach: (d) => { if (d?.id) { const n = { id: d.id, wer }; p.notizen.push(n); s.spur.notizen.set(d.id, n); } },
+        danach: (d) => { if (d?.id) { const n = { id: d.id, cookie }; p.notizen.push(n); s.spur.notizen.set(d.id, n); } },
       };
     }
     default: {
       // Aufgabe: eine eigene anlegen, beim nächsten Mal erledigen.
       if (p.aufgabe) {
         const a = p.aufgabe; p.aufgabe = null;
-        return { art, cookie: v.sitzungen[a.wer], methode: 'POST', pfad: `/api/aufgaben/${a.id}/erledigt`, danach: () => s.spur.aufgaben.delete(a.id) };
+        return { art, cookie: a.cookie, methode: 'POST', pfad: `/api/aufgaben/${a.id}/erledigt`, danach: () => s.spur.aufgaben.delete(a.id) };
       }
       const z = zufall(s.ziele);
       return {
-        art, cookie, methode: 'POST', pfad: `/api/mappen/${z.id}/aufgaben`, body: { text: 'Lasttest: bitte prüfen', empfaengerId: s.benutzerIds[wer] },
-        danach: (d) => { if (d?.id) { p.aufgabe = { id: d.id, wer }; s.spur.aufgaben.set(d.id, p.aufgabe); } },
+        art, cookie, methode: 'POST', pfad: `/api/mappen/${z.id}/aufgaben`, body: { text: 'Lasttest: bitte prüfen', empfaengerId: s.benutzerIds.get(cookie) },
+        danach: (d) => { if (d?.id) { p.aufgabe = { id: d.id, cookie }; s.spur.aufgaben.set(d.id, p.aufgabe); } },
       };
     }
   }
@@ -488,11 +578,12 @@ const aenderbaresFeld = (t) => t.felder.find((f) => f.typ === 'langtext' && !f.e
 
 /**
  * Ziele für den Durchgang „mit Speichern“: je Ansicht bis zu 50 Mappen aus den ersten 200, die das Mitglied ohne Rolle
- * sieht (dann dürfen alle drei Konten sie lesen und ändern), mit dem ursprünglichen Wert des Felds, das sich ändert.
+ * sieht (dann dürfen alle Konten sie lesen und ändern), mit dem ursprünglichen Wert des Felds, das sich ändert.
  */
 async function vorbereitenSpeichern(v) {
-  const benutzerIds = {};
-  for (const [k, cookie] of Object.entries(v.sitzungen)) benutzerIds[k] = (await json('GET', '/api/konto/status', { cookie })).daten.benutzer.id;
+  // Id je Sitzung für „Aufgabe an mich“ (#920: je Person).
+  const benutzerIds = new Map();
+  for (const p of personenVon(v)) benutzerIds.set(p.cookie, p.id ?? (await json('GET', '/api/konto/status', { cookie: p.cookie })).daten.benutzer.id);
   const { daten: typen } = await json('GET', '/api/typen', { cookie: v.sitzungen.admin });
   const felder = new Map(typen.filter((t) => !t.system).map((t) => [t.id, aenderbaresFeld(t) ?? null]));
   const ziele = [];
@@ -534,13 +625,13 @@ async function aufraeumen(v, s) {
   const t0 = Date.now();
   const admin = v.sitzungen.admin;
   let fehler = await nebenher([
-    ...[...s.spur.sterne].map((k) => { const [wer, id] = k.split(' '); return () => anfrage('DELETE', `/api/mappen/${id}/favorit`, { cookie: v.sitzungen[wer] }).then(ohneInhalt); }),
-    ...[...s.spur.notizen.values()].map((n) => () => anfrage('DELETE', `/api/notizen/${n.id}`, { cookie: v.sitzungen[n.wer] }).then(ohneInhalt)),
+    ...[...s.spur.sterne].map((k) => { const i = k.lastIndexOf(' '); return () => anfrage('DELETE', `/api/mappen/${k.slice(i + 1)}/favorit`, { cookie: k.slice(0, i) }).then(ohneInhalt); }),
+    ...[...s.spur.notizen.values()].map((n) => () => anfrage('DELETE', `/api/notizen/${n.id}`, { cookie: n.cookie }).then(ohneInhalt)),
   ], 8);
   fehler += await nebenher([...s.spur.geaendert.values()].map((z) => () => anfrage('PUT', `/api/mappen/${z.id}`, { cookie: admin, body: { werte: { [z.feld]: z.wert } } }).then(ohneInhalt)), 8);
   const ziele = new Set(s.ziele.map((z) => z.id));
   let aufgaben = 0;
-  for (const cookie of Object.values(v.sitzungen)) {
+  for (const cookie of new Set([...Object.values(v.sitzungen), ...personenVon(v).map((p) => p.cookie)])) {
     const { daten } = await json('GET', '/api/aufgaben', { cookie, zeit: 120_000 }).catch(() => ({ daten: [] }));
     const ids = (daten ?? []).filter((a) => ziele.has(a.mappeId) && (a.art === 'aenderung' || (a.art === 'manuell' && String(a.text ?? '').startsWith('Lasttest:')))).map((a) => a.id);
     for (let i = 0; i < ids.length; i += 500) {
@@ -613,11 +704,14 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
   const fenster = { t: [], ms: [] };
   let laeuft = true;
 
-  async function person() {
+  // #920: Person i meldet sich mit Konto i an (reihum, wenn es mehr Personen als Konten gibt).
+  const personen = personenVon(v);
+  async function person(i) {
+    const wer = personen[i % personen.length];
     // Zustand der Person im Durchgang „mit Speichern“ (eigene Notizen, offene Aufgabe); sonst nur lesen wie bisher.
     const p = speichern ? { s: speichern, notizen: [], aufgabe: null } : null;
     while (Date.now() < ende) {
-      const a = naechsteAnfrage(v, p);
+      const a = naechsteAnfrage(v, p, wer);
       const t0 = performance.now();
       try {
         const r = await anfrage(a.methode ?? 'GET', a.pfad, { cookie: a.cookie, body: a.body });
@@ -686,7 +780,7 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
   melde({ art: 'live', ...liveAus([], [], { name, n, seit: SKRIPT_START }) });
   const mess = messen();
   const ex = mitExport ? exportieren() : Promise.resolve();
-  await Promise.all(Array.from({ length: n }, person));
+  await Promise.all(Array.from({ length: n }, (_, i) => person(i)));
   await ex;
   laeuft = false;
   await mess;
@@ -937,13 +1031,14 @@ export function protokollGesamt(anfang, ende, laeufe) {
   const a = protokollVon(anfang), z = protokollVon(ende);
   if (!z) return null;
   const g = protokollZwischen(a, z);
+  const imLauf = (zeit) => { const t = Date.parse(zeit); return laeufe.find((x) => t >= x.beginn - 2000 && t <= x.ende + 2000) ?? null; };
   const ort = (k, zeit) => {
     for (const l of laeufe) {
       const m = l.protokoll?.eintraege?.find((x) => meldungsSchluessel(x) === k);
-      if (m) return { erste: m.erste, durchgang: l.name };
+      // Zusammengefasste Meldungen (#920) kommen bis zu einer Minute später an – zählt der Zeitpunkt des ersten Auftretens.
+      if (m) return { erste: m.erste, durchgang: (m.erste && imLauf(m.erste)?.name) || l.name };
     }
-    const t = Date.parse(zeit);
-    const l = laeufe.find((x) => t >= x.beginn - 2000 && t <= x.ende + 2000);
+    const l = imLauf(zeit);
     return { erste: zeit, durchgang: l ? l.name : 'zwischen den Durchgängen' };
   };
   g.eintraege = g.eintraege.map((m) => ({ ...m, ...ort(meldungsSchluessel(m), m.erste) }));
@@ -1185,7 +1280,9 @@ async function grosseStufe(v, lauf, dauer, stufe = 'gross') {
   const verfehlt = [];
   for (const e of [...schritte, ueberlast]) {
     if (e.ohneAntwort > PFLICHT.ohneAntwort) verfehlt.push(`${e.name}: ${e.ohneAntwort} Anfragen ohne Antwort nach ${ANTWORT_MAX_MS / 1000} s`);
-    if (e.speicherMbMax !== null && e.speicherMbMax > PFLICHT.speicherMb) verfehlt.push(`${e.name}: Arbeitsspeicher ${e.speicherMbMax} MB > ${PFLICHT.speicherMb} MB`);
+    // #920: Die Grenze gilt je Prozess (mit zwei Prozessen nicht für die Summe).
+    const sp = speicherVerfehlt(e);
+    if (sp) verfehlt.push(sp);
   }
   if (ueberlast.serverAusfaelle > 2) verfehlt.push(`${ueberlast.name}: Server ${ueberlast.serverAusfaelle}-mal nicht erreichbar`);
   if (erholt.ms === null || erholt.ms > PFLICHT.erholungMs) verfehlt.push(`Erholung nach der Überlast: ${erholt.ms === null ? 'keine' : `${erholt.ms} ms`} > ${PFLICHT.erholungMs} ms`);
@@ -1195,11 +1292,53 @@ async function grosseStufe(v, lauf, dauer, stufe = 'gross') {
   const nSpeichern = grenze?.n ?? stufenfolge[0] ?? start;
   const extra = v.speichern ? await mitSpeichern(v, lauf, { name: `${kurz} + Speichern`, n: nSpeichern, dauer: schrittDauer, mitExport: false }) : {};
   return {
-    stufe, art: 'messung', schritte, ueberlast, erholung: erholt, anmeldeschutz: anmelde, verfehlt,
+    stufe, art: 'messung', schritte, ueberlast, erholung: erholt, anmeldeschutz: anmelde, verfehlt, speicher: speicherHoechstens([...schritte, ueberlast]),
     // Schon der erste Schritt zu viel: Grenze 0 heißt „unter dem ersten Schritt“.
     grenze: grenze ? { gleichzeitig: grenze.n, jeSekunde: grenze.jeSekunde, p95: grenze.p95 } : { gleichzeitig: 0, jeSekunde: 0, p95: null, unter: stufenfolge[0] ?? start },
     grund, ...extra,
   };
+}
+
+/**
+ * Arbeitsspeicher eines Durchgangs gegen die Pflicht (#920): Die Grenze PFLICHT.speicherMb gilt für einen Prozess. Mit
+ * mehreren Prozessen (`engpass.speicherJeProzess`, ohne Hauptprozess) zählt der höchste Prozess gegen die Grenze; die
+ * Summe aller Prozesse (mit Hauptprozess) steht daneben mit Grenze × Prozesse. Ohne Angabe je Prozess (ein Prozess,
+ * ältere Fassung) zählt die Summe gegen Grenze × 1.
+ */
+export function speicherJeProzess(e) {
+  const liste = (e.engpass?.speicherJeProzess ?? []).filter((p) => p.rolle !== 'haupt' && typeof p.mb === 'number');
+  const prozesse = Math.max(1, liste.length);
+  return {
+    prozesse, summeMb: e.speicherMbMax ?? null, grenzeSummeMb: PFLICHT.speicherMb * prozesse,
+    jeProzessMb: liste.length ? Math.max(...liste.map((p) => p.mb)) : null, grenzeJeProzessMb: PFLICHT.speicherMb,
+  };
+}
+
+/** Verfehlt ein Durchgang die Speicherpflicht (#920)? Text für die Liste „verfehlt“, sonst null. */
+export function speicherVerfehlt(e) {
+  const s = speicherJeProzess(e);
+  if (s.jeProzessMb !== null) {
+    return s.jeProzessMb > s.grenzeJeProzessMb ? `${e.name}: Arbeitsspeicher eines Prozesses ${s.jeProzessMb} MB > ${s.grenzeJeProzessMb} MB (je Prozess; zusammen ${f(s.summeMb)} MB bei ${s.prozesse} Prozessen)` : null;
+  }
+  return s.summeMb !== null && s.summeMb > s.grenzeSummeMb ? `${e.name}: Arbeitsspeicher ${s.summeMb} MB > ${s.grenzeSummeMb} MB (${s.prozesse} Prozess)` : null;
+}
+
+/** Höchste Werte über mehrere Durchgänge (#920): Summe, je Prozess, Zahl der Prozesse. */
+export function speicherHoechstens(laeufe) {
+  const w = laeufe.map(speicherJeProzess);
+  const max = (k) => { const x = w.map((y) => y[k]).filter((y) => typeof y === 'number'); return x.length ? Math.max(...x) : null; };
+  const prozesse = max('prozesse') ?? 1;
+  return { prozesse, summeMb: max('summeMb'), grenzeSummeMb: PFLICHT.speicherMb * prozesse, jeProzessMb: max('jeProzessMb'), grenzeJeProzessMb: PFLICHT.speicherMb };
+}
+
+/**
+ * „Arbeitsspeicher (Pflicht, #920): je Prozess höchstens 1.300 MB (Grenze 1.536 MB je Prozess) · zusammen höchstens
+ * 2.640 MB bei 2 Prozessen (Grenze 2 × 1.536 MB = 3.072 MB)“. Ohne Angabe je Prozess nur die Summe.
+ */
+export function speicherText(s) {
+  const je = s.jeProzessMb === null ? 'je Prozess –' : `je Prozess höchstens ${zahl(s.jeProzessMb)} MB (Grenze ${zahl(s.grenzeJeProzessMb)} MB je Prozess)`;
+  const summe = `zusammen höchstens ${s.summeMb === null ? '–' : `${zahl(s.summeMb)} MB`} bei ${s.prozesse} ${s.prozesse === 1 ? 'Prozess' : 'Prozessen'} (Grenze ${s.prozesse} × ${zahl(PFLICHT.speicherMb)} MB = ${zahl(s.grenzeSummeMb)} MB)`;
+  return `${je} · ${summe}`;
 }
 
 /** Grenze gegenüber dem letzten Lauf: mehr als 20 % schlechter → Warnung (kein Abbruch). */
@@ -1248,6 +1387,7 @@ function bericht(ergebnisse, x) {
   z.push(`## Lasttest (${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC)`, '');
   // Ohne Adresse des Ziels: Der Bericht soll sich ohne Netzadressen weitergeben lassen (#563).
   if (x.bestand.ohneDatei) z.push(`**Warnung:** Dokumente ohne Datei: ${x.bestand.ohneDatei} – ist \`/data\` als Volume eingebunden? Herunterladen, Vorschau und Export dieser Dokumente schlagen fehl; die Messung ist so nicht vergleichbar.`, '');
+  z.push(personenText(x.personen), '');
   z.push(`Bestand: ${x.bestand.gesamt} Mappen (${x.bestand.demo} Demo-Mappen), in den Listen ${x.mappen}, Dokumente ${x.dokumente}.${x.exportPdf ? ` Export nebenher (mittel), einer nach dem anderen: PDF von ${x.exportPdf} Mappen mit Übersicht, PDF von ${x.exportDok} Mappen mit ihren Dokumenten, ZIP der größten Ansicht (${x.exportZip} Mappen).` : ''}`, '');
   z.push('| Durchgang | Gleichzeitig | Anfragen | je s | Median ms | p95 ms | p99 ms | Fehlerquote | abgewiesen (503) | ohne Antwort | Schleife p99/max ms | DB warten p95/max ms | Speicher MB Start/max/Ende |');
   z.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|');
@@ -1284,6 +1424,7 @@ function bericht(ergebnisse, x) {
       if (x.vergleich && e.stufe === 'gross') z.push(`Letzter Lauf: ${x.vergleich.vorher} gleichzeitig – ${x.vergleich.warnung ? `**WARNUNG: ${Math.round(x.vergleich.schlechter * 100)} % schlechter**` : `Abweichung ${Math.round(-x.vergleich.schlechter * 100)} %`}.`);
       z.push(`Erholung nach ${STUFEN[e.stufe].ueberlast} gleichzeitig: ${e.erholung.ms === null ? 'nicht innerhalb von 120 s' : `nach ${sek(e.erholung.ms)} s`} (p95 ${f(e.erholung.p95)} ms).`);
       z.push(`Anmeldeschutz unter Last: falsche Passwörter → ${e.anmeldeschutz.falsch.join(', ')}; danach richtiges Passwort → ${e.anmeldeschutz.richtig} – ${e.anmeldeschutz.wirkt ? 'wirkt' : 'WIRKT NICHT'}.`);
+      if (e.speicher) z.push(`Arbeitsspeicher (Pflicht): ${speicherText(e.speicher)}.`);
     }
     if (e.speichern) z.push('', ...speichernBericht(e));
     if (e.daten) z.push('', datenText(e));
@@ -1295,6 +1436,18 @@ function bericht(ergebnisse, x) {
   if (ziel.length) z.push('', '**Ziel verfehlt** (der Lauf wird deshalb nicht rot; Folge-Issue „Beschleunigen“, #563):', '', ...ziel.map((v) => `- ${v}`));
   return z.join('\n');
 }
+
+/**
+ * Hinweis zu den Konten der Personen (#920) für den Bericht: Seitdem misst der Test mit einem Konto je Person – frühere
+ * Werte (drei geteilte Konten) sind vor allem bei „+ Speichern“ nicht direkt vergleichbar.
+ */
+export function personenText(n) {
+  if (!n) return 'Simulierte Personen: drei geteilte Konten (Administrator, Mitglied mit und ohne Rolle).';
+  return `Simulierte Personen (#920): je Person ein eigenes Konto mit eigener Sitzung – ${n} Konten (zwei von drei mit der Rolle „Steuern und Finanzen“, eines von drei ohne Rolle), bei mehr gleichzeitigen Personen reihum. Messungen ohne diese Zeile teilten sich drei Konten und sind – vor allem „+ Speichern“ – nicht direkt vergleichbar.`;
+}
+
+/** Zeile für den Ergebnisblock (#920): woran man Messungen mit eigenen Konten erkennt. */
+export const personenZeile = (n) => (n ? `Personen: je Person ein eigenes Konto (${n} Konten, reihum; seit #920)` : null);
 
 /** Was der Server über sich sagt (ohne Adressen und Namen). */
 export async function umgebung(cookie) {
@@ -1335,6 +1488,7 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
   kz.push(`RAM: ${u.ramGb === null ? nv : `${String(u.ramGb).replace('.', ',')} GB${u.ramBegrenzt ? ' (Grenze des Containers)' : ''}`} · Speicher: ${angaben.speicher ?? `${nv} (HDD/SSD/NVMe)`}`);
   kz.push(`Bestand: ${x.bestand.gesamt} Mappen, ${x.dokumente} Dokumente (PDF)`);
   if (u.grenzen) kz.push(`Einstellungen: ${Object.entries(u.grenzen).map(([k, w]) => `${k}=${w}`).join(', ')}`);
+  if (personenZeile(x.personen)) kz.push(personenZeile(x.personen));
   for (const e of ergebnisse) {
     if (e.art === 'zusage') {
       const d = e.durchgang;
@@ -1368,6 +1522,9 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
   const spitze = Math.max(0, ...alle.map((l) => l.speicherMbMax ?? 0));
   const schleife = Math.max(0, ...alle.map((l) => l.schleifeP99 ?? 0));
   kz.push(`Arbeitsspeicher Ablago höchstens: ${spitze} MB · Ereignisschleife p99 höchstens: ${Math.round(schleife)} ms`);
+  // #920: Die Pflicht gilt je Prozess – beides nennen.
+  const sp = speicherHoechstens(alle);
+  if (sp.jeProzessMb !== null) kz.push(`Arbeitsspeicher je Prozess höchstens: ${sp.jeProzessMb} MB bei ${sp.prozesse} ${sp.prozesse === 1 ? 'Prozess' : 'Prozessen'} (Pflicht je Prozess ≤ ${PFLICHT.speicherMb} MB, zusammen ≤ ${sp.prozesse} × ${PFLICHT.speicherMb} MB)`);
   kz.push(containerZeile(alle));
   const mit = x.laeufe.filter((l) => l.speichern);
   if (mit.length) kz.push(`Mit Speichern: Arbeitsspeicher Ablago höchstens: ${Math.max(0, ...mit.map((l) => l.speicherMbMax ?? 0))} MB · Ereignisschleife p99 höchstens: ${Math.round(Math.max(0, ...mit.map((l) => l.schleifeP99 ?? 0)))} ms`);
@@ -1415,6 +1572,8 @@ async function messen(stufen) {
   for (const s of stufen) {
     melde({ art: 'stufe', stufe: s, nr: stufen.indexOf(s) + 1, von: stufen.length });
     bestand = await sicherstellen(mappenFuer(s));
+    // Sitzungen der Personen aus der vorigen Stufe nicht liegen lassen (#920).
+    await personenAbmelden(v);
     v = await vorbereiten();
     protokollAnfang ??= { t: Date.now(), ...(await serverStand(v.sitzungen.admin)) };
     // „mit Speichern“ (#739): Die Ziele holt erst der Durchgang selbst – der bisherige startet genau wie vorher.
@@ -1426,11 +1585,12 @@ async function messen(stufen) {
     e.daten = { anlegen: bestand.anlegen, ...await datenStand(v.sitzungen.admin) };
     ergebnisse.push(e);
   }
-  x = { ...x, bestand, laeufe, geprueft: hat('--grenzen') };
+  x = { ...x, bestand, laeufe, geprueft: hat('--grenzen'), personen: v.personen?.length ?? 0 };
   // #895: Warnungen und Fehler des ganzen Laufs, Abstürze und Neustarts mit Grund.
   x.protokoll = protokollGesamt(protokollAnfang, { t: Date.now(), ...(await serverStand(v.sitzungen.admin)) }, laeufe);
   x.vergleich = await vergleiche(ergebnisse.find((e) => e.stufe === 'gross'));
   const u = await umgebung(v.sitzungen.admin);
+  await personenAbmelden(v);
   const text = `${bericht(ergebnisse, x)}\n\n### Ergebnis zum Kopieren\n\nOhne Namen und Adressen – zum Einfügen in das Formular „Messergebnis Lasttest“.\n\n${ergebnisblock(ergebnisse, x, u)}`;
   console.log(`\n${text}`);
   await melde({ art: 'ergebnis', bericht: bericht(ergebnisse, x), vorlage: ergebnisblock(ergebnisse, x, u, PLATZHALTER), verfehlt: ergebnisse.some((e) => e.verfehlt.length) });
@@ -1452,6 +1612,7 @@ async function einzeln(n) {
   const runde = hat('--mit-speichern') ? schreibrunde(await vorbereitenSpeichern(v)) : null;
   const e = await durchgang(v, { name: `${n} gleichzeitig${runde ? ' + Speichern' : ''}`, n, dauer: Number(arg('--dauer', 120)), mitExport: !hat('--ohne-export'), speichern: runde });
   const aufgeraeumt = runde ? await aufraeumen(v, runde) : undefined;
+  await personenAbmelden(v);
   console.log(JSON.stringify({ bestand, ...e, exporte: e.exporte.length, aufgeraeumt }, null, 2));
 }
 

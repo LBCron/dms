@@ -2,6 +2,7 @@ import { monitorEventLoopDelay } from 'node:perf_hooks';
 import type postgres from 'postgres';
 import { SCHLEIFE_GRENZE_MS, SCHLEIFE_MINUTEN } from '../../shared/src/systemlast';
 import { kontext, protokoll, type Kontext } from './protokoll';
+import { zusammenfassungZusatz } from './protokollsammlung';
 import { t } from './sprache';
 import { gebietsschema } from '../../shared/src/sprache';
 
@@ -31,13 +32,30 @@ export interface MessSpeicher {
 
 const log = protokoll.modul('datenbank');
 
+/** Lange Anfragen und Datenbankzugriffe im Protokoll (#920): je Art eine Zeile je Minute statt jede einzeln. */
+export const ZUSAMMENFASSUNG_MS = 60_000;
+
+interface Zusammenfassung {
+  art: 'anfrage' | 'zugriff';
+  /** Routenmuster (lange Anfrage) bzw. Zugriff (langer Datenbankzugriff). */
+  name: string;
+  n: number; max: number; summe: number;
+  /** Erstes Auftreten in diesem Fenster. */
+  seit: string;
+  /** Kontext der längsten (Aufteilung, Anfrage). */
+  daten: Record<string, unknown>;
+}
+
 export class Messung {
   einstellungen: MessEinstellungen = { ...STANDARD };
   /** Verzögerung der Ereignisschleife (#477); läuft erst nach auslastung.start() (index.ts). */
   readonly auslastung = new Auslastung();
   private zuletztAufgeraeumt = 0;
+  private offen = new Map<string, Zusammenfassung>();
+  private zeitgeber: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(readonly speicher: MessSpeicher) {}
+  /** `fensterMs`: wie lange gleiche Meldungen zusammengefasst werden (#920; Tests kürzer). */
+  constructor(readonly speicher: MessSpeicher, private readonly fensterMs = ZUSAMMENFASSUNG_MS) {}
 
   async start() {
     try { this.einstellungen = { ...STANDARD, ...(await this.speicher.ladeEinstellungen()) }; } catch { /* Standardwerte */ }
@@ -75,12 +93,14 @@ export class Messung {
   /**
    * Ganze Anfrage (#477): dauert sie ab Eingang länger als die Schwelle, wird sie mit ihrer
    * Aufteilung als Langläufer gemerkt (Zugriff „Anfrage: …“). Im Protokoll mit `dauerMs` und dem Routenmuster
-   * (`muster`): Die Sammlung für den Lasttest zeigt so Dauer und Route ohne Ids (#909).
+   * (`muster`): Die Sammlung für den Lasttest zeigt so Dauer und Route ohne Ids (#909). Seit #920 je Routenmuster
+   * eine Zeile je Minute (Anzahl, höchste und mittlere Dauer) – unter Last kostete das Schreiben jeder einzelnen
+   * Zeile selbst Zeit. Die Langläufer in der Werkbank bleiben einzeln.
    */
   erfasseAnfrage(k: Pick<Kontext, 'pfad' | 'benutzer' | 'muster'>, t: Zeitaufteilung) {
     if (t.gesamt < this.einstellungen.schwelleMs) return;
     const zugriff = `Anfrage: ${aufteilungText(t)}`;
-    log.warn(`Lange Anfrage: ${k.pfad ?? ''} dauerte ${Math.round(t.gesamt)} ms`, { anfrage: k.pfad, muster: k.muster, dauerMs: Math.round(t.gesamt), vor: Math.round(t.vor), db: Math.round(t.db), rechte: Math.round(t.rechte), json: Math.round(t.json) });
+    this.sammle('anfrage', k.muster ?? k.pfad ?? '', t.gesamt, { ...(k.muster ? { muster: k.muster } : {}), vor: Math.round(t.vor), db: Math.round(t.db), rechte: Math.round(t.rechte), json: Math.round(t.json) });
     this.speicher.merke({ zeit: new Date().toISOString(), dauerMs: Math.round(t.gesamt), zugriff, anfrage: k.pfad ?? '', benutzer: k.benutzer ?? '' })
       .catch((e) => log.error('Langläufer nicht gespeichert', { fehler: (e as Error).message }));
   }
@@ -90,7 +110,7 @@ export class Messung {
     if (k) { k.db.anzahl++; k.db.ms += ms; if (k.rechte?.offen) k.rechte.dbMs += ms; }
     if (ms >= this.einstellungen.schwelleMs) {
       const l: Langlaeufer = { zeit: new Date().toISOString(), dauerMs: Math.round(ms), zugriff, anfrage: k?.pfad ?? '', benutzer: k?.benutzer ?? '' };
-      log.warn(`Langer Datenbankzugriff: ${zugriff} dauerte ${Math.round(ms)} ms`, { zugriff, dauerMs: Math.round(ms), anfrage: l.anfrage || undefined, muster: k?.muster });
+      this.sammle('zugriff', zugriff, ms, { zugriff, ...(k?.muster ? { anfrage: k.muster } : {}) });
       this.speicher.merke(l).catch((e) => log.error('Langläufer nicht gespeichert', { fehler: (e as Error).message }));
       if (Date.now() - this.zuletztAufgeraeumt > 3_600_000) {
         this.zuletztAufgeraeumt = Date.now();
@@ -101,6 +121,44 @@ export class Messung {
     } else {
       log.trace(`Datenbankzugriff ${zugriff}: ${Math.round(ms)} ms`);
     }
+  }
+
+  /** Gleiche lange Anfrage bzw. gleichen langen Zugriff bis zum Ende des Fensters zusammenzählen (#920). */
+  private sammle(art: Zusammenfassung['art'], name: string, ms: number, daten: Record<string, unknown>) {
+    const k = `${art}\u0000${name}`;
+    const x = this.offen.get(k);
+    if (x) {
+      x.n++; x.summe += ms;
+      if (ms > x.max) { x.max = ms; x.daten = daten; }
+    } else this.offen.set(k, { art, name, n: 1, max: ms, summe: ms, seit: new Date().toISOString(), daten });
+    if (!this.zeitgeber) {
+      // Außerhalb der Anfrage: Die Zeile gehört zu keiner einzelnen.
+      this.zeitgeber = kontext.exit(() => setTimeout(() => this.leeren(), this.fensterMs));
+      this.zeitgeber.unref?.();
+    }
+  }
+
+  /**
+   * Zusammenfassung schreiben (#920): je Art eine Warnung „Lange Anfrage: GET /api/mappen/:id dauerte 1240 ms
+   * (längste von 120 in einer Minute, Ø 610 ms)“ – mit `dauerMs` (höchste), `summeMs`, `zusammengefasst` (Anzahl) und
+   * `seit` im Kontext; die Sammlung für den Lasttest zählt daraus Anzahl und Dauer wie bei einzelnen Meldungen.
+   * Am Ende jedes Fensters, beim Herunterfahren und in Tests.
+   */
+  leeren() {
+    if (this.zeitgeber) { clearTimeout(this.zeitgeber); this.zeitgeber = null; }
+    if (!this.offen.size) return;
+    const liste = [...this.offen.values()];
+    this.offen.clear();
+    kontext.exit(() => {
+      for (const x of liste) {
+        const max = Math.round(x.max), mittel = Math.round(x.summe / x.n);
+        const titel = x.art === 'anfrage' ? 'Lange Anfrage' : 'Langer Datenbankzugriff';
+        log.warn(`${titel}: ${x.name} dauerte ${max} ms${zusammenfassungZusatz(x.n, mittel)}`, {
+          ...(x.art === 'anfrage' ? { anfrage: x.name } : {}), ...x.daten,
+          dauerMs: max, ...(x.n > 1 ? { mittelMs: mittel } : {}), summeMs: Math.round(x.summe), zusammengefasst: x.n, seit: x.seit,
+        });
+      }
+    });
   }
 }
 

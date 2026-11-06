@@ -111,7 +111,11 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     assert.match(s.ergebnis!.vorlage, /\n  Engpass klein \+ Speichern: [^\n]*Speicher je Prozess: Prozess 1: \d+ MB \(Halde \d+\)/);
     assert.ok(!/Abgelehnt \(4xx\)/.test(s.ergebnis!.bericht), 'alle schreibenden Anfragen gehen durch');
     assert.match(s.ergebnis!.bericht, /Bestand: 50\d\d Mappen \(5000 Demo-Mappen\)/);
-    assert.ok(!/lasttest-passwort|EINRICHTUNGSCODE|127\.0\.0\.1/.test(JSON.stringify(s)), 'keine Zugangsdaten, keine Adressen');
+    assert.ok(!/lasttest-passwort|lasttest-person-passwort|EINRICHTUNGSCODE|127\.0\.0\.1/.test(JSON.stringify(s)), 'keine Zugangsdaten, keine Adressen');
+    // #920: je Person ein eigenes Konto – im Bericht und im Ergebnisblock erkennbar.
+    assert.match(s.ergebnis!.vorlage, /\nPersonen: je Person ein eigenes Konto \(30 Konten, reihum; seit #920\)\n/);
+    assert.match(s.ergebnis!.bericht, /Simulierte Personen \(#920\): je Person ein eigenes Konto mit eigener Sitzung – 30 Konten/);
+    assert.ok(!/@example\.org/.test(s.ergebnis!.vorlage), 'keine Adressen der Konten im Ergebnis');
     await post(d.basis, '/api/lasttest/angaben', { geraet: 'Beispiel-NAS, 8 GB RAM', speicher: 'SSD' });
     const datei = join(wurzel, 'ergebnis', 'lasttest-klein.md');
     assert.match(readFileSync(datei, 'utf8'), /Gerät\/Modell: Beispiel-NAS, 8 GB RAM/);

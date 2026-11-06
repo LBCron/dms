@@ -137,7 +137,7 @@ Below the connection, the page shows how the database is doing in operation: the
 
 ### Long database accesses {#lange-datenbankzugriffe}
 
-Every database access is timed. Whatever takes longer than a threshold lands in the list and as a warning in the [log](fehlersuche.md#protokoll) (module *datenbank*). Directly above the list you set:
+Every database access is timed. Whatever takes longer than a threshold lands in the list and as a warning in the [log](fehlersuche.md#protokoll) (module *datenbank*) – there, since #920, as one line per minute and kind (route pattern or access) with count, highest and average duration; the list still shows each one. Directly above the list you set:
 
 - **Long from** – the threshold in milliseconds (default 500),
 - **Keep** – how many days the entries stay (default 30).

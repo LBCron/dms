@@ -14,6 +14,11 @@
  * (`daten.muster`, z. B. „GET /api/mappen/:id“), steht es statt des konkreten Pfads (`daten.anfrage`) im Text – es
  * kommt aus dem Code und enthält keine Ids.
  *
+ * Zusammengefasst (#920): Lange Anfragen und Datenbankzugriffe schreibt Ablago je Minute und Art als eine Zeile mit
+ * Anzahl (`daten.zusammengefasst`), höchster Dauer (`daten.dauerMs`), Summe (`daten.summeMs`) und erstem Auftreten
+ * (`daten.seit`); der Zusatz im Text ({@link zusammenfassungZusatz}) gehört nicht zur Art. Die Sammlung zählt so
+ * genau wie bei einzelnen Zeilen – nur ein wenig später.
+ *
  * Lasttest-Modus (#909): Was nur die Mess-Sitzung im Verwaltungsmodus auslöst (Spur des Verwaltungsmodus, im Kontext
  * mit `imVerwaltungsmodus: true` gekennzeichnet – etwa „Im Verwaltungsmodus: fremde Mappe“), zählt die Sammlung dann
  * nicht mit ({@link setzeLasttestModus}); ins Protokoll kommt es weiter.
@@ -103,6 +108,13 @@ export const DAUER_PLATZHALTER = '<Dauer>';
 const MUSTER = /^[A-Z]{3,9} \/[A-Za-z0-9_\-./:*]{0,120}$/;
 const SPUR_MUSTER = '\u0001';
 
+/** Zusatz im Text einer Zusammenfassung (#920): „ (längste von 120 in einer Minute, Ø 610 ms)“; bei einer leer. */
+export function zusammenfassungZusatz(n: number, mittelMs: number): string {
+  return n > 1 ? ` (längste von ${n} in einer Minute, Ø ${mittelMs} ms)` : '';
+}
+const ZUSATZ = / \(längste von \d+ in einer Minute, Ø \d+ ms\)$/;
+const ZUSAMMEN_MAX = 1_000_000_000;
+
 let lasttestModus = false;
 /**
  * Lasttest-Modus (#909) für diesen Prozess: Meldungen der Spur des Verwaltungsmodus (`imVerwaltungsmodus: true`)
@@ -139,15 +151,20 @@ export function rohAus(e: { stufe: string; modul: string; text: string; zeit: st
   const d = e.daten ?? {};
   if ((o.lasttest ?? lasttestModus) && d.imVerwaltungsmodus === true) return null;
   let text = String(e.text ?? '').split('\n')[0];
+  // Zusammenfassung (#920): Anzahl und Summe aus dem Kontext, der Zusatz im Text gehört nicht zur Art.
+  const n = typeof d.zusammengefasst === 'number' && Number.isInteger(d.zusammengefasst) && d.zusammengefasst >= 1 && d.zusammengefasst <= ZUSAMMEN_MAX ? d.zusammengefasst : null;
+  if (n !== null) text = text.replace(ZUSATZ, '');
   const muster = typeof d.muster === 'string' && MUSTER.test(d.muster) ? d.muster : null;
   if (muster && typeof d.anfrage === 'string' && d.anfrage && text.includes(d.anfrage)) text = text.replace(d.anfrage, muster);
   const ms = dauerZahl(d.dauerMs);
   if (ms !== null && text.includes(`${ms} ms`)) text = text.replace(`${ms} ms`, DAUER_PLATZHALTER);
   text = sauber(text, muster);
+  const summe = n !== null ? dauerZahl(d.summeMs) : ms;
+  const seit = n !== null && typeof d.seit === 'string' && !Number.isNaN(Date.parse(d.seit)) && d.seit <= e.zeit ? new Date(d.seit).toISOString() : e.zeit;
   return {
     stufe: e.stufe as SammelStufe, modul: e.modul, text,
-    ausnahme: ausnahmeArt(d.fehler ?? d.err ?? d.error ?? null), anzahl: 1, erste: e.zeit, letzte: e.zeit,
-    ...(ms !== null && text.includes(DAUER_PLATZHALTER) ? { dauer: { max: ms, summe: ms, n: 1 } } : {}),
+    ausnahme: ausnahmeArt(d.fehler ?? d.err ?? d.error ?? null), anzahl: n ?? 1, erste: seit, letzte: e.zeit,
+    ...(ms !== null && summe !== null && text.includes(DAUER_PLATZHALTER) ? { dauer: { max: ms, summe: Math.max(summe, ms), n: n ?? 1 } } : {}),
     ...(muster && text.includes(muster) ? { muster } : {}),
   };
 }

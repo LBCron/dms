@@ -8,8 +8,8 @@
  * zu ist. Nie abgewiesen werden die Gesundheitsprüfung des Containers und die Messwerte für den Lasttest.
  * Grenze: `DMS_MAX_ANFRAGEN` (Vorgabe 250 – das Zweieinhalbfache der realistischen Obergrenze von 100).
  */
-import type { FastifyInstance } from 'fastify';
-import { protokoll } from './protokoll';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { kontext, protokoll } from './protokoll';
 import { t } from './sprache';
 
 export const MAX_ANFRAGEN_VORGABE = 250;
@@ -19,6 +19,11 @@ export const MAX_ANFRAGEN_MAX = 10_000;
 export const WIEDER_IN_S = 5;
 
 const AUSGENOMMEN = new Set(['/api/gesundheit', '/api/werkbank/last']);
+/** Zusammenfassung der Abweisungen im Protokoll (#920): höchstens eine Zeile je Minute. */
+export const MELDUNG_MS = 60_000;
+/** Anfragen, die der Überlastschutz abgewiesen hat (#920): ohne eigene Zeile „… 503“ als Fehler im Protokoll. */
+const abgewiesene = new WeakSet<object>();
+export const vomUeberlastschutzAbgewiesen = (req: FastifyRequest) => abgewiesene.has(req);
 const log = protokoll.modul('system');
 
 export interface UeberlastEinstellung { max: number; quelle: 'vorgabe' | 'umgebung'; fehler?: string }
@@ -65,13 +70,40 @@ export class Ueberlastschutz {
 
   fertig() { if (this.laufend > 0) this.laufend--; }
 
-  /** Höchstens eine Zeile je Minute im Protokoll. */
+  /**
+   * Höchstens eine Zeile je Minute im Protokoll – als Hinweis, nicht als Warnung oder Fehler (#920): Abweisen ist
+   * gewollt (503 mit Retry-After). Die erste Abweisung nach einer ruhigen Minute steht sofort da; was danach in der
+   * Minute dazukommt, fasst eine Zeile am Ende der Minute zusammen (nichts geht verloren, es hinkt nur nach).
+   */
+  private zeitgeber: ReturnType<typeof setTimeout> | null = null;
   private melde() {
     const jetzt = this.uhr();
-    if (jetzt - this.gemeldet < 60_000) { this.seitMeldung++; return; }
-    log.warn(`Überlast: ${this.max} Anfragen gleichzeitig – weitere werden mit 503 abgewiesen`, { abgewiesen: this.abgewiesen, seitLetzterMeldung: this.seitMeldung + 1 });
-    this.gemeldet = jetzt;
+    if (!this.zeitgeber && jetzt - this.gemeldet >= MELDUNG_MS) {
+      this.schreibe(1, true);
+      this.gemeldet = jetzt;
+      return;
+    }
+    this.seitMeldung++;
+    if (!this.zeitgeber) {
+      // Ohne den Kontext der gerade abgewiesenen Anfrage (die Zeile gehört zu keiner Anfrage).
+      this.zeitgeber = kontext.exit(() => setTimeout(() => this.leeren(), Math.max(0, this.gemeldet + MELDUNG_MS - jetzt)));
+      this.zeitgeber.unref?.();
+    }
+  }
+
+  /** Offene Zusammenfassung jetzt schreiben (Ende der Minute, Herunterfahren, Tests). */
+  leeren() {
+    if (this.zeitgeber) { clearTimeout(this.zeitgeber); this.zeitgeber = null; }
+    if (!this.seitMeldung) return;
+    this.schreibe(this.seitMeldung, false);
     this.seitMeldung = 0;
+    this.gemeldet = this.uhr();
+  }
+
+  private schreibe(n: number, erste: boolean) {
+    log.info(erste
+      ? `Überlast: ${this.max} Anfragen gleichzeitig – weitere werden mit 503 abgewiesen (gewollt, mit Retry-After)`
+      : `Überlast: in der letzten Minute weitere ${n} Anfragen mit 503 abgewiesen (Grenze ${this.max} gleichzeitig)`, { abgewiesen: this.abgewiesen, seitLetzterMeldung: n });
   }
 
   stand() {
@@ -86,6 +118,7 @@ export class Ueberlastschutz {
     app.addHook('onRequest', async (req, reply) => {
       if (!zaehlt(req.url)) return;
       if (!this.herein()) {
+        abgewiesene.add(req);
         return reply.code(503).header('retry-after', String(WIEDER_IN_S)).header('cache-control', 'no-store')
           .send({ fehler: t('systemzustand.ueberlast.meldung') });
       }
