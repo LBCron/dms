@@ -375,7 +375,7 @@ export class Konten {
   }
 
   /** Benutzer und Sitzung zum Schlüssel, oder undefined, wenn sie ungültig, abgelaufen oder der Benutzer deaktiviert ist. */
-  async anmeldungZu(schluessel?: string): Promise<{ benutzer: Benutzer; sitzung: SitzungIntern } | undefined> {
+  async anmeldungZu(schluessel?: string, o: { still?: boolean } = {}): Promise<{ benutzer: Benutzer; sitzung: SitzungIntern } | undefined> {
     if (!schluessel) return undefined;
     const hash = hasheSchluessel(schluessel);
     // Sitzung und Person in einer Abfrage (#741), nie aus einem Zwischenspeicher: Sperren, Abmelden und Löschen
@@ -386,7 +386,8 @@ export class Konten {
     if (!s || s.ablauf.getTime() < Date.now()) return undefined;
     // Systemkonten (#673) haben nie eine Sitzung – auch eine untergeschobene gilt nicht.
     if (!b || !b.aktiv || b.art === 'system') return undefined;
-    if (Date.now() - s.zuletztAktiv.getTime() > BERUEHREN_MS) await this.repo.beruehreSitzung(hash);
+    // Abfragen im Hintergrund (#919, `still`) zählen nicht als Aktivität: „zuletzt aktiv“ bleibt, wie es war.
+    if (!o.still && Date.now() - s.zuletztAktiv.getTime() > BERUEHREN_MS) await this.repo.beruehreSitzung(hash);
     return { benutzer: b, sitzung: s };
   }
 

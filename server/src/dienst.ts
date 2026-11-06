@@ -3606,6 +3606,21 @@ export class Dienst {
     return { zahlen, stand: s.stand, geaendert: s.geaendert, etag: `"z${s.stand}-${s.abdruck}"` };
   }
 
+  /**
+   * Stand der Ablage für die Oberfläche (#919, `GET /api/ablage/stand`): ein kurzer Fingerabdruck, kein Inhalt. Die
+   * Startseite und die Zähler der Seitenleiste fragen ihn alle 10–15 s ab und laden nur neu, wenn er sich geändert hat.
+   *
+   * Billig: Haushaltsstand (Zahlen, auch Favoriten und Erinnerungen) und Mappenstand (#918) kommen in einer Anfrage aus
+   * der Abfrage der Sitzung (`standSpalten`), keine weitere Datenbankabfrage. Dazu, was für die Person zählt: das
+   * Datum (zeitabhängige Ansichten und Termine wechseln um Mitternacht) und die wirksame Rolle (Verwaltungsmodus sieht
+   * mehr). Nicht die Zähler dieses Prozesses – bei mehreren Prozessen wechselte der Wert sonst je nach Prozess.
+   * „Nachhinken ja, falsch nie“: Er ändert sich höchstens zu oft, nie zu selten für Änderungen über das Repo.
+   */
+  async ablageStand(ich: { rolle: string }): Promise<string> {
+    const [zahlen, mappen] = await Promise.all([this.stand.aktuell(), this.mappenstand.aktuell()]);
+    return fingerabdruck({ v: 1, zahlen, mappen, heute: heuteIn(), rolle: ich.rolle });
+  }
+
   /** Webhooks (#627): nach jeder Änderung, die Zahlen der Ansichten oder die Termine ändern kann. */
   beiAenderung(f: () => void) { this.stand.beiAenderung(f); }
 
