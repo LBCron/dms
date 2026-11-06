@@ -76,7 +76,7 @@ import type { OrdnerPruefung } from './ordner';
 import type { Einrichtung } from './einrichtung';
 import type { AnbindungVerwaltung } from './anbindung';
 import { notfallblatt } from './notfallblatt';
-import { istHeimnetz, type Notfallcode } from './notfallcode';
+import { heimnetzStand, type Notfallcode } from './notfallcode';
 import { WartungFehler } from './wartung';
 import { werkbankZahlen } from './werkbankzahlen';
 import { akzeptanzAufheben, akzeptierteMeldungen, meldungAkzeptieren } from './meldungen';
@@ -1873,8 +1873,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/anmeldeschutz', zugang: 'admin', handler: async (a) => ok({ einstellung: await konten.sperre.einstellung(), gesperrt: await konten.sperre.gesperrt(), deineIp: a.ip }) },
     { methode: 'PUT', pfad: '/api/werkbank/anmeldeschutz', zugang: 'admin', handler: async (a) => ok({ einstellung: await konten.sperre.speichere(a.body, ich(a).email), gesperrt: await konten.sperre.gesperrt(), deineIp: a.ip }) },
     // Notfallzugang (#815): Vorgabe „nur Heimnetz“; „aus dem Internet erlauben“ ist eine heikle Handlung (frische Anmeldung).
-    { methode: 'GET', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().einstellung(), code: await konten.notfallcodeStand(), heimnetz: istHeimnetz(a, x.proxy) }) },
-    { methode: 'PUT', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().setzeEinstellung(b(a), ich(a).email), code: await konten.notfallcodeStand(), heimnetz: istHeimnetz(a, x.proxy) }) },
+    { methode: 'GET', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().einstellung(), code: await konten.notfallcodeStand(), ...heimnetzStand(a, x.proxy) }) },
+    { methode: 'PUT', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().setzeEinstellung(b(a), ich(a).email), code: await konten.notfallcodeStand(), ...heimnetzStand(a, x.proxy) }) },
     { methode: 'POST', pfad: '/api/werkbank/anmeldeschutz/entsperren', zugang: 'admin', handler: async (a) => {
       const ip = String((b(a) as { ip?: unknown }).ip ?? '');
       if (!(await konten.sperre.entsperre(ip, ich(a).email))) throw new Fachfehler(404, t('meldungen.routen.diese-adresse-ist-nicht'));

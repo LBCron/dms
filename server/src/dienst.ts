@@ -8386,11 +8386,11 @@ export class Dienst {
     }
   }
 
-  /** Dürfen Benutzer ihre Daten selbst exportieren (#255)? Standard: ja. */
-  async persoenlicherExportErlaubt(): Promise<boolean> { return (await this.einstellungen?.lies('persoenlicher_export')) !== false; }
+  /** Dürfen Benutzer ihre Daten selbst exportieren (#255)? Ab Werk aus (#884): nur bei ausdrücklich `true`. */
+  async persoenlicherExportErlaubt(): Promise<boolean> { return (await this.einstellungen?.lies('persoenlicher_export')) === true; }
   async setzePersoenlicherExport(an: unknown, von: string) {
-    await this.einstellungen?.schreibe('persoenlicher_export', an === false ? false : null);
-    protokoll.modul('werkbank').info(an === false ? '„Meine Daten exportieren“ abgeschaltet' : '„Meine Daten exportieren“ erlaubt', { von });
+    await this.einstellungen?.schreibe('persoenlicher_export', an === true);
+    protokoll.modul('werkbank').info(an === true ? '„Meine Daten exportieren“ erlaubt' : '„Meine Daten exportieren“ abgeschaltet', { von });
     return this.persoenlicherExportErlaubt();
   }
 

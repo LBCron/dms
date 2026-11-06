@@ -15,7 +15,7 @@ import { Konten } from '../src/konten';
 import { pgKontoRepo, speicherKontoRepo, type KontoRepo } from '../src/konto-repo';
 import type { Mailer } from '../src/mail';
 import { notfallblattPlan } from '../src/notfallblatt';
-import { FEHLVERSUCHE_MELDEN, istHeimnetz, istPrivat, Notfallcode, NotfallSperre } from '../src/notfallcode';
+import { FEHLVERSUCHE_MELDEN, heimnetzStand, istHeimnetz, istPrivat, Notfallcode, NotfallSperre } from '../src/notfallcode';
 import { protokoll } from '../src/protokoll';
 import { speicherRepo } from '../src/repo-speicher';
 import { routen, ZWEITE_ABGELEHNT, type Anfrage } from '../src/routen';
@@ -122,6 +122,25 @@ describe('Notfallzugang (#815): nur aus dem Heimnetz – auch hinter einem Rever
     assert.equal(istHeimnetz({ ip: '192.168.1.20', kopf: kopf({ 'x-forwarded-for': '192.168.1.20' }) }, true), false);
     // Nur Köpfe, die Ablago nicht auswertet: lieber nicht.
     assert.equal(istHeimnetz({ ip: '172.18.0.3', kopf: kopf({ 'x-real-ip': '192.168.1.20' }) }, AUTO), false);
+  });
+
+  it('#885: die Werkbank erfährt, warum „nicht Heimnetz“ – öffentliche Adresse oder nicht geglaubte Proxy-Angabe', () => {
+    // Zu Hause über den öffentlichen Namen (Hairpin-NAT): der Proxy gibt die öffentliche Adresse weiter, Ablago glaubt ihm.
+    assert.deepEqual(heimnetzStand({ ip: '203.0.113.7', kopf: kopf({ 'x-forwarded-for': '203.0.113.7' }) }, AUTO), { heimnetz: false, grund: 'oeffentlich' });
+    assert.deepEqual(heimnetzStand({ ip: '198.51.100.4', kopf: kopf({}) }, false), { heimnetz: false, grund: 'oeffentlich' }, 'ohne Proxy, öffentlich');
+    // Proxy-Angabe nicht geglaubt: TRUST_PROXY=false, =true, nicht gesetzt oder nur Forwarded/X-Real-IP.
+    assert.deepEqual(heimnetzStand({ ip: '172.18.0.3', kopf: kopf({ 'x-forwarded-for': '192.168.1.20' }) }, false), { heimnetz: false, grund: 'proxy' });
+    assert.deepEqual(heimnetzStand({ ip: '192.168.1.20', kopf: kopf({ 'x-forwarded-for': '192.168.1.20' }) }, true), { heimnetz: false, grund: 'proxy' });
+    assert.deepEqual(heimnetzStand({ ip: '172.18.0.3', kopf: kopf({ forwarded: 'for=192.0.2.9' }) }, undefined), { heimnetz: false, grund: 'proxy' });
+    assert.deepEqual(heimnetzStand({ ip: '172.18.0.3', kopf: kopf({ 'x-real-ip': '192.168.1.20' }) }, AUTO), { heimnetz: false, grund: 'proxy' });
+    assert.deepEqual(heimnetzStand({ ip: '172.18.0.3', kopf: kopf({ forwarded: 'for=192.0.2.9' }) }, AUTO), { heimnetz: false, grund: 'proxy' });
+    // Im Heimnetz: kein Grund, nichts weiter.
+    assert.deepEqual(heimnetzStand({ ip: '192.168.1.20', kopf: kopf({ 'x-forwarded-for': '192.168.1.20' }) }, AUTO), { heimnetz: true });
+    assert.deepEqual(heimnetzStand({ ip: '192.168.1.20', kopf: kopf({}) }, false), { heimnetz: true });
+    // Die Prüfung selbst ist unverändert istHeimnetz.
+    for (const [ip, k, v] of [['203.0.113.7', { 'x-forwarded-for': '203.0.113.7' }, AUTO], ['172.18.0.3', { 'x-real-ip': '1.2.3.4' }, AUTO], ['10.0.0.2', {}, false]] as const) {
+      assert.equal(heimnetzStand({ ip, kopf: kopf(k) }, v as never).heimnetz, istHeimnetz({ ip, kopf: kopf(k) }, v as never));
+    }
   });
 
   it('aus dem Internet erst, wenn es in der Werkbank erlaubt ist – mit frischer Anmeldung (heikle Handlung)', async () => {
@@ -300,6 +319,19 @@ describe('Schnittstellen (#815, #821): offen für /notfall, Werkbank für den Re
     };
     return { ...x, t, rufe };
   }
+
+  it('#885: die Werkbank-API liefert heimnetz und bei „nicht Heimnetz“ den Grund mit', async () => {
+    const { t, lena } = await tabelle();
+    const r = t.find((y) => y.methode === 'GET' && y.pfad === '/api/werkbank/anmeldeschutz/notfallzugang')!;
+    const hole = async (ip: string, k: Record<string, string> = {}) => {
+      const b = ((await r.handler({ body: {}, params: {}, query: {}, ip, kopf: kopf(k), benutzer: imModus(lena) } as unknown as Anfrage)) as { body: Record<string, unknown> }).body;
+      return { heimnetz: b.heimnetz, grund: b.grund, hatGrund: 'grund' in b };
+    };
+    assert.deepEqual(await hole('192.168.1.20'), { heimnetz: true, grund: undefined, hatGrund: false });
+    assert.deepEqual(await hole('203.0.113.7'), { heimnetz: false, grund: 'oeffentlich', hatGrund: true });
+    // Ohne TRUST_PROXY (hier: kein Proxy eingetragen) wird eine Proxy-Angabe nicht geglaubt.
+    assert.deepEqual(await hole('172.18.0.3', { 'x-forwarded-for': '192.168.1.20' }), { heimnetz: false, grund: 'proxy', hatGrund: true });
+  });
 
   it('/api/notfall ohne Anmeldung, die Einstellung nur in der Werkbank (Bereich Anmeldeschutz)', async () => {
     const { t } = await tabelle();

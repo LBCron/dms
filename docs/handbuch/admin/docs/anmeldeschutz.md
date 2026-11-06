@@ -64,6 +64,14 @@ Wer sich ausgesperrt hat, kommt mit dem **Notfallcode** vom [Notfallblatt](siche
 !!! info "Hinter einem Reverse Proxy"
     Ob eine Anfrage aus dem Heimnetz kommt, entscheidet Ablago nach der echten Adresse des Browsers. Dafür muss der Proxy `X-Forwarded-For` setzen (das tun alle üblichen) und Ablago ihm vertrauen ([Was der Proxy Ablago mitteilt](installation.md#was-der-proxy-dem-dms-mitteilt)). Kommt eine solche Angabe an, obwohl `TRUST_PROXY=false` gilt, oder steht `TRUST_PROXY=true` (dann könnte jeder die Angabe fälschen), gilt die Anfrage als „nicht aus dem Heimnetz“. Ein Proxy, der gar keine Adresse weitergibt, lässt alle Anfragen wie aus dem Heimnetz aussehen – richte ihn so ein, dass er `X-Forwarded-For` setzt.
 
+Meint Ablago, du seist nicht im Heimnetz, steht unter dem Hinweis in der Werkbank, welche Adresse es sieht und warum: Entweder ist es eine **öffentliche Adresse** (siehe unten), oder **dein Proxy gibt die Adresse so weiter, dass Ablago ihr nicht trauen kann** – dann `TRUST_PROXY` und die Köpfe des Proxys prüfen wie unter [Was der Proxy Ablago mitteilt](installation.md#was-der-proxy-dem-dms-mitteilt).
+
+### Zu Hause über den öffentlichen Namen { #zu-hause-uber-den-offentlichen-namen }
+
+Rufst du Ablago zu Hause über seinen öffentlichen Namen auf (z. B. `ablage.example.org`), zeigt dieser Name auf die öffentliche Adresse deines Anschlusses. Die Anfrage geht dann vom Router nach außen und gleich wieder herein (Hairpin-NAT); der Proxy sieht und meldet die öffentliche Adresse, z. B. `203.0.113.7`. Ablago hat dann recht: Diese Anfrage kam über das Internet.
+
+Abhilfe ist ein **lokaler DNS-Eintrag** (Split-DNS): Im Heimnetz zeigt derselbe Name direkt auf den Proxy, z. B. `ablage.example.org → 192.168.1.10`. Den Eintrag legst du im Router oder in deinem DNS-Server im Heimnetz an (oft „lokaler DNS“, „DNS-Rebind-Schutz – Ausnahmen“ oder „Host-Overrides“ genannt). Danach ein paar Minuten warten oder den Browser neu starten; in der Werkbank steht dann eine Adresse aus dem Heimnetz. Das Zertifikat bleibt gültig, weil der Name gleich bleibt.
+
 ## Zwei-Faktor-Anmeldung
 
 Jeder Benutzer kann unter **Mein Konto → Sicherheit** (oben rechts auf deinen Namen klicken) eine Zwei-Faktor-Anmeldung mit einer Authenticator-App einrichten (TOTP, 6 Stellen, 30 Sekunden) und bekommt dazu zehn Wiederherstellungscodes. Wie das für Benutzer aussieht, beschreibt das [Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/profil/#zwei-faktor-anmeldung).

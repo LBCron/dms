@@ -197,7 +197,7 @@
   "fehlermelden.wird-gesendet": "Sending …",
   "fehlermelden.meldung-senden": "Send report",
   "meinexport.meine-daten-exportieren": "Export my data {hilfe}",
-  "meinexport.der-persoenliche-export-ist": "The personal export is switched off in the Workbench.",
+  "meinexport.der-persoenliche-export-ist": "Your administrator hasn't switched on the personal export. You can ask them for information about your data.",
   "meinexport.alle-mappen-die-du": "All folders you may read, with their documents, plus your tasks, reminders, favourites and your profile – in open formats (CSV, JSON, Excel, PDF), readable without Ablago. The export is not encrypted.",
   "meinexport.als-passwoerter-csv-fuer": "as passwoerter.csv for a password manager",
   "meinexport.passwortfelder-die-ich-sehen": "Include password fields I may see in plain text{klein}",

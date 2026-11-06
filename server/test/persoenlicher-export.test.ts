@@ -62,9 +62,20 @@ describe('Persönlicher Export (#255)', () => {
     const pw = await lies('passwoerter.csv');
     assert.match(pw, /strom123/);
     assert.ok(!pw.includes('geheim456'));
-    // Abschaltbar
-    assert.equal(await d.persoenlicherExportErlaubt(), true);
-    await d.setzePersoenlicherExport(false, 'test');
+  });
+
+  it('ist ab Werk aus und nur mit ausdrücklichem true erlaubt (#884)', async () => {
+    const einstellungen = speicherEinstellungen();
+    const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen });
+    assert.equal(await d.persoenlicherExportErlaubt(), false, 'ohne Einstellung aus');
+    assert.equal(await d.setzePersoenlicherExport(true, 'test'), true);
+    assert.equal(await einstellungen.lies('persoenlicher_export'), true);
+    assert.equal(await d.setzePersoenlicherExport(false, 'test'), false);
+    assert.equal(await einstellungen.lies('persoenlicher_export'), false);
+    // Alles außer true schaltet aus, auch ein alter Wert null aus der Zeit vor #884.
+    await d.setzePersoenlicherExport('ja', 'test');
+    assert.equal(await d.persoenlicherExportErlaubt(), false);
+    await einstellungen.schreibe('persoenlicher_export', null);
     assert.equal(await d.persoenlicherExportErlaubt(), false);
   });
 });

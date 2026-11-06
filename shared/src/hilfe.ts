@@ -168,6 +168,9 @@ export const HILFE = {
   'sicherung.ort': admin('sicherung/', 'Speicherort', 'speicherort'),
   'sicherung.notfallblatt': admin('sicherung/', 'Notfallblatt', 'notfallblatt'),
   'werkbank.notfallzugang': admin('anmeldeschutz/', 'Notfallzugang', 'notfallzugang'),
+  // #885: warum Ablago „nicht im Heimnetz“ meint.
+  'werkbank.notfallzugang.oeffentlich': admin('anmeldeschutz/', 'Zu Hause über den öffentlichen Namen', 'zu-hause-uber-den-offentlichen-namen'),
+  'werkbank.notfallzugang.proxy': admin('installation/', 'Was der Proxy Ablago mitteilt', 'was-der-proxy-dem-dms-mitteilt'),
   'sicherung.extern': admin('sicherung-ausser-haus/', 'Sicherung außer Haus'),
   'sicherung.probe': admin('wiederherstellen/', 'Probe-Wiederherstellung', 'probe-wiederherstellung'),
   // Ablage und Profil: Benutzerhandbuch

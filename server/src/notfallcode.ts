@@ -84,6 +84,20 @@ export function istHeimnetz(a: { ip: string; kopf?: (name: string) => string | u
   return istPrivat(a.ip);
 }
 
+/** Warum „nicht aus dem Heimnetz“ (#885): die Proxy-Angabe wird nicht geglaubt, oder Ablago sieht eine öffentliche Adresse. */
+export type HeimnetzGrund = 'oeffentlich' | 'proxy';
+
+/**
+ * Für die Werkbank (#885): `istHeimnetz` plus Grund, wenn nicht. Die Prüfung selbst bleibt `istHeimnetz`; hier wird nur
+ * nachträglich unterschieden, damit Markus sieht, was er beheben kann (lokaler DNS-Eintrag oder Proxy-Einstellung).
+ */
+export function heimnetzStand(a: { ip: string; kopf?: (name: string) => string | undefined }, vertrauen: ProxyVertrauen | undefined): { heimnetz: true } | { heimnetz: false; grund: HeimnetzGrund } {
+  if (istHeimnetz(a, vertrauen)) return { heimnetz: true };
+  const weiter = WEITERGELEITET.filter((k) => !!a.kopf?.(k)?.trim());
+  const geglaubt = !weiter.length || (Array.isArray(vertrauen) && weiter.includes('x-forwarded-for'));
+  return { heimnetz: false, grund: geglaubt ? 'oeffentlich' : 'proxy' };
+}
+
 /* ---------- Sperre je Adressbereich ---------- */
 
 /**

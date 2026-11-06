@@ -42,7 +42,7 @@ My account has five areas on the left (on a smartphone as buttons at the top):
 
 Your Ablago runs at your home or in your business, not at a cloud provider, and it sends no usage data – not even anonymous data. What it stores about you is your account, the folders and documents you and others create, and who changed what when.
 
-- **A copy of your data** you get yourself: under [Export my data](#meine-daten-exportieren).
+- **A copy of your data** you get yourself under [Export my data](#meine-daten-exportieren) – if the administrator has switched it on. Otherwise, ask them for information about your data.
 - **If something should be deleted** – or you want to know what else is stored about you –, ask the administrator of your Ablago. They can delete folders that you yourself may not delete. Some things must be kept for a while (e.g. invoices); they then stay locked until the period has expired. Your account is not deleted but deactivated once you have used it – your name stays with what you created.
 
 #### Export my data { #meine-daten-exportieren }
@@ -55,7 +55,7 @@ Under **Account → Export my data** you get a copy of everything you may see �
 
 What belongs to the whole household – deletion log, synonyms for the search, automations – is only in the administrator's full export. If a folder links to one you may not read, it says "Folder not visible" instead of the title.
 
-**The export is unencrypted** – keep the file safe. Password fields are only included if you may see them and explicitly confirm it; they are then in plain text in the file `passwoerter.csv`. The export runs in the background; when it's ready, you download it as a ZIP. There is only ever your latest export – a new one replaces the old one. **After downloading it is deleted**, at the latest after 7 days; until when it is available is shown next to the button. If you need it longer, keep the ZIP file. While someone is [working in your name](#in-deinem-namen), no export can be started. If the export is switched off in the workbench, it says so here.
+**The export is unencrypted** – keep the file safe. Password fields are only included if you may see them and explicitly confirm it; they are then in plain text in the file `passwoerter.csv`. The export runs in the background; when it's ready, you download it as a ZIP. There is only ever your latest export – a new one replaces the old one. **After downloading it is deleted**, at the latest after 7 days; until when it is available is shown next to the button. If you need it longer, keep the ZIP file. While someone is [working in your name](#in-deinem-namen), no export can be started. **The personal export is off by default**; the administrator switches it on in the Workbench. While it is off, you see a note here instead of the button – you then get information about your data from the administrator.
 
 ### My permissions { #meine-rechte }
 
