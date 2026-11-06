@@ -210,6 +210,7 @@ These settings are environment variables in the Compose project:
 | `DMS_MAX_ANFRAGEN` | From this many simultaneous requests (**per process**), Ablago immediately answers with "very busy right now" (HTTP 503), 20–10,000 (default 250), see [Technology](technik.md#last) |
 | `DMS_ARBEITER` | Number of [workers for PDF and exports](speicherplatz.md#arbeiter-fur-pdf-und-exporte) **per process**, 1–16. Not set: half of the container's cores, at least 1, at most 4 – divided up with several processes. `0` switches them off (only for troubleshooting) |
 | `DMS_HINTERGRUND_NICE` | How much lower the priority of [background work](technik.md#last) is than that of requests (nice value, 0–19). Not set: `10`. `0` switches it off |
+| `DMS_ZWISCHENSPEICHER` | Only for troubleshooting: `aus` switches off the caches for counts, numbers of results and dates – everything is calculated afresh on every request, Ablago gets slower. System health and the load test report point this out. See [Troubleshooting → Is it the cache?](fehlersuche.md#zwischenspeicher) |
 | `DMS_EINGANG` | Only for special cases: another location of the [intake folder](eingangsordner.md) in the container (default `/eingang`). The usual way is to mount the NAS's folder on `/eingang` |
 
 ## Behind a reverse proxy {#hinter-einem-reverse-proxy}

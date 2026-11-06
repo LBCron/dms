@@ -32,6 +32,18 @@ import { kontext, protokoll } from './protokoll';
  *   die Zahlen sofort; Arbeit im Hintergrund (Webhooks, Zusammenfassung) zählt immer frisch.
  * - Der Schlüssel bestimmt, wer einen Eintrag teilt: für die Zahlen der Ablage ein Fingerabdruck der Rechte
  *   (dienst.ts, `zaehler`) – nie ein Wert über Mappen, die jemand nicht lesen darf.
+ *
+ * Seit #918 („Nachhinken ja, falsch nie“):
+ *
+ * - **Mappenstand** (Sequenz `haushaltsstand_mappen`, Migration 086): ein zweiter, feinerer Stand neben dem
+ *   Haushaltsstand. Er zählt bei denselben Methoden, nur nicht bei denen in `NUR_FAVORITEN` (Stern). Die teuren Zahlen
+ *   je Mappentyp und Ansicht, die Zahl der Treffer einer Liste und die Termine ohne „nur Favoriten“ hängen an ihm; was
+ *   Favoriten zählt oder nach ihnen filtert, bleibt am Haushaltsstand. Ein Stern rechnet so nur noch die Zahlen der
+ *   Person neu, nicht die aller anderen.
+ * - **Eigene Änderung im selben Prozess:** Ein Eintrag gilt nur, solange auch dieser Prozess seitdem nichts geändert
+ *   hat (`lokal`) – sonst sähe man die eigene Änderung erst, wenn die Datenbank kurz danach hochgezählt hat.
+ * - **Schalter** `DMS_ZWISCHENSPEICHER=aus` (`zwischenspeicherAus`): kein Eintrag gilt, alles wird bei jeder Anfrage
+ *   frisch gerechnet – zur Fehlersuche („liegt es am Zwischenspeicher?“).
  */
 
 /** Zeitabhängige Ansichten: höchstens 5 Minuten. */
@@ -42,6 +54,8 @@ export const HOECHSTENS_MS = 30 * 60_000;
 export const MINDESTENS_MS = 3_000;
 /** Kurzzustand der eigenen Änderungen (#745): Art und Gültigkeit (länger als die Mindestgültigkeit). */
 const EIGENE = 'eigene-aenderung';
+/** Dasselbe für den Mappenstand (#918). */
+export const EIGENE_MAPPEN = 'eigene-aenderung-mappen';
 const EIGENE_MS = 10 * MINDESTENS_MS;
 /** Höchstens so viele Einträge (je Benutzer und Rechte einer); danach fliegt der älteste. */
 const MAX_EINTRAEGE = 500;
@@ -85,13 +99,44 @@ export const OHNE_FOLGEN = new Set<string>([
   'zaehlerstand', 'setzeZaehlerstand',
   // Zahlen in einem Lauf und der Haushaltsstand selbst (#742).
   'zaehleBestand', 'zaehlePersoenlich', 'haushaltsstand', 'erhoeheHaushaltsstand',
+  // Mappenstand und Vorfilter der Termine (#918).
+  'mappenstand', 'erhoeheMappenstand', 'fristKandidaten',
   // Ausgangskorb des Ereigniskatalogs (#670) und „Frist erreicht“ schon gemeldet: nur Buchführung des Verteilers.
   // Der Verteiler fragt alle 2 Sekunden nach (`holeKatalogEreignisse`) – zählte das, wären Zahlen und Termine
   // nie länger als 2 Sekunden gültig (Lasttest: Speicher und Ereignisschleife, seit #725 die Termine eines ganzen
   // Jahres für die Startseite rechnen).
   'legeKatalogEreignisAn', 'holeKatalogEreignisse', 'katalogEreignisseVerteilt', 'katalogEreignisFehlgeschlagen',
   'raeumeKatalogEreignisseAuf', 'katalogEreignisStand', 'merkeFristMeldung',
+  // #918: nur lesend bzw. ohne Folgen für Zahlen, Listen und Termine (Löschprotokoll, Erkennung, Vektoren, Sprachen
+  // der Seiten, Hinweis „Post teilen?“, Fragen an die Ablage, Verzeichnis der Auskünfte).
+  'papierkorbInhalt', 'papierkorbDokumentInhalt', 'loeschprotokoll', 'loeschprotokollSchreibe', 'loeschprotokollAufraeumen',
+  'erkennungLies', 'erkennungSchreibe', 'erkennungenMitAbsender', 'vektorSetze', 'vektorLoesche', 'vektorenLoeschePaket',
+  'vektorenLaden', 'vektorVon', 'vektorStand', 'ohneVektor', 'mitVolltext', 'seitensprachen', 'teilenHinweisAus',
+  'fragenFundstellen', 'historieArt',
 ]);
+
+/**
+ * Methoden, die nur Favoriten ändern (#918): Sie zählen für den Haushaltsstand (Zahl der Favoriten, Ansichten mit „ist
+ * mein Favorit“, Termine „nur Favoriten“), nicht für den Mappenstand.
+ */
+export const NUR_FAVORITEN: ReadonlySet<string> = new Set(['setzeFavorit']);
+
+/** Bezieht sich etwas (Bedingungen, Lesefilter, Anfrage) auf Favoriten? Dann gilt der Haushaltsstand (#918). */
+export const mitFavoriten = (x: unknown): boolean => /"(art":"favorit|favoriten)"/.test(JSON.stringify(x ?? null));
+
+const AUS_WERTE = ['aus', '0', 'nein', 'false', 'off'];
+let aus: boolean | null = null;
+
+/**
+ * Schalter `DMS_ZWISCHENSPEICHER` (#918), nur als Umgebungsvariable: `aus` (auch 0, nein, false, off) schaltet die
+ * Zwischenspeicher der Zahlen, Trefferzahlen und Termine ab. Beim Start gelesen; Tests stellen ihn hiermit um.
+ */
+export function richteZwischenspeicherEin(env: Record<string, string | undefined> = process.env): boolean {
+  aus = AUS_WERTE.includes((env.DMS_ZWISCHENSPEICHER ?? '').trim().toLowerCase());
+  return !aus;
+}
+/** Sind die Zwischenspeicher abgeschaltet (`DMS_ZWISCHENSPEICHER=aus`)? */
+export const zwischenspeicherAus = (): boolean => aus ?? !richteZwischenspeicherEin();
 
 /**
  * Die Termine (#528, #725) hängen zusätzlich an den freien Erinnerungen und an den Datumsfeldern: Diese Methoden
@@ -104,8 +149,18 @@ export interface Standquelle { lies(): Promise<number>; erhoehe(): Promise<numbe
 
 /** Stand des Haushalts: zählt nach jeder Änderung hoch, die Zahlen der Ansichten ändern kann. */
 export class Haushaltsstand {
-  /** `auch`: Methoden aus `OHNE_FOLGEN`, die für diesen Stand trotzdem zählen. */
-  constructor(private readonly auch: ReadonlySet<string> = new Set(), private quelle?: Standquelle) {}
+  /**
+   * `auch`: Methoden aus `OHNE_FOLGEN`, die für diesen Stand trotzdem zählen. `o.ohne` (#918): weitere, die für
+   * diesen Stand nicht zählen; `o.art`: Art im Kurzzustand für die eigenen Änderungen (je Stand eine).
+   */
+  constructor(private readonly auch: ReadonlySet<string> = new Set(), private quelle?: Standquelle, o: { ohne?: ReadonlySet<string>; art?: string } = {}) {
+    this.ohne = o.ohne ?? new Set();
+    this.art = o.art ?? EIGENE;
+  }
+  private readonly ohne: ReadonlySet<string>;
+  private readonly art: string;
+  /** Zählt diese Methode des Repos für diesen Stand? */
+  zaehlt(methode: string): boolean { return !(OHNE_FOLGEN.has(methode) && !this.auch.has(methode)) && !this.ohne.has(methode); }
   private n = 0;
   private hoerer: Array<() => void> = [];
   /** Letzte eigene Änderung je Person (Zahl der Änderungen in diesem Prozess danach). */
@@ -131,7 +186,7 @@ export class Haushaltsstand {
   /** Hat diese Person nach Stand `stand` selbst etwas geändert – in irgendeinem Prozess (#745)? */
   async eigeneNach(benutzerId: string | undefined, stand: number): Promise<boolean> {
     if (!benutzerId || !this.geteilt) return false;
-    const e = await this.geteilt.lies(EIGENE, benutzerId).catch(() => null);
+    const e = await this.geteilt.lies(this.art, benutzerId).catch(() => null);
     return !!e && Number(e.wert) > stand;
   }
 
@@ -162,7 +217,7 @@ export class Haushaltsstand {
         // Fehlt das Hochzählen, merken andere Prozesse die Änderung spätestens nach HOECHSTENS_MS.
         q.erhoehe().then(async (n) => {
           const z = this.geteilt;
-          if (z) for (const w of wer) await z.setze(EIGENE, w, n, Date.now() + EIGENE_MS);
+          if (z) for (const w of wer) await z.setze(this.art, w, n, Date.now() + EIGENE_MS);
         }).catch((e) => log.warn('Haushaltsstand nicht hochgezählt', { fehler: (e as Error).message }));
       }));
     }
@@ -176,18 +231,22 @@ export class Haushaltsstand {
    * Umhüllt ein Repo: Ist eine ändernde Methode fertig (auch mit Fehler – sie kann halb gewirkt
    * haben), zählt der Stand hoch. Erst danach, damit eine gleichzeitige Zählung den neuen Stand
    * nicht mit alten Zahlen speichert. `transaktion` zählt als Ganzes (das Repo darin ist nicht umhüllt).
+   * `weitere` (#918): Stände, die in derselben Hülle mitzählen, jeder nach seinen eigenen Methoden.
    */
-  umhuelle<T extends object>(repo: T): T {
-    const self = this;
+  umhuelle<T extends object>(repo: T, ...weitere: Haushaltsstand[]): T {
+    const alle = [this, ...weitere];
     return new Proxy(repo, {
       get(ziel, prop, empfaenger) {
         const wert = Reflect.get(ziel, prop, empfaenger);
-        if (typeof wert !== 'function' || typeof prop !== 'string' || (OHNE_FOLGEN.has(prop) && !self.auch.has(prop))) return wert;
+        if (typeof wert !== 'function' || typeof prop !== 'string') return wert;
+        const zaehlen = alle.filter((s) => s.zaehlt(prop));
+        if (!zaehlen.length) return wert;
+        const fertig = () => { for (const s of zaehlen) void s.erhoehe(); };
         return function (this: unknown, ...args: unknown[]) {
           let ergebnis: unknown;
-          try { ergebnis = wert.apply(ziel, args); } catch (e) { void self.erhoehe(); throw e; }
-          if (!(ergebnis instanceof Promise)) { void self.erhoehe(); return ergebnis; }
-          return ergebnis.then((r) => { void self.erhoehe(); return r; }, (e) => { void self.erhoehe(); throw e; });
+          try { ergebnis = wert.apply(ziel, args); } catch (e) { fertig(); throw e; }
+          if (!(ergebnis instanceof Promise)) { fertig(); return ergebnis; }
+          return ergebnis.then((r) => { fertig(); return r; }, (e) => { fertig(); throw e; });
         };
       },
     });
@@ -226,16 +285,19 @@ export class Zaehlerspeicher<T> {
    * Schlüssel warten auf dieselbe Zählung. Der Stand gilt ab Beginn der Zählung.
    */
   async hole(schluessel: string, zaehle: () => Promise<{ wert: T; zeitabhaengig: boolean }>, g: Gueltigkeit = {}): Promise<{ wert: T; art: Treffer }> {
+    // Abgeschaltet (#918): immer frisch, nichts merken.
+    if (zwischenspeicherAus()) { this.eintraege.clear(); return { wert: (await zaehle()).wert, art: 'neu' }; }
     const stand = await this.stand.aktuell();
     const t = this.jetzt();
     const heute = heuteIn(new Date(t));
     const da = this.eintraege.get(schluessel);
     if (da && da.heute === heute && t < da.bis) {
-      if (da.stand === stand) return { wert: await da.wert, art: 'treffer' };
+      // Gleicher Stand – und in diesem Prozess seitdem nichts geändert (#918; die Datenbank zählt erst kurz danach).
+      if (da.stand === stand && da.lokal === this.stand.stand) return { wert: await da.wert, art: 'treffer' };
       // Mindestgültigkeit (#742): Änderungen anderer erst nach kurzer Zeit; eigene sofort.
       const kurz = (g.mindestensMs ?? 0) > 0 && t - da.seit < g.mindestensMs! && this.stand.eigeneAenderung(g.wer) <= da.lokal;
       // Eigene Änderung in einem anderen Prozess (#745)? Nur in diesem seltenen Fall eine kleine Abfrage mehr.
-      if (kurz && da.stand < stand && !(await this.stand.eigeneNach(g.wer, da.stand))) return { wert: await da.wert, art: 'treffer' };
+      if (kurz && (da.stand === stand || (da.stand < stand && !(await this.stand.eigeneNach(g.wer, da.stand))))) return { wert: await da.wert, art: 'treffer' };
     }
     const e: Eintrag<T> = { stand, lokal: this.stand.stand, heute, seit: t, bis: t + HOECHSTENS_MS, wert: Promise.resolve(null as T) };
     e.wert = zaehle().then((z) => { if (z.zeitabhaengig) e.bis = Math.min(e.bis, t + ZEITABHAENGIG_MS); return z.wert; });

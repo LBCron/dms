@@ -83,6 +83,7 @@
   "grenzen.aus": "0 – switched off, from the environment",
   "grenzen.bereich": "{variable}, allowed {min} to {max}",
   "engpass.titel": "Bottleneck – this setting may help:",
+  "zwischenspeicher.aus": "Caches switched off (DMS_ZWISCHENSPEICHER=aus): counts, numbers of results and dates are calculated afresh on every request. This is meant for troubleshooting and makes Ablago slower – remove the variable again afterwards.",
   "engpass.schleife": "The server often had to wait a long time before it could process a request. If it computes PDF work and exports itself, {variable} helps (now {wert}): the workers take the heavy work off it. If the CPU is fully busy anyway, only more computing time for the container helps.",
   "engpass.verbindungen": "Queries typically wait longer than {ms} for a free database connection. {variable} gives more connections (now {wert}) – only useful if CPU and database aren’t busy.",
   "engpass.arbeiter": "The workers’ queue was full in the last {minuten} minutes; PDF jobs or exports were rejected. {variable} gives more workers (now {wert}) – only useful with free cores.",

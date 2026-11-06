@@ -105,7 +105,14 @@ export interface SeitenAnfrage {
    * gibt diese Zahl zurück (mindestens so viele, wie bis hier geliefert sind). Fehlt sie, wird gezählt.
    */
   gesamt?: number;
+  /**
+   * Zahl der Treffer ist schon bekannt (#918, Zwischenspeicher bei gleichem Mappenstand): Das Repo zählt nicht, auch
+   * nicht beim ersten Blatt oder mit Suche, und gibt diese Zahl zurück.
+   */
+  zahl?: number;
 }
+/** Mappe als Kandidat für Termine (#918): nur, was die Termine brauchen. */
+export interface FristKandidat { id: string; typId: string; titel?: string | null; werte: Werte }
 /** Gruppe gleichbedeutender Wörter (#356); quelle „werkbank“ oder die Id eines Pakets. */
 export interface Synonymgruppe { id: string; woerter: string[]; quelle: string }
 export interface NeueMappe {
@@ -205,6 +212,13 @@ export interface Repo {
    * (je einschließlich, JJJJ-MM-TT). Für „Anstehend“ (#477), statt alle Mappen des Typs zu laden.
    */
   mappenMitDatum(typId: string, felder: string[], von: string, bis: string): Promise<Mappe[]>;
+  /**
+   * Termine (#918): Mappen des Typs, die im Zeitraum ab … bis (je einschließlich) einen Termin haben **können** – ein
+   * Datum im Zeitraum in einem der Felder oder, bei wiederkehrenden Feldern (`monate`), einen Folgetermin (Datum +
+   * k · monate Monate, k ≥ 1). Vorfilter: Es dürfen mehr kommen, nie weniger; entschieden wird beim Rechnen. Nur Id,
+   * Typ, Titel und die Werte dieser Felder (Datumswerte JJJJ-MM-TT).
+   */
+  fristKandidaten(typId: string, felder: Array<{ key: string; monate: number | null }>, ab: string, bis: string): Promise<FristKandidat[]>;
   /** Nur Id, Typ und Titel aller Mappen (Demo-Daten, #248: auch bei 200.000 Mappen schlank). */
   mappenKurz(): Promise<Array<{ id: string; typId: string; titel: string }>>;
   /** Vorhandene Werte eines Feldes (für eindeutige Felder beim Erzeugen von Demo-Daten). */
@@ -364,6 +378,10 @@ export interface Repo {
   haushaltsstand?(): Promise<number>;
   /** Haushaltsstand `zahlen` hochzählen; liefert den neuen Stand. */
   erhoeheHaushaltsstand?(): Promise<number>;
+  /** Mappenstand (#918, Migration 086): wie `haushaltsstand`, zählt aber nicht bei Favoriten. */
+  mappenstand?(): Promise<number>;
+  /** Mappenstand hochzählen; liefert den neuen Stand. */
+  erhoeheMappenstand?(): Promise<number>;
   /** Berechtigungen (#124): welche dieser Mappen der Filter durchlässt. */
   lesbare(ids: string[], lesen: Lesefilter | null): Promise<Set<string>>;
   /** Exportrecht (#294): welche dieser Mappen zu mindestens einer der Klauseln passen. */

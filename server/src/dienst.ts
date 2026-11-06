@@ -10,7 +10,7 @@ import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
 import { beiVerklemmungWiederholen, istVerklemmung } from './db';
-import { fingerabdruck, Haushaltsstand, MINDESTENS_MS, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher, type Gueltigkeit } from './zaehlerspeicher';
+import { EIGENE_MAPPEN, fingerabdruck, Haushaltsstand, MINDESTENS_MS, mitFavoriten, NUR_FAVORITEN, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher, type Gueltigkeit } from './zaehlerspeicher';
 import { jeAnfrage } from './lesespeicher';
 import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { rechteMessen } from './messung';
@@ -23,7 +23,7 @@ import { alsText, erwaehnungen } from '../../shared/src/markdown';
 import { liesAnsicht, liesEigene, OHNE_EINSTELLUNG } from '../../shared/src/werkbankansicht';
 import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
-import { istUuid, KonfigurationVeraltet, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
+import { istUuid, KonfigurationVeraltet, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type FristKandidat, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
 import { ausgangAus, bereinigeBeschriftungen, ergaenzeBeschriftungen, optionsGruppen, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
 import { inSprache } from '../../shared/src/sprache';
@@ -205,6 +205,8 @@ function quelleAus(benutzerId: string, aufgaben: Aufgabe[]): Mappenquelle {
 }
 /** So lange wartet die Suche höchstens auf den Vektor des Suchbegriffs (#442); danach ohne Ähnlichkeit. */
 export const SUCHE_VEKTOR_MS = 1500;
+/** Startseite (#918): der nächste Termin erst in so vielen Tagen gesucht, nur ohne Treffer im ganzen Jahr. */
+export const NAECHSTER_TERMIN_ERST_TAGE = 31;
 const liesModellOder422 = (x: unknown) => { try { return liesModell(x); } catch (e) { throw new Fachfehler(422, (e as Error).message); } };
 /** Obergrenze für geschriebenen Volltext (Zeichen). */
 export const VOLLTEXT_MAX = VOLLTEXT_ZEICHEN_MAX;
@@ -678,6 +680,12 @@ export class Dienst {
    * für die Termine #528) – früher ein eigener Stand; eine Zahl in der Datenbank genügt, Erinnerungen ändern sich selten.
    */
   readonly stand = new Haushaltsstand(ZAEHLT_FUER_TERMINE);
+  /**
+   * Mappenstand (#918, Sequenz `haushaltsstand_mappen`): wie `stand`, zählt aber nicht bei Favoriten (`NUR_FAVORITEN`).
+   * Daran hängen die Zahlen je Typ und Ansicht (ohne Favoriten), die Zahl der Treffer und die Termine ohne „nur
+   * Favoriten“ – ein Stern rechnet sie nicht für alle neu.
+   */
+  readonly mappenstand = new Haushaltsstand(ZAEHLT_FUER_TERMINE, undefined, { ohne: NUR_FAVORITEN, art: EIGENE_MAPPEN });
   /** Termine (#528, #725): derselbe Stand (#742). */
   get fristenstand() { return this.stand; }
   /**
@@ -685,11 +693,21 @@ export class Dienst {
    * Fingerabdruck genau der Eingaben der Zählung (Lesefilter, Klauseln der sichtbaren Ansichten, Verwaltungsmodus) –
    * wer dieselben Eingaben hat, bekommt dieselbe Zahl; anders geht es nicht.
    */
-  private readonly bestand = new Zaehlerspeicher<Awaited<ReturnType<Repo['zaehleBestand']>>>(this.stand);
+  private readonly bestand = new Zaehlerspeicher<Awaited<ReturnType<Repo['zaehleBestand']>>>(this.mappenstand);
+  /** Dasselbe, wenn der Lesefilter Favoriten meint (#918): dann am Haushaltsstand. */
+  private readonly bestandFav = new Zaehlerspeicher<Awaited<ReturnType<Repo['zaehleBestand']>>>(this.stand);
   /** Zahlen der Person (#742): Eingang, Favoriten, Papierkorb – je Person und Lesefilter. */
   private readonly persoenlich = new Zaehlerspeicher<Awaited<ReturnType<Repo['zaehlePersoenlich']>>>(this.stand);
   /** Termine (#528, #725): Zwischenspeicher je Benutzer, Rechte und Zeitraum. */
-  private readonly termineSpeicher = new Zaehlerspeicher<Termin[]>(this.stand);
+  private readonly termineSpeicher = new Zaehlerspeicher<Termin[]>(this.mappenstand);
+  /** Termine „nur Favoriten“ (bzw. ein Lesefilter mit Favoriten): am Haushaltsstand (#918). */
+  private readonly termineFavSpeicher = new Zaehlerspeicher<Termin[]>(this.stand);
+  /**
+   * Zahl der Treffer einer Liste (#918): je Anfrage ohne Blatt und Reihenfolge (Ansicht bzw. Bedingungen, Lesefilter,
+   * Suche) – genau, ohne Mindestgültigkeit: gilt nur bei gleichem Mappenstand (mit Favoriten: Haushaltsstand).
+   */
+  private readonly trefferSpeicher = new Zaehlerspeicher<number>(this.mappenstand);
+  private readonly trefferFavSpeicher = new Zaehlerspeicher<number>(this.stand);
   /** Zähler-Endpunkt (#625): „neue Post für mich bzw. ohne Für“ je Benutzer und Rechte, wie die Zahlen der Ansichten. */
   private readonly neuePostSpeicher = new Zaehlerspeicher<number>(this.stand);
   /** Mindestgültigkeit der Zahlen bei Anfragen nach Änderungen anderer (#742); Tests stellen sie auf 0. */
@@ -705,7 +723,10 @@ export class Dienst {
     if (typeof grundRepo.haushaltsstand === 'function' && typeof grundRepo.erhoeheHaushaltsstand === 'function') {
       this.stand.verbinde({ lies: () => grundRepo.haushaltsstand!(), erhoehe: () => grundRepo.erhoeheHaushaltsstand!() });
     }
-    this.grundRepo = this.stand.umhuelle(grundRepo);
+    if (typeof grundRepo.mappenstand === 'function' && typeof grundRepo.erhoeheMappenstand === 'function') {
+      this.mappenstand.verbinde({ lies: () => grundRepo.mappenstand!(), erhoehe: () => grundRepo.erhoeheMappenstand!() });
+    }
+    this.grundRepo = this.stand.umhuelle(grundRepo, this.mappenstand);
     this.kurzzustand = opt.zustand ?? speicherKurzzustand();
     this.tresor = opt.tresor;
     this.einstellungen = opt.einstellungen;
@@ -2435,17 +2456,27 @@ export class Dienst {
     const ohne = await this.siehtOhneEmpfaenger(z.ich);
     const schluessel = `${z.ich.id}|${z.ich.rolle}|${ohne ? 'o' : ''}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${nurFavoriten ? 'f' : 'a'}`;
     const beginn = performance.now();
-    const r = await this.termineSpeicher.hole(schluessel, async () => ({ wert: await this.sammleTermine(z, heute, von, bis, nurFavoriten), zeitabhaengig: true }), this.gueltigkeit());
+    // #918: ohne Favoriten am Mappenstand – ein Stern rechnet die Termine nicht neu.
+    const speicher = nurFavoriten || mitFavoriten(z.lesen) ? this.termineFavSpeicher : this.termineSpeicher;
+    const r = await speicher.hole(schluessel, async () => ({ wert: await this.sammleTermine(z, heute, von, bis, nurFavoriten), zeitabhaengig: true }), this.gueltigkeit());
     const k = kontext.getStore();
     if (k) k.zwischenspeicher = { art: r.art, ms: performance.now() - beginn };
     return { heute, von, bis, eintraege: r.wert, feiertage: feiertageZwischen(von, bis, land) };
   }
 
-  /** Startseite (#725): der nächste Termin ab heute (innerhalb eines Jahres) und die Zahl des Überfälligen. */
+  /**
+   * Startseite (#725): der nächste Termin ab heute (innerhalb eines Jahres) und die Zahl des Überfälligen.
+   *
+   * #918: erst die nächsten 31 Tage, nur ohne Termin darin das ganze Jahr. Das Ergebnis ist dasselbe: Jeder Termin der
+   * 31 Tage ist auch einer des Jahres, alles danach ist später; Überfälliges kommt in jedem Zeitraum ganz mit, und bei
+   * gleichem Datum ordnet `sammleTermine` eindeutig. Ein Jahr umfasst bei jährlichen Fristen jede Mappe, 31 Tage nur
+   * die mit einem Termin in diesen Monaten.
+   */
   async naechsterTermin(z: Zugriff): Promise<{ termin: Termin | null; ueberfaellig: number }> {
     const heute = heuteIn();
-    const t = await this.termine(z, { von: heute, bis: verschiebe(heute, 365) });
-    return { termin: t.eintraege.find((x) => x.datum >= heute) ?? null, ueberfaellig: t.eintraege.filter((x) => x.faellig && x.datum < heute).length };
+    const aus = (t: TermineAntwort) => ({ termin: t.eintraege.find((x) => x.datum >= heute) ?? null, ueberfaellig: t.eintraege.filter((x) => x.faellig && x.datum < heute).length });
+    const nah = aus(await this.termine(z, { von: heute, bis: verschiebe(heute, NAECHSTER_TERMIN_ERST_TAGE) }));
+    return nah.termin ? nah : aus(await this.termine(z, { von: heute, bis: verschiebe(heute, 365) }));
   }
 
   private async sammleTermine(z: Zugriff, heute: string, von: string, bis: string, nurFavoriten: boolean): Promise<Termin[]> {
@@ -2466,18 +2497,16 @@ export class Dienst {
     for (const typ of [...z.typen.values()].filter((x) => fristFelder(x).length)) {
       const felder = fristFelder(typ);
       const wiederkehrend = felder.filter((f) => f.frist!.wiederholung);
-      const termine = (m: Mappe, f: Feld): Array<{ datum: string; folge: boolean }> => {
+      const termine = (m: FristKandidat, f: Feld): Array<{ datum: string; folge: boolean }> => {
         const w = m.werte[f.key];
         if (!istDatum(w)) return [];
         const x = w >= ab && w <= bis ? [{ datum: w, folge: false }] : [];
         return wiederkehrend.includes(f) ? [...x, ...folgetermine(w, f.frist!.wiederholung!, ab, bis).map((d) => ({ datum: d, folge: true }))] : x;
       };
-      // Nur Mappen mit einem Datum im Zeitraum aus der Datenbank holen (#477), nicht alle des Typs; bei
-      // wiederkehrenden Fristen jedes Datum bis zum Ende des Zeitraums.
-      const kandidaten = new Map<string, Mappe>();
-      for (const m of await this.repo.mappenMitDatum(typ.id, felder.map((f) => f.key), ab, bis)) kandidaten.set(m.id, m);
-      if (wiederkehrend.length) for (const m of await this.repo.mappenMitDatum(typ.id, wiederkehrend.map((f) => f.key), '0001-01-01', bis)) kandidaten.set(m.id, m);
-      let passend = [...kandidaten.values()].filter((m) => felder.some((f) => termine(m, f).length));
+      // Nur Mappen, die im Zeitraum einen Termin haben können (#477, #918: Vorfilter fristtermine, auch für
+      // wiederkehrende Fristen), und von ihnen nur Titel und Datumswerte. Entschieden wird hier, mit `termine`.
+      const kandidaten = await this.repo.fristKandidaten(typ.id, felder.map((f) => ({ key: f.key, monate: f.frist!.wiederholung ?? null })), ab, bis);
+      let passend = kandidaten.filter((m) => felder.some((f) => termine(m, f).length));
       if (nurFavoriten && passend.length) { const fav = await this.repo.favoritenVon(ich, passend.map((m) => m.id)); passend = passend.filter((m) => fav.has(m.id)); }
       if (!passend.length) continue;
       const ok = await this.lesbare(z, passend.map((m) => m.id));
@@ -2501,7 +2530,12 @@ export class Dienst {
     }
     let liste = erg;
     if (nurFavoriten) { const fav = await this.repo.favoritenVon(ich, [...new Set(erg.map((x) => x.mappeId))]); liste = erg.filter((x) => fav.has(x.mappeId)); }
-    liste.sort((a, b) => a.datum.localeCompare(b.datum) || a.mappeTitel.localeCompare(b.mappeTitel, 'de'));
+    // Eindeutige Reihenfolge (#918): bei gleichem Datum und Titel fällige Aufgaben, Fristen, Erinnerungen, dann nach
+    // Mappe, Feld und Erinnerung – unabhängig davon, in welcher Reihenfolge die Datenbank liefert.
+    const rang = (x: Termin) => (x.faellig ? 0 : x.art === 'frist' ? 1 : 2);
+    const vgl = (a?: string | null, b?: string | null) => ((a ?? '') < (b ?? '') ? -1 : (a ?? '') > (b ?? '') ? 1 : 0);
+    liste.sort((a, b) => a.datum.localeCompare(b.datum) || a.mappeTitel.localeCompare(b.mappeTitel, 'de') || rang(a) - rang(b)
+      || vgl(a.mappeId, b.mappeId) || vgl(a.feldKey, b.feldKey) || vgl(a.erinnerungId, b.erinnerungId) || vgl(a.text, b.text) || vgl(a.ab, b.ab));
     return liste;
   }
 
@@ -3408,7 +3442,7 @@ export class Dienst {
     // Beim Blättern ohne Suche (#740): die Zahl vom ersten Blatt statt noch einmal zu zählen.
     const bekannt = Number(q.gesamt);
     const gesamt = von > 0 && !suche && !textfilter && Number.isInteger(bekannt) && bekannt >= 0 ? bekannt : undefined;
-    let r = await this.repo.seite({ ...anfrage, varianten, ...(gesamt !== undefined ? { gesamt } : {}) });
+    let r = gesamt !== undefined ? await this.repo.seite({ ...anfrage, varianten, gesamt }) : await this.seiteMitZahl(anfrage, varianten);
     // Ohne genauen Treffer (#356): mit ähnlichen Wörtern aus dem Wörterverzeichnis noch einmal – genaue Treffer gehen so
     // immer vor; „Meintest du …?“ schlägt die Suche mit dem besten ähnlichen Wort vor.
     let unscharf: { statt: string; vorschlag: string | null; begriffe: Record<string, string[]> } | null = null;
@@ -3466,6 +3500,26 @@ export class Dienst {
   }
 
   /**
+   * Eine Seite mit der Zahl der Treffer aus dem Zwischenspeicher (#918): Die Zahl gilt je Anfrage ohne Blatt und
+   * Reihenfolge – Ansicht bzw. Bedingungen, Lesefilter, Suche samt Varianten, Eingang oder Favoriten der Person – und nur
+   * bei gleichem Mappenstand (mit Favoriten: Haushaltsstand), ohne Mindestgültigkeit: Sie bleibt genau. Einmal gezählt,
+   * holt jede weitere Anfrage nur die Seite. Nicht zwischengespeichert wird die Suche in Dokumenten und Notizen: Deren
+   * Texte (Texterkennung, Notizen) ändern keinen Stand.
+   */
+  private async seiteMitZahl(anfrage: SeitenAnfrage, varianten: Varianten) {
+    const inhalte = (!!anfrage.suche && (!!anfrage.volltext || !!anfrage.notizen)) || !!anfrage.textfilter?.text.trim();
+    if (inhalte) return this.repo.seite({ ...anfrage, varianten });
+    const { von: _von, anzahl: _anzahl, sortierung: _sortierung, gesamt: _gesamt, zahl: _zahl, ...was } = anfrage;
+    const speicher = mitFavoriten(was) ? this.trefferFavSpeicher : this.trefferSpeicher;
+    let r: Awaited<ReturnType<Repo['seite']>> | undefined;
+    const z = await speicher.hole(fingerabdruck({ v: 1, ...was, varianten }), async () => {
+      r = await this.repo.seite({ ...anfrage, varianten });
+      return { wert: r.gesamt, zeitabhaengig: zeitabhaengig(anfrage.klauseln) };
+    });
+    return r ?? this.repo.seite({ ...anfrage, varianten, zahl: z.wert });
+  }
+
+  /**
    * Anzahl Mappen je Typ (davon unpassend, Demo), je Sicht und im Eingang des Benutzers.
    * Zwischengespeichert je Benutzer und Rechte (#512), solange sich am Haushalt nichts ändert
    * (`Haushaltsstand`); zeitabhängige Ansichten laufen nach Minuten bzw. um Mitternacht ab. Ob der
@@ -3496,8 +3550,11 @@ export class Dienst {
     const ichSchluessel = `${ich.id}|${ohneEmpfaenger ? 'o' : ''}|${fingerabdruck({ v: 2, admin, lesen, sichten: persoenlich.map((x) => [x.id, x.k]) })}`;
     const beginn = performance.now();
     const g = this.gueltigkeit();
+    // #918: Der Mappenstand genügt, solange der Lesefilter keine Favoriten meint (die Ansichten mit „ist mein Favorit“
+    // zählen bei den Zahlen der Person).
+    const bestand = mitFavoriten(lesen) ? this.bestandFav : this.bestand;
     const [b, p] = await Promise.all([
-      this.bestand.hole(bestandSchluessel, async () => ({ wert: await this.repo.zaehleBestand(gemeinsam.map((x) => x.k), lesen), zeitabhaengig: zeitabh }), g),
+      bestand.hole(bestandSchluessel, async () => ({ wert: await this.repo.zaehleBestand(gemeinsam.map((x) => x.k), lesen), zeitabhaengig: zeitabh }), g),
       this.persoenlich.hole(ichSchluessel, async () => ({ wert: await this.repo.zaehlePersoenlich(ich.id, ohneEmpfaenger, lesen, persoenlich.map((x) => x.k)), zeitabhaengig: zeitabh }), g),
     ]);
     // Server-Timing `zs`: die teure Zählung über alle Mappen; die Zahlen der Person sind kleine Zählungen.

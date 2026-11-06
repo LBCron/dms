@@ -1208,6 +1208,8 @@ export type SystemlastAntwort = import('../../shared/src/systemlast').Systemlast
   grenzen?: import('../../shared/src/systemlast').Grenzwerte;
   /** Engpässe, je mit der Variable (#544). */
   engpaesse?: import('../../shared/src/systemlast').Engpass[];
+  /** Zwischenspeicher der Zahlen, Trefferzahlen und Termine (#918): „aus“ mit DMS_ZWISCHENSPEICHER=aus. */
+  zwischenspeicher?: 'an' | 'aus';
 };
 /** Datenbank-Erweiterung der Suche (#562): ok, fehlt oder in einem Schema, das eine Wiederherstellung löscht. */
 export interface ErweiterungStand { name: 'pg_trgm' | 'unaccent'; schema: string | null; zustand: 'ok' | 'fehlt' | 'gefaehrdet' }

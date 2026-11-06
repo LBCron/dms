@@ -6,14 +6,14 @@ import { alsSeitensprachen, teilenAb } from '../../shared/src/seitensprachen';
 import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type FallEnde, type FallOhneLeserecht, type DokumentVersion, type Herkunft, type Historienart, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type OcrStandArt, type Werte } from '../../shared/src/model';
 import type { Filter, Klausel, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ausdruck, Lesefilter } from '../../shared/src/rechte';
-import type { Erinnerung } from '../../shared/src/fristen';
+import { fristMonat, type Erinnerung } from '../../shared/src/fristen';
 import { umschluesseleTief } from './tresor';
 import { datumIn, ziehe, type Nummernkreis } from '../../shared/src/nummernkreis';
 import type { Quelle } from '../../shared/src/model';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { beiVerklemmungWiederholen } from './db';
 import { protokoll } from './protokoll';
-import { erhoeheZahlenstand, lesespeicherFuer, liesStand } from './lesespeicher';
+import { erhoeheMappenstand, erhoeheZahlenstand, lesespeicherFuer, liesStand } from './lesespeicher';
 import { feldweise, istUuid, KonfigurationVeraltet, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type SeitenAnfrage, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 import { zeitzone } from '../../shared/src/region';
@@ -716,6 +716,28 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
         ORDER BY erstellt`;
       return r.map(alsMappe);
     },
+    async fristKandidaten(typId, felder, ab, bis) {
+      if (!istUuid(typId) || !felder.length) return [];
+      // Vorfilter aus fristtermine (#918, Migration 086, per Trigger mit der Mappe gepflegt). Wiederkehrend: ein Monat im
+      // Zeitraum, der um ein Vielfaches des Rhythmus nach dem des Datums liegt (wie kannTerminHaben in shared/src/fristen.ts).
+      const alle = felder.map((f) => f.key);
+      const wk = felder.filter((f) => f.monate && f.monate >= 1);
+      const von = fristMonat(ab); const ende = fristMonat(bis);
+      const wiederkehrend = wk.length
+        ? sql`OR (f.datum <= ${bis} AND EXISTS (SELECT 1 FROM unnest(${wk.map((f) => f.key)}::text[], ${wk.map((f) => Math.trunc(f.monate!))}::int[]) AS w(k, n)
+            WHERE w.k = f.feld AND (f.monat IS NULL OR ${von === null || ende === null} OR (
+              greatest(${von}::int, f.monat + w.n) + (((f.monat - greatest(${von}::int, f.monat + w.n)) % w.n) + w.n) % w.n <= ${ende}::int))))`
+        : sql``;
+      const r = await sql`
+        SELECT m.id, m.typ_id, m.titel,
+          (SELECT coalesce(jsonb_object_agg(k.k, m.werte -> k.k), '{}'::jsonb) FROM unnest(${alle}::text[]) AS k(k) WHERE m.werte ? k.k) AS werte
+        FROM mappen m
+        WHERE m.haushalt_id = ${haushaltId} AND m.typ_id = ${typId} AND m.id IN (
+          SELECT f.mappe_id FROM fristtermine f
+          WHERE f.haushalt_id = ${haushaltId} AND f.typ_id = ${typId} AND f.feld = ANY(${alle}::text[])
+            AND ((f.datum BETWEEN ${ab} AND ${bis}) ${wiederkehrend}))`;
+      return r.map((z) => ({ id: z.id as string, typId: z.typ_id as string, titel: (z.titel as string | null) ?? null, werte: (z.werte ?? {}) as Werte }));
+    },
     async mappenKurz() {
       return (await sql`SELECT id, typ_id, coalesce(titel, '') AS titel FROM mappen WHERE haushalt_id = ${haushaltId}`)
         .map((r) => ({ id: r.id as string, typId: r.typ_id as string, titel: r.titel as string }));
@@ -1013,7 +1035,18 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
       const { wo, treffer, ausdruck, richtung, tf, enthaelt, schreibweisen, anfragen, v, teilSql } = await seitenTeile(o);
       let n: number | undefined;
       let r: postgres.Row[];
-      if (treffer) {
+      if (o.zahl !== undefined) {
+        // Zahl der Treffer schon bekannt (#918): nur die Seite, ohne Zählen.
+        n = o.zahl;
+        r = treffer
+          ? await sql`
+            SELECT * FROM (SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId}
+              AND id IN (SELECT id FROM (${treffer}) AS t(id)) ${wo} OFFSET 0) AS mappen
+            ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`
+          : await sql`
+            SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ${wo}
+            ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`;
+      } else if (treffer) {
         // Mit Suche (#740): erst die Treffer als eine Id-Menge (Mappe, Notizen, Dokumente – je über ihren Index),
         // dann Typ, Bedingungen und Lesefilter, Gesamtzahl und Seite in einer Abfrage. OFFSET 0 hält die Treffer
         // zusammen (sonst geht PostgreSQL bei einem seltenen Begriff einen Sortier-Index der Reihe nach durch).
@@ -1147,6 +1180,8 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     },
     async haushaltsstand() { return liesStand(sql, haushaltId, 'zahlen'); },
     async erhoeheHaushaltsstand() { return erhoeheZahlenstand(sql); },
+    async mappenstand() { return liesStand(sql, haushaltId, 'mappen'); },
+    async erhoeheMappenstand() { return erhoeheMappenstand(sql); },
     async zaehleKlauseln(liste, lesefilter) {
       if (!liste.length) return [];
       const spalten = liste.map((k, i) => sql`count(*) FILTER (WHERE ${klauselnSql(sql, k)})::int AS ${sql(`s${i}`)}`);

@@ -52,6 +52,7 @@ import { Paketlaeufer } from './laeufer/verwaltung';
 import { hatSchnittstelle } from '../../shared/src/pakete';
 import { adressfelder } from '../../shared/src/paketeinstellungen';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
+import { richteZwischenspeicherEin } from './zaehlerspeicher';
 import { richteHintergrundEin } from './hintergrund';
 import { maxAnfragenAus, Ueberlastschutz } from './ueberlast';
 import { Systemlast } from './systemlast';
@@ -273,6 +274,8 @@ messung.auslastung.start();
 const hintergrund = richteHintergrundEin(env);
 if (hintergrund.fehler && leiter) log.warn(hintergrund.fehler);
 if (leiter) log.info(hintergrund.wert ? tDe('meldungen.hintergrund.start', { wert: hintergrund.wert }) : tDe('meldungen.hintergrund.aus'));
+// Zwischenspeicher der Zahlen, Trefferzahlen und Termine (#918): DMS_ZWISCHENSPEICHER=aus nur zur Fehlersuche.
+if (!richteZwischenspeicherEin(env) && leiter) log.warn(tDe('meldungen.zwischenspeicher.aus'));
 // Arbeiter für PDF und große Exporte (#542): ein kleiner Pool von Fäden neben dem Hauptfaden.
 // Mehrere Prozesse (#745): Der Pool gilt je Prozess; die Vorgabe teilt sich auf die Prozesse auf.
 const arbeiter = richteArbeiterEin(env, { vorwaermen: true, prozesse: verbund.anzahl });

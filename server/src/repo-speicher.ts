@@ -1,7 +1,7 @@
 import { volltextHerkunft } from '../../shared/src/volltext';
 import { randomUUID } from 'node:crypto';
 import { lesbar, werte } from '../../shared/src/rechte';
-import type { Erinnerung } from '../../shared/src/fristen';
+import { kannTerminHaben, type Erinnerung } from '../../shared/src/fristen';
 import { umschluesseleTief } from './tresor';
 import { datumIn, ziehe, type Nummernkreis } from '../../shared/src/nummernkreis';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
@@ -195,6 +195,13 @@ export function speicherRepo(): Repo {
     async listeMappen(typId) { return [...mappen.values()].filter((m) => !typId || m.typId === typId).map(kopie); },
     async mappenMitDatum(typId, felder, von, bis) {
       return [...mappen.values()].filter((m) => m.typId === typId && felder.some((k) => { const w = m.werte[k]; return typeof w === 'string' && w >= von && w <= bis; })).map(kopie);
+    },
+    async fristKandidaten(typId, felder, ab, bis) {
+      // Wie PostgreSQL (#918): Vorfilter über die Datumswerte (JJJJ-MM-TT), nur die Werte dieser Felder.
+      return [...mappen.values()].filter((m) => m.typId === typId && felder.some((f) => {
+        const w = m.werte[f.key];
+        return typeof w === 'string' && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(w) && kannTerminHaben(w, f.monate, ab, bis);
+      })).map((m) => ({ id: m.id, typId: m.typId, titel: m.titel ?? null, werte: Object.fromEntries(felder.filter((f) => f.key in m.werte).map((f) => [f.key, kopie(m.werte[f.key])])) }));
     },
     async holeMappe(id) { const m = mappen.get(id); return m && kopie(m); },
     async legeMappeAn(id, typId, werte: Werte, vs, benutzerId, demo = false, systemKennung = null, nummern) {
@@ -393,7 +400,7 @@ export function speicherRepo(): Repo {
           || (tf.notizen && [...notizen.values()].some((n) => n.mappeId === m.id && enthaelt(n.text, tf.text, vv))))
         .sort((a, b) => vergleiche(a, b, o.sortierung) || (a.titel ?? '').toLowerCase().localeCompare((b.titel ?? '').toLowerCase()) || a.id.localeCompare(b.id));
       const seite = alle.slice(o.von, o.von + o.anzahl).map(kopie);
-      if (!fund) return { gesamt: alle.length, mappen: seite };
+      if (!fund) return { gesamt: o.zahl ?? alle.length, mappen: seite };
       const ausschnitte: Record<string, Ausschnitt> = {};
       const q2 = (o.suche && (o.volltext || o.notizen) ? q! : tf!.text).toLowerCase();
       if (fund.notizen) {
@@ -412,7 +419,7 @@ export function speicherRepo(): Repo {
         const i = Math.max(0, text.toLowerCase().indexOf(w));
         ausschnitte[m.id] = { dokument: d.name, text: `${text.slice(Math.max(0, i - 40), i)}${TREFFER_ANFANG}${text.slice(i, i + w.length)}${TREFFER_ENDE}${text.slice(i + w.length, i + w.length + 40)}` };
       }
-      return { gesamt: alle.length, mappen: seite, ausschnitte };
+      return { gesamt: o.zahl ?? alle.length, mappen: seite, ausschnitte };
     },
     async gibtTreffer(o) { return (await this.seite({ ...o, von: 0, anzahl: 1 })).gesamt > 0; },
     /* Unscharfe Suche (#356): Wörterverzeichnis aus dem Bestand, jedes Mal neu gezählt. */

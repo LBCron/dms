@@ -231,6 +231,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
         {s.warnung.length > 0 && (
           <div className="hinweis warn"><p>{s.warnung.map((w) => <strong key={w}>{t.frei(`systemzustand.warnung.${w}`)} </strong>)}{t('systemzustand.warnung.text')}</p></div>
         )}
+        {s.zwischenspeicher === 'aus' && <div className="hinweis warn" id="zwischenspeicher"><p>{t('systemzustand.zwischenspeicher.aus')}</p></div>}
         <Engpaesse s={s} />
         <div className="az-raster">
           <CpuKachel jetzt={s.jetzt.cpu} verlauf={s.verlauf}>

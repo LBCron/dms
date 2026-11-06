@@ -60,7 +60,7 @@ export interface Kontext {
    * Haushaltsstand aus der Datenbank (#741), mit der Sitzung in derselben Abfrage gelesen (lesespeicher.ts). Gilt nur
    * für dieselbe Verbindung und denselben Haushalt, kurz und bis zur nächsten Änderung in dieser Anfrage.
    */
-  staende?: { quelle: object; haushalt: string; werte: Partial<Record<'lesen' | 'zahlen', number>>; aenderungen: number; zeit: number };
+  staende?: { quelle: object; haushalt: string; werte: Partial<Record<'lesen' | 'zahlen' | 'mappen', number>>; aenderungen: number; zeit: number };
   /** Änderungen über das Repo oder die Einstellungen in dieser Anfrage (#741): macht Gemerktes der Anfrage ungültig. */
   aenderungen?: number;
   /** Einmal je Anfrage gebildet (#741): Zugriff, Rollen. Gilt bis zur nächsten Änderung in dieser Anfrage. */

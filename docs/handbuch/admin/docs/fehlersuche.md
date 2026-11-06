@@ -67,6 +67,17 @@ Wirkt eine Seite langsam, schalte unter **Mein Konto** den **Entwicklermodus** e
 
 Die Werte kommen vom Server im Header `Server-Timing` (`vor`, `app`, `db`, `rechte`, `json`, `gesamt`) und aus der Zeitmessung des Browsers. Bei den Zahlen der Ansichten (`/api/sichten`) steht dort zusätzlich `zs`: `treffer`, wenn sie aus dem Zwischenspeicher kamen, `neu`, wenn sie gezählt wurden – gezählt wird nach jeder Änderung im Haushalt, sonst spätestens nach 5 Minuten (Ansichten mit Datumsbezug) bzw. 30 Minuten und um Mitternacht.
 
+### Liegt es am Zwischenspeicher? { #zwischenspeicher }
+
+Damit Ablago auch bei vielen Mappen und vielen gleichzeitigen Änderungen flüssig bleibt, merkt es sich teure Ergebnisse: die Zahlen je Mappentyp und Ansicht, die Zahl der Treffer einer Liste und die Termine in *Zu erledigen* und auf der Startseite (#918). Der Grundsatz dabei: **Nachhinken ja, falsch nie.**
+
+- Was du selbst änderst, siehst du sofort – auch wenn Ablago mit [mehreren Prozessen](technik.md#mehrere-prozesse) läuft.
+- Ändert jemand anderes etwas, können die Zahlen der Ablage bei dir einige Sekunden später nachziehen. Die Zahl der Treffer einer Liste ist immer genau.
+- Ein Stern (Favorit), eine Notiz, die Historie und „gesehen“ rechnen die Zahlen je Mappentyp und Ansicht nicht neu.
+- Die Termine wiederkehrender Fristen rechnet Ablago bei jedem Abruf aus Datum und Rhythmus des Mappentyps; ein Vorfilter in der Datenbank sucht nur die Mappen heraus, die im Zeitraum einen Termin haben können. Es gibt keinen nächtlichen Lauf, von dem die Termine abhängen.
+
+Zeigt Ablago eine Zahl oder einen Termin, die dauerhaft nicht stimmen, setze im Container die Variable `DMS_ZWISCHENSPEICHER=aus` und starte neu. Dann rechnet Ablago alles bei jeder Anfrage frisch – langsamer, aber ohne Zwischenspeicher. **Werkbank → Wartung und Fehlersuche → Systemzustand** zeigt dann einen Hinweis, ebenso der Lasttest-Bericht. Stimmt es jetzt, lag es am Zwischenspeicher: Bitte als [Issue](https://github.com/motom001/dms/issues/new?template=fehler.md) melden, mit dem, was du getan hast und was zu sehen war. Danach die Variable wieder entfernen.
+
 ## Technik
 
 **Werkbank → Wartung und Fehlersuche → Systemzustand → Version und Updates** zeigt im Abschnitt **Installiert** (unter *Neuere Versionen*), was installiert ist: Version und Stand von Ablago, Laufzeit (Node.js, Betriebssystem), Datenbank, Bibliotheken und Oberfläche.

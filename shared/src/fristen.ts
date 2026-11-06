@@ -79,6 +79,33 @@ export function folgetermine(datum: string, monate: number, von: string, bis: st
   return erg;
 }
 
+/**
+ * Monat eines Datums als Zahl (Jahr · 12 + Monat − 1) für den Vorfilter der Termine (#918); null, wenn das Rechnen mit
+ * Monaten nicht sicher ist (Monat nicht 01–12, Tag nicht 01–31, Jahr vor 0100). Wie `dms_fristmonat` (Migration 086).
+ */
+export function fristMonat(d: string): number | null {
+  const j = d.slice(0, 4); const m = d.slice(5, 7); const t = d.slice(8, 10);
+  if (!(m >= '01' && m <= '12' && t >= '01' && t <= '31' && j >= '0100')) return null;
+  return Number(j) * 12 + Number(m) - 1;
+}
+
+/**
+ * Vorfilter der Termine (#918): Kann ein Feld mit diesem Datum im Zeitraum ab … bis einen Termin haben – das Datum selbst
+ * oder, wiederkehrend alle `monate` Monate, einen Folgetermin? Ein Folgetermin Datum + k · monate liegt immer im Monat
+ * (Monat des Datums + k · monate) – nur der Tag wird am Monatsende gekappt (`verschiebe`). Gesucht ist also ein Monat im
+ * Zeitraum, der um ein Vielfaches des Rhythmus nach dem des Datums liegt. Lieber ein Kandidat zu viel: Den Termin
+ * selbst rechnet danach `folgetermine`. Dieselbe Rechnung macht PostgreSQL (repo-pg.ts `fristKandidaten`).
+ */
+export function kannTerminHaben(datum: string, monate: number | null, ab: string, bis: string): boolean {
+  if (datum >= ab && datum <= bis) return true;
+  if (!monate || datum > bis) return false;
+  const mi = fristMonat(datum);
+  const von = fristMonat(ab); const ende = fristMonat(bis);
+  if (mi === null || von === null || ende === null) return true;
+  const s = Math.max(von, mi + monate);
+  return s + ((((mi - s) % monate) + monate) % monate) <= ende;
+}
+
 export const datumDe = (iso: string) => { const [j, m, t] = iso.slice(0, 10).split('-'); return `${t}.${m}.${j}`; };
 
 /** Text der Aufgabe, z. B. „Kündigung bis 30.09.2027“. */
