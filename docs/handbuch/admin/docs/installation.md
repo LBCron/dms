@@ -137,7 +137,7 @@ Unter der Verbindung zeigt die Seite, wie es der Datenbank im Betrieb geht: die 
 
 ### Lange Datenbankzugriffe
 
-Jeder Datenbankzugriff wird gestoppt. Was länger dauert als eine Schwelle, landet in der Liste und als Warnung im [Protokoll](fehlersuche.md#protokoll) (Modul *datenbank*). Direkt über der Liste stellst du ein:
+Jeder Datenbankzugriff wird gestoppt. Was länger dauert als eine Schwelle, landet in der Liste und als Warnung im [Protokoll](fehlersuche.md#protokoll) (Modul *datenbank*) – dort seit #920 je Minute und Art (Routenmuster bzw. Zugriff) in einer Zeile mit Anzahl, höchster und mittlerer Dauer; die Liste zeigt weiter jeden einzeln. Direkt über der Liste stellst du ein:
 
 - **Lang ab** – die Schwelle in Millisekunden (Standard 500),
 - **Aufbewahren** – wie viele Tage die Einträge bleiben (Standard 30).

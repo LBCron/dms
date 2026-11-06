@@ -331,9 +331,68 @@ describe('Sammlung im Lasttest (#909): ohne Spur der Mess-Sitzung, mit Dauer', (
     const weg = protokoll.beobachte((x) => { if (x.modul === 'datenbank') gesehen.push(rohAus(x, { lasttest: false })); });
     try {
       m.erfasseAnfrage({ pfad: `GET /api/mappen/${ID}`, muster: 'GET /api/mappen/:id' }, { vor: 1, app: 40, db: 20, dbAnzahl: 1, rechte: 2, json: 1, gesamt: 42 });
+      assert.equal(gesehen.length, 0, '#920: erst am Ende der Minute');
+      m.leeren();
     } finally { weg(); }
     assert.equal(gesehen[0]?.text, 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>');
     assert.deepEqual(gesehen[0]?.dauer, { max: 42, summe: 42, n: 1 });
+  });
+
+  it('#920: lange Anfragen und Datenbankzugriffe je Minute und Art zusammengefasst – Sammlung zählt weiter mit Dauer', async () => {
+    const m = new Messung(speicherMessSpeicher(), 60_000);
+    await m.setze({ schwelleMs: 10 });
+    const zeilen: Array<{ text: string; daten?: Record<string, unknown>; benutzer?: string }> = [];
+    const gesehen: Array<Rohmeldung | null> = [];
+    const weg = protokoll.beobachte((x) => { if (x.modul === 'datenbank') { zeilen.push(x); gesehen.push(rohAus(x, { lasttest: false })); } });
+    const t = (gesamt: number) => ({ vor: 1, app: gesamt - 2, db: 5, dbAnzahl: 1, rechte: 1, json: 1, gesamt });
+    const repo = m.umhuelle({ async langsam() { await new Promise((r) => setTimeout(r, 15)); } }, 'test');
+    try {
+      for (const [id, ms] of [[ID, 100], ['a1b2c3d4e5f6', 300], [ID, 200]] as const) m.erfasseAnfrage({ pfad: `GET /api/mappen/${id}`, muster: 'GET /api/mappen/:id', benutzer: 'lena@example.org' }, t(ms));
+      m.erfasseAnfrage({ pfad: 'GET /api/sichten', muster: 'GET /api/sichten' }, t(50));
+      await repo.langsam(); await repo.langsam();
+      assert.equal(zeilen.length, 0, 'nichts einzeln');
+      m.leeren();
+      m.leeren();
+    } finally { weg(); }
+    assert.equal(zeilen.length, 3, `je Art eine Zeile: ${JSON.stringify(zeilen.map((z) => z.text))}`);
+    const mappe = zeilen.find((z) => z.text.includes('/api/mappen/:id'))!;
+    assert.equal(mappe.text, 'Lange Anfrage: GET /api/mappen/:id dauerte 300 ms (längste von 3 in einer Minute, Ø 200 ms)');
+    assert.equal(mappe.benutzer, undefined, 'gehört zu keiner einzelnen Anfrage');
+    assert.deepEqual([mappe.daten?.zusammengefasst, mappe.daten?.dauerMs, mappe.daten?.mittelMs, mappe.daten?.summeMs], [3, 300, 200, 600]);
+    assert.doesNotMatch(JSON.stringify(mappe), new RegExp(ID), 'Ids nur im Langläufer der Werkbank');
+    const sichten = zeilen.find((z) => z.text.includes('/api/sichten'))!;
+    assert.equal(sichten.text, 'Lange Anfrage: GET /api/sichten dauerte 50 ms', 'eine: wie bisher ohne Zusatz');
+    assert.match(zeilen.find((z) => z.text.startsWith('Langer Datenbankzugriff'))!.text, /^Langer Datenbankzugriff: test\.langsam dauerte \d+ ms \(längste von 2 in einer Minute, Ø \d+ ms\)$/);
+    // Sammlung: dieselbe Art wie einzelne Meldungen, Anzahl und Dauer aus dem Kontext.
+    const r = gesehen.find((x) => x?.text.includes('/api/mappen/:id'))!;
+    assert.equal(r.text, 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>');
+    assert.equal(r.anzahl, 3);
+    assert.deepEqual(r.dauer, { max: 300, summe: 600, n: 3 });
+    assert.ok(r.erste <= r.letzte);
+    assert.equal(gesehen.find((x) => x?.text.startsWith('Langer Datenbankzugriff'))!.text, 'Langer Datenbankzugriff: test.langsam dauerte <Dauer>');
+    const s = new Protokollsammlung(zeit);
+    s.nimm(r, 1);
+    s.nimm(rohAus({ stufe: 'warn', modul: 'datenbank', text: 'Lange Anfrage: GET /api/mappen/:id dauerte 900 ms', zeit, daten: { anfrage: 'GET /api/mappen/:id', muster: 'GET /api/mappen/:id', dauerMs: 900 } })!, 2);
+    const e = s.stand().eintraege[0];
+    assert.deepEqual([e.anzahl, e.dauer], [4, { max: 900, summe: 1500, n: 4 }]);
+    assert.equal(lt.mitDauer(e.text, { max: 900, mittel: 375, n: 4 }), 'Lange Anfrage: GET /api/mappen/:id dauerte bis 900 ms (Ø 375 ms)');
+    // Unbrauchbare Angaben: wie eine einzelne Meldung.
+    const komisch = rohAus({ stufe: 'warn', modul: 'datenbank', text: 'Lange Anfrage: GET /api/x dauerte 70 ms', zeit, daten: { muster: 'GET /api/x', dauerMs: 70, zusammengefasst: 'viele', summeMs: 1 } })!;
+    assert.deepEqual([komisch.anzahl, komisch.dauer], [1, { max: 70, summe: 70, n: 1 }]);
+  });
+
+  it('#920: Zusammenfassung schreibt sich am Ende des Fensters selbst', async () => {
+    const m = new Messung(speicherMessSpeicher(), 30);
+    await m.setze({ schwelleMs: 10 });
+    const zeilen: string[] = [];
+    const weg = protokoll.beobachte((x) => { if (x.modul === 'datenbank') zeilen.push(x.text); });
+    try {
+      m.erfasseAnfrage({ pfad: 'GET /api/typen', muster: 'GET /api/typen' }, { vor: 1, app: 20, db: 5, dbAnzahl: 1, rechte: 1, json: 1, gesamt: 22 });
+      m.erfasseAnfrage({ pfad: 'GET /api/typen', muster: 'GET /api/typen' }, { vor: 1, app: 20, db: 5, dbAnzahl: 1, rechte: 1, json: 1, gesamt: 42 });
+      await new Promise((r) => setTimeout(r, 120));
+    } finally { weg(); }
+    assert.deepEqual(zeilen, ['Lange Anfrage: GET /api/typen dauerte 42 ms (längste von 2 in einer Minute, Ø 32 ms)']);
+    assert.equal((await m.speicher.liste(10)).length, 2, 'Langläufer der Werkbank weiter einzeln');
   });
 
   it('Bericht, Zeile und Live: „dauerte bis 1.240 ms (Ø 610 ms)“, Mittel je Durchgang', () => {
@@ -447,6 +506,7 @@ describe('Lasttest (#895): Route und Durchgang', () => {
     try {
       await (await fetch(`${process.env.DMS_URL}/api/werkbank/last?x=1`, { headers: { 'x-dms': '1', 'x-dms-aktiv': '1', cookie: admin } })).arrayBuffer();
       await new Promise((r) => setTimeout(r, 20));
+      messung.leeren();
     } finally { weg(); await messung.setze({ schwelleMs: 500 }); }
     assert.equal(gesehen[0]?.text, 'Lange Anfrage: GET /api/werkbank/last dauerte <Dauer>', JSON.stringify(gesehen));
     assert.ok((gesehen[0]?.dauer?.n ?? 0) === 1);

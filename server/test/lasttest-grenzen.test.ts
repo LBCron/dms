@@ -92,3 +92,66 @@ describe('Lasttest: mit Speichern und extrem (#739) – alte Stufen bleiben verg
     assert.equal(lt.mappenFuer('klein', '1000000'), 5_000);
   });
 });
+
+describe('Lasttest (#920): eigene Konten je Person, Speicher je Prozess', () => {
+  type Sp = { prozesse: number; summeMb: number | null; grenzeSummeMb: number; jeProzessMb: number | null; grenzeJeProzessMb: number };
+  const x = lt as unknown as Lasttest & {
+    PERSONEN_MAX: number; personKonto(nr: number): { email: string; name: string; passwort: string; art: string };
+    personenVon(v: unknown): Array<{ art: string; cookie: string }>;
+    personenText(n: number): string; personenZeile(n: number): string | null;
+    speicherJeProzess(e: unknown): Sp; speicherVerfehlt(e: unknown): string | null; speicherHoechstens(l: unknown[]): Sp; speicherText(s: Sp): string;
+    protokollGesamt(a: unknown, z: unknown, l: unknown[]): { eintraege: Array<{ durchgang: string; erste: string }> } | null;
+  };
+
+  it('Konten mit erfundenen Namen und reservierter Domain, zwei von drei mit Rolle; reihum', () => {
+    assert.ok(x.PERSONEN_MAX >= 25 && x.PERSONEN_MAX <= 50);
+    const alle = Array.from({ length: x.PERSONEN_MAX }, (_, i) => x.personKonto(i + 1));
+    assert.equal(new Set(alle.map((k) => k.email)).size, alle.length);
+    for (const k of alle) {
+      assert.match(k.email, /^lasttest-person-\d{2}@example\.org$/);
+      assert.match(k.name, /^Person \d{2} \(Lasttest\)$/);
+      assert.ok(k.passwort.length >= 12);
+    }
+    assert.equal(alle.filter((k) => k.art === 'ohneRolle').length, x.PERSONEN_MAX / 3);
+    assert.ok(alle.every((k) => k.art === 'mitRolle' || k.art === 'ohneRolle'));
+    // Ohne eigene Konten (fertige Sitzungen): die drei von früher.
+    assert.deepEqual(x.personenVon({ sitzungen: { admin: 'a', mitRolle: 'b', ohneRolle: 'c' } }).map((p) => [p.art, p.cookie]), [['admin', 'a'], ['mitRolle', 'b'], ['ohneRolle', 'c']]);
+    const eigene = [{ nr: 1, art: 'mitRolle', cookie: 'x' }];
+    assert.equal(x.personenVon({ sitzungen: {}, personen: eigene }), eigene);
+  });
+
+  it('Hinweis im Bericht und Zeile im Ergebnisblock: ab wann mit eigenen Konten gemessen wird', () => {
+    assert.match(x.personenText(30), /je Person ein eigenes Konto mit eigener Sitzung – 30 Konten.*nicht direkt vergleichbar/);
+    assert.match(x.personenText(0), /drei geteilte Konten/);
+    assert.equal(x.personenZeile(30), 'Personen: je Person ein eigenes Konto (30 Konten, reihum; seit #920)');
+    assert.equal(x.personenZeile(0), null);
+  });
+
+  it('Speicherpflicht je Prozess: zwei Prozesse mit zusammen über 1.536 MB sind kein Verstoß', () => {
+    const zwei = (a: number, b: number, summe: number) => ({ name: 'groß 350', speicherMbMax: summe, engpass: { speicherJeProzess: [{ nr: 0, rolle: 'haupt', mb: 40 }, { nr: 1, rolle: 'leiter', mb: a }, { nr: 2, rolle: 'anfragen', mb: b }] } });
+    const ok = zwei(900, 1100, 2040);
+    assert.deepEqual(x.speicherJeProzess(ok), { prozesse: 2, summeMb: 2040, grenzeSummeMb: 3072, jeProzessMb: 1100, grenzeJeProzessMb: 1536 });
+    assert.equal(x.speicherVerfehlt(ok), null, 'früher: 2040 MB > 1536 MB „verfehlt“');
+    assert.match(x.speicherVerfehlt(zwei(900, 1600, 2540))!, /^groß 350: Arbeitsspeicher eines Prozesses 1600 MB > 1536 MB \(je Prozess; zusammen 2540 MB bei 2 Prozessen\)$/);
+    // Ein Prozess bzw. ältere Fassung ohne Angabe je Prozess: die Summe gegen die Grenze.
+    assert.equal(x.speicherVerfehlt({ name: 'groß 25', speicherMbMax: 1500, engpass: null }), null);
+    assert.match(x.speicherVerfehlt({ name: 'groß 25', speicherMbMax: 1600, engpass: null })!, /1600 MB > 1536 MB \(1 Prozess\)/);
+    const h = x.speicherHoechstens([ok, zwei(1200, 1000, 2300), { name: 'a', speicherMbMax: null, engpass: null }]);
+    assert.deepEqual(h, { prozesse: 2, summeMb: 2300, grenzeSummeMb: 3072, jeProzessMb: 1200, grenzeJeProzessMb: 1536 });
+    assert.equal(x.speicherText(h), 'je Prozess höchstens 1.200 MB (Grenze 1.536 MB je Prozess) · zusammen höchstens 2.300 MB bei 2 Prozessen (Grenze 2 × 1.536 MB = 3.072 MB)');
+  });
+
+  it('Zusammengefasste Meldungen zählen beim Durchgang ihres ersten Auftretens', () => {
+    const t = Date.parse('2026-11-06T10:00:00Z');
+    const iso = (s: number) => new Date(t + s * 1000).toISOString();
+    const text = 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>';
+    const m = (anzahl: number, erste: string) => ({ stufe: 'warn', modul: 'datenbank', text, ausnahme: null, anzahl, erste, letzte: iso(150), prozesse: [1] });
+    const laeufe = [
+      { name: 'groß 25', beginn: t, ende: t + 120_000, protokoll: { eintraege: [] } },
+      // Die Zusammenfassung der letzten Minute von „groß 25“ kommt erst während „groß 50“ an.
+      { name: 'groß 50', beginn: t + 125_000, ende: t + 245_000, protokoll: { eintraege: [m(40, iso(100))] } },
+    ];
+    const g = x.protokollGesamt({ t, engpass: { protokoll: { gesamt: 0, weitere: 0, eintraege: [] } } }, { t: t + 250_000, engpass: { protokoll: { gesamt: 40, weitere: 0, eintraege: [m(40, iso(100))] } } }, laeufe)!;
+    assert.deepEqual([g.eintraege[0].durchgang, g.eintraege[0].erste], ['groß 25', iso(100)]);
+  });
+});

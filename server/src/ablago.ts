@@ -849,6 +849,9 @@ const beenden = async () => {
   webhooks.stop();
   if (leiter) await konsole.entferne();
   await app.close();
+  // Zusammenfassungen der letzten Minute (#920) noch ins Protokoll.
+  messung.leeren();
+  ueberlast.leeren();
   await beendeArbeiter();
   verbindungswarten.stop();
   poolmessung.aus();

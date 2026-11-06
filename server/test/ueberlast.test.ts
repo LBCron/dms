@@ -70,6 +70,58 @@ describe('Überlastschutz (#544)', () => {
   });
 });
 
+describe('Überlastschutz im Protokoll (#920): Hinweis statt Fehler, höchstens eine Zeile je Minute', () => {
+  it('erste Abweisung sofort, weitere am Ende der Minute zusammengefasst – nie als Warnung oder Fehler', async () => {
+    const { protokoll } = await import('../src/protokoll');
+    let uhr = Date.parse('2026-11-06T12:00:00Z');
+    const u = new Ueberlastschutz(1, 'vorgabe', () => uhr);
+    const zeilen: Array<{ stufe: string; text: string; daten?: Record<string, unknown> }> = [];
+    const vorher = protokoll.letzteNr;
+    const warn = protokoll.beobachte((x) => { if (x.modul === 'system' && x.text.startsWith('Überlast')) zeilen.push(x); });
+    try {
+      assert.equal(u.herein(), true);
+      for (let i = 0; i < 5; i++) { uhr += 1000; assert.equal(u.herein(), false); }
+      assert.deepEqual(zeilen, [], 'keine Warnung, kein Fehler');
+      const info = () => protokoll.eintraege({ seit: vorher, modul: 'system' }).filter((x) => x.text.startsWith('Überlast'));
+      assert.equal(info().length, 1, 'die erste sofort');
+      assert.equal(info()[0].stufe, 'info');
+      u.leeren();
+      assert.equal(info().length, 2, 'die übrigen vier zusammen');
+      assert.match(info()[0].text, /weitere 4 Anfragen mit 503 abgewiesen/);
+      assert.equal(info()[0].daten?.seitLetzterMeldung, 4);
+      u.leeren();
+      assert.equal(info().length, 2, 'nichts offen – keine Zeile');
+      uhr += 10_000; u.herein(); u.leeren();
+      assert.equal(info().length, 3, 'nach der Zusammenfassung erst wieder nach einer Minute eine eigene Zeile');
+      uhr += 61_000; u.herein();
+      assert.equal(info().length, 4);
+    } finally { warn(); u.leeren(); }
+  });
+
+  it('abgewiesene Anfragen: keine Zeile „… 503“ als Fehler (nur Debug), andere 5xx weiter als Fehler', async () => {
+    const { speicherRepo } = await import('../src/repo-speicher');
+    const { speicherDateien } = await import('../src/dateispeicher');
+    const { Dienst } = await import('../src/dienst');
+    const { Konten } = await import('../src/konten');
+    const { speicherKontoRepo } = await import('../src/konto-repo');
+    const { baueApp } = await import('../src/http');
+    const { protokoll } = await import('../src/protokoll');
+    const dienst = new Dienst(speicherRepo(), speicherDateien());
+    const konten = new Konten(speicherKontoRepo(), null, 'http://nas', dienst.benutzerspiegel());
+    const ueberlast = new Ueberlastschutz(20);
+    ueberlast.laufend = 20;
+    const app = await baueApp(dienst, konten, { ueberlast });
+    const fehler: string[] = [];
+    const weg = protokoll.beobachte((x) => { if (x.stufe === 'error') fehler.push(x.text); });
+    try {
+      const r = await app.inject({ method: 'GET', url: '/api/typen' });
+      assert.equal(r.statusCode, 503);
+      await new Promise((x) => setTimeout(x, 10));
+      assert.deepEqual(fehler, []);
+    } finally { weg(); ueberlast.leeren(); await app.close(); }
+  });
+});
+
 describe('Systemzustand: Werte und Engpässe nennen die Variable (#544)', () => {
   it('Engpässe aus Wartezeit, Verbindungen, Arbeiter-Warteschlange und Überlastschutz', async () => {
     const { engpaesseAus, ENGPASS_VARIABLE, ENGPASS_MINUTEN } = await import('../../shared/src/systemlast');

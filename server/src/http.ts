@@ -28,6 +28,7 @@ import type { Aufgabenmail } from './aufgabenmail';
 import type { Fehlermeldungen } from './fehlermeldungen';
 import type { Verwaltung } from './verwaltung';
 import { WartungFehler, type Wartung } from './wartung';
+import { vomUeberlastschutzAbgewiesen } from './ueberlast';
 import type { Notfallzugang } from './notfall';
 import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
@@ -210,7 +211,8 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     const url = req.url.split('?')[0];
     const status = reply.statusCode;
     const api = url.startsWith('/api/');
-    const stufe = anfrageStufe({ methode: req.method, url, status, lesend: (req as MitKontext).lesend });
+    // Vom Überlastschutz abgewiesen (#920): gewollt – die Zusammenfassung je Minute schreibt der Überlastschutz.
+    const stufe = vomUeberlastschutzAbgewiesen(req) ? 'debug' : anfrageStufe({ methode: req.method, url, status, lesend: (req as MitKontext).lesend });
     const k = (req as MitKontext).dms ?? { anfrage: req.id, db: { anzahl: 0, ms: 0 } };
     kontext.run(k, () => protokoll.schreibe(stufe, api ? modulAus(url) : 'http', `${req.method} ${url} ${status}`, {
       ms: Math.round(reply.elapsedTime), ...(k.db.anzahl ? { db: k.db.anzahl, dbMs: Math.round(k.db.ms) } : {}),
