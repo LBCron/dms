@@ -402,10 +402,11 @@ describe('Mappenstand über zwei Prozesse (#918)', () => {
 });
 
 const url = process.env.TEST_DATABASE_URL;
+const EIGENE_DB = `dms_test_918_${process.pid}`;
 describe('PostgreSQL: Vorfilter, Pflege und Migration (#918)', { skip: url ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
   const HAUSHALT = '00000000-0000-4000-8000-000000000001';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let sql: any;
+  let sql: any; let haupt: any;
   let ordner = '';
   let h!: Aufbau;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -423,8 +424,13 @@ describe('PostgreSQL: Vorfilter, Pflege und Migration (#918)', { skip: url ? fal
   before(async () => {
     const { verbinde, migriere } = await import('../src/db');
     mod = { ...await import('../src/repo-pg'), ...await import('../src/konto-repo'), ...await import('../src/einstellungen') };
-    sql = verbinde(url!);
-    await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    // Eigene Datenbank: die Testdateien laufen parallel auf derselben Test-Datenbank; ein DROP SCHEMA hier
+    // würde anderen Dateien mitten im Lauf die Tabellen wegnehmen.
+    haupt = verbinde(url!);
+    await haupt.unsafe(`DROP DATABASE IF EXISTS ${EIGENE_DB}`);
+    await haupt.unsafe(`CREATE DATABASE ${EIGENE_DB}`);
+    const u = new URL(url!); u.pathname = `/${EIGENE_DB}`;
+    sql = verbinde(u.toString());
     // Migration füllt den Bestand: erst alle Migrationen vor 086, Mappen anlegen, dann der Rest.
     const alle = fileURLToPath(new URL('../migrations', import.meta.url));
     ordner = await mkdtemp(join(tmpdir(), 'dms-918-'));
@@ -439,7 +445,7 @@ describe('PostgreSQL: Vorfilter, Pflege und Migration (#918)', { skip: url ? fal
     await abgleich('nach der Migration');
     h = await aufbau(mod.pgRepo(sql, HAUSHALT), mod.pgKontoRepo(sql, HAUSHALT), mod.pgEinstellungen(sql, HAUSHALT));
   });
-  after(async () => { if (ordner) await rm(ordner, { recursive: true, force: true }); if (sql) await sql.end(); });
+  after(async () => { if (ordner) await rm(ordner, { recursive: true, force: true }); if (sql) await sql.end(); if (haupt) { await haupt.unsafe(`DROP DATABASE IF EXISTS ${EIGENE_DB}`); await haupt.end(); } });
 
   it('die Migration füllt den Vorfilter für den Bestand', async () => {
     const [r] = await sql`SELECT count(*)::int AS n FROM fristtermine`;
