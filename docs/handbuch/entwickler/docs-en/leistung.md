@@ -197,6 +197,32 @@ Principle: **lagging behind is fine, wrong never** – what is shown may be a fe
 - **Number of results** (`seiteMitZahl`): per request without page and order, only with the same state and without minimum validity – it stays exact. With a known number, `seite` only fetches the page (`zahl`), also without `count(*) OVER ()` for a search. Searches in documents and notes always count: their texts don't change any state.
 - **Switch** `DMS_ZWISCHENSPEICHER=aus`: every `Zaehlerspeicher` calculates afresh on every call (counts, number of results, dates, new post). The read cache for folder types, views and settings (#741) stays – it depends on the state `lesen`, which a trigger counts in the same transaction. Notice in system health (`/api/werkbank/systemlast`, `zwischenspeicher`) and in the load test report.
 
+### Saving a task and a note (#928) { #speichern-928 }
+
+In the load test "+ saving", creating a task or a note was the slowest operation. **Finding** (local, 2 cores, 50,000 folders, 40,000 tasks, 25 concurrent + saving; repository accesses per request summed up from the measurement): no single query was expensive – under load **every** round trip to the database costs 10–12 ms (waiting for a connection and CPU time), and `POST /api/mappen/:id/aufgaben` made 31 of them before answering, the note 12. Not part of the answer were: reconciling the cases without read permission (#798, 6 accesses) and the dispatcher of the outbox (automations, packages, webhooks – it started straight away in the context of the request and shared connections and CPU time with it), plus the folder's type, the system folder types (three `holeTyp`) and names read twice. The transaction and the household state play no part when creating: task and note run without `mappen.transaktion`; household and folder state count up after the answer (sequence, 1 ms). The `mappen.transaktion` in the log belongs to "change folder" (mean 190 ms). Its `SELECT … FOR UPDATE` on the folder, however, held up every new task, note, history entry and star of the **same** folder until the end of its transaction: the foreign key checks with `FOR KEY SHARE`, which waits for `FOR UPDATE`.
+
+**Changed:**
+
+- **After the answer** (`Dienst.nachDerAntwort`, `Kontext.nachAntwort`, via the `Nachlauf` of #741): reconciling the cases (`faelleNach`), as long as no temporary read permission is attached to the folders – if one is, straight away, because it ends with the task ("wrong never"); the overview in the Workbench reconciles by itself before showing anything anyway. Likewise waking the dispatcher; the event is already in the outbox. Without a request (tests, background, automations) both run straight away as before. Whatever the follow-up work itself triggers runs along with it.
+- **Reading less:** the folder's type from the check at the start, the recipient's name once, `holeTyp` from the remembered folder types (`Lesespeicher`, state `lesen`; inside a transaction still from the table).
+- **`FOR NO KEY UPDATE`** instead of `FOR UPDATE` when changing field by field and when assigning a number: two changes of the same folder still wait for each other, new tasks, notes, history entries and favourites no longer do.
+- **Number in "To do"** (`eingangSql`): `empfaenger_id = $me OR ($admin AND empfaenger_id IS NULL)` turned the generic plan of the prepared statement into a hash join over all folders of the household (50,000 folders: 16 ms, growing with the stock). Now two branches (`UNION`) over the partial index `aufgaben_offen_empfaenger_idx (empfaenger_id, mappe_id) WHERE erledigt IS NULL` (migration 087), the folder per hit via its key: 3 ms, independent of the number of folders. It counts exactly as before.
+- **Views with favourites only** ("is my favourite") among the person's numbers start from the favourites (`nurFavoritenVon`): if every clause of a view requires a favourite of the same person, a run of its own counts only over their favourites instead of over all folders of the types (50,000 folders: 34 ms → 0.2 ms). Altogether the person's count (`zaehlePersoenlich`) costs 1.5–2 ms instead of 34 ms.
+- Recalculating only on task changes was not needed: a note does not count up any state (`legeNotizAn`, `historieSchreibe`, `legeKatalogEreignisAn` are in `OHNE_FOLGEN`), a star only the household state (#918). Each person then recounts their own numbers – at 2 ms instead of 34 ms a third state is not worth it.
+
+**Measurement** (`server/test/lasttest.mjs --gleichzeitig 25 --mit-speichern --ohne-export --dauer 60 --mappen 50000`, own accounts, 2 cores, PostgreSQL 16; p50 / p95 in ms):
+
+| Operation | before | after |
+|---|---:|---:|
+| Task (create or complete) | 233 / 439 | 164 / 301 |
+| Note | 156 / 255 | 139 / 210 |
+| Star | 84 / 168 | 72 / 155 |
+| Home page | 76 / 200 | 74 / 156 |
+| Change folder | 304 / 452 | 307 / 453 |
+| all requests | 99 / 252 | 99 / 228 |
+
+On the server (handler, median): creating a task 304 → 204 ms with 31 → 22 accesses before the answer, note 142 → 118 ms with 12 → 11. "Change folder" remains the slowest writing operation (transaction); that is a topic of its own. `server/test/aufgaben-zaehler.test.ts` records: the same numbers as the previous query, with and without cache, with deputy, temporary read permission, tasks without recipient and from automations; your own task and note are visible in the next request; temporary read permission ends with completing the task straight away.
+
 ## Load test { #lasttest }
 
 `server/test/lasttest.mjs` (#544, #563) sends many **simultaneous HTTP requests** to a running Ablago – the counterpart to the measuring script, which measures individual database accesses. Without dependencies, only with Node.js's `fetch`. In the image it is the command `dms-lasttest` (operators: Administrator manual → [Running the load test yourself](https://help.ablago.app/admin/aktuell/en/lasttest/)).

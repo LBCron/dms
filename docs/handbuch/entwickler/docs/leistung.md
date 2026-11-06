@@ -197,6 +197,32 @@ Grundsatz: **Nachhinken ja, falsch nie** – Angezeigtes darf ein paar Sekunden 
 - **Zahl der Treffer** (`seiteMitZahl`): je Anfrage ohne Blatt und Reihenfolge, nur bei gleichem Stand und ohne Mindestgültigkeit – sie bleibt genau. Mit bekannter Zahl holt `seite` nur das Blatt (`zahl`), auch ohne `count(*) OVER ()` bei einer Suche. Suchen in Dokumenten und Notizen zählen immer: Deren Texte ändern keinen Stand.
 - **Schalter** `DMS_ZWISCHENSPEICHER=aus`: Jeder `Zaehlerspeicher` rechnet bei jedem Abruf frisch (Zahlen, Trefferzahl, Termine, neue Post). Der Lesespeicher für Mappentypen, Ansichten und Einstellungen (#741) bleibt – er hängt am Stand `lesen`, den ein Trigger in derselben Transaktion zählt. Hinweis im Systemzustand (`/api/werkbank/systemlast`, `zwischenspeicher`) und im Lasttest-Bericht.
 
+### Aufgabe und Notiz speichern (#928) { #speichern-928 }
+
+Im Lasttest „+ Speichern“ waren Aufgabe und Notiz anlegen die langsamsten Vorgänge. **Befund** (lokal, 2 Kerne, 50.000 Mappen, 40.000 Aufgaben, 25 gleichzeitig + Speichern; je Anfrage die Repo-Zugriffe aus der Messung summiert): Keine einzelne Abfrage war teuer – unter Last kostet **jeder** Hin- und Rückweg zur Datenbank 10–12 ms (Warten auf Verbindung und Rechenzeit), und `POST /api/mappen/:id/aufgaben` machte 31 davon vor der Antwort, die Notiz 12. Davon gehörten nicht zur Antwort: der Abgleich der Fälle ohne Leserecht (#798, 6 Zugriffe), der Verteiler des Ausgangskorbs (Automatisierungen, Pakete, Webhooks – er lief im Kontext der Anfrage gleich los und teilte sich Verbindungen und Rechenzeit mit ihr), dazu doppelt gelesene Typen der Mappe, Systemtypen (drei `holeTyp`) und Namen. Transaktion und Haushaltsstand spielen beim Anlegen keine Rolle: Aufgabe und Notiz laufen ohne `mappen.transaktion`; Haushalts- und Mappenstand zählen nach der Antwort hoch (Sequenz, 1 ms). Die `mappen.transaktion` im Protokoll gehört zu „Mappe ändern“ (Mittel 190 ms). Deren `SELECT … FOR UPDATE` auf die Mappe hielt aber jede neue Aufgabe, Notiz, Historie und jeden Stern **derselben** Mappe bis zum Ende ihrer Transaktion auf: Der Fremdschlüssel prüft mit `FOR KEY SHARE`, und das wartet auf `FOR UPDATE`.
+
+**Geändert:**
+
+- **Nach der Antwort** (`Dienst.nachDerAntwort`, `Kontext.nachAntwort`, über den `Nachlauf` von #741): der Abgleich der Fälle (`faelleNach`), solange an den Mappen kein Leserecht auf Zeit hängt – hängt eines daran, sofort, denn es endet mit der Aufgabe („falsch nie“); die Übersicht in der Werkbank gleicht vor dem Anzeigen ohnehin selbst ab. Ebenso das Wecken des Verteilers; das Ereignis steht schon im Ausgangskorb. Ohne Anfrage (Tests, Hintergrund, Automatisierungen) läuft beides wie bisher sofort. Was der Nachlauf selbst anstößt, läuft gleich mit.
+- **Weniger lesen:** Typ der Mappe aus der Prüfung am Anfang, Name des Empfängers einmal, `holeTyp` aus den gemerkten Mappentypen (`Lesespeicher`, Stand `lesen`; in einer Transaktion weiter aus der Tabelle).
+- **`FOR NO KEY UPDATE`** statt `FOR UPDATE` beim feldweisen Ändern und beim Vergeben einer Nummer: Zwei Änderungen derselben Mappe warten weiter aufeinander, neue Aufgaben, Notizen, Historie und Favoriten nicht mehr.
+- **Zahl „Zu erledigen“** (`eingangSql`): `empfaenger_id = $ich OR ($admin AND empfaenger_id IS NULL)` machte den allgemeinen Plan der vorbereiteten Abfrage zu einem Hash-Join über alle Mappen des Haushalts (50.000 Mappen: 16 ms, wächst mit dem Bestand). Jetzt zwei Zweige (`UNION`) über den Teilindex `aufgaben_offen_empfaenger_idx (empfaenger_id, mappe_id) WHERE erledigt IS NULL` (Migration 087), die Mappe je Treffer über ihren Schlüssel: 3 ms, unabhängig von der Zahl der Mappen. Gezählt wird genau wie vorher.
+- **Ansichten nur mit Favoriten** („ist mein Favorit“) in den Zahlen der Person gehen von den Favoriten aus (`nurFavoritenVon`): Verlangt jede Klausel einer Ansicht den Favoriten derselben Person, zählt ein eigener Lauf nur über deren Favoriten statt über alle Mappen der Typen (50.000 Mappen: 34 ms → 0,2 ms). Zusammen kostet die Zählung der Person (`zaehlePersoenlich`) 1,5–2 ms statt 34 ms.
+- Nicht nötig war eine Neuberechnung nur bei Aufgaben: Eine Notiz zählt keinen Stand hoch (`legeNotizAn`, `historieSchreibe`, `legeKatalogEreignisAn` stehen in `OHNE_FOLGEN`), ein Stern nur den Haushaltsstand (#918). Danach rechnet zwar jede Person ihre eigenen Zahlen neu – mit 2 ms statt 34 ms lohnt ein dritter Stand nicht.
+
+**Messung** (`server/test/lasttest.mjs --gleichzeitig 25 --mit-speichern --ohne-export --dauer 60 --mappen 50000`, eigene Konten, 2 Kerne, PostgreSQL 16; p50 / p95 in ms):
+
+| Vorgang | vorher | nachher |
+|---|---:|---:|
+| Aufgabe (anlegen oder erledigen) | 233 / 439 | 164 / 301 |
+| Notiz | 156 / 255 | 139 / 210 |
+| Stern | 84 / 168 | 72 / 155 |
+| Startseite | 76 / 200 | 74 / 156 |
+| Mappe ändern | 304 / 452 | 307 / 453 |
+| alle Anfragen | 99 / 252 | 99 / 228 |
+
+Auf dem Server (Handler, Median): Aufgabe anlegen 304 → 204 ms bei 31 → 22 Zugriffen vor der Antwort, Notiz 142 → 118 ms bei 12 → 11. „Mappe ändern“ bleibt der langsamste schreibende Vorgang (Transaktion); das ist ein eigenes Thema. `server/test/aufgaben-zaehler.test.ts` hält fest: gleiche Zahlen wie die bisherige Abfrage, mit und ohne Zwischenspeicher, mit Vertretung, Leserecht auf Zeit, Aufgaben ohne Empfänger und aus Automatisierungen; die eigene Aufgabe und Notiz sind in der nächsten Anfrage zu sehen; Leserecht auf Zeit endet mit dem Erledigen sofort.
+
 ## Lasttest { #lasttest }
 
 `server/test/lasttest.mjs` (#544, #563) schickt viele **gleichzeitige HTTP-Anfragen** an ein laufendes Ablago – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit `fetch` von Node.js. Im Image steckt es als Befehl `dms-lasttest` (Betreiber: Administratorhandbuch → [Lasttest selbst durchführen](https://help.ablago.app/admin/aktuell/lasttest/)).

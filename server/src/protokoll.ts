@@ -65,6 +65,12 @@ export interface Kontext {
   aenderungen?: number;
   /** Einmal je Anfrage gebildet (#741): Zugriff, Rollen. Gilt bis zur nächsten Änderung in dieser Anfrage. */
   jeAnfrage?: Map<string, { aenderungen: number; zeit: number; wert: Promise<unknown> }>;
+  /**
+   * Arbeit nach der Antwort (#928), angemeldet aus dem Dienst (`Dienst.nachDerAntwort`); http.ts gibt sie wie
+   * `Antwort.danach` an den Nachlauf (#741). Fehlt das Feld (Tests, Hintergrund, nach dem Handler), läuft die Arbeit
+   * sofort.
+   */
+  nachAntwort?: Array<() => Promise<unknown>>;
 }
 export const kontext = new AsyncLocalStorage<Kontext>();
 

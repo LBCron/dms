@@ -361,6 +361,34 @@ function typIn(sql: Sql, typen: string[]): Teil {
   return typen.length === 1 ? sql`mappen.typ_id = ${typen[0]}::uuid` : sql`mappen.typ_id = ANY(${typen}::uuid[])`;
 }
 
+/**
+ * Zahl „Zu erledigen“ (#477, #928): Mappen mit offenen Aufgaben für `ich`, mit `ohneEmpfaenger` auch mit offenen Aufgaben
+ * ohne Empfänger. Zwei Zweige statt `empfaenger_id = … OR (… AND empfaenger_id IS NULL)`: Mit dem ODER über einen
+ * Parameter nahm der allgemeine Plan der vorbereiteten Abfrage alle offenen Aufgaben und verband sie per Hash mit allen
+ * Mappen des Haushalts (50.000 Mappen: 16 ms, wächst mit dem Bestand). Jetzt je Zweig der Index
+ * `aufgaben_offen_empfaenger_idx` (Migration 087), der zweite Zweig fällt ohne `ohneEmpfaenger` ganz weg. Die Mappe
+ * wird je gefundener Mappe über ihren Schlüssel geprüft (Haushalt) – als Unterabfrage, damit PostgreSQL nicht doch alle
+ * Mappen liest. Gezählt wird genau wie vorher: jede Mappe einmal.
+ */
+function eingangSql(sql: Sql, haushaltId: string, ich: string | null, ohneEmpfaenger: boolean): Teil {
+  return sql`(SELECT count(*)::int FROM (
+      SELECT a.mappe_id FROM aufgaben a WHERE a.erledigt IS NULL AND a.empfaenger_id = ${ich}::uuid
+      UNION
+      SELECT a.mappe_id FROM aufgaben a WHERE ${ohneEmpfaenger}::boolean AND a.erledigt IS NULL AND a.empfaenger_id IS NULL
+    ) o WHERE (SELECT m.haushalt_id FROM mappen m WHERE m.id = o.mappe_id) = ${haushaltId}::uuid)`;
+}
+
+/**
+ * Zählt eine Ansicht nur Favoriten einer Person (#928)? Dann deren Id: Jede Klausel, die überhaupt etwas zählen kann
+ * (mit gültigem Typ), verlangt „ist Favorit von“ derselben Person. Sonst null.
+ */
+function nurFavoritenVon(klauseln: Klausel[]): string | null {
+  const wirksam = klauseln.filter((k) => k.typen.some(istUuid));
+  if (!wirksam.length) return null;
+  const je = wirksam.map((k) => k.filter.find((f): f is Extract<Filter, { art: 'favorit' }> => f.art === 'favorit' && istUuid(f.benutzer))?.benutzer ?? null);
+  return je.every((b) => b && b === je[0]) ? je[0] : null;
+}
+
 /** ODER der Klauseln; jede Klausel: Typ passt UND alle Filter. Ohne Klauseln: nichts. */
 export function klauselnSql(sql: Sql, klauseln: Klausel[]): Teil {
   const teile = klauseln.filter((k) => k.typen.some(istUuid)).map((k) => {
@@ -441,6 +469,7 @@ export function realArray(b: Buffer): Float32Array {
 export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
   /** Mappentypen, Ansichten und Pakete (#741): für alle gleich, gültig bei gleichem Haushaltsstand `lesen`. */
   const gemerkt = <T>(schluessel: string, lade: () => Promise<T>): Promise<T> => (imTx ? lade() : lesespeicherFuer(sql, haushaltId).hole(schluessel, lade));
+  const alleTypen = () => gemerkt('typen', async () => (await sql`SELECT * FROM mappentypen WHERE haushalt_id = ${haushaltId} ORDER BY lower(name)`).map(alsTyp));
   // Dokumente immer mit ausdrücklichen Spalten, nie `d.*` (#367): sonst kommt der Volltext mit.
   const DOK = sql.unsafe(DOKUMENT_SPALTEN.map((c) => `d.${c}`).join(', '));
   const DOK_RUECK = sql.unsafe(DOKUMENT_SPALTEN.join(', '));
@@ -656,11 +685,12 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     transaktion(f) {
       return sql.begin((tx) => f(pgRepo(inTransaktion(tx), haushaltId, true))) as Promise<Awaited<ReturnType<typeof f>>>;
     },
-    async listeTypen() {
-      return gemerkt('typen', async () => (await sql`SELECT * FROM mappentypen WHERE haushalt_id = ${haushaltId} ORDER BY lower(name)`).map(alsTyp));
-    },
+    async listeTypen() { return alleTypen(); },
     async holeTyp(id) {
       if (!istUuid(id)) return undefined;
+      // Aus den gemerkten Typen (#928, gleicher Stand `lesen` wie listeTypen): Anlegen einer Aufgabe las sonst dreimal
+      // je einen Typ (Systemtypen). In einer Transaktion wie bisher aus der Tabelle.
+      if (!imTx) return (await alleTypen()).find((t) => t.id === id);
       const [r] = await sql`SELECT * FROM mappentypen WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
       return r ? alsTyp(r) : undefined;
     },
@@ -927,7 +957,9 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     },
     async vergebeNummer(mappeId, feldKey, kreis, jetzt) {
       return sql.begin(async (tx) => {
-        const [m] = await tx`SELECT werte FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${mappeId} FOR UPDATE`;
+        // FOR NO KEY UPDATE (#928): sperrt gegen andere Änderungen der Mappe, nicht gegen neue Aufgaben, Notizen, Historie
+        // und Favoriten (deren Fremdschlüssel prüft mit FOR KEY SHARE – das wartete bei FOR UPDATE bis zum Ende).
+        const [m] = await tx`SELECT werte FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${mappeId} FOR NO KEY UPDATE`;
         const alt = (m?.werte as Werte | undefined)?.[feldKey];
         if (!m || (alt != null && alt !== '')) return null;
         const nummer = await zieheIn(tx, kreis, mappeId, jetzt);
@@ -960,9 +992,11 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     async aendereMappe(id, werte, vs, benutzerId, fw) {
       return sql.begin(async (tx) => {
         let neu = werte; let verweise = vs;
-        // Feldweise (#609): unter Sperre der Zeile auf den aktuellen Stand legen.
+        // Feldweise (#609): unter Sperre der Zeile auf den aktuellen Stand legen. FOR NO KEY UPDATE (#928): Zwei
+        // Änderungen derselben Mappe warten aufeinander wie bisher; neue Aufgaben, Notizen, Historie und Favoriten der
+        // Mappe (Fremdschlüssel, FOR KEY SHARE) warten nicht mehr bis zum Ende der Transaktion.
         if (fw) {
-          const [a] = await tx`SELECT werte, geaendert FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${id} FOR UPDATE`;
+          const [a] = await tx`SELECT werte, geaendert FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${id} FOR NO KEY UPDATE`;
           if (a && fw.stand !== undefined && iso(a.geaendert) !== fw.stand) throw new StandVeraltet();
           neu = feldweise((a?.werte as Werte | undefined) ?? {}, fw.basis, werte);
           verweise = fw.verweise(neu);
@@ -1128,9 +1162,7 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
           count(*) FILTER (WHERE demo)::int AS demo
         FROM mappen WHERE haushalt_id = ${haushaltId} ${lesen} GROUP BY typ_id`;
       // Eingang (#477): von den offenen Aufgaben aus statt je Mappe (EXISTS über alle Mappen), ohne Lesefilter.
-      const [e] = await sql`SELECT count(DISTINCT a.mappe_id)::int AS n FROM aufgaben a JOIN mappen m ON m.id = a.mappe_id
-        WHERE m.haushalt_id = ${haushaltId} AND a.erledigt IS NULL
-          AND (a.empfaenger_id = ${istUuid(benutzerId) ? benutzerId : null}::uuid OR (${admin} AND a.empfaenger_id IS NULL))`;
+      const [e] = await sql`SELECT ${eingangSql(sql, haushaltId, istUuid(benutzerId) ? benutzerId : null, admin)} AS n`;
       const [f] = await sql`SELECT count(*)::int AS n FROM favoriten f JOIN mappen ON mappen.id = f.mappe_id
         WHERE f.haushalt_id = ${haushaltId} AND f.benutzer_id = ${istUuid(benutzerId) ? benutzerId : null}::uuid ${lesen}`;
       return {
@@ -1158,25 +1190,32 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
       const ich = istUuid(benutzerId) ? benutzerId : null;
       const lesen = lesefilter ? sql`AND ${lesefilterSql(sql, lesefilter)}` : sql``;
       // Ansichten mit Bezug auf die Person: ein Lauf nur über die Typen dieser Ansichten.
-      const typIds = [...new Set(liste.flat().flatMap((k) => k.typen))].filter(istUuid);
-      const spalten = liste.map((k) => sql`count(*) FILTER (WHERE ${klauselnSql(sql, k)})::int`);
-      const sichten = spalten.length && typIds.length
-        ? sql`, (SELECT ARRAY[${spalten.slice(1).reduce((acc, t) => sql`${acc}, ${t}`, spalten[0])}] FROM mappen
-            WHERE haushalt_id = ${haushaltId} AND typ_id = ANY(${typIds}::uuid[]) ${lesen}) AS sichten`
-        : sql``;
-      // Drei kleine Zählungen über Indizes in einer Abfrage (#742); Eingang wie in `zaehler` (#477), Papierkorb wie in
-      // `zaehlePapierkorb` (eigene Mappen und Dokumente, #344).
+      // Ansichten mit Bezug auf die Person: ein Lauf je Gruppe nur über die Typen ihrer Ansichten. Ansichten, die nur
+      // Favoriten einer Person zählen („ist mein Favorit“), gehen von deren Favoriten aus statt über alle Mappen der
+      // Typen (#928: bei 50.000 Mappen 34 ms → unter 1 ms) – jede ihrer Klauseln verlangt den Favoriten, also fehlt
+      // keine Mappe, die sie zählen würden.
+      const gruppen = new Map<string, number[]>();
+      liste.forEach((k, i) => { const g = nurFavoritenVon(k) ?? ''; gruppen.set(g, [...(gruppen.get(g) ?? []), i]); });
+      const teile = [...gruppen].flatMap(([fav, idx], g) => {
+        const typIds = [...new Set(idx.flatMap((i) => liste[i].flatMap((k) => k.typen)))].filter(istUuid);
+        if (!typIds.length) return [];
+        const spalten = idx.map((i) => sql`count(*) FILTER (WHERE ${klauselnSql(sql, liste[i])})::int`);
+        const nurFav = fav ? sql`AND id IN (SELECT mappe_id FROM favoriten WHERE benutzer_id = ${fav}::uuid)` : sql``;
+        return [{ idx, teil: sql`, (SELECT ARRAY[${spalten.slice(1).reduce((acc, t) => sql`${acc}, ${t}`, spalten[0])}] FROM mappen
+            WHERE haushalt_id = ${haushaltId} AND typ_id = ANY(${typIds}::uuid[]) ${nurFav} ${lesen}) AS ${sql(`s${g}`)}` }];
+      });
+      // Drei kleine Zählungen über Indizes in einer Abfrage (#742); Eingang wie in `zaehler` (#477, #928), Papierkorb wie
+      // in `zaehlePapierkorb` (eigene Mappen und Dokumente, #344).
       const [r] = await sql`SELECT
-        (SELECT count(DISTINCT a.mappe_id)::int FROM aufgaben a JOIN mappen m ON m.id = a.mappe_id
-          WHERE m.haushalt_id = ${haushaltId} AND a.erledigt IS NULL
-            AND (a.empfaenger_id = ${ich}::uuid OR (${ohneEmpfaenger} AND a.empfaenger_id IS NULL))) AS eingang,
+        ${eingangSql(sql, haushaltId, ich, ohneEmpfaenger)} AS eingang,
         (SELECT count(*)::int FROM favoriten f JOIN mappen ON mappen.id = f.mappe_id
           WHERE f.haushalt_id = ${haushaltId} AND f.benutzer_id = ${ich}::uuid ${lesen}) AS favoriten,
         (SELECT count(*)::int FROM papierkorb WHERE haushalt_id = ${haushaltId} AND geloescht_von = ${ich}::uuid)
           + (SELECT count(*)::int FROM papierkorb_dokumente WHERE haushalt_id = ${haushaltId} AND geloescht_von = ${ich}::uuid) AS papierkorb
-        ${sichten}`;
-      const n = (r.sichten as number[] | undefined) ?? [];
-      return { eingang: r.eingang as number, favoriten: r.favoriten as number, papierkorb: r.papierkorb as number, sichten: liste.map((_, i) => Number(n[i] ?? 0)) };
+        ${teile.reduce<Teil>((acc, t) => sql`${acc} ${t.teil}`, sql``)}`;
+      const n = new Map<number, number>();
+      [...gruppen].forEach(([, idx], g) => { const w = (r[`s${g}`] as number[] | undefined) ?? []; idx.forEach((i, j) => n.set(i, Number(w[j] ?? 0))); });
+      return { eingang: r.eingang as number, favoriten: r.favoriten as number, papierkorb: r.papierkorb as number, sichten: liste.map((_, i) => n.get(i) ?? 0) };
     },
     async haushaltsstand() { return liesStand(sql, haushaltId, 'zahlen'); },
     async erhoeheHaushaltsstand() { return erhoeheZahlenstand(sql); },

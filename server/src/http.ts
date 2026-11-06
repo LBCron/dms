@@ -258,10 +258,14 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         const zeit = ((req as MitKontext).zeit ??= { eingang: start });
         zeit.start = start;
         if (r.lesend) (req as MitKontext).lesend = true;
-        const k: Kontext = { anfrage: req.id, pfad: `${req.method} ${req.url.split('?')[0]}`, muster: `${req.method} ${r.pfad}`, db: { anzahl: 0, ms: 0 }, ursprung: `${req.protocol}://${req.host}` };
+        const k: Kontext = { anfrage: req.id, pfad: `${req.method} ${req.url.split('?')[0]}`, muster: `${req.method} ${r.pfad}`, db: { anzahl: 0, ms: 0 }, ursprung: `${req.protocol}://${req.host}`, nachAntwort: [] };
         (req as MitKontext).dms = k;
         // Sprache (#729): erst die, die die Oberfläche mitschickt, dann die der angemeldeten Person.
         const kopfSprache = spracheAusKopf(a.kopf?.('x-sprache'), erlaubteSprachen());
+        // Was der Dienst nach der Antwort erledigt (#928), läuft auch nach einem Fehler – die Änderung kann schon stehen.
+        // Danach ist die Liste zu: Was nach dem Handler noch in dieser Anfrage anfällt (Strom, Nachlauf, angestoßene
+        // Arbeit), läuft gleich.
+        const nachAntwort = () => { const l = k.nachAntwort ?? []; k.nachAntwort = undefined; return l; };
         const antwort = await mitSprache(kopfSprache, () => kontext.run(k, async () => {
           await pruefeZugang(r, a, (n) => req.headers[n] as string | undefined, konten, opt.apiSchluessel, opt.konsole);
           if (a.benutzer?.sprache && erlaubteSprachen().includes(a.benutzer.sprache)) setzeAnfrageSprache(a.benutzer.sprache);
@@ -273,10 +277,15 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
           // Die Konsole (#244) arbeitet auch im Wartungsmodus – etwa um ihn zu beenden.
           if (!a.konsole) opt.wartung?.pruefeAnfrage(r, a.benutzer);
           return r.handler(a);
-        }));
+        })).catch((e: unknown) => {
+          const danach = nachAntwort();
+          if (danach.length) (req as MitKontext).nachher = nachlauf.melde(k, danach);
+          throw e;
+        });
         // Für den Entwicklermodus: Server-Timing setzt der onSend-Hook (#477), dann mit JSON und gesamt.
         zeit.ende = performance.now();
-        if (antwort.danach?.length) (req as MitKontext).nachher = nachlauf.melde(k, antwort.danach);
+        const danach = [...(antwort.danach ?? []), ...nachAntwort()];
+        if (danach.length) (req as MitKontext).nachher = nachlauf.melde(k, danach);
         if (antwort.sitzungSetzen !== undefined || antwort.cookies?.length) {
           const sicher = typeof opt.sicher === 'function' ? kontext.run(k, opt.sicher) : opt.sicher ?? false;
           reply.header('set-cookie', [
