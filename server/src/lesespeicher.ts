@@ -32,7 +32,8 @@ export const GEMERKTE_EINSTELLUNGEN: ReadonlySet<string> = new Set([
   'historie', 'wiederherstellung_abschluss',
 ]);
 
-export type Standart = 'lesen' | 'zahlen';
+/** `mappen` (#918, Sequenz `haushaltsstand_mappen`): wie `zahlen`, aber ohne Favoriten. */
+export type Standart = 'lesen' | 'zahlen' | 'mappen';
 
 /** Eine Änderung in dieser Anfrage: Stände und Werte der Anfrage gelten nicht mehr. */
 export function merkeAenderung(): void {
@@ -62,11 +63,11 @@ const zahl = (v: unknown) => (v === null || v === undefined ? 0 : Number(v));
 /** SQL-Ausdrücke für beide Stände – für die Abfrage der Sitzung (konto-repo.ts). */
 export function standSpalten(sql: postgres.Sql, haushalt: string) {
   return sql`(SELECT lesen FROM haushaltsstand WHERE haushalt_id = ${haushalt}) AS stand_lesen,
-    (SELECT last_value FROM haushaltsstand_zahlen) AS stand_zahlen`;
+    (SELECT last_value FROM haushaltsstand_zahlen) AS stand_zahlen, (SELECT last_value FROM haushaltsstand_mappen) AS stand_mappen`;
 }
 /** Stände aus einer Zeile mit `standSpalten` übernehmen. */
 export function staendeAusZeile(sql: postgres.Sql, haushalt: string, r: Record<string, unknown>): void {
-  merkeStaende(sql, haushalt, { lesen: zahl(r.stand_lesen), zahlen: zahl(r.stand_zahlen) });
+  merkeStaende(sql, haushalt, { lesen: zahl(r.stand_lesen), zahlen: zahl(r.stand_zahlen), mappen: zahl(r.stand_mappen) });
 }
 
 /** Ein Stand: aus der Anfrage, sonst eine kleine Abfrage (eine Zahl). */
@@ -74,7 +75,7 @@ export async function liesStand(sql: postgres.Sql, haushalt: string, art: Standa
   const da = standAusAnfrage(sql, haushalt, art);
   if (da !== undefined) return da;
   const [r] = await sql`SELECT ${standSpalten(sql, haushalt)}`;
-  const werte = { lesen: zahl(r.stand_lesen), zahlen: zahl(r.stand_zahlen) };
+  const werte = { lesen: zahl(r.stand_lesen), zahlen: zahl(r.stand_zahlen), mappen: zahl(r.stand_mappen) };
   merkeStaende(sql, haushalt, werte);
   return werte[art];
 }
@@ -86,6 +87,12 @@ export async function liesStand(sql: postgres.Sql, haushalt: string, art: Standa
  */
 export async function erhoeheZahlenstand(sql: postgres.Sql): Promise<number> {
   const [r] = await sql`SELECT nextval('haushaltsstand_zahlen') AS stand`;
+  return zahl(r.stand);
+}
+
+/** Stand `mappen` hochzählen (#918): wie `erhoeheZahlenstand`, nach Änderungen, die mehr als Favoriten betreffen. */
+export async function erhoeheMappenstand(sql: postgres.Sql): Promise<number> {
+  const [r] = await sql`SELECT nextval('haushaltsstand_mappen') AS stand`;
   return zahl(r.stand);
 }
 

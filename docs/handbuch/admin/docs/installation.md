@@ -210,6 +210,7 @@ Diese Einstellungen sind Umgebungsvariablen im Compose-Projekt:
 | `DMS_MAX_ANFRAGEN` | Ab so vielen gleichzeitigen Anfragen (**je Prozess**) antwortet Ablago sofort mit „gerade sehr beschäftigt“ (HTTP 503), 20–10.000 (Vorgabe 250), siehe [Technik](technik.md#last) |
 | `DMS_ARBEITER` | Zahl der [Arbeiter für PDF und Exporte](speicherplatz.md#arbeiter-fur-pdf-und-exporte) **je Prozess**, 1–16. Nicht gesetzt: die Hälfte der Kerne des Containers, mindestens 1, höchstens 4 – mit mehreren Prozessen aufgeteilt. `0` schaltet sie aus (nur zur Fehlersuche) |
 | `DMS_HINTERGRUND_NICE` | Wie viel niedriger die [Arbeit im Hintergrund](technik.md#last) rechnet als die Anfragen (nice-Wert, 0–19). Nicht gesetzt: `10`. `0` schaltet es aus |
+| `DMS_ZWISCHENSPEICHER` | Nur zur Fehlersuche: `aus` schaltet die Zwischenspeicher der Zahlen, der Trefferzahlen und der Termine ab – alles wird bei jeder Anfrage frisch gerechnet, Ablago wird langsamer. Der Systemzustand und der Lasttest-Bericht weisen darauf hin. Siehe [Fehlersuche → Liegt es am Zwischenspeicher?](fehlersuche.md#zwischenspeicher) |
 | `DMS_EINGANG` | Nur für Sonderfälle: anderer Ort des [Eingangsordners](eingangsordner.md) im Container (Standard `/eingang`). Üblich ist, den Ordner des NAS auf `/eingang` einzubinden |
 
 ## Hinter einem Reverse-Proxy

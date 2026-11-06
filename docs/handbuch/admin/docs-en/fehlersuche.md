@@ -67,6 +67,17 @@ If a page seems slow, switch on **developer mode** under **My account**. Then Ab
 
 The values come from the server in the header `Server-Timing` (`vor`, `app`, `db`, `rechte`, `json`, `gesamt`) and from the browser's timing. For the views' numbers (`/api/sichten`) there is additionally `zs`: `treffer` if they came from the cache, `neu` if they were counted – counting happens after every change in the household, otherwise at the latest after 5 minutes (views with a date reference) or 30 minutes and at midnight.
 
+### Is it the cache? { #zwischenspeicher }
+
+So that Ablago stays smooth even with many folders and many simultaneous changes, it remembers expensive results: the counts per folder type and view, the number of results in a list and the dates in *To do* and on the start page (#918). The principle: **lagging behind is fine, wrong never.**
+
+- What you change yourself you see straight away – also when Ablago runs with [several processes](technik.md#mehrere-prozesse).
+- If someone else changes something, the counts in your Library may catch up a few seconds later. The number of results in a list is always exact.
+- A star (favourite), a note, the history and "seen" do not recalculate the counts per folder type and view.
+- Ablago calculates the dates of recurring deadlines on every request from the date and the rhythm of the folder type; a pre-filter in the database only picks out the folders that can have a date in the period. There is no nightly run the dates depend on.
+
+If Ablago shows a count or a date that stays wrong, set the variable `DMS_ZWISCHENSPEICHER=aus` in the container and restart. Ablago then calculates everything afresh on every request – slower, but without caches. **Workbench → Maintenance and troubleshooting → System health** then shows a notice, and so does the load test report. If it is right now, the cache was the cause: please report it as an [issue](https://github.com/motom001/dms/issues/new?template=fehler.md), with what you did and what you saw. Remove the variable again afterwards.
+
 ## Technology { #technik }
 
 **Workbench → Maintenance and troubleshooting → system health → Version and updates** shows in the section **Installed** (below *Newer versions*) what is installed: version and state of Ablago, runtime (Node.js, operating system), database, libraries and interface.

@@ -46,6 +46,7 @@ import { eigeneVersion, standKennung, uebersicht, versionsabgleich, type SystemQ
 import type { Fehlermeldungen } from './fehlermeldungen';
 import type { Verwaltung } from './verwaltung';
 import { MODULE, protokoll, STUFEN, type Stufe } from './protokoll';
+import { zwischenspeicherAus } from './zaehlerspeicher';
 import type { Betrieb } from './betrieb';
 import { maskiere, type Tresor } from './tresor';
 import type { Texterkennung } from './texterkennung';
@@ -1995,7 +1996,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Mehrere Prozesse (#745): Anteil von Ablago = alle Prozesse zusammen, dazu die Liste je Prozess.
       const p = await prozessZeilen(x).catch(() => null);
       const dms = p && p.zeilen.every((z) => z.speicher !== null) ? p.zeilen.reduce((n, z) => n + z.speicher!, 0) : stand.anteile.dms;
-      return ok({ ...stand, anteile: { ...stand.anteile, dms }, ...(p ? { prozesse: p.zeilen } : {}), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen, ...grenzenUndEngpaesse(x) });
+      // #918: Hinweis, wenn die Zwischenspeicher zur Fehlersuche abgeschaltet sind (DMS_ZWISCHENSPEICHER=aus).
+      return ok({ ...stand, anteile: { ...stand.anteile, dms }, ...(p ? { prozesse: p.zeilen } : {}), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen, ...grenzenUndEngpaesse(x), zwischenspeicher: zwischenspeicherAus() ? 'aus' : 'an' });
     } },
     { methode: 'POST', pfad: '/api/werkbank/system/abgleich', zugang: 'admin', handler: async (a) => {
       const browser = Object.fromEntries(Object.entries((b(a).browser ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]));

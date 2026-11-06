@@ -122,6 +122,7 @@ export function teileArbeit(v: Verbund, o: TeilungsDeps): { start(): Promise<voi
   if (v.mehrere) {
     o.dienst.auftraege.teile(o.zustand);
     o.dienst.stand.teileEigene(o.zustand);
+    o.dienst.mappenstand.teileEigene(o.zustand);
     // Einstellungen im Arbeitsspeicher neu laden, sobald sich der Haushaltsstand `lesen` ändert.
     let stand: string | null = null;
     let nochmal = false;

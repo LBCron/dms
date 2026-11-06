@@ -1386,6 +1386,8 @@ function bericht(ergebnisse, x) {
   const z = [];
   z.push(`## Lasttest (${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC)`, '');
   // Ohne Adresse des Ziels: Der Bericht soll sich ohne Netzadressen weitergeben lassen (#563).
+  // #918: Mit abgeschalteten Zwischenspeichern ist die Messung nicht mit anderen vergleichbar.
+  if (x.zwischenspeicherAus) z.push('**Hinweis:** Zwischenspeicher ausgeschaltet (`DMS_ZWISCHENSPEICHER=aus`) – Zahlen, Trefferzahlen und Termine wurden bei jeder Anfrage frisch gerechnet; nicht mit anderen Läufen vergleichbar.', '');
   if (x.bestand.ohneDatei) z.push(`**Warnung:** Dokumente ohne Datei: ${x.bestand.ohneDatei} – ist \`/data\` als Volume eingebunden? Herunterladen, Vorschau und Export dieser Dokumente schlagen fehl; die Messung ist so nicht vergleichbar.`, '');
   z.push(personenText(x.personen), '');
   z.push(`Bestand: ${x.bestand.gesamt} Mappen (${x.bestand.demo} Demo-Mappen), in den Listen ${x.mappen}, Dokumente ${x.dokumente}.${x.exportPdf ? ` Export nebenher (mittel), einer nach dem anderen: PDF von ${x.exportPdf} Mappen mit Übersicht, PDF von ${x.exportDok} Mappen mit ihren Dokumenten, ZIP der größten Ansicht (${x.exportZip} Mappen).` : ''}`, '');
@@ -1464,6 +1466,7 @@ export async function umgebung(cookie) {
     cpu: lokal ? cpus()[0]?.model?.replace(/\s+/g, ' ').trim() ?? null : null,
     kerne: l?.kerne ?? null, kerneBegrenzt: l?.kerneBegrenzt ?? null, rechnerKerne: l?.hostKerne ?? null,
     ramGb: l?.speicher?.grenze ? Math.round((l.speicher.grenze / 1024 ** 3) * 10) / 10 : null, ramBegrenzt: l ? !l.speicher.ohneGrenze : null,
+    zwischenspeicher: l?.zwischenspeicher ?? null,
     grenzen: l?.grenzen ? Object.fromEntries(Object.entries(l.grenzen).map(([k, g]) => [g.variable, `${g.wert}${g.quelle === 'umgebung' ? ' (gesetzt)' : ''}`])) : null,
   };
 }
@@ -1489,6 +1492,7 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
   kz.push(`Bestand: ${x.bestand.gesamt} Mappen, ${x.dokumente} Dokumente (PDF)`);
   if (u.grenzen) kz.push(`Einstellungen: ${Object.entries(u.grenzen).map(([k, w]) => `${k}=${w}`).join(', ')}`);
   if (personenZeile(x.personen)) kz.push(personenZeile(x.personen));
+  if (u.zwischenspeicher === 'aus') kz.push('Zwischenspeicher: aus (DMS_ZWISCHENSPEICHER=aus)');
   for (const e of ergebnisse) {
     if (e.art === 'zusage') {
       const d = e.durchgang;
@@ -1591,6 +1595,7 @@ async function messen(stufen) {
   x.vergleich = await vergleiche(ergebnisse.find((e) => e.stufe === 'gross'));
   const u = await umgebung(v.sitzungen.admin);
   await personenAbmelden(v);
+  x.zwischenspeicherAus = u.zwischenspeicher === 'aus';
   const text = `${bericht(ergebnisse, x)}\n\n### Ergebnis zum Kopieren\n\nOhne Namen und Adressen – zum Einfügen in das Formular „Messergebnis Lasttest“.\n\n${ergebnisblock(ergebnisse, x, u)}`;
   console.log(`\n${text}`);
   await melde({ art: 'ergebnis', bericht: bericht(ergebnisse, x), vorlage: ergebnisblock(ergebnisse, x, u, PLATZHALTER), verfehlt: ergebnisse.some((e) => e.verfehlt.length) });

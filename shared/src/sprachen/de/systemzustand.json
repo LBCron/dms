@@ -83,6 +83,7 @@
   "grenzen.aus": "0 – ausgeschaltet, aus der Umgebung",
   "grenzen.bereich": "{variable}, erlaubt {min} bis {max}",
   "engpass.titel": "Engpass – diese Einstellung hilft vielleicht:",
+  "zwischenspeicher.aus": "Zwischenspeicher ausgeschaltet (DMS_ZWISCHENSPEICHER=aus): Zahlen, Trefferzahlen und Termine werden bei jeder Anfrage frisch gerechnet. Das ist zur Fehlersuche gedacht und macht Ablago langsamer – entferne die Variable danach wieder.",
   "engpass.schleife": "Der Server musste oft lange warten, bevor er eine Anfrage bearbeiten konnte. Rechnet er PDF-Arbeiten und Exporte selbst, hilft {variable} (jetzt {wert}): Die Arbeiter nehmen ihm die schwere Arbeit ab. Ist die CPU ohnehin voll ausgelastet, hilft nur mehr Rechenzeit für den Container.",
   "engpass.verbindungen": "Abfragen warten üblich länger als {ms} auf eine freie Verbindung zur Datenbank. Mehr Verbindungen gibt {variable} (jetzt {wert}) – sinnvoll nur, wenn CPU und Datenbank nicht ausgelastet sind.",
   "engpass.arbeiter": "Die Warteschlange der Arbeiter war in den letzten {minuten} Minuten voll; PDF-Arbeiten oder Exporte wurden abgewiesen. Mehr Arbeiter gibt {variable} (jetzt {wert}) – sinnvoll nur mit freien Kernen.",
