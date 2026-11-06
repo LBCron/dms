@@ -107,6 +107,8 @@ curl -X PUT -H "Authorization: Bearer dms_…" -H "Content-Type: application/jso
 
 Ohne `stand` prüft Ablago nichts – wie bis 0.143.0 gilt, was du schickst. Bestehende Skripte laufen unverändert weiter; nicht übergebene Felder setzt Ablago nie zurück. „Zuletzt geändert“ (`geaendert`) ist auf die Millisekunde genau und wird bei jedem Speichern größer – vergleiche es als Text, rechne nicht damit.
 
+**Mappentypen** (`PUT /api/v1/typen/{id}`, Werkbank) nehmen ebenfalls `stand` an – den Wert `geaendert` des Mappentyps, so wie du ihn gelesen hast. Hat ihn seitdem jemand anderes gespeichert, kommt **409**, nichts wird überschrieben; dann neu lesen und die eigenen Änderungen noch einmal anwenden. Ohne `stand` gilt wie bisher, was zuletzt gespeichert wird.
+
 !!! note "Namen in der API"
     Die Schnittstelle behält ihre Namen, auch wo die Oberfläche seit 0.73 andere Wörter verwendet: `sicht` ist die **Ansicht**, `sicht=eingang` die Liste **Zu erledigen**, `key` die **Kennung** eines Felds, Registers oder Mappentyps, die Feldart `referenz` der **Verweis**, das Register der Art `protokoll` die **Historie** und `mandant` bzw. `haushalt_id` der **Haushalt**.
 

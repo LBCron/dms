@@ -14,7 +14,7 @@ import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { beiVerklemmungWiederholen } from './db';
 import { protokoll } from './protokoll';
 import { erhoeheZahlenstand, lesespeicherFuer, liesStand } from './lesespeicher';
-import { feldweise, istUuid, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type SeitenAnfrage, type Verweis } from './repo';
+import { feldweise, istUuid, KonfigurationVeraltet, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type SeitenAnfrage, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 import { zeitzone } from '../../shared/src/region';
 import { t } from './sprache';
@@ -672,13 +672,18 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
         RETURNING *`;
       return alsTyp(r);
     },
-    async aendereTyp(id, d) {
+    async aendereTyp(id, d, erwartet) {
       return sql.begin(async (tx) => {
+        // Gleichzeitig bearbeitet (#917): nur auf dem Stand, auf dem die Bearbeitung beruht.
+        if (erwartet !== undefined) {
+          const [a] = await tx`SELECT geaendert FROM mappentypen WHERE haushalt_id = ${haushaltId} AND id = ${id} FOR UPDATE`;
+          if (a && iso(a.geaendert) !== erwartet) throw new KonfigurationVeraltet();
+        }
         const [r] = await tx`
           UPDATE mappentypen SET name = ${d.name}, schluessel = coalesce(schluessel, ${d.schluessel ?? null}), beschreibung = ${d.beschreibung}, titel_vorlage = ${d.titelVorlage},
             felder = ${json(sql, d.felder)}, register = ${json(sql, d.register)}, trefferliste = ${json(sql, standardliste(d).spalten)}, trefferlisten = ${json(sql, trefferlistenVon(d))},
             erstellen_erlaubt = ${d.erstellenErlaubt !== false}, loeschen_erlaubt = ${d.loeschenErlaubt !== false}, archiv = ${d.archiv ? json(sql, d.archiv) : null},
-            beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = now()
+            beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = ${STAND_WEITER}
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
           RETURNING *`;
         const refKeys = d.felder.filter((f) => f.typ === 'referenz').map((f) => f.key);
@@ -1161,13 +1166,29 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
         RETURNING *`;
       return alsSicht(r);
     },
-    async aendereSicht(id, d: SichtDaten) {
-      const [r] = await sql`
-        UPDATE sichten SET name = ${d.name}, beschreibung = ${d.beschreibung}, eltern_id = ${d.elternId}, position = ${d.position},
-          typen = ${json(sql, d.typen)}, bedingungen = ${json(sql, d.bedingungen)}, trefferliste = ${d.trefferliste ?? null},
-          berechtigungen = ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, symbol = ${d.symbol ?? null}, beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = now()
-        WHERE haushalt_id = ${haushaltId} AND id = ${id} RETURNING *`;
-      return alsSicht(r);
+    async aendereSicht(id, d: SichtDaten, erwartet) {
+      const schreibe = async (q: typeof sql) => {
+        const [r] = await q`
+          UPDATE sichten SET name = ${d.name}, beschreibung = ${d.beschreibung}, eltern_id = ${d.elternId}, position = ${d.position},
+            typen = ${json(sql, d.typen)}, bedingungen = ${json(sql, d.bedingungen)}, trefferliste = ${d.trefferliste ?? null},
+            berechtigungen = ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, symbol = ${d.symbol ?? null}, beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = ${STAND_WEITER}
+          WHERE haushalt_id = ${haushaltId} AND id = ${id} RETURNING *`;
+        return alsSicht(r);
+      };
+      if (erwartet === undefined) return schreibe(sql);
+      // Gleichzeitig bearbeitet (#917): nur auf dem Stand, auf dem die Bearbeitung beruht.
+      return sql.begin(async (tx) => {
+        const [a] = await tx`SELECT geaendert FROM sichten WHERE haushalt_id = ${haushaltId} AND id = ${id} FOR UPDATE`;
+        if (a && iso(a.geaendert) !== erwartet) throw new KonfigurationVeraltet();
+        return schreibe(tx as unknown as typeof sql);
+      });
+    },
+    async setzeSichtOrt(id, elternId, position) {
+      // Nur der Wechsel der Elternsicht ist eine Änderung der Ansicht (#917); Umnummerieren lässt den Stand.
+      await sql`
+        UPDATE sichten SET geaendert = CASE WHEN eltern_id IS DISTINCT FROM ${elternId}::uuid THEN ${STAND_WEITER} ELSE geaendert END,
+          eltern_id = ${elternId}, position = ${position}
+        WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
     },
     async loescheSicht(id) {
       await sql`DELETE FROM sichten WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
@@ -1263,7 +1284,7 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
       await sql`UPDATE mappentypen SET schluessel = ${schluessel} WHERE haushalt_id = ${haushaltId} AND id = ${typId} AND schluessel IS NULL`;
     },
     async setzeBerechtigungen(typId, rw) {
-      const [r] = await sql`UPDATE mappentypen SET berechtigungen = ${rw ? json(sql, rw) : null}, geaendert = now() WHERE haushalt_id = ${haushaltId} AND id = ${typId} RETURNING *`;
+      const [r] = await sql`UPDATE mappentypen SET berechtigungen = ${rw ? json(sql, rw) : null}, geaendert = ${STAND_WEITER} WHERE haushalt_id = ${haushaltId} AND id = ${typId} RETURNING *`;
       return alsTyp(r);
     },
     async rueckverweise(zielId) {

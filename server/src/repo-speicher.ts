@@ -12,7 +12,7 @@ import { teilenAb, type Seitensprache } from '../../shared/src/seitensprachen';
 import { ausschnittAus } from './repo-pg';
 import { aehnlichkeit, AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, woerterIn, type Varianten } from '../../shared/src/suche';
 import { inSicht, type Sicht, type SichtDaten, type Zaehlquelle } from '../../shared/src/sichten';
-import { feldweise, StandVeraltet, type AuskunftLinkIntern, type PapierkorbEintrag, type Repo, type Rueckverweis, type SortierungIntern, type Synonymgruppe, type Verweis } from './repo';
+import { feldweise, KonfigurationVeraltet, StandVeraltet, type AuskunftLinkIntern, type PapierkorbEintrag, type Repo, type Rueckverweis, type SortierungIntern, type Synonymgruppe, type Verweis } from './repo';
 import { passt as passtLoesch, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 import { t } from './sprache';
 
@@ -178,9 +178,10 @@ export function speicherRepo(): Repo {
       typen.set(id, t);
       return kopie(t);
     },
-    async aendereTyp(id, d) {
+    async aendereTyp(id, d, erwartet) {
       const alt = typen.get(id)!;
-      const t: Mappentyp = { ...alt, ...kopie(d), schluessel: alt.schluessel ?? d.schluessel, ...listen(d), erstellenErlaubt: d.erstellenErlaubt !== false, loeschenErlaubt: d.loeschenErlaubt !== false, geaendert: jetzt() };
+      if (erwartet !== undefined && alt.geaendert !== erwartet) throw new KonfigurationVeraltet();
+      const t: Mappentyp = { ...alt, ...kopie(d), schluessel: alt.schluessel ?? d.schluessel, ...listen(d), erstellenErlaubt: d.erstellenErlaubt !== false, loeschenErlaubt: d.loeschenErlaubt !== false, geaendert: standWeiter(alt.geaendert) };
       typen.set(id, t);
       const refKeys = new Set(t.felder.filter((f) => f.typ === 'referenz').map((f) => f.key));
       for (const m of mappen.values()) if (m.typId === id) verweise.set(m.id, (verweise.get(m.id) ?? []).filter((v) => refKeys.has(v.feldKey)));
@@ -484,10 +485,20 @@ export function speicherRepo(): Repo {
     async inKlauseln(ids, klauseln) { return new Set(ids.filter((id) => mappen.has(id) && inSicht(mappen.get(id)!, klauseln, zaehl))); },
     async zaehleAusdruck(typId, x) { return [...mappen.values()].filter((m) => m.typId === typId && werte(x, m, zaehl)).length; },
     async setzeTypSchluessel(typId, schluessel) { const t = typen.get(typId); if (t && !t.schluessel) t.schluessel = schluessel; },
-    async setzeBerechtigungen(typId, rw) { const t = typen.get(typId)!; t.berechtigungen = rw ? kopie(rw) : null; t.geaendert = jetzt(); return kopie(t); },
+    async setzeBerechtigungen(typId, rw) { const t = typen.get(typId)!; t.berechtigungen = rw ? kopie(rw) : null; t.geaendert = standWeiter(t.geaendert); return kopie(t); },
     async listeSichten() { return [...sichten.values()].map(kopie).sort((a, b) => a.position - b.position || a.name.localeCompare(b.name, 'de')); },
     async legeSichtAn(id, d: SichtDaten) { const x: Sicht = { id, ...kopie(d), erstellt: jetzt(), geaendert: jetzt() }; sichten.set(id, x); return kopie(x); },
-    async aendereSicht(id, d: SichtDaten) { const x: Sicht = { ...sichten.get(id)!, ...kopie(d), geaendert: jetzt() }; sichten.set(id, x); return kopie(x); },
+    async aendereSicht(id, d: SichtDaten, erwartet) {
+      const alt = sichten.get(id)!;
+      if (erwartet !== undefined && alt.geaendert !== erwartet) throw new KonfigurationVeraltet();
+      const x: Sicht = { ...alt, ...kopie(d), geaendert: standWeiter(alt.geaendert) }; sichten.set(id, x); return kopie(x);
+    },
+    async setzeSichtOrt(id, elternId, position) {
+      const x = sichten.get(id);
+      if (!x) return;
+      if (x.elternId !== elternId) x.geaendert = standWeiter(x.geaendert);
+      x.elternId = elternId; x.position = position;
+    },
     async loescheSicht(id) {
       sichten.delete(id);
       for (const x of sichten.values()) if (x.elternId === id) x.elternId = null;

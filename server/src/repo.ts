@@ -40,6 +40,14 @@ export class StandVeraltet extends Error {
   constructor() { super(t('meldungen.repo.die-mappe-hat-sich')); }
 }
 
+/**
+ * Gleichzeitig bearbeitet (#917): Mappentyp oder Ansicht hat seit dem erwarteten Stand (`geaendert`) jemand anderes
+ * gespeichert. Nichts wurde geändert; der Dienst macht daraus eine 409.
+ */
+export class KonfigurationVeraltet extends Error {
+  constructor() { super('Stand veraltet'); this.name = 'KonfigurationVeraltet'; }
+}
+
 /** Neue Werte feldweise auf den aktuellen Stand legen (#609): nur Felder, die sich gegenüber `basis` ändern. */
 export function feldweise(aktuell: Werte, basis: Werte, werte: Werte): Werte {
   const r: Werte = { ...aktuell };
@@ -182,8 +190,12 @@ export interface Repo {
   holeTyp(id: string): Promise<Mappentyp | undefined>;
   /** `system` nur für die Systemtypen, die der Server selbst anlegt. */
   legeTypAn(id: string, d: MappentypDaten, system?: Systemtyp): Promise<Mappentyp>;
-  /** Aktualisiert den Typ und entfernt Verweise aus Feldern, die keine Referenzfelder mehr sind. */
-  aendereTyp(id: string, d: MappentypDaten): Promise<Mappentyp>;
+  /**
+   * Aktualisiert den Typ und entfernt Verweise aus Feldern, die keine Referenzfelder mehr sind.
+   * Mit `erwartet` (#917, `geaendert`, auf dem die Bearbeitung beruht) nur, wenn seitdem niemand gespeichert hat –
+   * sonst {@link KonfigurationVeraltet} und nichts ändert sich. `geaendert` wächst bei jeder Änderung um mindestens 1 ms.
+   */
+  aendereTyp(id: string, d: MappentypDaten, erwartet?: string): Promise<Mappentyp>;
   loescheTyp(id: string): Promise<void>;
   zaehleMappen(typId: string): Promise<number>;
 
@@ -365,7 +377,13 @@ export interface Repo {
 
   listeSichten(): Promise<Sicht[]>;
   legeSichtAn(id: string, d: SichtDaten): Promise<Sicht>;
-  aendereSicht(id: string, d: SichtDaten): Promise<Sicht>;
+  /** Mit `erwartet` (#917) wie bei {@link Repo.aendereTyp}: nur auf dem Stand, auf dem die Bearbeitung beruht. */
+  aendereSicht(id: string, d: SichtDaten, erwartet?: string): Promise<Sicht>;
+  /**
+   * Ort im Baum (Ordnen, Verschieben, #917): Nur ein Wechsel der Elternsicht zählt als Änderung der Ansicht
+   * (`geaendert`); bloßes Umnummerieren unter Geschwistern lässt den Stand, damit offene Bearbeitungen weiter gelten.
+   */
+  setzeSichtOrt(id: string, elternId: string | null, position: number): Promise<void>;
   loescheSicht(id: string): Promise<void>;
   /** problem null = passt. */
   setzePassung(liste: Array<{ id: string; problem: string | null }>): Promise<void>;

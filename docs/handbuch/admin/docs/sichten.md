@@ -14,6 +14,7 @@ Der Editor ist wie beim [Mappentyp](mappentypen.md#aufbau-des-editors) in Bereic
 - <span id="symbol"></span>**Symbol** – ein kleines Bild vor dem Namen, damit man Ansichten schneller wiederfindet, auch am Handy und auf der Startseite. Du wählst es aus einer festen Auswahl (Haus, Auto, Geld, Gesundheit, Familie, Post, Fristen …) mit Suche; **Symbol entfernen** stellt „ohne Symbol“ wieder her. Die mitgelieferte Ansicht *Neue Post* hat schon eins. Pakete können ein Symbol mitbringen; ändert ein Paket-Update eine Ansicht nicht, bleibt dein Symbol, wie es ist.
 - **Liegt unter** – die Elternansicht im Baum, beliebig tief. Eine Ansicht kann nicht unter sich selbst oder einer ihrer Unteransichten liegen.
 - **Reihenfolge** – mit **↑ nach oben** und **↓ nach unten** unter den Ansichten derselben Ebene.
+- **Zu zweit bearbeiten:** Hat jemand anderes die Ansicht gespeichert oder unter eine andere Ansicht verschoben, während du sie bearbeitest, überschreibt Ablago nichts und meldet „Jemand hat diese Ansicht inzwischen geändert …“. **Verwerfen** lädt den neuen Stand; dann übernimmst du deine Änderungen noch einmal. Die Reihenfolge innerhalb einer Ebene zu ändern stört eine offene Bearbeitung nicht.
 
 ### Ordnen per Drag & Drop
 

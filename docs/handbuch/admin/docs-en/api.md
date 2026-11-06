@@ -107,6 +107,8 @@ curl -X PUT -H "Authorization: Bearer dms_…" -H "Content-Type: application/jso
 
 Without `stand`, Ablago checks nothing – as up to 0.143.0, what you send applies. Existing scripts keep running unchanged; Ablago never resets fields that weren't passed. "Last changed" (`geaendert`) is accurate to the millisecond and becomes greater with every save – compare it as text, don't calculate with it.
 
+**Folder types** (`PUT /api/v1/typen/{id}`, Workbench) also accept `stand` – the folder type's `geaendert` value as you read it. If someone else has saved it since then, **409** comes and nothing is overwritten; read it again and apply your changes once more. Without `stand`, whatever is saved last applies, as before.
+
 !!! note "Names in the API"
     The interface keeps its names, even where the interface on screen has used other words since 0.73: `sicht` is the **view**, `sicht=eingang` the list **To do**, `key` the **identifier** of a field, tab or folder type, the field kind `referenz` the **link**, the tab of kind `protokoll` the **history** and `mandant` or `haushalt_id` the **household**. The API names stay German in every language.
 

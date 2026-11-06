@@ -14,6 +14,7 @@ As with the [Folder type](mappentypen.md#aufbau-des-editors), the editor is divi
 - <span id="symbol"></span>**Icon** – a small picture in front of the name so that views are found again faster, also on the phone and on the start page. You choose it from a fixed selection (house, car, money, health, family, post, deadlines …) with a search; **Remove icon** restores "without icon". The supplied view *New post* already has one. Packages can bring an icon; if a package update doesn't change a view, your icon stays as it is.
 - **Sits under** – the parent view in the tree, as deep as you like. A view can't sit under itself or one of its subviews.
 - **Order** – with **↑ up** and **↓ down** among the views of the same level.
+- **Editing at the same time:** If someone else saves the view or moves it under another view while you're editing it, Ablago doesn't overwrite anything and reports "Someone has changed this view in the meantime …". **Discard** loads the new state; then you apply your changes again. Changing the order within a level doesn't disturb an open edit.
 
 ### Arranging by drag and drop {#ordnen-per-drag-drop}
 
