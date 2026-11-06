@@ -83,7 +83,7 @@ export function zusammenfassung(a: Auswertung): string {
   if (!a.quarantaene.length) z.push('Keine Tests in Quarantäne.');
   else {
     z.push('| Test | Datei | Issue | fällig | Ergebnis |', '|---|---|---|---|---|');
-    for (const q of a.quarantaene) z.push(`| ${q.name.replace(/\|/g, '\\|')} | ${q.datei} | #${q.issue} | ${q.faellig}${q.ueberfaellig ? ' **überfällig**' : ''} | ${q.ergebnis} |`);
+    for (const q of a.quarantaene) z.push(`| ${q.name.replace(/[\\|]/g, (x) => `\\${x}`)} | ${q.datei} | #${q.issue} | ${q.faellig}${q.ueberfaellig ? ' **überfällig**' : ''} | ${q.ergebnis} |`);
   }
   if (a.echt.length) z.push('', `**${a.echt.length} Fehlschlag/Fehlschläge außerhalb der Quarantäne:**`, '', ...a.echt.map((e) => `- ${e}`));
   return `${z.join('\n')}\n`;
