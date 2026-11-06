@@ -86,6 +86,7 @@ import { alterExportOrdner, exportOrdnerVon, exportOrt, merkeUmzug, raeumeExport
 import { Startmodus } from './startmodus';
 import { raeumeHochladenAuf, richteHochladenEin } from './hochladen';
 import { PROZESSE_MAX, prozesseAus, verbundFuerProzess } from './prozesse';
+import { setzeLasttestModus } from './protokollsammlung';
 import { teileArbeit, UPLOAD_ALTER_MS } from './aufteilung';
 import { Fernlaeufer } from './laeufer/fern';
 import type { PaketLaeufer } from './pakete';
@@ -819,6 +820,8 @@ if (lasttest.wahl) {
 }
 
 verbund.bediene('lasttest.intern', () => !!lasttestSeite);
+// Sammlung für den Lasttest (#909): die Spur des Verwaltungsmodus der Mess-Sitzung nicht mitzählen – in jedem Prozess.
+if (lasttestSeite || lasttestIntern) setzeLasttestModus(true);
 // CPU und Speicher je Prozessgruppe (#895): nur im Leiter, nur wenn jemand fragt (der Lasttest alle 2 Sekunden).
 if (leiter) {
   const gruppen = new Prozessgruppen({ postgresImContainer: env.DMS_VARIANTE === 'komplett' });

@@ -901,10 +901,31 @@ function protokollZwischen(a, z, staende = []) {
       const s = staende.find((x) => (protokollVon(x)?.eintraege ?? []).some((y) => meldungsSchluessel(y) === k && y.anzahl > vorher.get(k)));
       erste = s ? new Date(s.t).toISOString() : m.letzte;
     }
-    eintraege.push({ stufe: m.stufe, modul: m.modul, text: m.text, ausnahme: m.ausnahme ?? null, anzahl: n, erste, prozesse: m.prozesse ?? [] });
+    const dauer = dauerZwischen(a?.eintraege?.find((x) => meldungsSchluessel(x) === k)?.dauer, m.dauer);
+    eintraege.push({ stufe: m.stufe, modul: m.modul, text: m.text, ausnahme: m.ausnahme ?? null, anzahl: n, erste, prozesse: m.prozesse ?? [], ...(dauer ? { dauer } : {}) });
   }
   eintraege.sort((x, y) => y.anzahl - x.anzahl || (x.erste < y.erste ? -1 : 1));
   return { gesamt: Math.max(0, (z.gesamt ?? 0) - (a?.gesamt ?? 0)), weitere: Math.max(0, (z.weitere ?? 0) - (a?.weitere ?? 0)), eintraege };
+}
+
+/**
+ * Dauer gleicher Meldungen zwischen zwei Ständen (#909): Mittel aus Summe und Anzahl der neuen; höchste Dauer aus dem
+ * späteren Stand (die Sammlung kennt nur die höchste seit ihrem Start). null ohne Angabe.
+ */
+export function dauerZwischen(a, z) {
+  if (!z || !(z.n > 0)) return null;
+  const n = z.n - (a?.n ?? 0), summe = z.summe - (a?.summe ?? 0);
+  if (!(n > 0) || !(summe >= 0)) return null;
+  return { max: z.max, mittel: Math.round(summe / n), n };
+}
+
+/**
+ * Text einer Meldung mit Dauer (#909): `<Dauer>` → „1.240 ms“ bzw. „bis 1.240 ms (Ø 610 ms)“; ohne Angabe „… ms“.
+ */
+export function mitDauer(text, dauer) {
+  if (!String(text).includes('<Dauer>')) return text;
+  const d = dauer && typeof dauer.max === 'number' ? (dauer.n === 1 || dauer.mittel === dauer.max ? `${zahl(dauer.max)} ms` : `bis ${zahl(dauer.max)} ms (Ø ${zahl(dauer.mittel)} ms)`) : '… ms';
+  return String(text).replace('<Dauer>', d);
 }
 
 /**
@@ -938,7 +959,7 @@ export function protokollGesamt(anfang, ende, laeufe) {
 }
 
 const STUFE_NAME = { warn: 'Warnung', error: 'Fehler', fatal: 'Schwerer Fehler' };
-const meldungText = (m) => `${STUFE_NAME[m.stufe] ?? m.stufe} [${m.modul}] ${m.text}${m.ausnahme ? ` (${m.ausnahme})` : ''}`;
+const meldungText = (m) => `${STUFE_NAME[m.stufe] ?? m.stufe} [${m.modul}] ${mitDauer(m.text, m.dauer)}${m.ausnahme ? ` (${m.ausnahme})` : ''}`;
 const neustartText = (x) => `Prozess ${x.nr} ${x.grund}`;
 
 /**
@@ -963,7 +984,7 @@ export function protokollBericht(g) {
   if (!g.gesamt) z.push('Keine Warnungen und Fehler.');
   else {
     z.push('| # | Anzahl | Stufe | Modul | Meldung | Ausnahme | erstmals | Durchgang | Prozesse |', '|---:|---:|---|---|---|---|---|---|---|');
-    g.eintraege.slice(0, PROTOKOLL_ANZAHL).forEach((m, i) => z.push(`| ${i + 1} | ${zahl(m.anzahl)} | ${STUFE_NAME[m.stufe] ?? m.stufe} | ${zelle(m.modul)} | ${zelle(m.text)} | ${zelle(m.ausnahme ?? '–')} | ${uhr(m.erste)} | ${zelle(m.durchgang ?? '–')} | ${(m.prozesse ?? []).map((n) => (n === 0 ? 'Haupt' : n)).join(', ') || '–'} |`));
+    g.eintraege.slice(0, PROTOKOLL_ANZAHL).forEach((m, i) => z.push(`| ${i + 1} | ${zahl(m.anzahl)} | ${STUFE_NAME[m.stufe] ?? m.stufe} | ${zelle(m.modul)} | ${zelle(mitDauer(m.text, m.dauer))} | ${zelle(m.ausnahme ?? '–')} | ${uhr(m.erste)} | ${zelle(m.durchgang ?? '–')} | ${(m.prozesse ?? []).map((n) => (n === 0 ? 'Haupt' : n)).join(', ') || '–'} |`));
     const rest = g.eintraege.length - PROTOKOLL_ANZAHL;
     if (rest > 0 || g.weitere) z.push('', `Dazu ${rest > 0 ? `${rest} weitere Arten` : ''}${rest > 0 && g.weitere ? ' und ' : ''}${g.weitere ? `${zahl(g.weitere)} Meldungen ohne eigene Zeile (Sammlung voll)` : ''}.`);
   }
@@ -993,7 +1014,7 @@ export function liveAus(staende, letzteMs, { name, n, seit }) {
     gruppen = gz.gruppen.map((g) => ({ art: g.art, ...(g.art === 'ablago' ? { nr: g.nr, rolle: g.rolle } : {}), anzahl: g.anzahl, mb: g.mb, cpu: vorher.has(gruppeSchluessel(g)) ? prozentKern(g.cpuSekunden - vorher.get(gruppeSchluessel(g)), gs) : null }));
   }
   const meldungen = (protokollVon(z)?.eintraege ?? []).filter((m) => m.letzte >= seit).sort((x, y) => (x.letzte < y.letzte ? 1 : -1)).slice(0, 5)
-    .map((m) => ({ stufe: m.stufe, modul: m.modul, text: m.text, ausnahme: m.ausnahme ?? null, anzahl: m.anzahl, letzte: m.letzte }));
+    .map((m) => { const dauer = dauerZwischen(null, m.dauer); return { stufe: m.stufe, modul: m.modul, text: m.text, ausnahme: m.ausnahme ?? null, anzahl: m.anzahl, letzte: m.letzte, ...(dauer ? { dauer: { max: dauer.max, mittel: dauer.mittel } } : {}) }; });
   const pool = z?.engpass?.pool;
   return {
     name, n, p95: rund(quantil(letzteMs, 0.95)), anfragen: letzteMs.length,

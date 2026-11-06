@@ -256,7 +256,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         const zeit = ((req as MitKontext).zeit ??= { eingang: start });
         zeit.start = start;
         if (r.lesend) (req as MitKontext).lesend = true;
-        const k: Kontext = { anfrage: req.id, pfad: `${req.method} ${req.url.split('?')[0]}`, db: { anzahl: 0, ms: 0 }, ursprung: `${req.protocol}://${req.host}` };
+        const k: Kontext = { anfrage: req.id, pfad: `${req.method} ${req.url.split('?')[0]}`, muster: `${req.method} ${r.pfad}`, db: { anzahl: 0, ms: 0 }, ursprung: `${req.protocol}://${req.host}` };
         (req as MitKontext).dms = k;
         // Sprache (#729): erst die, die die Oberfläche mitschickt, dann die der angemeldeten Person.
         const kopfSprache = spracheAusKopf(a.kopf?.('x-sprache'), erlaubteSprachen());

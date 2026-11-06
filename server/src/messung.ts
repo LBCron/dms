@@ -74,12 +74,13 @@ export class Messung {
 
   /**
    * Ganze Anfrage (#477): dauert sie ab Eingang länger als die Schwelle, wird sie mit ihrer
-   * Aufteilung als Langläufer gemerkt (Zugriff „Anfrage: …“).
+   * Aufteilung als Langläufer gemerkt (Zugriff „Anfrage: …“). Im Protokoll mit `dauerMs` und dem Routenmuster
+   * (`muster`): Die Sammlung für den Lasttest zeigt so Dauer und Route ohne Ids (#909).
    */
-  erfasseAnfrage(k: Pick<Kontext, 'pfad' | 'benutzer'>, t: Zeitaufteilung) {
+  erfasseAnfrage(k: Pick<Kontext, 'pfad' | 'benutzer' | 'muster'>, t: Zeitaufteilung) {
     if (t.gesamt < this.einstellungen.schwelleMs) return;
     const zugriff = `Anfrage: ${aufteilungText(t)}`;
-    log.warn(`Lange Anfrage: ${k.pfad ?? ''} dauerte ${Math.round(t.gesamt)} ms`, { anfrage: k.pfad, ms: Math.round(t.gesamt), vor: Math.round(t.vor), db: Math.round(t.db), rechte: Math.round(t.rechte), json: Math.round(t.json) });
+    log.warn(`Lange Anfrage: ${k.pfad ?? ''} dauerte ${Math.round(t.gesamt)} ms`, { anfrage: k.pfad, muster: k.muster, dauerMs: Math.round(t.gesamt), vor: Math.round(t.vor), db: Math.round(t.db), rechte: Math.round(t.rechte), json: Math.round(t.json) });
     this.speicher.merke({ zeit: new Date().toISOString(), dauerMs: Math.round(t.gesamt), zugriff, anfrage: k.pfad ?? '', benutzer: k.benutzer ?? '' })
       .catch((e) => log.error('Langläufer nicht gespeichert', { fehler: (e as Error).message }));
   }
@@ -89,7 +90,7 @@ export class Messung {
     if (k) { k.db.anzahl++; k.db.ms += ms; if (k.rechte?.offen) k.rechte.dbMs += ms; }
     if (ms >= this.einstellungen.schwelleMs) {
       const l: Langlaeufer = { zeit: new Date().toISOString(), dauerMs: Math.round(ms), zugriff, anfrage: k?.pfad ?? '', benutzer: k?.benutzer ?? '' };
-      log.warn(`Langer Datenbankzugriff: ${zugriff} dauerte ${Math.round(ms)} ms`, { zugriff, ms: Math.round(ms), anfrage: l.anfrage || undefined });
+      log.warn(`Langer Datenbankzugriff: ${zugriff} dauerte ${Math.round(ms)} ms`, { zugriff, dauerMs: Math.round(ms), anfrage: l.anfrage || undefined, muster: k?.muster });
       this.speicher.merke(l).catch((e) => log.error('Langläufer nicht gespeichert', { fehler: (e as Error).message }));
       if (Date.now() - this.zuletztAufgeraeumt > 3_600_000) {
         this.zuletztAufgeraeumt = Date.now();

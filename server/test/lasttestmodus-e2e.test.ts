@@ -102,7 +102,7 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     assert.match(s.ergebnis!.vorlage, /Messergebnis Lasttest[\s\S]*Gerät\/Modell: \{\{geraet\}\}[\s\S]*klein\s+25 gleichzeitig: p50[^\n]*\n  Engpass klein: Warten auf DB-Verbindung p95 [^\n]*\n(?:  Teuerste Abfragen klein: [^\n]*\n)?(?:  CPU je Gruppe klein [^\n]*\n)?klein \+ Speichern\s+25 gleichzeitig: p50/);
     // #895: CPU je Gruppe unter der Stufe, Protokoll als Zeile; im Bericht ausführlich; live auf der Seite.
     assert.match(s.ergebnis!.vorlage, /\n  CPU je Gruppe klein \(% eines Kerns, Speicher RSS höchstens\): Ablago Prozess 1 \d+ % \d+ MB · Lastgenerator \d+ % /);
-    assert.match(s.ergebnis!.vorlage, /\nProtokoll: (keine Warnungen und Fehler|[\d.]+ Warnungen und Fehler, \d+ Arten? – )/);
+    assert.match(s.ergebnis!.vorlage, /\nProtokoll: (keine Warnungen und Fehler|[\d.]+ Warnungen und Fehler, \d+ (?:Art|Arten) – )/);
     assert.match(s.ergebnis!.bericht, /CPU und Speicher je Gruppe „klein“[\s\S]*Warnungen und Fehler im Protokoll \(#895/);
     assert.ok(live && live.jetzt.name.startsWith('klein') && live.jetzt.n === 25, 'Werte der laufenden Messung auf der Seite');
     assert.ok(live.jetzt.gruppen?.some((g) => g.art === 'lastgenerator'), 'Lastgenerator erkannt');

@@ -41,6 +41,8 @@ export interface Kontext {
   anfrage: string;
   /** Methode und Pfad, z. B. „GET /api/mappen“. */
   pfad?: string;
+  /** Methode und Routenmuster ohne Ids, z. B. „GET /api/mappen/:id“ (#909, für die Sammlung im Lasttest). */
+  muster?: string;
   benutzer?: string;
   db: { anzahl: number; ms: number };
   /**
