@@ -23,7 +23,7 @@ import { alsText, erwaehnungen } from '../../shared/src/markdown';
 import { liesAnsicht, liesEigene, OHNE_EINSTELLUNG } from '../../shared/src/werkbankansicht';
 import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
-import { istUuid, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
+import { istUuid, KonfigurationVeraltet, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
 import { ausgangAus, bereinigeBeschriftungen, ergaenzeBeschriftungen, optionsGruppen, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
 import { inSprache } from '../../shared/src/sprache';
@@ -585,10 +585,10 @@ function passwortWert(eingabe: unknown, hatEingabe: boolean, bisher: unknown, ve
 }
 
 /** Stand einer Änderung (#609): „zuletzt geändert“ als ISO-Zeitpunkt; fehlt = ohne Prüfung. */
-function liesStand(v: unknown): string | undefined {
+function liesStand(v: unknown, fehler: 'mappen.konflikt.standUngueltig' | 'meldungen.dienst.stand-ungueltig' = 'mappen.konflikt.standUngueltig'): string | undefined {
   if (v === undefined || v === null || v === '') return undefined;
   const ms = typeof v === 'string' ? Date.parse(v) : NaN;
-  if (!Number.isFinite(ms)) throw new Fachfehler(422, t('mappen.konflikt.standUngueltig'));
+  if (!Number.isFinite(ms)) throw new Fachfehler(422, t(fehler));
   return new Date(ms).toISOString();
 }
 
@@ -3181,9 +3181,15 @@ export class Dienst {
     return typ;
   }
 
+  /**
+   * Gleichzeitig bearbeiten (#917): Mit `stand` (`geaendert` des Typs, wie gelesen) speichert Ablago nur, wenn seitdem
+   * niemand den Typ geändert hat – sonst 409, nichts wird überschrieben. Ohne `stand` keine Prüfung (wie bisher).
+   */
   private async aendereTypIntern(id: string, eingabe: unknown): Promise<Mappentyp> {
     const alt = await this.repo.holeTyp(id);
     if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
+    const stand = liesStand((eingabe as { stand?: unknown } | null)?.stand, 'meldungen.dienst.stand-ungueltig');
+    if (stand !== undefined && alt.geaendert !== stand) throw Dienst.konfigurationKonflikt('typ', alt.geaendert);
     let d = behalteBeschriftungen(eingabe, bereinigeTyp(eingabe), alt);
     if (alt.system) d = await this.mitSystemfeldern(d, alt.system);
     // Der Schlüssel ist fest (#145); fehlt er noch, gilt der eingegebene bzw. einer aus dem Namen.
@@ -3197,7 +3203,9 @@ export class Dienst {
       const name = alt.register.find((r) => r.key === key)?.name ?? key;
       throw new Fachfehler(409, t('meldungen.dienst.im-register-liegen-noch', { anzahl: n, name }));
     }
-    const typ = await this.repo.aendereTyp(id, d);
+    let typ: Mappentyp;
+    try { typ = await this.repo.aendereTyp(id, d, stand); }
+    catch (f) { if (f instanceof KonfigurationVeraltet) throw Dienst.konfigurationKonflikt('typ'); throw f; }
     // Die Sicht, die für diesen Typ entstanden ist, heißt weiter wie er – solange sie niemand umbenannt hat.
     const eigene = (await this.repo.listeSichten()).find((x) => x.id === id);
     if (eigene && eigene.name === alt.name && alt.name !== typ.name) await this.repo.aendereSicht(id, { ...eigene, name: typ.name });
@@ -4040,9 +4048,11 @@ export class Dienst {
     // „Alle Mappentypen“ (#725) steht allein; sonst nur vorhandene Typen.
     const typen = gewaehlt.includes(ALLE_TYPEN) ? [ALLE_TYPEN] : gewaehlt.filter((t) => vorhanden.has(t));
     const geschwister = kinderVon(alle.filter((s) => s.id !== id), elternId);
+    // Ohne Stelle: bleibt die Elternsicht, bleibt auch die Stelle (#917) – sonst ans Ende der neuen Ebene.
+    const bisher = alle.find((s) => s.id === id);
     const position = Number.isFinite(Number(x.position)) && x.position !== null && x.position !== undefined
       ? Math.trunc(Number(x.position))
-      : (geschwister.at(-1)?.position ?? 0) + 10;
+      : bisher && bisher.elternId === elternId ? bisher.position : (geschwister.at(-1)?.position ?? 0) + 10;
     // Trefferliste (#75): nur der Schlüssel; passt er nicht (mehr), gilt der Standard und die Werkbank zeigt es an.
     const trefferliste = text(x.trefferliste).slice(0, 40) || null;
     // Berechtigungen (#148): fehlt die Angabe, bleiben sie, wie sie sind.
@@ -4062,10 +4072,24 @@ export class Dienst {
     return this.repo.legeSichtAn(id, await this.bereinigeSicht(e, id, alle));
   }
 
+  /**
+   * Ansicht ändern. Gleichzeitig bearbeiten (#917): Mit `stand` (ihr `geaendert`, wie gelesen) speichert Ablago nur,
+   * wenn seitdem niemand die Ansicht geändert hat – sonst 409 und nichts geht verloren. Ohne `stand` keine Prüfung.
+   */
   async aendereSicht(id: string, e: unknown): Promise<Sicht> {
     const alle = await this.repo.listeSichten();
-    if (!alle.some((s) => s.id === id)) throw new Fachfehler(404, t('meldungen.dienst.diese-ansicht-gibt-es'));
-    return this.repo.aendereSicht(id, await this.bereinigeSicht(e, id, alle));
+    const alt = alle.find((s) => s.id === id);
+    if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diese-ansicht-gibt-es'));
+    const stand = liesStand((e as { stand?: unknown } | null)?.stand, 'meldungen.dienst.stand-ungueltig');
+    if (stand !== undefined && alt.geaendert !== stand) throw Dienst.konfigurationKonflikt('sicht', alt.geaendert);
+    const d = await this.bereinigeSicht(e, id, alle);
+    try { return await this.repo.aendereSicht(id, d, stand); }
+    catch (f) { if (f instanceof KonfigurationVeraltet) throw Dienst.konfigurationKonflikt('sicht'); throw f; }
+  }
+
+  /** 409 „Jemand hat … inzwischen geändert“ (#917) für Mappentyp bzw. Ansicht; `aktuell` = der Stand jetzt. */
+  private static konfigurationKonflikt(art: 'typ' | 'sicht', aktuell?: string): Fachfehler {
+    return new Fachfehler(409, t(art === 'typ' ? 'meldungen.dienst.typ-konflikt' : 'meldungen.dienst.sicht-konflikt'), { konflikt: true, ...(aktuell ? { stand: aktuell } : {}) });
   }
 
   /** Untersichten rücken eine Ebene nach oben, an die Stelle der gelöschten. */
@@ -4076,7 +4100,7 @@ export class Dienst {
     // Neue Reihenfolge der Ebene: Geschwister davor, die Kinder, Geschwister danach.
     const ebene = kinderVon(alle, s.elternId).flatMap((g) => (g.id === id ? kinderVon(alle, id) : [g]));
     for (const [i, g] of ebene.entries()) {
-      if (g.elternId !== s.elternId || g.position !== (i + 1) * 10) await this.repo.aendereSicht(g.id, { ...g, elternId: s.elternId, position: (i + 1) * 10 });
+      if (g.elternId !== s.elternId || g.position !== (i + 1) * 10) await this.repo.setzeSichtOrt(g.id, s.elternId, (i + 1) * 10);
     }
     await this.repo.loescheSicht(id);
   }
@@ -4090,7 +4114,7 @@ export class Dienst {
     if (liste.length !== geschwister.length || !geschwister.every((g) => liste.includes(g.id))) throw new Fachfehler(422, t('meldungen.dienst.die-reihenfolge-muss-genau'));
     for (const [i, sid] of liste.entries()) {
       const g = geschwister.find((x) => x.id === sid)!;
-      if (g.position !== (i + 1) * 10) await this.repo.aendereSicht(sid, { ...g, position: (i + 1) * 10 });
+      if (g.position !== (i + 1) * 10) await this.repo.setzeSichtOrt(sid, g.elternId, (i + 1) * 10);
     }
     return this.repo.listeSichten();
   }
@@ -4113,7 +4137,7 @@ export class Dienst {
     for (const [j, g] of neu.entries()) {
       const position = (j + 1) * 10;
       if (g.id === id ? g.elternId !== eltern || g.position !== position : g.position !== position) {
-        await this.repo.aendereSicht(g.id, { ...g, elternId: g.id === id ? eltern : g.elternId, position });
+        await this.repo.setzeSichtOrt(g.id, g.id === id ? eltern : g.elternId, position);
       }
     }
     return this.repo.listeSichten();

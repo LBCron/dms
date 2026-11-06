@@ -196,6 +196,14 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
   });
 
   const gespeichert = d.typ(e.id);
+  // Gleichzeitig bearbeiten (#917): der Stand, auf dem diese Bearbeitung beruht – geht beim Speichern mit.
+  const [stand, setStand] = useState(typ?.geaendert);
+  // Hat inzwischen jemand anderes gespeichert und ist hier nichts geändert, gilt gleich der neue Stand.
+  useEffect(() => {
+    if (neu || !gespeichert || !stand || gespeichert.geaendert <= stand || ent.geaendert) return;
+    const frisch = entwurfAus(gespeichert);
+    setE(frisch); setBasis(JSON.stringify(frisch)); setStand(gespeichert.geaendert);
+  }, [gespeichert?.geaendert, ent.geaendert]); // eslint-disable-line react-hooks/exhaustive-deps
   // Der Entwurf als Mappentyp, für Regeln und Prüfungen im Editor.
   const entwurfTyp = { id: e.id, name: e.name, beschreibung: e.beschreibung, system: system ?? null, felder: e.felder as unknown as Feld[], register: [], erstellt: '', geaendert: '' } as unknown as Mappentyp;
   // Fehler, die man schon vor dem Speichern sieht.
@@ -263,9 +271,9 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       })),
     };
     try {
-      const mappentyp = neu ? await api.typAnlegen({ ...daten, sichtAnlegen }) : await api.typAendern(e.id, { ...daten, bestaetigt });
+      const mappentyp = neu ? await api.typAnlegen({ ...daten, sichtAnlegen }) : await api.typAendern(e.id, { ...daten, bestaetigt, stand });
       const sauber = entwurfAus(mappentyp);
-      setE(sauber); setBasis(JSON.stringify(sauber)); setFehler(null); setOffen(null); setFehlerOrte(new Set());
+      setE(sauber); setBasis(JSON.stringify(sauber)); setStand(mappentyp.geaendert); setFehler(null); setOffen(null); setFehlerOrte(new Set());
       // Ein neuer Typ bleibt nach dem Anlegen aufgeklappt wie gerade.
       if (neu) merkeOffen(mappentyp.id, auf);
       loeseWache();
@@ -274,6 +282,9 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       else setMeldung(t('mappentypen.editor.mappentyp-gespeichert'));
     } catch (err) {
       const f = err as ApiFehler;
+      // Inzwischen von jemand anderem gespeichert (#917): nichts überschrieben; den neuen Stand holen –
+      // „Verwerfen“ zeigt ihn dann, die eigenen Änderungen bleiben bis dahin stehen.
+      if (f.status === 409 && (f.details as { konflikt?: boolean } | undefined)?.konflikt) { setMeldung(f.message); await d.neuLaden(); return; }
       // Berechtigungen (#142): Danach könnte niemand mehr Mappen dieses Typs lesen – nachfragen.
       if (f.status === 409 && (f.details as { niemand?: number } | undefined)?.niemand && !bestaetigt && await rueckfrage({ titel: t('mappentypen.editor.trotzdem-speichern'), text: f.message, ja: t('mappentypen.editor.trotzdem-speichern-2'), gefahr: true })) { setSendet(false); await speichern(true); return; }
       // Bereiche mit Fehler markieren und aufklappen (#144).

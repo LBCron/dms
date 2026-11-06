@@ -643,7 +643,7 @@ export const api = {
   /* Sichten verwalten (#38) */
   sichtDefinitionen: () => anfrage<Sicht[]>('GET', '/api/sichten/definitionen'),
   sichtAnlegen: (s: Partial<SichtDaten>) => anfrage<Sicht>('POST', '/api/sichten/definitionen', s),
-  sichtAendern: (id: string, s: Partial<SichtDaten>) => anfrage<Sicht>('PUT', `/api/sichten/definitionen/${id}`, s),
+  sichtAendern: (id: string, s: Partial<SichtDaten> & { stand?: string }) => anfrage<Sicht>('PUT', `/api/sichten/definitionen/${id}`, s),
   sichtLoeschen: (id: string) => anfrage<null>('DELETE', `/api/sichten/definitionen/${id}`),
   /** Drag & Drop (#73): unter elternId an die Stelle stelle (0 = zuerst). */
   sichtVerschieben: (id: string, elternId: string | null, stelle: number) => anfrage<Sicht[]>('POST', `/api/sichten/definitionen/${id}/verschieben`, { elternId, stelle }),

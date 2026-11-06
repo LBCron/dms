@@ -16,6 +16,7 @@ The editor is built in the order in which you create a folder type: **Basics →
 - A **new** folder type is fully expanded, an **existing** one starts collapsed. Your device remembers per folder type what you expand or collapse.
 - The **jump bar** at the top leads to every area and expands it; **Expand all** or **Collapse all** switches all at once.
 - Areas with an **error** are marked red in the jump bar and at the edge. An unknown placeholder in the title or an incomplete rule is noticed while typing; what is only noticed on saving expands its area by itself.
+- **Editing at the same time:** If someone else saves the folder type while you're editing it, Ablago doesn't overwrite anything. It reports "Someone has changed this folder type in the meantime …"; **Discard** loads the new state, then you apply your changes again. Without changes of your own, the editor shows the new state by itself.
 
 ## Basics {#grunddaten}
 

@@ -16,6 +16,7 @@ Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: 
 - Ein **neuer** Mappentyp ist ganz aufgeklappt, ein **bestehender** startet eingeklappt. Was du auf- oder zuklappst, merkt sich dein Gerät je Mappentyp.
 - Die **Sprungleiste** oben führt zu jedem Bereich und klappt ihn auf; **Alle aufklappen** bzw. **Alle zuklappen** schaltet alle auf einmal.
 - Bereiche mit einem **Fehler** sind in der Sprungleiste und am Rand rot markiert. Ein unbekannter Platzhalter im Titel oder eine unvollständige Regel fällt schon beim Tippen auf; was erst beim Speichern auffällt, klappt seinen Bereich von selbst auf.
+- **Zu zweit bearbeiten:** Hat jemand anderes den Mappentyp gespeichert, während du ihn bearbeitest, überschreibt Ablago nichts. Es meldet „Jemand hat diesen Mappentyp inzwischen geändert …“; **Verwerfen** lädt den neuen Stand, dann übernimmst du deine Änderungen noch einmal. Ohne eigene Änderungen zeigt der Editor den neuen Stand von selbst.
 
 ## Grunddaten
 

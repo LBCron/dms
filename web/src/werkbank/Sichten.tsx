@@ -148,6 +148,14 @@ export function SichtEditor({ id }: { id: string }) {
   const [vorschau, setVorschau] = useState<number | null>(null);
   const ent = useEntwurf(basis, JSON.stringify(e), { neu, liste: '/werkbank/sichten', zuruecksetzen: () => { setE(JSON.parse(basis)); setMeldung(undefined); } });
   const { geaendert } = ent;
+  // Gleichzeitig bearbeiten (#917): der Stand, auf dem diese Bearbeitung beruht – geht beim Speichern mit.
+  const [stand, setStand] = useState(vorhanden?.geaendert);
+  // Hat inzwischen jemand anderes gespeichert und ist hier nichts geändert, gilt gleich der neue Stand.
+  useEffect(() => {
+    if (neu || !vorhanden || !stand || vorhanden.geaendert <= stand || geaendert) return;
+    const frisch = JSON.stringify(datenVon(vorhanden));
+    setBasis(frisch); setE(JSON.parse(frisch)); setStand(vorhanden.geaendert);
+  }, [vorhanden?.geaendert, geaendert]); // eslint-disable-line react-hooks/exhaustive-deps
   // Bereiche (#148) wie am Mappentyp: neu offen, bestehend eingeklappt bzw. wie zuletzt.
   const b = useBereiche(SICHT_BEREICHE, 'sicht', neu ? null : id);
   const [fehlerOrte, setFehlerOrte] = useState<Set<SichtBereich>>(new Set());
@@ -185,15 +193,18 @@ export function SichtEditor({ id }: { id: string }) {
   async function speichern() {
     setSendet(true); setMeldung(undefined);
     try {
-      const s = neu ? await api.sichtAnlegen({ ...e, position: undefined }) : await api.sichtAendern(id, e.elternId !== vorhanden!.elternId ? { ...e, position: undefined } : e);
+      // Die Stelle im Baum ändern nur Ordnen und Verschieben; ohne Angabe bleibt sie (bzw. ans Ende einer neuen Ebene).
+      const s = neu ? await api.sichtAnlegen({ ...e, position: undefined }) : await api.sichtAendern(id, { ...e, position: undefined, stand });
       const neuBasis = JSON.stringify(datenVon(s));
-      setBasis(neuBasis); setE(JSON.parse(neuBasis)); setFehlerOrte(new Set());
+      setBasis(neuBasis); setE(JSON.parse(neuBasis)); setFehlerOrte(new Set()); setStand(s.geaendert);
       loeseWache();
       if (neu) b.merke(s.id);
       await d.neuLaden();
       if (neu) geheZu(`/werkbank/sichten/${s.id}`); else setMeldung({ art: 'gut', text: t('werkbank.sichten.ansicht-gespeichert') });
     } catch (x) {
       setMeldung({ art: 'schlecht', text: (x as Error).message });
+      // Inzwischen von jemand anderem gespeichert (#917): nichts überschrieben; den neuen Stand holen – „Verwerfen“ zeigt ihn.
+      if ((x as { status?: number }).status === 409 && (x as { details?: { konflikt?: boolean } }).details?.konflikt) { await d.neuLaden(); return; }
       // Fehler in den Berechtigungen (#148): Bereich markieren und aufklappen; sonst die Grunddaten.
       const ort: SichtBereich = ((x as { details?: { berechtigungen?: boolean } }).details?.berechtigungen) ? 'berechtigungen' : 'grunddaten';
       setFehlerOrte(new Set([ort])); b.oeffne([ort]);
