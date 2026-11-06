@@ -62,6 +62,18 @@ export function useKonto(): Konto {
 }
 
 /**
+ * Konto, falls jemand angemeldet ist – sonst null (#881). Für Bausteine, die auch im Einrichtungsassistenten
+ * laufen: Der steht vor dem Provider, dort gibt es noch kein Konto.
+ */
+export function useKontoOptional(): Konto | null {
+  return useContext(Ctx);
+}
+
+/** War beim letzten Status jemand angemeldet? Für die Fehlergrenze (#881), die außerhalb des Providers liegt. */
+let ANGEMELDET = false;
+export const jemandAngemeldet = () => ANGEMELDET;
+
+/**
  * Entscheidet, was zu sehen ist: Ersteinrichtung, Anmeldung, Passwort setzen
  * oder – mit gültiger Sitzung – die eigentliche Anwendung.
  */
@@ -103,6 +115,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
         if (ziel && ziel !== hier) geheZu(ziel, true);
       }
       ohneBenutzer.current = !st.benutzer;
+      ANGEMELDET = !!st.benutzer;
       setStatus(st); setFehler(undefined); geladen.current = true;
     }
     catch (e) { if (!geladen.current) setFehler((e as Error).message); }
@@ -126,6 +139,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
     if (r?.abmelden) { location.href = r.abmelden; return; }
     setStatus((s) => (s ? { ...s, benutzer: null } : s));
     ohneBenutzer.current = true;
+    ANGEMELDET = false;
     geheZu('/', true);
   }, []);
 
