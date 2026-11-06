@@ -1,11 +1,3 @@
 {
-  "tests": [
-    {
-      "name": "Ergebnis von execFile kommt wie gewohnt an; fehlendes Programm bleibt ENOENT",
-      "datei": "hintergrund.test.ts",
-      "issue": 900,
-      "faellig": "2026-12-06",
-      "grund": "Die niedrigere Priorität wird erst nach dem Start des Programms gesetzt; ein schnelles „sh -c nice“ liest manchmal noch 0 (main, 06.11.)."
-    }
-  ]
+  "tests": []
 }
