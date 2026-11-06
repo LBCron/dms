@@ -25,7 +25,7 @@ done
 [ -s "$kandidaten" ] || { echo "nichts zu tun – keine Version über ${bisher:-?}" >&2; exit 1; }
 
 while IFS=$'\t' read -r v zeit labels; do
-  t=$(date -u -d "$zeit" +%s 2>/dev/null) || { echo "$v: Zeitpunkt „$zeit“ unlesbar" >&2; continue; }
+  t=$(date -u -d "$zeit" +%s 2>/dev/null) || { echo "$v: Zeitpunkt \"$zeit\" unlesbar" >&2; continue; }
   if [ $((jetzt - t)) -lt "$mindestalter" ]; then echo "$v: jünger als $((mindestalter / 3600)) Stunden" >&2; continue; fi
   if grund=$("$pruefen" "$v" true "$notizen/v$v.md" "$labels"); then echo "$v"; exit 0; fi
   echo "$v: $grund" >&2
