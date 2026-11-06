@@ -30,6 +30,8 @@ const REGELN: Regel[] = [
   R('PUT', '/api/werkbank/ansicht', NUR_GESAMT),
   R('*', '/api/werkbank/auftrag*', JEDER),
   R('GET', '/api/rollen', JEDER),
+  // Wer gerade auch im Verwaltungsmodus ist (#921): Hinweis oben in der Werkbank für alle im Modus.
+  R('GET', '/api/werkbank/gerade-im-modus', JEDER),
   // Einrichtungsassistent und Liste „Im Verwaltungsmodus angesehen“ (#820): nur Gesamte Verwaltung.
   R('*', '/api/werkbank/einrichtung*', NUR_GESAMT),
   R('*', '/api/werkbank/verwaltungsmodus*', NUR_GESAMT),

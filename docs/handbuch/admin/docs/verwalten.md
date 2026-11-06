@@ -43,6 +43,8 @@ Der Modus **endet** mit **Verwaltung beenden** (Balken oder Benutzermenü) oder 
 
 Dieser Tagesmerker hängt an der Sitzung auf dem Server, nicht an einem Cookie. Er endet um Mitternacht, beim Abmelden, wenn die Sitzung von einem anderen Gerät beendet wird, beim Passwortwechsel, wenn sich die Zwei-Faktor-Anmeldung ändert und wenn das Verwaltungsrecht entzogen wird. In einer Vertretung („Als … anmelden“) gibt es keinen Verwaltungsmodus.
 
+**Wer verwaltet gerade auch?** Sind weitere Personen zur selben Zeit im Verwaltungsmodus, steht in der Werkbank unter dem roten Balken zum Beispiel „Gerade auch im Verwaltungsmodus: Markus (seit 10:42)“ – bei mehreren alle, die eigene Person nie. So könnt ihr euch absprechen, bevor zwei dieselbe Konfiguration ändern. Der Hinweis ist **kein Schutz**: Davor bewahrt, dass Ablago beim Speichern eine zwischenzeitliche Änderung erkennt und nichts still überschreibt. Er erscheint nur in der Werkbank und nur im Modus, aktualisiert sich alle 10–15 Sekunden von selbst (das verlängert den eigenen Modus nicht) und verschwindet spätestens nach einer Minute, wenn der andere den Modus beendet oder er abläuft. Dienst- und Systemkonten erscheinen nie. Gemerkt wird dabei nichts – Beginn und Ende des Modus stehen wie bisher im [Protokoll](#protokoll).
+
 Im Modus ist die **Ablage** wie sonst zu bedienen – zum Nachsehen und für die Fehlersuche –, mit allen Mappen. Die Startseite ist dann die Werkbank, ohne Modus die Ablage.
 
 ### Frische Anmeldung für heikle Handlungen { #frische-anmeldung }

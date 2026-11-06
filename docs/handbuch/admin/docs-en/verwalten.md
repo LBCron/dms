@@ -43,6 +43,8 @@ The mode **ends** with **End administration** (bar or user menu) or after **15 m
 
 This day marker is tied to the session on the server, not to a cookie. It ends at midnight, on signing out, when the session is ended from another device, on a password change, when two-factor sign-in changes and when the administration permission is withdrawn. In a stand-in arrangement ("Sign in as …") there is no administration mode.
 
+**Who else is administering right now?** If other people are in administration mode at the same time, the workbench shows below the red bar, for example, "Also in administration mode right now: Markus (since 10:42)" – all of them if there are several, never yourself. This lets you agree with each other before two people change the same configuration. The note is **not a safeguard**: what protects you is that Ablago detects an intermediate change when saving and never silently overwrites it. It only appears in the workbench and only in the mode, updates itself every 10–15 seconds (this does not extend your own mode) and disappears after a minute at the latest when the other person ends the mode or it expires. Service and system accounts never appear. Nothing is recorded – the start and end of the mode are in the log as before.
+
 In the mode, the **Library** can be used as usual – for looking things up and for troubleshooting –, with all folders. The home page is then the workbench, without the mode the Library.
 
 ### Fresh sign-in for sensitive actions { #frische-anmeldung }

@@ -1737,6 +1737,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'PUT', pfad: '/api/werkbank/ansicht', zugang: 'admin', handler: async (a) => ok(await dienst.setzeWerkbankAnsicht(ich(a), b(a))) },
     // Übersicht als Startseite der Werkbank (#68): was zu tun ist, auf einen Blick.
+    // Werkbank (#921): wer außer mir gerade im Verwaltungsmodus ist – nur im Modus (zugang „admin“, Bereich für alle,
+    // die verwalten), nie mit API-Schlüssel, nicht in /api/v1. Nachgefragt im Takt (`still`: verlängert den Modus nicht).
+    { methode: 'GET', pfad: '/api/werkbank/gerade-im-modus', zugang: 'admin', still: true, handler: async (a) => ok(await konten.andereImVerwaltungsmodus(ich(a))) },
     { methode: 'GET', pfad: '/api/werkbank/uebersicht', zugang: 'admin', handler: async (a) => {
       const sicher = async <T>(f: () => Promise<T>): Promise<T | null> => { try { return await f(); } catch { return null; } };
       const ts = x.tresor ? await sicher(() => x.tresor!.status()) : null;

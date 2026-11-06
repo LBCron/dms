@@ -48,6 +48,8 @@
   "verwaltung.fehler.schluessel": "API keys never get administration rights. Administration happens only in the interface or with the dms command in the container.",
   "verwaltung.balken.titel": "You are administering Ablago.",
   "verwaltung.balken.text": "You shouldn’t work like this every day. You see all folders, even locked ones.",
+  "verwaltung.andere.text": "Also in administration mode right now: {namen}",
+  "verwaltung.andere.person": "{name} (since {uhrzeit})",
   "verwaltung.beenden": "End administration",
   "verwaltung.menue.verwalten": "Administer Ablago",
   "verwaltung.menue.aktiv": "in administration mode",

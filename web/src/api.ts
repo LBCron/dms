@@ -171,7 +171,7 @@ export async function heikleDatei(url: string, ersatzname: string, rueckfragen =
 }
 
 /**
- * Abfrage im Hintergrund (#919): ohne Kennzeichen „aktiv“ (zählt nie als Aktivität, auch kurz nach einer Eingabe)
+ * Abfrage im Hintergrund (#919, #921): ohne Kennzeichen „aktiv“ (zählt nie als Aktivität, auch kurz nach einer Eingabe)
  * und ohne Rückfrage nach der Anmeldung, wenn der Verwaltungsmodus inzwischen abgelaufen ist – fragt die Oberfläche von
  * selbst, darf sie niemanden unterbrechen. Der Server behandelt die Route ebenso (`still`).
  */
@@ -647,6 +647,8 @@ export const api = {
   sichten: () => anfrage<Zaehler>('GET', '/api/sichten'),
   /** Stand der Ablage (#919): ein Fingerabdruck ohne Inhalt; ändert er sich, lädt die Oberfläche Zahlen und Startseite neu. */
   ablageStand: () => stilleAnfrage<{ stand: string }>('/api/ablage/stand').then((x) => x.stand),
+  /** Werkbank (#921): wer außer mir gerade im Verwaltungsmodus ist (Name und Beginn), nur im Verwaltungsmodus. */
+  geradeImModus: () => stilleAnfrage<Array<{ name: string; seit: string }>>('/api/werkbank/gerade-im-modus'),
   /** Ohne Zählen (#512): Papierkorb-Tage und „Neue Post“ – vor den Zahlen. */
   sichtenRahmen: () => anfrage<Pick<Zaehler, 'papierkorbTage' | 'neuePost' | 'favoritenSicht'>>('GET', '/api/sichten/rahmen'),
   /* Sichten verwalten (#38) */
