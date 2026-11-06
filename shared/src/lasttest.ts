@@ -96,7 +96,9 @@ export interface LasttestLive {
   /** PostgreSQL in einem eigenen Container: von hier aus nicht messbar. */
   postgresExtern: boolean;
   /** Neueste Warnungen und Fehler aus dem Protokoll (ohne Einzelheiten). */
-  meldungen: Array<{ stufe: 'warn' | 'error' | 'fatal'; modul: string; text: string; ausnahme: string | null; anzahl: number; letzte: string }>;
+  meldungen: Array<{ stufe: 'warn' | 'error' | 'fatal'; modul: string; text: string; ausnahme: string | null; anzahl: number; letzte: string;
+    /** Höchste und mittlere Dauer in ms (#909), wenn der Text `<Dauer>` enthält. */
+    dauer?: { max: number; mittel: number } }>;
 }
 
 export interface LasttestLiveStand {

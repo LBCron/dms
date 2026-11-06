@@ -19,6 +19,9 @@ import { platz } from './werkbank/Speicherplatz';
 const FORMULAR = 'https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml';
 const SAMMEL = 'https://github.com/motom001/dms/issues/576';
 const zahl = (n: number) => n.toLocaleString(gebietsschema());
+/** `<Dauer>` im Text einer Meldung (#909): höchste und mittlere Dauer, bei gleichen nur eine. */
+const mitDauer = (text: string, d?: { max: number; mittel: number }) => (!text.includes('<Dauer>') ? text
+  : text.replace('<Dauer>', !d ? t('lasttest.live.dauer.ohne') : d.max === d.mittel ? t('lasttest.live.dauer.eine', { ms: zahl(d.max) }) : t('lasttest.live.dauer', { max: zahl(d.max), mittel: zahl(d.mittel) })));
 const prozent = (q: number) => `${(q * 100).toFixed(2).replace('.', ',')} %`;
 
 /** Kopieren auch ohne HTTPS (NAS im Heimnetz): Zwischenablage, sonst markieren und execCommand. */
@@ -97,7 +100,7 @@ function Live({ l, stufe }: { l: LasttestLiveStand; stufe: LasttestStand['stufe'
           {j.meldungen.map((m, i) => (
             <li key={i}>
               <span className={`lasttest-art ${m.stufe === 'warn' ? 'warn' : 'fehler'}`}>{t.frei(`lasttest.live.art.${m.stufe}`)}</span>{' '}
-              {t('lasttest.live.meldung', { anzahl: zahl(m.anzahl), modul: m.modul, text: m.text, zeit: uhr(m.letzte) })}{m.ausnahme ? ` (${m.ausnahme})` : ''}
+              {t('lasttest.live.meldung', { anzahl: zahl(m.anzahl), modul: m.modul, text: mitDauer(m.text, m.dauer), zeit: uhr(m.letzte) })}{m.ausnahme ? ` (${m.ausnahme})` : ''}
             </li>
           ))}
         </ul>

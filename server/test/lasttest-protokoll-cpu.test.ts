@@ -11,7 +11,8 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { ausnahmeArt, Buendel, ohneEinzelheiten, Protokollsammlung, rohAus, type Rohmeldung } from '../src/protokollsammlung';
+import { ausnahmeArt, Buendel, ohneEinzelheiten, Protokollsammlung, rohAus, setzeLasttestModus, type Rohmeldung } from '../src/protokollsammlung';
+import { Messung, speicherMessSpeicher } from '../src/messung';
 import { Protokoll, protokoll } from '../src/protokoll';
 import { artNachName, liesStat, Prozessgruppen } from '../src/prozessgruppen';
 import { einzeln } from '../src/prozesse';
@@ -23,14 +24,14 @@ after(() => rmSync(tmp, { recursive: true, force: true }));
 
 type Lt = Record<string, (...a: never[]) => unknown> & {
   gruppenAus(s: unknown[]): G | null; gruppenText(g: unknown): string | null; gruppenBericht(n: string, g: unknown): string[];
-  protokollAus(s: unknown[]): P | null; protokollGesamt(a: unknown, z: unknown, l: unknown[]): P | null; protokollZeile(g: unknown): string | null; protokollBericht(g: unknown): string[];
+  protokollAus(s: unknown[]): P | null; mitDauer(t: string, d: unknown): string; protokollGesamt(a: unknown, z: unknown, l: unknown[]): P | null; protokollZeile(g: unknown): string | null; protokollBericht(g: unknown): string[];
   liveAus(s: unknown[], ms: number[], o: { name: string; n: number; seit: string }): Record<string, unknown> & { gruppen: Array<{ art: string; nr?: number; cpu: number | null }> | null; meldungen: Array<{ text: string }> };
   ergebnisblock(e: unknown[], x: unknown, u: unknown, a: unknown): string;
   anmelden(k: [string, string]): Promise<string>;
   durchgang(v: unknown, o: { name: string; n: number; dauer: number; mitExport: boolean }): Promise<Record<string, unknown> & { gruppen: G | null; protokoll: P | null; beginn: number; ende: number }>;
 };
 type G = { verfuegbar: boolean; postgresImContainer?: boolean; gruppen: Array<{ art: string; nr?: number; cpu: number | null; mbMax: number; anzahlMax: number }> };
-type P = { gesamt: number; weitere: number; eintraege: Array<{ stufe: string; modul: string; text: string; ausnahme: string | null; anzahl: number; erste: string; durchgang?: string }>; neustarts?: number | null; neustartListe?: Array<{ nr: number; grund: string }> };
+type P = { gesamt: number; weitere: number; eintraege: Array<{ stufe: string; modul: string; text: string; ausnahme: string | null; anzahl: number; erste: string; durchgang?: string; dauer?: { max: number; mittel: number; n: number } }>; neustarts?: number | null; neustartListe?: Array<{ nr: number; grund: string }> };
 // Das Skript liest die Adresse beim Laden: Port vorher festlegen (der Server unten lauscht dort).
 const PORT = await new Promise<number>((r) => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const a = s.address() as AddressInfo; s.close(() => r(a.port)); }); });
 process.env.DMS_URL = `http://127.0.0.1:${PORT}`;
@@ -264,6 +265,97 @@ describe('Lasttest-Skript (#895): Gruppen, Protokoll, Ergebnisblock, Bericht, Li
   });
 });
 
+describe('Sammlung im Lasttest (#909): ohne Spur der Mess-Sitzung, mit Dauer', () => {
+  const zeit = '2026-11-06T10:00:00.000Z';
+  const ID = '0b0e2c3a-1d1f-4a4e-9a9a-1234567890ab';
+
+  it('Lasttest-Modus: Spur des Verwaltungsmodus zählt nicht mit, steht aber im Protokoll', async () => {
+    const spur = { stufe: 'warn', modul: 'ablage', text: 'Im Verwaltungsmodus: fremde Mappe', zeit, daten: { was: 'gelesen', anzahl: 3, von: 'markus@example.org', imVerwaltungsmodus: true } };
+    assert.equal(rohAus(spur, { lasttest: true }), null);
+    assert.equal(rohAus(spur, { lasttest: false })?.text, 'Im Verwaltungsmodus: fremde Mappe', 'ohne Lasttest-Modus wie bisher');
+    assert.equal(rohAus({ ...spur, text: 'Verwaltungsmodus begonnen' }, { lasttest: true }), null, 'auch andere Meldungen der Spur');
+    assert.equal(rohAus({ ...spur, daten: { imVerwaltungsmodus: false } }, { lasttest: true })?.text, 'Im Verwaltungsmodus: fremde Mappe', 'nur mit dem Merkmal');
+    assert.ok(rohAus({ ...spur, text: 'Datei fehlt', daten: {} }, { lasttest: true }), 'andere Meldungen zählen weiter');
+
+    const v = einzeln();
+    const vorher = (await v.meldungen())!;
+    const n = (s: typeof vorher, text: string) => s.eintraege.find((e) => e.text === text)?.anzahl ?? 0;
+    setzeLasttestModus(true);
+    try {
+      protokoll.modul('ablage').warn('Im Verwaltungsmodus: fremde Mappe', { was: 'gelesen', anzahl: 1, von: 'markus@example.org', imVerwaltungsmodus: true });
+      protokoll.modul('ablage').warn('Probe #909: andere Warnung');
+    } finally { setzeLasttestModus(false); }
+    const s = (await v.meldungen())!;
+    assert.equal(n(s, 'Im Verwaltungsmodus: fremde Mappe'), n(vorher, 'Im Verwaltungsmodus: fremde Mappe'), 'nicht gezählt');
+    assert.equal(s.gesamt, vorher.gesamt + 1);
+    assert.ok(protokoll.eintraege({ suche: 'fremde Mappe', max: 5 }).length >= 1, 'im Protokoll steht sie weiter');
+  });
+
+  it('Lange Anfrage und langer Datenbankzugriff: Dauer bleibt, Routenmuster statt Pfad; andere Zahlen, Pfade und Ids nicht', () => {
+    const lang = rohAus({ stufe: 'warn', modul: 'datenbank', text: `Lange Anfrage: GET /api/mappen/${ID} dauerte 1240 ms`, zeit, daten: { anfrage: `GET /api/mappen/${ID}`, muster: 'GET /api/mappen/:id', dauerMs: 1240, db: 800 } })!;
+    assert.equal(lang.text, 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>');
+    assert.deepEqual(lang.dauer, { max: 1240, summe: 1240, n: 1 });
+    const ohneMuster = rohAus({ stufe: 'warn', modul: 'datenbank', text: `Lange Anfrage: GET /api/mappen/${ID} dauerte 900 ms`, zeit, daten: { anfrage: `GET /api/mappen/${ID}`, dauerMs: 900 } })!;
+    assert.equal(ohneMuster.text, 'Lange Anfrage: GET <Pfad> dauerte <Dauer>', 'ohne Muster wie bisher <Pfad>');
+    const falsch = rohAus({ stufe: 'warn', modul: 'datenbank', text: `Lange Anfrage: GET /api/mappen/${ID} dauerte 900 ms`, zeit, daten: { anfrage: `GET /api/mappen/${ID}`, muster: 'GET /api/mappen/"Lena"', dauerMs: 900 } })!;
+    assert.equal(falsch.text, 'Lange Anfrage: GET <Pfad> dauerte <Dauer>', 'kein gültiges Muster: Pfad ersetzt');
+    const db = rohAus({ stufe: 'warn', modul: 'datenbank', text: 'Langer Datenbankzugriff: repo.holeMappen dauerte 700 ms', zeit, daten: { zugriff: 'repo.holeMappen', dauerMs: 700, anfrage: `GET /api/mappen/${ID}`, muster: 'GET /api/mappen/:id' } })!;
+    assert.equal(db.text, 'Langer Datenbankzugriff: repo.holeMappen dauerte <Dauer>');
+    const sonst = rohAus({ stufe: 'warn', modul: 'system', text: 'Paket 7: Aufruf nach 300 ms fehlgeschlagen', zeit, daten: { ms: 300 } })!;
+    assert.equal(sonst.text, 'Paket #: Aufruf nach # ms fehlgeschlagen', 'ohne dauerMs: Zahlen ersetzt');
+    assert.equal(sonst.dauer, undefined);
+
+    // Zusammen: höchste, Summe, Anzahl – im Bündel und in der Sammlung (die das Muster beim Bereinigen stehen lässt).
+    const gesendet: Rohmeldung[][] = [];
+    const b = new Buendel((m) => gesendet.push(m), 10_000);
+    b.nimm(lang);
+    b.nimm(rohAus({ stufe: 'warn', modul: 'datenbank', text: 'Lange Anfrage: GET /api/mappen/a1b2c3d4e5f6 dauerte 600 ms', zeit, daten: { anfrage: 'GET /api/mappen/a1b2c3d4e5f6', muster: 'GET /api/mappen/:id', dauerMs: 600 } })!);
+    b.leeren();
+    assert.equal(gesendet[0].length, 1, 'verschiedene Ids, eine Art');
+    assert.deepEqual(gesendet[0][0].dauer, { max: 1240, summe: 1840, n: 2 });
+    const s = new Protokollsammlung(zeit);
+    s.nimm(gesendet[0][0], 1);
+    s.nimm({ ...lang, dauer: { max: 20, summe: 20, n: 1 } }, 2);
+    s.nimm({ ...lang, dauer: { max: 'x', summe: 1, n: 1 } as never }, 2);
+    const e = s.stand().eintraege[0];
+    assert.equal(e.text, 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>');
+    assert.equal(e.anzahl, 4);
+    assert.deepEqual(e.dauer, { max: 1240, summe: 1860, n: 3 }, 'unbrauchbare Angaben zählen nicht zur Dauer');
+    assert.ok(!('muster' in e));
+  });
+
+  it('Messung schreibt Dauer und Muster in den Kontext der Meldung', async () => {
+    const m = new Messung(speicherMessSpeicher());
+    await m.setze({ schwelleMs: 10 });
+    const gesehen: Array<Rohmeldung | null> = [];
+    const weg = protokoll.beobachte((x) => { if (x.modul === 'datenbank') gesehen.push(rohAus(x, { lasttest: false })); });
+    try {
+      m.erfasseAnfrage({ pfad: `GET /api/mappen/${ID}`, muster: 'GET /api/mappen/:id' }, { vor: 1, app: 40, db: 20, dbAnzahl: 1, rechte: 2, json: 1, gesamt: 42 });
+    } finally { weg(); }
+    assert.equal(gesehen[0]?.text, 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>');
+    assert.deepEqual(gesehen[0]?.dauer, { max: 42, summe: 42, n: 1 });
+  });
+
+  it('Bericht, Zeile und Live: „dauerte bis 1.240 ms (Ø 610 ms)“, Mittel je Durchgang', () => {
+    const t0 = Date.parse(zeit);
+    const text = 'Lange Anfrage: GET /api/mappen/:id dauerte <Dauer>';
+    const eintrag = (anzahl: number, dauer: { max: number; summe: number; n: number }) => ({ stufe: 'warn', modul: 'datenbank', text, ausnahme: null, anzahl, erste: zeit, letzte: zeit, prozesse: [1], dauer });
+    const a = stand(t0, { protokoll: { seit: zeit, gesamt: 1, weitere: 0, eintraege: [eintrag(1, { max: 700, summe: 700, n: 1 })] } });
+    const z = stand(t0 + 4000, { protokoll: { seit: zeit, gesamt: 32, weitere: 0, eintraege: [eintrag(32, { max: 1240, summe: 700 + 31 * 610, n: 32 })] } });
+    const p = lt.protokollAus([a, z])!;
+    assert.deepEqual(p.eintraege[0].dauer, { max: 1240, mittel: 610, n: 31 });
+    assert.equal(lt.protokollZeile(p), 'Protokoll: 31 Warnungen und Fehler, 1 Art – 31× Warnung [datenbank] Lange Anfrage: GET /api/mappen/:id dauerte bis 1.240 ms (Ø 610 ms)');
+    assert.ok(lt.protokollBericht(p).some((x) => x.includes('| Lange Anfrage: GET /api/mappen/:id dauerte bis 1.240 ms (Ø 610 ms) |')));
+    assert.equal(lt.mitDauer(text, { max: 1240, mittel: 1240, n: 1 }), 'Lange Anfrage: GET /api/mappen/:id dauerte 1.240 ms', 'eine: nur die Dauer');
+    assert.equal(lt.mitDauer(text, null), 'Lange Anfrage: GET /api/mappen/:id dauerte … ms');
+    assert.equal(lt.mitDauer('Datei fehlt: <Pfad>', null), 'Datei fehlt: <Pfad>');
+    const l = lt.liveAus([z], [], { name: 'klein', n: 25, seit: zeit }) as { meldungen: Array<{ dauer?: unknown }> };
+    assert.deepEqual(l.meldungen[0].dauer, { max: 1240, mittel: 613 }, 'Live: Mittel seit Start der Sammlung');
+    assert.deepEqual(liveAus({ name: 'klein', meldungen: [{ stufe: 'warn', modul: 'datenbank', text, anzahl: 2, letzte: zeit, dauer: { max: 9, mittel: 'x' } }, { stufe: 'warn', modul: 'datenbank', text, anzahl: 2, letzte: zeit, dauer: { max: 9, mittel: 5, geheim: 1 } }] })!.meldungen.map((x) => x.dauer ?? null),
+      [null, { max: 9, mittel: 5 }], 'nur Zahlen');
+  });
+});
+
 describe('Lasttest-Seite (#895): Werte der laufenden Messung', () => {
   class FalschesKind extends EventEmitter { kill() { setImmediate(() => this.emit('exit', 0)); return true; } }
   const freierPort = () => new Promise<number>((r) => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const a = s.address() as AddressInfo; s.close(() => r(a.port)); }); });
@@ -300,6 +392,7 @@ describe('Lasttest (#895): Route und Durchgang', () => {
   let app: Awaited<ReturnType<typeof import('../src/http')['baueApp']>>;
   const LENA: [string, string] = ['lena@example.org', 'lasttest-passwort-1'];
   let gefragt = 0;
+  const messung = new Messung(speicherMessSpeicher());
   before(async () => {
     const { Dienst } = await import('../src/dienst');
     const { speicherRepo } = await import('../src/repo-speicher');
@@ -317,7 +410,7 @@ describe('Lasttest (#895): Route und Durchgang', () => {
     // Echte Gruppen aus /proc dieses Rechners (nur Linux) – mit diesem Prozess als Ablago-Prozess 1.
     const gruppen = new Prozessgruppen({ postgresImContainer: false });
     app = await baueApp(d, konten, {
-      systemlast: new Systemlast(), verbund: einzeln(),
+      systemlast: new Systemlast(), verbund: einzeln(), messung,
       prozessgruppen: async () => { gefragt++; return gruppen.stand({ ablago: [{ nr: 1, pid: process.pid, rolle: 'leiter' }], lastgenerator: null }); },
     });
     await app.listen({ port: PORT, host: '127.0.0.1' });
@@ -344,5 +437,18 @@ describe('Lasttest (#895): Route und Durchgang', () => {
     }
     const c = (await (await fetch(`${process.env.DMS_URL}/api/werkbank/last`, { headers: { 'x-dms': '1', 'x-dms-aktiv': '1', cookie: admin } })).json()) as { container: Record<string, unknown> | null };
     if (c.container) assert.ok('grenzeMb' in c.container && 'kerne' in c.container, 'Grenze und Kerne für die Prozentwerte der Seite');
+  });
+
+  it('#909: Routenmuster der Anfrage im Kontext – lange Anfragen mit Muster und Dauer', async () => {
+    const admin = await lt.anmelden(LENA);
+    await messung.setze({ schwelleMs: 1 });
+    const gesehen: Array<Rohmeldung | null> = [];
+    const weg = protokoll.beobachte((x) => { if (x.text.startsWith('Lange Anfrage')) gesehen.push(rohAus(x, { lasttest: true })); });
+    try {
+      await (await fetch(`${process.env.DMS_URL}/api/werkbank/last?x=1`, { headers: { 'x-dms': '1', 'x-dms-aktiv': '1', cookie: admin } })).arrayBuffer();
+      await new Promise((r) => setTimeout(r, 20));
+    } finally { weg(); await messung.setze({ schwelleMs: 500 }); }
+    assert.equal(gesehen[0]?.text, 'Lange Anfrage: GET /api/werkbank/last dauerte <Dauer>', JSON.stringify(gesehen));
+    assert.ok((gesehen[0]?.dauer?.n ?? 0) === 1);
   });
 });

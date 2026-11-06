@@ -135,6 +135,13 @@ const GRUPPEN_ARTEN: readonly LiveGruppenArt[] = ['ablago', 'lastgenerator', 'po
 const zahlOderNull = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 const kurz = (x: unknown, n: number) => String(x ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, n);
 
+/** Dauer einer Meldung (#909): höchste und mittlere in ms, nur als Zahlen. */
+const dauerAus = (d: unknown): { dauer?: { max: number; mittel: number } } => {
+  const x = d as { max?: unknown; mittel?: unknown } | null;
+  const max = zahlOderNull(x?.max), mittel = zahlOderNull(x?.mittel);
+  return max !== null && mittel !== null ? { dauer: { max, mittel } } : {};
+};
+
 /**
  * Werte der laufenden Messung aus der Meldung des Skripts (#895) übernehmen – nur die bekannten Felder, Zahlen als
  * Zahlen, Texte gekürzt. Die Texte der Meldungen kommen schon ohne Einzelheiten vom Server (protokollsammlung.ts).
@@ -151,7 +158,7 @@ export function liveAus(m: Record<string, unknown>): LasttestLive | null {
   const meldungen = Array.isArray(m.meldungen)
     ? (m.meldungen as Array<Record<string, unknown>>).filter((x) => x && ['warn', 'error', 'fatal'].includes(String(x.stufe))).slice(0, 10).map((x) => ({
       stufe: x.stufe as 'warn' | 'error' | 'fatal', modul: kurz(x.modul, 30), text: kurz(x.text, 200), ausnahme: x.ausnahme ? kurz(x.ausnahme, 60) : null,
-      anzahl: zahlOderNull(x.anzahl) ?? 0, letzte: kurz(x.letzte, 30),
+      anzahl: zahlOderNull(x.anzahl) ?? 0, letzte: kurz(x.letzte, 30), ...dauerAus(x.dauer),
     }))
     : [];
   return {

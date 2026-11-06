@@ -8,6 +8,16 @@
  * {@link ohneEinzelheiten}. Aus einem Fehler im Kontextobjekt bleibt nur seine Art (`TypeError`, `Error ENOENT`),
  * nie die Nachricht oder der Stapel ({@link ausnahmeArt}).
  *
+ * Dauer (#909): Bringt eine Meldung ihre Dauer im Kontext mit (`daten.dauerMs`, z. B. „Lange Anfrage“, „Langer
+ * Datenbankzugriff“), steht im Text statt der Zahl `<Dauer>`; gezählt werden höchste Dauer, Summe und Anzahl – die
+ * Anzeige macht daraus „dauerte bis 1.240 ms (Ø 610 ms)“. Nennt der Kontext das Routenmuster der Anfrage
+ * (`daten.muster`, z. B. „GET /api/mappen/:id“), steht es statt des konkreten Pfads (`daten.anfrage`) im Text – es
+ * kommt aus dem Code und enthält keine Ids.
+ *
+ * Lasttest-Modus (#909): Was nur die Mess-Sitzung im Verwaltungsmodus auslöst (Spur des Verwaltungsmodus, im Kontext
+ * mit `imVerwaltungsmodus: true` gekennzeichnet – etwa „Im Verwaltungsmodus: fremde Mappe“), zählt die Sammlung dann
+ * nicht mit ({@link setzeLasttestModus}); ins Protokoll kommt es weiter.
+ *
  * Mit mehreren Prozessen schickt jeder seine Meldungen gebündelt an den Hauptprozess, der sie für alle sammelt
  * (prozesse.ts) – so überstehen sie auch den Absturz eines Prozesses. Mit einem Prozess sammelt er selbst. Die Sammlung
  * lebt nur im Arbeitsspeicher, ist klein ({@link ARTEN_MAX} Arten) und kostet ohne Warnungen nichts.
@@ -20,8 +30,13 @@ export const ARTEN_MAX = 100;
 /** Länge des Textes einer Meldung. */
 export const TEXT_MAX = 160;
 
+/** Dauer gleicher Meldungen (#909): höchste, Summe und Anzahl (für den Mittelwert) in ms. */
+export interface Sammeldauer { max: number; summe: number; n: number }
+
 /** Eine Meldung, wie sie zwischen Prozessen reist: schon ohne Einzelheiten. */
-export interface Rohmeldung { stufe: SammelStufe; modul: string; text: string; ausnahme: string | null; anzahl: number; erste: string; letzte: string }
+export interface Rohmeldung { stufe: SammelStufe; modul: string; text: string; ausnahme: string | null; anzahl: number; erste: string; letzte: string; dauer?: Sammeldauer | null;
+  /** Routenmuster im Text (#909), damit es beim erneuten Bereinigen im Hauptprozess stehen bleibt. */
+  muster?: string | null }
 
 export interface Sammeleintrag extends Rohmeldung {
   /** Nummern der Prozesse, die sie meldeten (0 = Hauptprozess). */
@@ -82,16 +97,70 @@ export function ausnahmeArt(f: unknown): string | null {
   return teile.length ? teile.join(' ') : null;
 }
 
+/** Platzhalter für die Dauer im Text (#909). */
+export const DAUER_PLATZHALTER = '<Dauer>';
+/** Routenmuster aus dem Code (#909): Methode und Pfad mit Platzhaltern, keine Ids, keine Anführungszeichen. */
+const MUSTER = /^[A-Z]{3,9} \/[A-Za-z0-9_\-./:*]{0,120}$/;
+const SPUR_MUSTER = '\u0001';
+
+let lasttestModus = false;
+/**
+ * Lasttest-Modus (#909) für diesen Prozess: Meldungen der Spur des Verwaltungsmodus (`imVerwaltungsmodus: true`)
+ * zählen nicht mit. Im Lasttest-Modus ist das Skript der einzige Nutzer – solche Meldungen löst nur seine
+ * Mess-Sitzung aus (z. B. 528× „Im Verwaltungsmodus: fremde Mappe“), und sie verdecken die übrigen.
+ */
+export function setzeLasttestModus(an: boolean) { lasttestModus = an; }
+
+const dauerZahl = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? Math.round(x) : null);
+
+/** Zwei Dauern zusammenführen (#909); ohne Angabe bleibt die andere. */
+export function vereineDauer(a: Sammeldauer | null | undefined, b: Sammeldauer | null | undefined): Sammeldauer | null {
+  const x = dauerAus(a), y = dauerAus(b);
+  if (!x) return y;
+  if (!y) return x;
+  return { max: Math.max(x.max, y.max), summe: x.summe + y.summe, n: x.n + y.n };
+}
+
+/** Dauer aus einer Meldung eines anderen Prozesses: nur Zahlen. */
+function dauerAus(d: Sammeldauer | null | undefined): Sammeldauer | null {
+  if (!d || typeof d !== 'object') return null;
+  const max = dauerZahl(d.max), summe = dauerZahl(d.summe), n = dauerZahl(d.n);
+  return max === null || summe === null || !n ? null : { max, summe, n };
+}
+
 const schluessel = (m: Pick<Rohmeldung, 'stufe' | 'modul' | 'text' | 'ausnahme'>) => `${m.stufe}\u0000${m.modul}\u0000${m.text}\u0000${m.ausnahme ?? ''}`;
 
-/** Aus einem Eintrag des Protokolls die Rohmeldung (ohne Einzelheiten); null unter Warnung. */
-export function rohAus(e: { stufe: string; modul: string; text: string; zeit: string; daten?: Record<string, unknown> }): Rohmeldung | null {
+/**
+ * Aus einem Eintrag des Protokolls die Rohmeldung (ohne Einzelheiten); null unter Warnung und – im Lasttest-Modus –
+ * für die Spur des Verwaltungsmodus (#909). Mit `daten.dauerMs` die Dauer, mit `daten.muster` das Routenmuster.
+ */
+export function rohAus(e: { stufe: string; modul: string; text: string; zeit: string; daten?: Record<string, unknown> }, o: { lasttest?: boolean } = {}): Rohmeldung | null {
   if (!SAMMEL_STUFEN.includes(e.stufe)) return null;
   const d = e.daten ?? {};
+  if ((o.lasttest ?? lasttestModus) && d.imVerwaltungsmodus === true) return null;
+  let text = String(e.text ?? '').split('\n')[0];
+  const muster = typeof d.muster === 'string' && MUSTER.test(d.muster) ? d.muster : null;
+  if (muster && typeof d.anfrage === 'string' && d.anfrage && text.includes(d.anfrage)) text = text.replace(d.anfrage, muster);
+  const ms = dauerZahl(d.dauerMs);
+  if (ms !== null && text.includes(`${ms} ms`)) text = text.replace(`${ms} ms`, DAUER_PLATZHALTER);
+  text = sauber(text, muster);
   return {
-    stufe: e.stufe as SammelStufe, modul: e.modul, text: ohneEinzelheiten(e.text),
+    stufe: e.stufe as SammelStufe, modul: e.modul, text,
     ausnahme: ausnahmeArt(d.fehler ?? d.err ?? d.error ?? null), anzahl: 1, erste: e.zeit, letzte: e.zeit,
+    ...(ms !== null && text.includes(DAUER_PLATZHALTER) ? { dauer: { max: ms, summe: ms, n: 1 } } : {}),
+    ...(muster && text.includes(muster) ? { muster } : {}),
   };
+}
+
+/**
+ * Text ohne Einzelheiten (#909): ein gültiges Routenmuster im Text bleibt stehen – vor dem Bereinigen durch ein
+ * Zeichen ersetzt, das es übersteht, danach wieder eingesetzt. Ohne Muster wie {@link ohneEinzelheiten}.
+ */
+export function sauber(text: string, muster: unknown): string {
+  const t = String(text ?? '');
+  if (typeof muster !== 'string' || !MUSTER.test(muster) || !t.includes(muster)) return ohneEinzelheiten(t);
+  const i = t.indexOf(muster);
+  return ohneEinzelheiten(`${t.slice(0, i)}${SPUR_MUSTER}${t.slice(i + muster.length)}`).replace(SPUR_MUSTER, muster).replaceAll(SPUR_MUSTER, '');
 }
 
 /** Zählt gleiche Meldungen zusammen; mit `prozess` für die Sammlung aller Prozesse. */
@@ -111,14 +180,17 @@ export class Protokollsammlung {
       if (m.erste < alt.erste) alt.erste = m.erste;
       if (m.letzte > alt.letzte) alt.letzte = m.letzte;
       if (!alt.prozesse.includes(prozess)) alt.prozesse = [...alt.prozesse, prozess].sort((a, b) => a - b);
+      const dauer = vereineDauer(alt.dauer, m.dauer);
+      if (dauer) alt.dauer = dauer;
       return;
     }
     if (this.arten.size >= this.max) { this.weitere += n; return; }
-    this.arten.set(k, { stufe: m.stufe, modul: String(m.modul), text: ohneEinzelheiten(m.text), ausnahme: m.ausnahme ?? null, anzahl: n, erste: m.erste, letzte: m.letzte, prozesse: [prozess] });
+    const dauer = dauerAus(m.dauer);
+    this.arten.set(k, { stufe: m.stufe, modul: String(m.modul), text: sauber(m.text, m.muster), ausnahme: m.ausnahme ?? null, anzahl: n, erste: m.erste, letzte: m.letzte, prozesse: [prozess], ...(dauer ? { dauer } : {}) });
   }
 
   stand(): Sammelstand {
-    const eintraege = [...this.arten.values()].map((e) => ({ ...e, prozesse: [...e.prozesse] })).sort((a, b) => b.anzahl - a.anzahl || (a.erste < b.erste ? -1 : 1));
+    const eintraege = [...this.arten.values()].map((e) => ({ ...e, prozesse: [...e.prozesse], ...(e.dauer ? { dauer: { ...e.dauer } } : {}) })).sort((a, b) => b.anzahl - a.anzahl || (a.erste < b.erste ? -1 : 1));
     return { seit: this.seit, gesamt: this.gesamt, weitere: this.weitere, eintraege };
   }
 }
@@ -135,7 +207,11 @@ export class Buendel {
   nimm(m: Rohmeldung) {
     const k = schluessel(m);
     const alt = this.offen.get(k);
-    if (alt) { alt.anzahl += m.anzahl; alt.letzte = m.letzte; } else this.offen.set(k, { ...m });
+    if (alt) {
+      alt.anzahl += m.anzahl; alt.letzte = m.letzte;
+      const dauer = vereineDauer(alt.dauer, m.dauer);
+      if (dauer) alt.dauer = dauer;
+    } else this.offen.set(k, { ...m, ...(m.dauer ? { dauer: { ...m.dauer } } : {}) });
     if (m.stufe !== 'warn') { this.leeren(); return; }
     if (!this.uhr) { this.uhr = setTimeout(() => this.leeren(), this.ms); this.uhr.unref?.(); }
   }
