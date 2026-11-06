@@ -124,7 +124,9 @@ export function vergiss() {
 }
 
 export function useAssistent(): Assistentenstand {
-  return useSyncExternalStore((h) => { hoerer.add(h); return () => hoerer.delete(h); }, () => zustand);
+  // Dritter Wert: derselbe Stand auch beim Zeichnen ohne Browser (Test ohne Konto, #881).
+  const lies = () => zustand;
+  return useSyncExternalStore((h) => { hoerer.add(h); return () => hoerer.delete(h); }, lies, lies);
 }
 
 /* ---------- Sammlung ⇄ Plan (#806) ---------- */

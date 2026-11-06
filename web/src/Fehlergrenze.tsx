@@ -1,0 +1,62 @@
+import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
+import { jemandAngemeldet } from './konto';
+import { t } from './sprache';
+
+/**
+ * Fehlergrenze (#881): Wirft eine Komponente beim Zeichnen, zeigt React sonst eine leere weiße Seite. Stattdessen
+ * eine kurze Meldung mit „Neu laden“ und „Fehler melden“ – angemeldet geht es zu Mein Konto → Fehler melden, sonst
+ * (z. B. im Einrichtungsassistenten) kopiert der Knopf die technischen Angaben in die Zwischenablage.
+ */
+export class Fehlergrenze extends Component<{ children: ReactNode }, { fehler: Error | null }> {
+  state: { fehler: Error | null } = { fehler: null };
+
+  static getDerivedStateFromError(fehler: unknown) {
+    return { fehler: fehler instanceof Error ? fehler : new Error(String(fehler)) };
+  }
+
+  componentDidCatch(fehler: unknown, info: ErrorInfo) {
+    console.error(fehler, info.componentStack);
+  }
+
+  render() {
+    return this.state.fehler ? <FehlerAnzeige fehler={this.state.fehler} /> : this.props.children;
+  }
+}
+
+/** Was in die Zwischenablage kommt: Meldung, Seite, Zeit, Browser und der Anfang des Stacks. */
+export function fehlerAngaben(fehler: Error, wo = typeof location === 'undefined' ? '' : location.pathname, browser = typeof navigator === 'undefined' ? '' : navigator.userAgent): string {
+  return [
+    `${t('oberflaeche.fehlergrenze.meldung')}: ${fehler.message}`,
+    `${t('oberflaeche.fehlergrenze.seite')}: ${wo}`,
+    `${t('oberflaeche.fehlergrenze.zeit')}: ${new Date().toISOString()}`,
+    `${t('oberflaeche.fehlergrenze.browser')}: ${browser}`,
+    ...(fehler.stack ? ['', ...fehler.stack.split('\n').slice(0, 12)] : []),
+  ].join('\n');
+}
+
+export function FehlerAnzeige({ fehler }: { fehler: Error }) {
+  const [kopiert, setKopiert] = useState<'ja' | 'nein' | null>(null);
+  async function melden() {
+    if (jemandAngemeldet()) { location.href = '/profil/fehler-melden'; return; }
+    try { await navigator.clipboard.writeText(fehlerAngaben(fehler)); setKopiert('ja'); }
+    catch { setKopiert('nein'); }
+  }
+  return (
+    <div className="kartenseite">
+      <div className="karte fehlergrenze" role="alert">
+        <h1>{t('oberflaeche.fehlergrenze.titel')}</h1>
+        <p>{t('oberflaeche.fehlergrenze.text')}</p>
+        <details className="klein">
+          <summary>{t('oberflaeche.fehlergrenze.angaben')}</summary>
+          <pre className="fehlergrenze-angaben">{fehler.message}</pre>
+        </details>
+        {kopiert === 'ja' && <p className="gutertext klein" role="status">{t('oberflaeche.fehlergrenze.kopiert')}</p>}
+        {kopiert === 'nein' && <p className="fehlertext klein" role="status">{t('oberflaeche.fehlergrenze.nicht-kopiert')}</p>}
+        <div className="knoepfe links">
+          <button type="button" className="knopf primaer" onClick={() => location.reload()}>{t('oberflaeche.fehlergrenze.neu-laden')}</button>
+          <button type="button" className="knopf" onClick={() => void melden()}>{t('oberflaeche.fehlergrenze.melden')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}

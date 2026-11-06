@@ -272,6 +272,10 @@ tbody tr:last-child > * { border-bottom: 0; }
 .kartenseite { min-height: 100vh; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left)); }
 .karte { width: 100%; max-width: 420px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
 .karte h1 { font-size: calc(22px * var(--skala, 1)); }
+/* Fehlergrenze (#881): Meldung statt leerer Seite. */
+.karte.fehlergrenze { max-width: 520px; }
+.karte.fehlergrenze .knopf.primaer { width: auto; padding: 7px 13px; }
+.fehlergrenze-angaben { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12em; overflow: auto; margin: 6px 0 0; padding: 8px; background: var(--senke); border: 1px solid var(--linie); border-radius: 6px; font-size: calc(12px * var(--skala, 1)); }
 /* Wiederherstellen (#107) */
 .karte.breit { max-width: 760px; }
 .karte .wiederherstellen .knopf.primaer { width: auto; }
@@ -898,12 +902,14 @@ a.person:hover, a.person:focus-visible { text-decoration: underline; }
 .ansichtwahl .haken { margin: 0; }
 .handbuchlink { margin-top: 0; }
 .uebersicht .hinweiszeile { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
-.uebersicht .hinweiszeile p { flex: 1 1 22em; margin: 0; }
+/* Nur der Meldungstext der Zeile (#882) – nicht der Absatz in „Zur Kenntnis nehmen“: Das Formular stapelt senkrecht, dort würden 22em zur Höhe. */
+.uebersicht .hinweiszeile > p { flex: 1 1 22em; margin: 0; }
 /* Übersicht (#816): Kacheln oben, Meldungen nach Schwere, „Zur Kenntnis nehmen“ und der Abschnitt „Bewusst akzeptiert“. */
 .uebersicht .kacheln { margin-bottom: 12px; }
 .uebersicht .hinweiszeile + .hinweiszeile { margin-top: 8px; }
 .hinweiszeile .akzeptieren, .meldung-akzeptieren .akzeptieren { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .akzeptieren input { width: 100%; max-width: 32em; }
+.akzeptieren p { flex: none; margin: 0; }
 .meldung-akzeptieren { padding: 0 12px 8px; }
 .meldung-akzeptieren.nur-schmal-block { margin-top: 0; }
 .aufklappbereich.akzeptiert { margin-top: 16px; }

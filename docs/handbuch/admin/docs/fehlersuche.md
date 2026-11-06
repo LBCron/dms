@@ -10,6 +10,8 @@ Alles dazu steht in der Werkbank unter **Wartung und Fehlersuche**. Die Gruppe e
 
 Benutzer melden Fehler über **Fehler melden** in ihrem Menü – mit eigener Beschreibung, bis zu zwei Screenshots und technischen Angaben (Version, Browser, Bildschirmgröße, Sprache, Zeitzone, die letzten 25 besuchten Seiten, die letzten 10 Fehler im Browser und fehlgeschlagenen Anfragen). Passwörter, Inhalte von Mappen und Cookies gehen nicht mit. Die Meldung bleibt in deinem Ablago – sie geht nie an das Projekt. Wer daraus ein GitHub-Issue machen will, tut das selbst.
 
+Lässt sich eine Seite nicht anzeigen, weil die Oberfläche beim Zeichnen auf einen Fehler stößt, erscheint statt einer leeren Seite „Hier ist etwas schiefgegangen“ mit **Neu laden** und **Fehler melden**. Wer angemeldet ist, kommt damit zu **Fehler melden**; ohne Anmeldung (etwa im Einrichtungsassistenten) kopiert der Knopf die technischen Angaben in die Zwischenablage, die Meldung selbst steht unter „Technische Angaben“.
+
 ![Werkbank → Gemeldete Fehler](bilder/werkbank-fehlermeldung.png)
 
 Unter **Werkbank → Gemeldete Fehler** stehen die Meldungen, neueste zuerst; der Zähler in der Leiste und in der Übersicht nennt die offenen. In der Meldung siehst du Beschreibung, Screenshots und Angaben und kannst sie **als erledigt markieren** (und wieder öffnen) oder **löschen** – endgültig, samt Bildern. Eine Rückmeldung an den Benutzer gibt es in Ablago bewusst nicht; die erledigst du auf deinem Weg.

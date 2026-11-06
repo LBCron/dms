@@ -284,8 +284,8 @@ function ErgaenzungenWahl({ erg, offen, wahl, imPlan, schalten }: { erg: Kandida
 
 const leer = (v: unknown) => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
 
-/** Jede Frage einmal (#405) – mit Ausnahmen je Paket –, Zusammenfassung und ein Knopf. */
-function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig, sammeln, vorgabe }: {
+/** Jede Frage einmal (#405) – mit Ausnahmen je Paket –, Zusammenfassung und ein Knopf. Exportiert für den Test ohne Konto (#881). */
+export function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig, sammeln, vorgabe }: {
   plan: AblaufPlan<PaketVorschau>; eingabe(): AblaufEingabe; zurueck(): void; neuerPlan(p: AblaufPlan<PaketVorschau>): void; fertig(e: AblaufErgebnis): void;
   sammeln?(w: PaketWahl): void; vorgabe?: PaketVorgabe;
 }) {
