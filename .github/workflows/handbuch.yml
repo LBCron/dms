@@ -2,15 +2,18 @@ name: Handbuch
 
 # Baut alle vier Handbücher mit aktuellen Screenshots, auf Deutsch und Englisch (#730: …/<handbuch>/aktuell/en/).
 # Online gibt es nur noch „aktuell“ (#846),
-# veröffentlicht über GitHub Actions (Pages-Quelle „GitHub Actions“, kein Zweig gh-pages):
+# veröffentlicht über GitHub Actions (Pages-Quelle „GitHub Actions“, kein Zweig gh-pages).
+# Ältere Fassungen bringt jede Installation unter /hilfe/ mit (#219).
 #   Release (image.yml)    → bauen und veröffentlichen
 #   von Hand auf main      → bauen und veröffentlichen (z. B. nach einer Störung)
-#   push auf main, PRs     → nur bauen und prüfen; PRs legen die Screenshots als Artefakt ab.
-# Ältere Fassungen bringt jede Installation unter /hilfe/ mit (#219).
+#   PRs                    → nur bauen und prüfen; PRs legen die Screenshots als Artefakt ab.
+# Nach einem Merge auf main baut nichts mehr (#905) – veröffentlicht wird über die Release-Kette.
+#
+# Ablauf (#905): Die Bildschirmfotos auf Deutsch und Englisch und die iPhone-Prüfung laufen parallel im Job
+# „bilder“, jeweils mit eigenem Ablago und eigener Datenbank. „bauen“ (Pflicht-Prüfung) wartet auf alle drei,
+# holt die Bilder ab, baut die Handbücher und macht die übrigen Prüfungen.
 
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -33,14 +36,27 @@ on:
 permissions:
   contents: read
 
+# Neuer Stand im PR bricht den alten Lauf ganz ab (#905), alle Jobs zusammen. Release und Start von Hand bekommen
+# je Lauf eine eigene Gruppe; dort gilt weiter nur die Gruppe von „bauen“ (und „pages“ beim Veröffentlichen).
+concurrency:
+  group: handbuch-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  bauen:
+  # Bildschirmfotos und Prüfungen mit laufendem Ablago (#905): je Teil ein eigener Rechner mit frischem Ablago.
+  #   de    – Bildschirmfotos auf Deutsch nach bilder/ (mit openapi.json und den README-Bildern)
+  #   en    – Bildschirmfotos auf Englisch nach bilder/en/ (#730)
+  #   mobil – iPhone-Größe, erweiterte Suche, gleichzeitig bearbeiten; Daten wie für die Bilder (DMS_NUR_DATEN)
+  bilder:
+    name: bilder (${{ matrix.teil }})
     runs-on: ubuntu-latest
-    concurrency:
-      group: handbuch-bauen-${{ inputs.version || github.ref }}
-      cancel-in-progress: true
-    env:
-      ZIEL: ${{ inputs.version || 'entwicklung' }}
+    # Ein hängender Browser-Schritt soll den PR nicht stundenlang blockieren (sonst läuft der Job bis 6 h).
+    timeout-minutes: 20
+    strategy:
+      # Alle drei zu Ende laufen lassen: Fehlerbilder der iPhone-Prüfung auch dann, wenn ein anderer Teil scheitert.
+      fail-fast: false
+      matrix:
+        teil: [de, en, mobil]
     services:
       postgres:
         image: postgres:17
@@ -59,13 +75,11 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.15'
 
       # poppler und qpdf wie im Image (#459: ohne Texterkennung – die ist ein Paket).
+      # Erst ohne „apt-get update“ (#905), nur wenn das scheitert mit – das Update dauert mal 10 s, mal über 3 Minuten.
       - name: poppler und qpdf installieren
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null
+        run: sudo apt-get install -y -qq poppler-utils qpdf >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null; }
 
       - name: Ablago bauen
         run: |
@@ -83,11 +97,17 @@ jobs:
           PORT: '3000'
           DMS_VERSION: handbuch
 
-      - name: Screenshots aufnehmen
+      # Chromium für die Bilder und die Prüfungen, WebKit zusätzlich für die iPhone-Prüfung (#174, #489).
+      - name: Playwright installieren
         working-directory: docs/handbuch/screenshots
         run: |
           npm install --no-audit --no-fund --no-save playwright@1.64.1  # feste Version (#289)
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium ${{ matrix.teil == 'mobil' && 'webkit' || '' }}
+
+      - name: Screenshots aufnehmen
+        if: matrix.teil == 'de'
+        working-directory: docs/handbuch/screenshots
+        run: |
           set -o pipefail
           node aufnehmen.mjs "$GITHUB_WORKSPACE/docs/handbuch/bilder" 2>&1 | tee "$RUNNER_TEMP/aufnahme.log"
           # Das README bindet diese beiden Bilder vom Handbuch ein (#290) – ohne sie kein Handbuch.
@@ -100,11 +120,45 @@ jobs:
           DB_HOST: localhost
           DB_PASSWORT: dms
 
-      # iPhone-Größe mit WebKit (#174, #489): kein Eingabefeld und kein Element ragt über den Rand, Menüs im Bild.
-      - name: Oberfläche in iPhone-Größe prüfen
+      # Bildschirmfotos auf Englisch (#730): ein eigenes, frisches Ablago mit englischer Oberfläche nach bilder/en/.
+      # Solange die Oberfläche noch kein Englisch spricht (#729), endet das Skript ohne Bilder; die englischen
+      # Handbücher zeigen dann die deutschen mit einem Hinweis. Ein Fehler hier hält das Handbuch nicht auf –
+      # dann fehlen nur englische Bilder.
+      - name: Bildschirmfotos auf Englisch
+        if: matrix.teil == 'en'
+        continue-on-error: true
         working-directory: docs/handbuch/screenshots
         run: |
-          npx playwright install --with-deps webkit
+          set -o pipefail
+          node aufnehmen.mjs "$GITHUB_WORKSPACE/docs/handbuch/bilder/en" 2>&1 | tee "$RUNNER_TEMP/aufnahme.log"
+        shell: bash
+        env:
+          DMS_URL: http://localhost:3000
+          DMS_SPRACHE: en
+          DMS_DATENWURZEL: ${{ runner.temp }}/daten
+          DB_HOST: localhost
+          DB_PASSWORT: dms
+
+      # Für die Prüfungen (#905): Assistent und dieselben Daten wie für die Bilder, aber ohne Bildschirmfotos.
+      - name: Ablago einrichten und Daten anlegen
+        if: matrix.teil == 'mobil'
+        working-directory: docs/handbuch/screenshots
+        run: |
+          set -o pipefail
+          node aufnehmen.mjs "$RUNNER_TEMP/einrichtung" 2>&1 | tee "$RUNNER_TEMP/aufnahme.log"
+        shell: bash
+        env:
+          DMS_URL: http://localhost:3000
+          DMS_NUR_DATEN: '1'
+          DMS_DATENWURZEL: ${{ runner.temp }}/daten
+          DB_HOST: localhost
+          DB_PASSWORT: dms
+
+      # iPhone-Größe mit WebKit (#174, #489): kein Eingabefeld und kein Element ragt über den Rand, Menüs im Bild.
+      - name: Oberfläche in iPhone-Größe prüfen
+        if: matrix.teil == 'mobil'
+        working-directory: docs/handbuch/screenshots
+        run: |
           set -o pipefail
           node mobil-pruefen.mjs "$RUNNER_TEMP/mobil" 2>&1 | tee -a "$RUNNER_TEMP/aufnahme.log"
         shell: bash
@@ -113,6 +167,7 @@ jobs:
 
       # Erweiterte Suche (#199): Formular, Chips, Link in der Adresse, Ablauf am Handy.
       - name: Erweiterte Suche prüfen
+        if: matrix.teil == 'mobil'
         working-directory: docs/handbuch/screenshots
         run: |
           set -o pipefail
@@ -123,6 +178,7 @@ jobs:
 
       # Gleichzeitig bearbeiten (#609): dieselbe Mappe in zwei Fenstern, Rückfrage hell/dunkel, breit/Handy.
       - name: Gleichzeitig bearbeiten prüfen
+        if: matrix.teil == 'mobil'
         working-directory: docs/handbuch/screenshots
         run: |
           set -o pipefail
@@ -131,30 +187,19 @@ jobs:
         env:
           DMS_URL: http://localhost:3000
 
-      # Bildschirmfotos auf Englisch (#730): ein zweites, frisches Ablago mit eigener Datenbank und englischer
-      # Oberfläche nach bilder/en/. Solange die Oberfläche noch kein Englisch spricht (#729), endet das Skript
-      # ohne Bilder; die englischen Handbücher zeigen dann die deutschen mit einem Hinweis. Ein Fehler hier
-      # hält das Handbuch nicht auf – dann fehlen nur englische Bilder.
-      - name: Bildschirmfotos auf Englisch
-        continue-on-error: true
-        working-directory: docs/handbuch/screenshots
-        run: |
-          PGPASSWORD=dms psql -h localhost -U dms -d dms -qc 'CREATE DATABASE dms_en'
-          DMS_DATENWURZEL="$RUNNER_TEMP/daten-en" PORT=3001 DMS_VERSION=handbuch nohup node "$GITHUB_WORKSPACE/server/dist/index.js" > "$RUNNER_TEMP/dms-en.log" 2>&1 &
-          set -o pipefail
-          node aufnehmen.mjs "$GITHUB_WORKSPACE/docs/handbuch/bilder/en" 2>&1 | tee -a "$RUNNER_TEMP/aufnahme.log"
-        shell: bash
-        env:
-          DMS_URL: http://localhost:3001
-          DMS_SPRACHE: en
-          DMS_DATENWURZEL: ${{ runner.temp }}/daten-en
-          DB_HOST: localhost
-          DB_PASSWORT: dms
-          DB_NAME: dms_en
+      # Bilder für „bauen“ (#905), nur für diesen Lauf. Ohne englische Bilder gibt es kein Artefakt „bilder-en“.
+      - name: Bilder an „bauen“ übergeben
+        if: matrix.teil != 'mobil'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bilder-${{ matrix.teil }}
+          path: ${{ matrix.teil == 'en' && 'docs/handbuch/bilder/en' || 'docs/handbuch/bilder' }}
+          if-no-files-found: ${{ matrix.teil == 'en' && 'ignore' || 'error' }}
+          retention-days: 1
 
       # Immer (#489): Bilder in iPhone SE/15/17 Pro-Größe zum Nachsehen, bei Fehlern mit den Fundstellen.
       - name: Bilder der iPhone-Prüfung hochladen
-        if: always()
+        if: always() && matrix.teil == 'mobil'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mobil-pruefung
@@ -166,8 +211,57 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          tail -n 40 "$RUNNER_TEMP/aufnahme.log" 2>/dev/null | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=Screenshots::/'; echo
-          grep -E "ERROR|WARN|error" "$RUNNER_TEMP/dms.log" | tail -n 30 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=Ablago-Protokoll::/'; echo
+          tail -n 40 "$RUNNER_TEMP/aufnahme.log" 2>/dev/null | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=Screenshots (${{ matrix.teil }})::/'; echo
+          grep -E "ERROR|WARN|error" "$RUNNER_TEMP/dms.log" | tail -n 30 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=Ablago-Protokoll (${{ matrix.teil }})::/'; echo
+
+  # Pflicht-Prüfung im Ruleset „main schützen“ – der Name „bauen“ bleibt. „bauen“ läuft immer (ein übersprungener
+  # Job zählt bei GitHub als bestanden) und scheitert als Erstes, wenn ein Teil von „bilder“ nicht durchlief.
+  bauen:
+    needs: bilder
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: handbuch-bauen-${{ inputs.version || github.ref }}
+      cancel-in-progress: true
+    env:
+      ZIEL: ${{ inputs.version || 'entwicklung' }}
+    steps:
+      - name: Bilder vollständig?
+        if: needs.bilder.result != 'success'
+        run: |
+          echo "::error title=Bilder::Bildschirmfotos oder Prüfungen in „bilder“ sind gescheitert (${{ needs.bilder.result }}) – Einzelheiten dort."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.15'
+
+      # Nur für die Prüfskripte (tsx, shared/); Ablago selbst wird hier nicht gebaut.
+      - name: Abhängigkeiten installieren
+        run: npm ci --no-audit --no-fund
+
+      - name: Bilder abholen
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: bilder-*
+          path: ${{ runner.temp }}/bilder
+
+      # Deutsch nach bilder/, Englisch (falls aufgenommen) nach bilder/en/ – wie bisher in einem Job.
+      - name: Bilder einsortieren
+        shell: bash
+        run: |
+          test -d "$RUNNER_TEMP/bilder/bilder-de" || { echo "::error title=Bilder::Bilder auf Deutsch fehlen"; exit 1; }
+          rm -rf docs/handbuch/bilder
+          mv "$RUNNER_TEMP/bilder/bilder-de" docs/handbuch/bilder
+          if [ -d "$RUNNER_TEMP/bilder/bilder-en" ]; then mv "$RUNNER_TEMP/bilder/bilder-en" docs/handbuch/bilder/en; fi
+          test -s docs/handbuch/bilder/openapi.json || { echo "::error title=Bilder::openapi.json fehlt"; exit 1; }
+          echo "$(find docs/handbuch/bilder -maxdepth 1 -name '*.png' | wc -l) Bilder auf Deutsch, $(find docs/handbuch/bilder/en -maxdepth 1 -name '*.png' 2>/dev/null | wc -l) auf Englisch"
 
       - name: Neu in dieser Version
         run: python3 docs/handbuch/werkzeuge/neu.py "$ZIEL"

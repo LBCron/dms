@@ -72,7 +72,11 @@ describe('Lasttest: Mess-Sitzung im Verwaltungsmodus (#873)', () => {
     assert.deepEqual(zaehler, vorher, 'kein 403, kein erneuter Beginn');
   });
 
-  it('nach mehr als 15 Minuten ohne Abfrage: einmal neu beginnen (heute bestätigt) und wiederholen – Kopf vollständig', async () => {
+  it('nach mehr als 15 Minuten ohne Abfrage: einmal neu beginnen (heute bestätigt) und wiederholen – Kopf vollständig', async (t) => {
+    // „Heute bestätigt“ zählt in Europe/Berlin; die Uhr rückt hier um 16 Minuten vor, die Anmeldung läuft mit der echten.
+    // Kurz vor Mitternacht würde mitten im Test das Datum wechseln.
+    const berlin = (o: Intl.DateTimeFormatOptions) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', ...o }).format(Date.now()));
+    if (berlin({ hour: '2-digit', hourCycle: 'h23' }) === 23 && berlin({ minute: '2-digit' }) >= 15) return t.skip('kurz vor Mitternacht (Europe/Berlin)');
     const c = await lt.anmelden(LENA);
     jetzt.t += 16 * MIN;
     const vorher = { ...zaehler };
