@@ -102,7 +102,16 @@ jobs:
         working-directory: docs/handbuch/screenshots
         run: |
           npm install --no-audit --no-fund --no-save playwright@1.64.1  # feste Version (#289)
-          npx playwright install --with-deps chromium ${{ matrix.teil == 'mobil' && 'webkit' || '' }}
+          # Die Installation hängt bei GitHub gelegentlich (apt der Browser-Abhängigkeiten): höchstens 5 Minuten, dann
+          # ein zweiter Versuch – statt dass der ganze Job erst an seiner Zeitgrenze abbricht.
+          for versuch in 1 2; do
+            timeout 480 npx playwright install --with-deps chromium ${{ matrix.teil == 'mobil' && 'webkit' || '' }} && break
+            [ "$versuch" = 2 ] && exit 1
+            echo "::warning::Playwright-Installation hing oder scheiterte – zweiter Versuch"
+            # timeout beendet nur npx; ein hängendes apt-get hielte sonst die Sperre von dpkg fest.
+            sudo pkill -x apt-get || true; sudo pkill -x dpkg || true; sleep 5
+            sudo dpkg --configure -a || true
+          done
 
       - name: Screenshots aufnehmen
         if: matrix.teil == 'de'

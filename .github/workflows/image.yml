@@ -77,7 +77,8 @@ jobs:
       # Der offizielle Katalog unter seiner echten Adresse: erreichbar, nur https, Signatur gültig (#688).
       - name: Offizieller Katalog erreichbar und signiert
         run: node --import tsx server/werkzeuge/katalog-erreichbar.ts
-      # Wann :stabil weiterwandert (#714): kein Release → kein :stabil, Vorabversionen und „nicht-stabil“ nie.
+      # Wann :stabil weiterwandert (#714, #907): kein Release → kein :stabil, Vorabversionen und „nicht-stabil“ nie;
+      # Auswahl im Wochenlauf (mindestens 24 Stunden alt, nie zurück).
       - name: Regeln für :stabil
         run: .github/werkzeuge/stabil-pruefen.test.sh
       - name: Bauen
@@ -124,7 +125,7 @@ jobs:
       # Einrichtungsskript für den Raspberry Pi (#578); shellcheck ist auf den GitHub-Rechnern vorinstalliert.
       - name: Einrichtungsskript prüfen
         if: matrix.plattform == 'linux/amd64'
-        run: shellcheck deploy/raspberry-pi/einrichten.sh .github/werkzeuge/update-test.sh .github/werkzeuge/stabil-pruefen.sh .github/werkzeuge/stabil-pruefen.test.sh .github/werkzeuge/stabil-bisher.sh
+        run: shellcheck deploy/raspberry-pi/einrichten.sh .github/werkzeuge/update-test.sh .github/werkzeuge/stabil-pruefen.sh .github/werkzeuge/stabil-pruefen.test.sh .github/werkzeuge/stabil-bisher.sh .github/werkzeuge/stabil-auswahl.sh
       # dms-komplett (#208): Ablago und PostgreSQL in einem Container – auf beiden Architekturen.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -160,14 +161,23 @@ jobs:
     needs: pruefen
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Label „sofort-stabil“ am Pull Request (#907)
+      pull-requests: read
     outputs:
       version: ${{ steps.v.outputs.version }}
       neu: ${{ steps.v.outputs.neu }}
       # Ordner des Handbuchs zu dieser Version (#111): je Minor-Version, z. B. v0.22.
       handbuch: ${{ steps.v.outputs.handbuch }}
+      sofort: ${{ steps.v.outputs.sofort }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           version=$(node -p "require('./package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -178,6 +188,10 @@ jobs:
           else
             echo "neu=true" >> "$GITHUB_OUTPUT"
             echo "Neue Version v$version – nach dem Image entsteht das Release."
+            # Dringende Fehlerbehebung (#907): mit „sofort-stabil“ am Pull Request wandert :stabil gleich mit.
+            sofort=$(gh api "repos/$REPO/commits/$SHA/pulls" -q 'any(.[].labels[].name; . == "sofort-stabil")' || echo false)
+            echo "sofort=$sofort" >> "$GITHUB_OUTPUT"
+            if [ "$sofort" = true ]; then echo "Label sofort-stabil: :stabil wandert direkt nach dem Release."; fi
           fi
 
   # Image je Architektur auf einem passenden Rechner bauen (#88): arm64 auf einem echten
@@ -348,59 +362,21 @@ jobs:
       tag: v${{ needs.version.outputs.version }}
       ziel: ${{ github.sha }}
 
-  # :stabil (#714): wandert nur mit einem Release – Versionsnummer, Release-Notes, beide Images
-  # gebaut und attestiert (image-zusammen), Update-Test vom bisherigen :stabil grün. Zurückhalten
-  # mit dem Label „nicht-stabil“ am Pull Request; zurückrollen mit dem Workflow „:stabil zurücksetzen“.
+  # :stabil (#714, #907): wandert nicht mehr mit jedem Release, sondern einmal pro Woche (stabil.yml).
+  # Ausnahme für dringende Fehlerbehebungen: Label „sofort-stabil“ am Pull Request – dann gleich nach
+  # dem Release, mit denselben Prüfungen (beide Images, Herkunftsnachweis, Update-Test vom bisherigen
+  # :stabil). „nicht-stabil“ hält auch dann zurück; zurückrollen mit dem Workflow „:stabil zurücksetzen“.
   stabil:
-    needs: [version, image-zusammen, release]
-    if: needs.release.result == 'success'
-    runs-on: ubuntu-latest
+    needs: [version, release]
+    if: needs.release.result == 'success' && needs.version.outputs.sofort == 'true'
     permissions:
-      contents: read
+      contents: write
       packages: write
       pull-requests: read
-    concurrency:
-      group: stabil
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - id: pruefen
-        name: Bedingungen
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.version.outputs.version }}
-          NEU: ${{ needs.version.outputs.neu }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
-        run: |
-          labels=$(gh api "repos/$REPO/commits/$SHA/pulls" -q '[.[].labels[].name] | join(",")' || true)
-          if .github/werkzeuge/stabil-pruefen.sh "$VERSION" "$NEU" "docs/releases/v$VERSION.md" "$labels"; then echo "setzen=true" >> "$GITHUB_OUTPUT"
-          else echo "setzen=false" >> "$GITHUB_OUTPUT"; echo "::notice title=:stabil::bleibt, wo es ist"; fi
-      - name: Update-Test vom bisherigen :stabil
-        if: steps.pruefen.outputs.setzen == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          OWNER: ${{ github.repository_owner }}
-          VERSION: ${{ needs.version.outputs.version }}
-        run: .github/werkzeuge/update-test.sh "$(.github/werkzeuge/stabil-bisher.sh dms-komplett)" "ghcr.io/$OWNER/dms-komplett:$VERSION"
-      - name: :stabil setzen
-        if: steps.pruefen.outputs.setzen == 'true'
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          for image in dms dms-komplett; do
-            ref="ghcr.io/$OWNER/$image"
-            docker buildx imagetools create -t "$ref:stabil" "$ref:$VERSION"
-            echo "::notice title=:stabil::$image:stabil → $VERSION"
-          done
+      attestations: read
+    uses: ./.github/workflows/stabil.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
 
   # Handbuch online (#846): nur „aktuell“, veröffentlicht über GitHub Actions.
   handbuch:

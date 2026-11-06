@@ -1,0 +1,150 @@
+name: ":stabil befördern"
+
+# :stabil im Wochentakt (#907): Releases entstehen weiter mit jedem Merge, :stabil wandert aber nur
+# einmal pro Woche (dienstags früh) – auf das neueste Release, das mindestens 24 Stunden alt ist und
+# dessen Pull Request nicht das Label „nicht-stabil“ trägt (sonst das nächstältere). Dieselben
+# Prüfungen wie bisher (#714): beide Images für amd64 und arm64 mit Herkunftsnachweis, Update-Test
+# vom bisherigen :stabil. Das beförderte Release wird auf GitHub „Latest“ – danach richtet sich der
+# Hinweis „neue Version“ in Ablago – und bekommt die Liste der Versionen seit dem letzten :stabil.
+#
+# Aufrufe:
+#  - Zeitplan und Handstart (Actions → „:stabil befördern“ → Run workflow): Auswahl wie oben,
+#  - „Prüfen und Image bauen“ nach einem Release mit dem Label „sofort-stabil“ am Pull Request
+#    (dringende Fehlerbehebung): genau diese Version, ohne 24 Stunden Wartezeit.
+# Zurückrollen in beide Richtungen bleibt beim Workflow „:stabil zurücksetzen“.
+
+on:
+  schedule:
+    # Dienstag 04:23 UTC (05:23 bzw. 06:23 deutscher Zeit); nicht zur vollen Stunde, da drängeln sich die Läufe.
+    - cron: '23 4 * * 2'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Version X.Y.Z, die sofort stabil werden soll (Label „sofort-stabil“)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  befoerdern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      # Release auf „Latest“ setzen und den Text ergänzen
+      contents: write
+      packages: write
+      # Labels der Pull Requests („nicht-stabil“)
+      pull-requests: read
+      # Herkunftsnachweis der Images prüfen
+      attestations: read
+    concurrency:
+      group: stabil
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: auswahl
+        name: Version auswählen
+        env:
+          SOFORT: ${{ inputs.version }}
+        run: |
+          set -o pipefail
+          # Bisher stabil: das Release „Latest“ (setzen dieser Workflow und „:stabil zurücksetzen“).
+          bisher=$(gh api "repos/$REPO/releases/latest" -q .tag_name 2>/dev/null || true); bisher="${bisher#v}"
+          [[ "$bisher" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || bisher=""
+          echo "bisher=$bisher" >> "$GITHUB_OUTPUT"
+          ueber() { [ -z "$2" ] || { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]; }; }
+          # Labels des Pull Requests zum Release-Commit; schlägt die Abfrage fehl, wird nichts befördert.
+          labels() { local sha; sha=$(gh api "repos/$REPO/commits/v$1" -q .sha) && gh api "repos/$REPO/commits/$sha/pulls" -q '[.[].labels[].name] | join(",")'; }
+          if [ -n "$SOFORT" ]; then
+            zeit=$(gh api "repos/$REPO/releases/tags/v$SOFORT" -q .published_at)
+            l=$(labels "$SOFORT") || { echo "::error::Labels zu v$SOFORT nicht abrufbar"; exit 1; }
+            printf '%s\t%s\t%s\n' "$SOFORT" "$zeit" "$l" > liste.tsv
+            export MINDESTALTER=0
+          else
+            # Veröffentlichte Releases X.Y.Z über dem bisherigen; nur für die werden die Labels abgefragt.
+            gh api "repos/$REPO/releases?per_page=100" -q '.[] | select(.draft | not) | select(.prerelease | not) | [.tag_name, .published_at] | @tsv' |
+              while IFS=$'\t' read -r tag zeit; do
+                v="${tag#v}"
+                [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && ueber "$v" "$bisher" || continue
+                l=$(labels "$v") || { echo "::error::Labels zu v$v nicht abrufbar"; exit 1; }
+                printf '%s\t%s\t%s\n' "$v" "$zeit" "$l"
+              done > liste.tsv
+          fi
+          if ! v=$(.github/werkzeuge/stabil-auswahl.sh "$bisher" < liste.tsv); then
+            echo "::notice title=:stabil::bleibt auf ${bisher:-?} – nichts zu tun"; exit 0
+          fi
+          # Ist es schon :stabil (z. B. nach einem Handstart), nichts tun.
+          d() { docker buildx imagetools inspect "ghcr.io/$OWNER/dms:$1" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest; }
+          neu=$(d "$v") || { echo "::error::ghcr.io/$OWNER/dms:$v fehlt"; exit 1; }
+          if [ "$neu" = "$(d stabil || true)" ]; then echo "::notice title=:stabil::zeigt schon auf $v"; exit 0; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo ":stabil wandert von ${bisher:-?} auf $v"
+      - name: Beide Images für beide Architekturen, mit Herkunftsnachweis
+        if: steps.auswahl.outputs.version
+        env:
+          VERSION: ${{ steps.auswahl.outputs.version }}
+        run: |
+          set -o pipefail
+          for image in dms dms-komplett; do
+            ref="ghcr.io/$OWNER/$image:$VERSION"
+            docker buildx imagetools inspect --raw "$ref" | jq -e '[.manifests[].platform.architecture] | (index("amd64") != null and index("arm64") != null)' >/dev/null \
+              || { echo "::error::$ref fehlt oder hat nicht beide Architekturen"; exit 1; }
+            gh attestation verify "oci://$ref" -R "$REPO" >/dev/null || { echo "::error::$ref ohne gültigen Herkunftsnachweis"; exit 1; }
+          done
+      - name: Update-Test vom bisherigen :stabil
+        if: steps.auswahl.outputs.version
+        env:
+          VERSION: ${{ steps.auswahl.outputs.version }}
+        run: .github/werkzeuge/update-test.sh "$(.github/werkzeuge/stabil-bisher.sh dms-komplett)" "ghcr.io/$OWNER/dms-komplett:$VERSION"
+      - name: :stabil setzen
+        if: steps.auswahl.outputs.version
+        env:
+          VERSION: ${{ steps.auswahl.outputs.version }}
+        run: |
+          for image in dms dms-komplett; do
+            ref="ghcr.io/$OWNER/$image"
+            docker buildx imagetools create -t "$ref:stabil" "$ref:$VERSION"
+            echo "::notice title=:stabil::$image:stabil → $VERSION"
+          done
+      # Release „Latest“ und Text: „Seit der letzten stabilen Version“ mit allen Versionen dazwischen (#907).
+      - name: Release auf „Latest“, Versionen seit dem letzten :stabil
+        if: steps.auswahl.outputs.version
+        env:
+          VERSION: ${{ steps.auswahl.outputs.version }}
+          BISHER: ${{ steps.auswahl.outputs.bisher }}
+        run: |
+          set -o pipefail
+          gh api "repos/$REPO/releases?per_page=100" -q '.[] | select(.draft | not) | select(.prerelease | not) | .tag_name' |
+            sed 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V -r |
+            while read -r v; do
+              # bisher < v <= VERSION
+              [ "$(printf '%s\n%s\n' "$v" "$VERSION" | sort -V | tail -1)" = "$VERSION" ] || continue
+              if [ -n "$BISHER" ] && [ "$(printf '%s\n%s\n' "$v" "$BISHER" | sort -V | tail -1)" = "$BISHER" ]; then continue; fi
+              echo "- [Ablago v$v](https://github.com/$REPO/releases/tag/v$v)"
+            done > versionen.md
+          # Ein früherer Abschnitt (erneuter Lauf) wird ersetzt, nicht verdoppelt.
+          gh release view "v$VERSION" -R "$REPO" --json body -q .body | sed '/^## Seit der letzten stabilen Version\r\?$/,$d' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > notizen.md
+          {
+            echo
+            echo "## Seit der letzten stabilen Version"
+            echo
+            if [ -n "$BISHER" ]; then echo "Mit \`:stabil\` kommen diese Versionen seit ${BISHER} dazu:"; else echo "Mit \`:stabil\` kommen diese Versionen dazu:"; fi
+            echo
+            cat versionen.md
+          } >> notizen.md
+          gh release edit "v$VERSION" -R "$REPO" --latest --notes-file notizen.md
+          echo "::notice title=Release::v$VERSION ist jetzt „Latest“ ($(wc -l < versionen.md) Versionen seit ${BISHER:-?})"

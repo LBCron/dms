@@ -72,7 +72,7 @@ Die Werte kommen vom Server im Header `Server-Timing` (`vor`, `app`, `db`, `rech
 ![Technik und Versionen](bilder/werkbank-technik.png)
 
 - **Für den Support:** Übersicht kopieren und in ein [GitHub-Issue](https://github.com/motom001/dms/issues/new?template=wunsch.md) einfügen. Passwörter und Zugangsdaten stehen nicht darin.
-- **Neuere Versionen:** Ein Knopfdruck fragt nach, ob es neuere Versionen gibt – bei GitHub für Ablago, bei endoflife.date für Node.js, PostgreSQL und Alpine, bei npm für die Bibliotheken. Ohne Knopfdruck fragt Ablago nirgends nach. Bei Ablago selbst steht unter *Aktuell* das neueste Release mit Datum; liegen auf `main` schon weitere Änderungen, die noch in keinem Release sind, nennt sie der Hinweis.
+- **Neuere Versionen:** Ein Knopfdruck fragt nach, ob es neuere Versionen gibt – bei GitHub für Ablago, bei endoflife.date für Node.js, PostgreSQL und Alpine, bei npm für die Bibliotheken. Ohne Knopfdruck fragt Ablago nirgends nach. Bei Ablago selbst steht unter *Aktuell* die neueste stabile Version mit Datum – die, auf die `:stabil` zeigt (sie wandert einmal pro Woche, siehe [Welches Image-Tag?](aktualisieren.md#image-tag)); „neuer“ heißt es erst bei einer neuen stabilen Version. Läuft schon ein neuerer Stand (`:main` oder eine höhere feste Nummer) und liegen auf `main` weitere Änderungen, nennt sie der Hinweis.
 
 Wie die Bausteine zusammenhängen, beschreibt [Technik](technik.md).
 

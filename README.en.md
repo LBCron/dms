@@ -110,7 +110,7 @@ The image `ghcr.io/motom001/dms` is public – you do not need to sign in to the
 2. Next to it, put a file `.env` with `DB_PASSWORD=<long random password>`.
 3. Start it and open `http://<NAS>:8080`. A wizard guides you through the setup: setup code (shown in the container log and in `geheim/EINRICHTUNGSCODE`), database, then **set up new** or **restore from a backup**, name of your filing system, administrator, first user, key and emergency sheet.
 
-`ghcr.io/motom001/dms:stabil` (used by all templates) follows the tested releases; `:main` follows every state of `main` and is for testing only; with a version number, i.e. `ghcr.io/motom001/dms:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on a release. Everything else is in the administrator manual under [Setup and operation](https://help.ablago.app/admin/aktuell/en/installation/) and [Updating and backing up](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
+`ghcr.io/motom001/dms:stabil` (used by all templates) follows the tested releases once a week; `:main` follows every state of `main` and is for testing only; with a version number, i.e. `ghcr.io/motom001/dms:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on a release. Everything else is in the administrator manual under [Setup and operation](https://help.ablago.app/admin/aktuell/en/installation/) and [Updating and backing up](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
 
 ## Security and openness
 
