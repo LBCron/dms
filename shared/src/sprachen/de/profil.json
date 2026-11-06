@@ -197,7 +197,7 @@
   "fehlermelden.wird-gesendet": "Wird gesendet …",
   "fehlermelden.meldung-senden": "Meldung senden",
   "meinexport.meine-daten-exportieren": "Meine Daten exportieren {hilfe}",
-  "meinexport.der-persoenliche-export-ist": "Der persönliche Export ist in der Werkbank abgeschaltet.",
+  "meinexport.der-persoenliche-export-ist": "Deine Verwaltung hat den eigenen Export nicht eingeschaltet. Eine Auskunft über deine Daten bekommst du bei ihr.",
   "meinexport.alle-mappen-die-du": "Alle Mappen, die du lesen darfst, mit ihren Dokumenten, dazu deine Aufgaben, Erinnerungen, Favoriten und dein Profil – in offenen Formaten (CSV, JSON, Excel, PDF), lesbar ohne Ablago. Der Export ist unverschlüsselt.",
   "meinexport.als-passwoerter-csv-fuer": "als passwoerter.csv für einen Passwortmanager",
   "meinexport.passwortfelder-die-ich-sehen": "Passwortfelder, die ich sehen darf, im Klartext mitnehmen{klein}",

@@ -71,7 +71,7 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
       </form>
       <ZweifaktorPflichtBlatt />
       <AnbieterBlatt />
-      <NotfallzugangBlatt />
+      <NotfallzugangBlatt deineIp={s.deineIp} />
       {/* #366: früher die mittlere Spalte; ganz unten, mit fester Höhe – bei Dauerangriffen kommen viele zusammen. */}
       <div className="blatt" id="gesperrt">
         <h2 className="h3">{t('werkbank.anmeldeschutz.gesperrte-adressen')}{s.gesperrt.length > 0 && <> <span className="chip">{s.gesperrt.length}</span></>}</h2>
@@ -94,7 +94,7 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
  * Notfallzugang mit dem Notfallcode vom Notfallblatt (#815): Vorgabe „nur aus dem Heimnetz“. Aus dem Internet erlauben
  * ist eine heikle Handlung (frische Anmeldung) und kommt mit Warnung.
  */
-function NotfallzugangBlatt() {
+function NotfallzugangBlatt({ deineIp }: { deineIp: string }) {
   const [n, setN] = useState<NotfallzugangStand | null>(null);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
   const [sendet, setSendet] = useState(false);
@@ -115,7 +115,13 @@ function NotfallzugangBlatt() {
           <span>{t('werkbank.notfallzugang.internet')}<small className="hilfe">{t('werkbank.notfallzugang.internet.hilfe')}</small></span></label>
         {n.internet && <div className="hinweis warn"><p>{t('werkbank.notfallzugang.internet.warnung')}</p></div>}
         {n.internet && n.von && n.am && <p className="leise klein">{t('werkbank.notfallzugang.internet.von', { von: n.von, am: zeit(n.am) })}</p>}
-        {!n.heimnetz && !n.internet && <p className="leise klein">{t('werkbank.notfallzugang.nicht-heimnetz')}</p>}
+        {!n.heimnetz && !n.internet && <>
+          <p className="leise klein">{t('werkbank.notfallzugang.nicht-heimnetz')}</p>
+          {/* #885: welche Adresse Ablago sieht und warum es „nicht Heimnetz“ meint – mit Weg zur Abhilfe. */}
+          <p className="leise klein" id="notfall-grund">{n.grund === 'proxy'
+            ? tn('werkbank.notfallzugang.grund.proxy', { code: <code>{deineIp}</code>, hilfe: <Hilfe ort="werkbank.notfallzugang.proxy" /> })
+            : tn('werkbank.notfallzugang.grund.oeffentlich', { code: <code>{deineIp}</code>, hilfe: <Hilfe ort="werkbank.notfallzugang.oeffentlich" /> })}</p>
+        </>}
       </>}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
     </div>

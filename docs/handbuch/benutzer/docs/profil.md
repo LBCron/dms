@@ -42,7 +42,7 @@ Mein Konto hat links fünf Bereiche (am Smartphone oben als Knöpfe):
 
 Dein Ablago läuft bei dir zu Hause oder in deinem Betrieb, nicht bei einem Cloud-Anbieter, und es sendet keine Nutzungsdaten – auch keine anonymen. Was es über dich speichert, sind dein Konto, die Mappen und Dokumente, die du und andere anlegen, und wer wann was geändert hat.
 
-- **Eine Kopie deiner Daten** holst du dir selbst: unter [Meine Daten exportieren](#meine-daten-exportieren).
+- **Eine Kopie deiner Daten** holst du dir selbst unter [Meine Daten exportieren](#meine-daten-exportieren) – wenn der Administrator das eingeschaltet hat. Sonst bekommst du eine Auskunft über deine Daten bei ihm.
 - **Soll etwas gelöscht werden** – oder willst du wissen, was sonst noch über dich gespeichert ist –, frag den Administrator deines Ablago. Er kann Mappen löschen, die du selbst nicht löschen darfst. Manches muss eine Zeit lang aufbewahrt werden (z. B. Rechnungen); dann bleibt es gesperrt, bis die Frist abgelaufen ist. Dein Konto wird nicht gelöscht, sondern deaktiviert, sobald du es einmal benutzt hast – dein Name bleibt bei dem stehen, was du angelegt hast.
 
 #### Meine Daten exportieren
@@ -55,7 +55,7 @@ Unter **Konto → Meine Daten exportieren** bekommst du eine Kopie von allem, wa
 
 Was dem ganzen Haushalt gehört – Löschprotokoll, gleichbedeutende Wörter der Suche, Automatisierungen –, steht nur im Vollexport des Administrators. Verweist eine Mappe auf eine, die du nicht lesen darfst, steht dort statt des Titels „nicht sichtbare Mappe“.
 
-**Der Export ist unverschlüsselt** – bewahre die Datei sicher auf. Passwortfelder stehen nur dabei, wenn du sie sehen darfst und das ausdrücklich bestätigst; sie liegen dann im Klartext in der Datei `passwoerter.csv`. Der Export läuft im Hintergrund; ist er fertig, lädst du ihn als ZIP herunter. Es gibt immer nur deinen letzten Export – ein neuer ersetzt den alten. **Nach dem Herunterladen wird er gelöscht**, spätestens nach 7 Tagen; bis wann er bereitliegt, steht neben dem Knopf. Brauchst du ihn länger, bewahre die ZIP-Datei auf. Solange jemand [in deinem Namen arbeitet](#in-deinem-namen), lässt sich kein Export starten. Ist der Export in der Werkbank abgeschaltet, steht das an dieser Stelle.
+**Der Export ist unverschlüsselt** – bewahre die Datei sicher auf. Passwortfelder stehen nur dabei, wenn du sie sehen darfst und das ausdrücklich bestätigst; sie liegen dann im Klartext in der Datei `passwoerter.csv`. Der Export läuft im Hintergrund; ist er fertig, lädst du ihn als ZIP herunter. Es gibt immer nur deinen letzten Export – ein neuer ersetzt den alten. **Nach dem Herunterladen wird er gelöscht**, spätestens nach 7 Tagen; bis wann er bereitliegt, steht neben dem Knopf. Brauchst du ihn länger, bewahre die ZIP-Datei auf. Solange jemand [in deinem Namen arbeitet](#in-deinem-namen), lässt sich kein Export starten. **Ab Werk ist der eigene Export aus**; der Administrator schaltet ihn in der Werkbank ein. Solange er aus ist, steht an dieser Stelle ein Hinweis statt des Knopfs – eine Auskunft über deine Daten bekommst du dann beim Administrator.
 
 ### Meine Rechte
 

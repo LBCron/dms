@@ -64,6 +64,14 @@ Whoever has locked themselves out gets back in with the **emergency code** from 
 !!! info "Behind a reverse proxy"
     Whether a request comes from the home network, Ablago decides by the browser's real address. For that the proxy must set `X-Forwarded-For` (all common ones do) and Ablago must trust it ([What the proxy tells Ablago](installation.md#was-der-proxy-dem-dms-mitteilt)). If such information arrives although `TRUST_PROXY=false` applies, or if `TRUST_PROXY=true` is set (then anyone could forge the information), the request counts as "not from the home network". A proxy that passes on no address at all makes all requests look as if from the home network – set it up so that it sets `X-Forwarded-For`.
 
+If Ablago thinks you aren't in the home network, the Workbench shows below the note which address it sees and why: either it is a **public address** (see below), or **your proxy passes the address on in a way Ablago can't trust** – then check `TRUST_PROXY` and the proxy's headers as described under [What the proxy tells Ablago](installation.md#was-der-proxy-dem-dms-mitteilt).
+
+### At home via the public name { #zu-hause-uber-den-offentlichen-namen }
+
+If you open Ablago at home via its public name (e.g. `ablage.example.org`), that name points to the public address of your internet connection. The request then goes out of the router and straight back in (hairpin NAT); the proxy sees and passes on the public address, e.g. `203.0.113.7`. Ablago is right then: this request came via the internet.
+
+The remedy is a **local DNS entry** (split DNS): in the home network the same name points straight to the proxy, e.g. `ablage.example.org → 192.168.1.10`. You create the entry in your router or in your DNS server at home (often called "local DNS", "DNS rebind protection – exceptions" or "host overrides"). Then wait a few minutes or restart the browser; the Workbench then shows an address from the home network. The certificate stays valid because the name stays the same.
+
 ## Two-factor sign-in {#zwei-faktor-anmeldung}
 
 Every user can set up two-factor sign-in with an authenticator app under **My account → Security** (click your name at the top right) (TOTP, 6 digits, 30 seconds) and gets ten recovery codes with it. What this looks like for users is described in the [User manual](https://help.ablago.app/benutzer/aktuell/en/profil/#zwei-faktor-anmeldung).

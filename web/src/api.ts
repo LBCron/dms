@@ -437,7 +437,7 @@ export interface Notfallblattstand {
   grund?: 'fehlt' | 'schluessel' | 'ohne-code' | 'benutzt' | null;
 }
 /** Werkbank → Anmeldeschutz → Notfallzugang (#815). */
-export interface NotfallzugangStand { internet: boolean; von: string | null; am: string | null; code: { vorhanden: boolean; erstellt: string | null }; heimnetz: boolean }
+export interface NotfallzugangStand { internet: boolean; von: string | null; am: string | null; code: { vorhanden: boolean; erstellt: string | null }; heimnetz: boolean; /** #885: nur bei heimnetz: false */ grund?: 'oeffentlich' | 'proxy' }
 export interface SicherungsZustand {
   letzte: { name: string; ende: string; art: string } | null;
   fehler: { am: string; art: string; grund: string } | null;
