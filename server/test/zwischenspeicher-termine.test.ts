@@ -424,7 +424,7 @@ describe('PostgreSQL: Vorfilter, Pflege und Migration (#918)', { skip: url ? fal
   before(async () => {
     const { verbinde, migriere } = await import('../src/db');
     mod = { ...await import('../src/repo-pg'), ...await import('../src/konto-repo'), ...await import('../src/einstellungen') };
-    // Eigene Datenbank: die Testdateien laufen parallel auf derselben Test-Datenbank; ein DROP SCHEMA hier
+    // Eigene Datenbank: die Testdateien laufen parallel auf derselben Test-Datenbank; das Schema dort zu leeren
     // würde anderen Dateien mitten im Lauf die Tabellen wegnehmen.
     haupt = verbinde(url!);
     await haupt.unsafe(`DROP DATABASE IF EXISTS ${EIGENE_DB}`);

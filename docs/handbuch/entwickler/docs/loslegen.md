@@ -49,11 +49,35 @@ deploy/vorlagen-probe.sh dms                           # NAS-Vorlagen mit dem sc
 | Befehl | Was |
 | --- | --- |
 | `npm test` | alle Tests des Servers (Node-Testrunner) |
-| `TEST_DATABASE_URL=postgres://… npm test` | zusätzlich die Tests gegen PostgreSQL – **leert das Schema der angegebenen Datenbank**, also nur eine Wegwerf-Datenbank nehmen |
+| `TEST_DATABASE_URL=postgres://… npm test` | zusätzlich die Tests gegen PostgreSQL – jede Testdatei legt daneben ihre eigene Datenbank an (siehe unten); die Rolle braucht das Recht, Datenbanken anzulegen |
 | `npm run typecheck` | TypeScript für `shared`, `server` und `web` |
 | `npm run build` | Oberfläche und Server bauen wie im Image |
 
 Die CI auf GitHub führt all das aus, baut beide Images (`dms`, `dms-komplett`) für amd64 und arm64, nimmt die Screenshots der Handbücher auf und prüft die Oberfläche in iPhone-Größe.
+
+### Tests mit PostgreSQL: eigene Datenbank
+
+`npm test` startet alle Testdateien gleichzeitig. Teilten sie sich die Datenbank aus `TEST_DATABASE_URL`, könnte eine Datei der anderen die Tabellen wegnehmen – rote Läufe ohne echten Fehler. Darum legt jede Testdatei mit PostgreSQL ihre **eigene Datenbank** an, über den Helfer `server/test/hilfe-db.ts`:
+
+```ts
+import { eigeneDatenbank } from './hilfe-db';
+
+const db = await eigeneDatenbank('meine_datei');            // dms_test_meine_datei_<pid>_<n>, migriert
+const leer = await eigeneDatenbank('alt', { migrieren: false }); // leer, z. B. für den Stand vor einer Migration
+// db.sql (höchstens 4 Verbindungen), db.url, db.ende()
+```
+
+Die Datenbank entsteht neben der aus `TEST_DATABASE_URL` und wird mit `ende()` gelöscht, spätestens nach dem letzten Test der Datei von selbst. Auf der gemeinsamen Datenbank selbst schreibt kein Test; `test/eigene-datenbank.test.ts` lässt die CI scheitern, sobald eine Testdatei wieder ein Schema leert. Die Pools bleiben klein, damit viele Dateien gleichzeitig unter `max_connections` (Vorgabe 100) bleiben.
+
+### Quarantäne für wackelnde Tests
+
+Ein Test, der ohne Änderung mal rot, mal grün ist, kommt mit Issue und Fälligkeit in `server/test/quarantaene.json`:
+
+```json
+{ "name": "Name wie in it(…)", "datei": "beispiel.test.ts", "issue": 900, "faellig": "2026-12-06", "grund": "warum er wackelt" }
+```
+
+Er läuft weiter, bricht die CI aber nicht ab; sein Ergebnis (bestanden, fehlgeschlagen, nicht gefunden) steht in der Zusammenfassung des Laufs. Ein Name kann auch ein ganzer Abschnitt (`describe`) sein. Ist die Fälligkeit überschritten, scheitert die CI – dann den Test beheben und den Eintrag entfernen oder die Fälligkeit bewusst verlängern (höchstens 90 Tage). Ausgewertet wird das TAP-Protokoll mit `node --import tsx server/test/quarantaene.ts test.log <Exit-Code>`. Vor der Quarantäne lohnt der Blick auf die Ursache: Meist ist es eine feste Wartezeit, wo der Test auf ein Ereignis warten sollte.
 
 ## Handbücher
 

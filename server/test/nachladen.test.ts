@@ -17,6 +17,7 @@ import { speicherRepo } from '../src/repo-speicher';
 import { pruefeVerwaltung, type Anfrage } from '../src/routen';
 import { bereicheDerRoute, JEDER } from '../src/verwaltungsbereiche';
 import { imModus } from './hilfen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const PW = 'ein-langes-passwort';
 const MIN = 60_000;
@@ -300,13 +301,11 @@ describe('Gerade auch im Verwaltungsmodus (#921, GET /api/werkbank/gerade-im-mod
 const url = process.env.TEST_DATABASE_URL;
 describe('PostgreSQL: Sitzungen im Verwaltungsmodus (#921)', { skip: url ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
   it('nur aktive Personen des Haushalts mit Modus, ohne Vertretung, gültige Sitzung; keine Dienst- und Systemkonten', async () => {
-    const { verbinde, migriere } = await import('../src/db');
     const { pgKontoRepo } = await import('../src/konto-repo');
-    const { fileURLToPath } = await import('node:url');
-    const sql = verbinde(url!);
+    // Eigene Datenbank (#900), nicht das Schema der gemeinsamen leeren.
+    const db = await eigeneDatenbank('nachladen');
+    const sql = db.sql;
     try {
-      await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-      await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
       const H = '00000000-0000-4000-8000-000000000001', ANDERER = '00000000-0000-4000-8000-000000000002';
       await sql`INSERT INTO haushalte (id, name) VALUES (${H}, 'Test'), (${ANDERER}, 'Anderer') ON CONFLICT DO NOTHING`;
       const repo = pgKontoRepo(sql, H);
@@ -339,6 +338,6 @@ describe('PostgreSQL: Sitzungen im Verwaltungsmodus (#921)', { skip: url ? false
       assert.deepEqual((await fremd.sitzungenImVerwaltungsmodus()).map((x) => x.benutzer.name), ['Katrin'], 'nur der eigene Haushalt');
       await repo.setzeSitzungsVerwaltung('h-lena', { verwaltungSeit: null, verwaltungAktiv: null });
       assert.deepEqual(await repo.sitzungenImVerwaltungsmodus(), [], 'beendet: weg');
-    } finally { await sql.end(); }
+    } finally { await db.ende(); }
   });
 });

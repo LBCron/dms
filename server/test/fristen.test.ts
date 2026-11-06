@@ -12,6 +12,7 @@ import { Konten } from '../src/konten';
 import { speicherKontoRepo } from '../src/konto-repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { routen, type Anfrage } from '../src/routen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 const heute = heuteIn();
@@ -20,13 +21,11 @@ const in_ = (tage: number) => verschiebe(heute, tage);
 /** Je Test eine frische Datenbank, wenn pg (TEST_DATABASE_URL), sonst Arbeitsspeicher. */
 async function repos(pg: boolean) {
   if (!pg) return undefined;
-  const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-  const { verbinde, migriere } = await import('../src/db');
+  const { migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
   const { pgKontoRepo } = await import('../src/konto-repo');
-  const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_frist_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-  await legeDatenbankAn(a);
-  const sql = verbinde(alsUrl(a));
+  // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+  const sql = (await eigeneDatenbank('frist', { migrieren: false })).sql;
   offen.push(sql);
   await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
   const H = '00000000-0000-4000-8000-000000000001';

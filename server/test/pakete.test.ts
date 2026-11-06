@@ -17,6 +17,7 @@ import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { zipPuffer } from '../src/zip';
 import { basisMitAblageort, frueherAblageort } from './hilfen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const ICH = { id: '00000000-0000-4000-8000-0000000000aa', email: 'admin@example.org' };
 const BASIS = fileURLToPath(new URL('./pakete/basis', import.meta.url));
@@ -25,12 +26,10 @@ const KATALOG = 'https://katalog.test/katalog.json';
 const offen: Array<{ end(): Promise<void> }> = [];
 async function repo(pg: boolean): Promise<Repo> {
   if (!pg) return speicherRepo();
-  const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-  const { verbinde, migriere } = await import('../src/db');
+  const { migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
-  const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_pk_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-  await legeDatenbankAn(a);
-  const sql = verbinde(alsUrl(a));
+  // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+  const sql = (await eigeneDatenbank('pk', { migrieren: false })).sql;
   offen.push(sql);
   await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
   await sql`INSERT INTO benutzer (id, haushalt_id, email, name, rolle) VALUES (${ICH.id}, '00000000-0000-4000-8000-000000000001', ${ICH.email}, 'Admin', 'admin')`.catch(async () => {
@@ -50,7 +49,9 @@ function ordner(pfad: string, vor = ''): Record<string, string> {
   }
   return erg;
 }
-const archiv = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })));
+// Feste Zeit in den ZIP-Köpfen (#900): sonst unterscheidet sich die Prüfsumme zweier Bauten desselben Archivs
+// gelegentlich (Uhrzeit im 2-Sekunden-Raster).
+const archiv = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })), new Date('2026-01-01T12:00:00Z'));
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 
 /** Sammeldatei (#461) wie von der Katalog-Webseite: Verzeichnis und Paket-Archive; aendern: Dateien danach verändern. */

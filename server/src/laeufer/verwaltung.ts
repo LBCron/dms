@@ -83,6 +83,8 @@ export interface LaeuferOptionen {
   /** Tests: weniger Fortsetzungen je Ereignis (#458, Standard WEITER_MAX). */
   weiterMax?: number;
   nachlaufMs?: number;
+  /** Tests (#900): erste Nachberechnung nach dem Laden der Pakete (Standard 1 s); lang = nur ausdrücklich aufgerufen. */
+  nachlaufErstMs?: number;
 }
 
 export interface PaketStand {
@@ -309,7 +311,7 @@ export class Paketlaeufer implements PaketLaeufer {
       case 'geladen':
         for (const p of m.pakete) { this.ladefehler.set(p.id, p.fehler); if (p.fehler) log.warn('Paket-Läufer: Modul abgelehnt', { paket: p.id, fehler: p.fehler }); }
         // Vektoren (#442): gleich das Modell erfragen und den Zwischenspeicher laden, nicht erst nach 30 s.
-        if (this.vektorPaket() && !this.nachlauf.has(this.vektorPaket()!)) setTimeout(() => void this.nachberechnen(), 1000).unref?.();
+        if (this.vektorPaket() && !this.nachlauf.has(this.vektorPaket()!)) setTimeout(() => void this.nachberechnen(), this.o.nachlaufErstMs ?? 1000).unref?.();
         return;
       case 'log': this.notiere(m.paket, { stufe: m.stufe, text: m.text }); return;
       case 'ergebnis': { const a = this.aufrufe.get(m.nr); this.aufrufe.delete(m.nr); a?.ok(m); return; }

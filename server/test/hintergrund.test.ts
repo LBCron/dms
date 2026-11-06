@@ -45,7 +45,10 @@ describe('Priorität der Arbeit im Hintergrund (#893)', () => {
   });
 
   it('Ergebnis von execFile kommt wie gewohnt an; fehlendes Programm bleibt ENOENT', async () => {
-    const aus = await new Promise<string>((ok, nein) => execFile('sh', ['-c', 'nice'], { encoding: 'utf8' }, (e, o) => (e ? nein(e) : ok(o))));
+    // Die Priorität sinkt gleich nach dem Start (setPriority auf die PID) – ein schnelles „nice“ las manchmal noch den
+    // alten Wert (#900). Darum liest das Programm wiederholt, bis der Wert nicht mehr der des DMS ist (höchstens 5 s).
+    const skript = `i=0; while [ "$(nice)" = "${basis}" ] && [ $i -lt 250 ]; do sleep 0.02; i=$((i+1)); done; nice`;
+    const aus = await new Promise<string>((ok, nein) => execFile('sh', ['-c', skript], { encoding: 'utf8' }, (e, o) => (e ? nein(e) : ok(o))));
     assert.equal(aus.trim(), String(ziel), 'das Programm sieht selbst den nice-Wert');
     const e = await new Promise<{ code?: unknown } | null>((ok) => execFile('gibt-es-nicht-893', [], (x) => ok(x)));
     assert.equal(e?.code, 'ENOENT');

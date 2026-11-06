@@ -14,6 +14,7 @@ import { Paketverwaltung, type PaketLaeufer } from '../src/pakete';
 import { speicherRepo } from '../src/repo-speicher';
 import { Tresor } from '../src/tresor';
 import { zipPuffer } from '../src/zip';
+import { eigeneDatenbank } from './hilfe-db';
 
 const ICH = { id: null, email: 'admin@example.org' };
 const KATALOG = 'https://katalog.test/katalog.json';
@@ -215,14 +216,12 @@ describe('Paket-Einstellungen (#197)', () => {
   });
 
   it('Sicherung: Werte liegen in der Tabelle einstellungen (im Abzug), Geheimnisse verschlüsselt, Schlüsselwechsel inklusive', { skip: !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, async () => {
-    const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-    const { verbinde, migriere } = await import('../src/db');
+    const { migriere } = await import('../src/db');
     const { pgRepo } = await import('../src/repo-pg');
     const { pgEinstellungen } = await import('../src/einstellungen');
     const { OHNE_INHALT } = await import('../src/datenbankabzug');
-    const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_pe_${Date.now().toString(36)}` };
-    await legeDatenbankAn(a);
-    const sql = verbinde(alsUrl(a));
+    // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+    const sql = (await eigeneDatenbank('pe', { migrieren: false })).sql;
     try {
       await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
       const h = '00000000-0000-4000-8000-000000000001';

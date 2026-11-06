@@ -52,7 +52,9 @@ function ordner(pfad: string, vor = ''): Record<string, string> {
   }
   return erg;
 }
-const archiv = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })));
+// Feste Zeit in den ZIP-Köpfen (#900): sonst unterscheidet sich die Prüfsumme zweier Bauten desselben Archivs
+// gelegentlich (Uhrzeit im 2-Sekunden-Raster).
+const archiv = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })), new Date('2026-01-01T12:00:00Z'));
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 const kopf = (id: string, version: string, rest = '') => `schema: 1\nid: ${id}\nname: ${id[0].toUpperCase()}${id.slice(1)}\nversion: ${version}\nbeschreibung: Test.\nautor: { name: Test, github: test }\nlizenz: MIT\ndms: ">=0.133.0"\n${rest}`;
 

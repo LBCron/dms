@@ -5,7 +5,6 @@
  * Namen und Texte sind erfunden. TEST_DATABASE_URL – zusätzlich mit PostgreSQL (Spalte, Kurzzustand).
  */
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
 import { after, describe, it } from 'node:test';
 import { NICHTS, type Regelwerk } from '../../shared/src/rechte';
 import { HILFE } from '../../shared/src/hilfe';
@@ -26,6 +25,7 @@ import { speicherRepo } from '../src/repo-speicher';
 import { routen, type Anfrage } from '../src/routen';
 import { liesAntwort, liesQuelle, ZWISCHENSPEICHER } from '../src/uebersetzung';
 import { pdfMitText } from './hilfen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const status = (s: number, text?: RegExp) => (e: unknown) => e instanceof Fachfehler && e.status === s && (!text || text.test(e.message));
 
@@ -333,14 +333,11 @@ describe('Inhalte übersetzen (#732): PostgreSQL', { skip: !url }, () => {
   let sql: { end(): Promise<void>; unsafe(q: string): Promise<unknown> } | undefined;
   after(async () => { await sql?.end(); });
   it('Wahl der Person bleibt gespeichert; Übersetzungen im Kurzzustand, verfallen mit dem Original', async () => {
-    const { verbinde, migriere } = await import('../src/db');
     const { pgRepo } = await import('../src/repo-pg');
     const { pgKontoRepo } = await import('../src/konto-repo');
     const { pgKurzzustand } = await import('../src/kurzzustand');
-    const db = verbinde(url!);
+    const db = (await eigeneDatenbank('uebersetzung')).sql;
     sql = db;
-    await db.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-    await migriere(db, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
     const x = await aufbau({ repo: pgRepo(db, HAUSHALT), konto: pgKontoRepo(db, HAUSHALT), zustand: pgKurzzustand(db, HAUSHALT) });
     assert.equal((await x.ich(x.lena.id)).uebersetzen, undefined, 'Vorgabe an');
     await x.konten.aendereProfil(await x.ich(x.lena.id), { uebersetzen: false });

@@ -14,6 +14,7 @@ import { Konten } from '../src/konten';
 import { speicherKontoRepo } from '../src/konto-repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { routen, type Anfrage } from '../src/routen';
+import { eigeneDatenbank } from './hilfe-db';
 
 export const BRIEF = `Stadtwerke Musterstadt GmbH · Hauptstraße 1 · 01067 Musterstadt
 Anna Beispiel
@@ -231,12 +232,10 @@ describe('Erkennung: Vorschläge beim Zuordnen (#336)', () => {
 
 describe('Erkennung: Ablage in PostgreSQL (#336, #337)', { skip: !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
   it('speichert je Post, ersetzt, findet frühere Post des Absenders und fällt mit der Post weg', async () => {
-    const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-    const { verbinde, migriere } = await import('../src/db');
+    const { migriere } = await import('../src/db');
     const { pgRepo } = await import('../src/repo-pg');
-    const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_g11_erk_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-    await legeDatenbankAn(a);
-    const sql = verbinde(alsUrl(a));
+    // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+    const sql = (await eigeneDatenbank('g11_erk', { migrieren: false })).sql;
     try {
       await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
       const haushalt = '00000000-0000-4000-8000-000000000001';

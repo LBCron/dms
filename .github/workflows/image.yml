@@ -61,11 +61,16 @@ jobs:
           else echo "::warning::GreenMail nicht verfügbar – IMAP-Test übersprungen"; fi
       - name: Typen prüfen
         run: npm run typecheck
+      # Jede Testdatei mit PostgreSQL legt sich eine eigene Datenbank an (#900, test/hilfe-db.ts).
+      # Quarantäne (#900): Tests aus server/test/quarantaene.json laufen mit, brechen aber nicht ab; ihr Ergebnis
+      # steht in der Zusammenfassung. Steht einer über seine Fälligkeit hinaus darin, scheitert der Schritt.
       - name: Tests (inklusive PostgreSQL)
         shell: bash
         run: |
           set -o pipefail
-          npm test 2>&1 | tee test.log || {
+          status=0
+          npm test 2>&1 | tee test.log || status=$?
+          node --import tsx server/test/quarantaene.ts test.log "$status" || {
             # Fehlschläge als Anmerkungen ausgeben, damit sie ohne Log-Zugriff sichtbar sind.
             # Fehlschläge als Anmerkungen ausgeben (die Job-Logs sind nicht überall abrufbar).
             grep -n -B2 -A30 "^ *not ok" test.log | head -120 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error::/'

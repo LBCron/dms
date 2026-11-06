@@ -36,7 +36,10 @@ function ordner(pfad: string, vor = ''): Record<string, string> {
   }
   return erg;
 }
-const archiv = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })));
+// Feste Zeit in den ZIP-Köpfen (#900): Dasselbe Archiv wird für Katalog und Sammeldatei zweimal gebaut; mit der
+// Uhrzeit (2-Sekunden-Raster) unterschied sich sonst gelegentlich die Prüfsumme („Sammeldatei beschädigt“).
+const ZIP_ZEIT = new Date('2026-01-01T12:00:00Z');
+const archiv = (d: Record<string, string>) => zipPuffer(Object.entries(d).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })), ZIP_ZEIT);
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 const basis = ordner(BASIS);
 const basis11 = { ...basis, 'manifest.yaml': basis['manifest.yaml'].replace('version: 1.0.0', 'version: 1.1.0') };

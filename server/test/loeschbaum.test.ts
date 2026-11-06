@@ -20,6 +20,7 @@ import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { routen, type Anfrage } from '../src/routen';
 import { V1_TABELLE } from '../src/api-v1';
+import { eigeneDatenbank } from './hilfe-db';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 const H = '00000000-0000-4000-8000-000000000001';
@@ -137,13 +138,11 @@ describe('Mit verknüpften Mappen löschen: Plan (#424)', () => {
 const offen: Array<{ end(): Promise<void> }> = [];
 async function repos(pg: boolean): Promise<{ repo: Repo; konto: ReturnType<typeof speicherKontoRepo> }> {
   if (!pg) return { repo: speicherRepo(), konto: speicherKontoRepo() };
-  const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-  const { verbinde, migriere } = await import('../src/db');
+  const { migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
   const { pgKontoRepo } = await import('../src/konto-repo');
-  const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_loesch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-  await legeDatenbankAn(a);
-  const sql = verbinde(alsUrl(a));
+  // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+  const sql = (await eigeneDatenbank('loesch', { migrieren: false })).sql;
   offen.push(sql);
   await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
   return { repo: pgRepo(sql, H) as never, konto: pgKontoRepo(sql, H) as never };
