@@ -45,7 +45,7 @@ code:
   aktionen: [...]
 ```
 
-- **Folder types** in `rechte` you write as in links: your own with their key (`rechnung`), other packages' as `package:key`, Ablago's types as `dms:ablageort`, `dms:rolle` or `dms:post`. `"*"` means all folder types except users; `dms:benutzer` isn't allowed, other `dms:` keys don't exist.
+- **Folder types** in `rechte` you write as in links: your own with their key (`rechnung`), other packages' as `package:key`, Ablago's types as `dms:rolle` or `dms:post`, the storage location as `basis:ablageort` (since 0.212; the former `dms:ablageort` is an alias until Ablago 1.0, with a notice in the package check). `"*"` means all folder types except users; `dms:benutzer` isn't allowed, other `dms:` keys don't exist.
 - **Only post** (since 0.94.0): if your package only needs post – for instance to split incoming scans –, state `dms:post` instead of `"*"`. With `lesen`/`schreiben: ["dms:post"]` and `dokumente: schreiben` it may read post, **split post** (`POST /dokumente/{id}/seiten` creates a new post per part), set the **archive number** and the **full text** of its documents – it sees no other folders. The preview at installation then shows "Post". Unlike in links (`ziel`, `typen`), `dms:post` is only allowed in `rechte`. A package with this states `dms: ">=0.94.0"`; older Ablago versions don't know the key and then give the package no post at all.
 
   ```yaml

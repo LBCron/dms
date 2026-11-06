@@ -4,7 +4,8 @@
  *
  * - Angelegt wird über dieselben Funktionen wie in der Werkbank (mit allen Prüfregeln).
  * - Schlüssel bekommen das Paket-Präfix (<paket>_<schluessel>), Verweise <paket>:<schluessel> werden aufgelöst.
- * - dms:<kennung> verweist auf einen Mappentyp, den das DMS selbst mitbringt (#310), z. B. dms:ablageort.
+ * - dms:<kennung> verweist auf einen Mappentyp, den das DMS selbst mitbringt (#310), z. B. dms:rolle; dms:ablageort ist
+ *   seit #883 ein Alias für basis:ablageort (DMS_ALIAS).
  * - Scheitert etwas, wird zurückgerollt: Es bleibt nichts halb angelegt.
  * - Ein Update ergänzt nur (neue Typen, Felder, Register, Sichten); es löscht und überschreibt nichts.
  */
@@ -18,7 +19,7 @@ import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
 import { typBild, type TypBild } from '../../shared/src/typvergleich';
 import { ergaenzeBeschriftungen, type Beschriftungen, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
-import { ALLE_TYPEN, BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, DMS_ALIAS, veralteteVerweise, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
@@ -218,6 +219,8 @@ const TYPVERWEIS = /^([a-z][a-z0-9_]{1,19}:)?[a-z][a-z0-9_]{0,39}$/;
  * selbst auf jede Mappe, ein Paket braucht keinen eigenen Verweis darauf.
  */
 export const DMS_TYPEN: Record<string, string> = { ablageort: 'Ablageort', benutzer: 'Benutzer', rolle: 'Rolle' };
+/** Ab dieser Version bringt das Paket Basis den Ablageort mit (#883, dms-registry #138). */
+export const BASIS_ABLAGEORT_AB = '1.6.0';
 /** Ab dieser Version versteht das DMS Verweise `dms:…`; Pakete damit sollten `dms: ">=0.75.0"` angeben. */
 export const DMS_VERWEISE_AB = '0.75.0';
 const DMS_PRAEFIX = 'dms:';
@@ -773,11 +776,30 @@ export class Paketverwaltung {
 
   constructor(private d: Dienst, private o: PaketOptionen) {}
 
-  /** Mappentypen des DMS, auf die Pakete verweisen dürfen (#310): Kennung → Typ. */
+  /** Mappentypen des DMS, auf die Pakete verweisen dürfen (#310): Kennung → Typ. `ablageort` ist der Alias (#883). */
   private async dmsTypen(): Promise<Map<string, Mappentyp>> {
     const s = await this.d.sichereSystem();
     const a = await this.d.ablageortTyp();
     return new Map<string, Mappentyp>([['benutzer', s.benutzer], ['rolle', s.rolle], ...(a ? [['ablageort', a] as [string, Mappentyp]] : [])]);
+  }
+
+  /**
+   * Übernahme (#883): Bringt Basis den Ablageort mit und gibt es noch den früheren des Kerns, übernimmt das Paket ihn mit
+   * gleicher Id – alle Mappen und Verweise bleiben, Herkunft danach „Basis“, kein zweiter Mappentyp. Eine Ansicht des
+   * Pakets nur über den Ablageort (ohne Bedingungen, oberste Ebene) übernimmt die vorhandene Ansicht nur über ihn.
+   */
+  private async uebernahme(paket: Paket, ich: InstalliertesPaket | null): Promise<{ typen: Record<string, string>; sichten: Record<string, string>; name: string } | null> {
+    if (paket.manifest.id !== 'basis' || ich?.typen.ablageort || !paket.typen.some((t) => t.schluessel === 'ablageort')) return null;
+    const frueher = await this.d.frueherAblageortTyp();
+    if (!frueher) return null;
+    const sichten: Record<string, string> = {};
+    const vorhanden = (await this.d.listeSichten()).filter((x) => !x.elternId && x.typen.length === 1 && x.typen[0] === frueher.id && !x.bedingungen.length);
+    for (const s of paket.sichten) {
+      if (s.eltern || ich?.sichten[s.schluessel] || (s.bedingungen ?? []).length || (s.typen ?? []).length !== 1 || s.typen![0] !== 'ablageort') continue;
+      const x = vorhanden.find((v) => !Object.values(sichten).includes(v.id));
+      if (x) sichten[s.schluessel] = x.id;
+    }
+    return { typen: { ablageort: frueher.id }, sichten, name: frueher.name };
   }
 
   get katalogUrl() { return this.o.katalogUrl ?? OFFIZIELLER_KATALOG; }
@@ -1208,11 +1230,16 @@ export class Paketverwaltung {
       if (sp.uebergangen.length) hinweise.push(t('meldungen.sprachpakete.uebergangen', { anzahl: sp.uebergangen.length }));
       if (VERSION.test(dmsVersion) && vergleicheVersion(sp.angabe.ablago, dmsVersion) < 0) hinweise.push(t('meldungen.sprachpakete.aelter', { ablago: sp.angabe.ablago, version: dmsVersion }));
     }
-    // Verweise auf Mappentypen des DMS (#310), z. B. dms:ablageort.
+    // Verweise auf Mappentypen des DMS (#310), z. B. dms:rolle; dms:ablageort ist seit #883 ein Alias für basis:ablageort.
     const dmsTypen = await this.dmsTypen();
     const genutzt = [...new Set(typverweise(paket.typen, paket.sichten).filter(istDmsVerweis).map((vw) => vw.slice(DMS_PRAEFIX.length)))];
-    for (const k of genutzt.filter((k) => !dmsTypen.has(k))) probleme.push(t('meldungen.pakete.das-paket-verweist-auf', { wert: DMS_TYPEN[k] ?? k, DMS_VERWEISE_AB }));
-    const da = genutzt.filter((k) => dmsTypen.has(k));
+    for (const k of genutzt.filter((k) => !dmsTypen.has(k))) {
+      probleme.push(DMS_ALIAS[k] ? t('meldungen.pakete.alias-ohne-ziel', { vw: DMS_PRAEFIX + k, neu: DMS_ALIAS[k], version: BASIS_ABLAGEORT_AB }) : t('meldungen.pakete.das-paket-verweist-auf', { wert: DMS_TYPEN[k] ?? k, DMS_VERWEISE_AB }));
+    }
+    const veraltet = veralteteVerweise([...typverweise(paket.typen, paket.sichten), ...(paket.code ? [...paket.code.info.rechte.lesen, ...paket.code.info.rechte.schreiben, ...(paket.code.info.mappentypen ?? [])] : []),
+      ...paket.automatisierungen.map((a) => str(a.wenn.typ))]);
+    for (const vw of veraltet) hinweise.push(t('meldungen.pakete.alias-veraltet', { vw, neu: DMS_ALIAS[vw.slice(DMS_PRAEFIX.length)] }));
+    const da = genutzt.filter((k) => dmsTypen.has(k) && !DMS_ALIAS[k]);
     if (da.length) hinweise.push(t('meldungen.pakete.nutzt-mappentypen-aus-ablago', { map: da.map((k) => t('meldungen.pakete.aus-ablago', { name: dmsTypen.get(k)!.name })).join(', ') }));
     // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche.
     if (paket.wortlisten.length) hinweise.push(t('meldungen.pakete.bringt-gruppen-gleichbedeutender', { anzahl: paket.wortlisten.length }));
@@ -1242,9 +1269,11 @@ export class Paketverwaltung {
       }
       return erg;
     };
+    const ueb = await this.uebernahme(paket, ich);
+    if (ueb) hinweise.push(t('meldungen.pakete.ablageort-uebernommen', { name: ueb.name }));
     const typPlaene = await Promise.all(paket.typen.map(async (paketTyp): Promise<TypPlan> => {
       const dmsSchluessel = `${m.id}_${paketTyp.schluessel}`;
-      const vorhandenId = ich?.typen[paketTyp.schluessel];
+      const vorhandenId = ich?.typen[paketTyp.schluessel] ?? ueb?.typen[paketTyp.schluessel];
       const vorhanden = vorhandenId ? typen.find((x) => x.id === vorhandenId) : undefined;
       if (vorhanden) {
         return {
@@ -1281,7 +1310,7 @@ export class Paketverwaltung {
       if (ausgelassen.has(s.schluessel) && !ich?.sichten[s.schluessel]) return { schluessel: s.schluessel, name: s.name, eltern: s.eltern ?? null, vorhanden: false, konflikt: null, vorschlag: null, ausgelassen: ausgelassen.get(s.schluessel)! };
       const ohne = (s.fremdeTypen ?? []).filter((f) => !typen.some((t) => t.schluessel === f.kennung)).map((f) => f.name);
       if (ohne.length && !ich?.sichten[s.schluessel]) hinweise.push(t('meldungen.pakete.ansicht-kommt-ohne-den', { name: s.name, map: ohne.map((n) => `„${n}“`).join(', ') }));
-      const vorhandenId = ich?.sichten[s.schluessel];
+      const vorhandenId = ich?.sichten[s.schluessel] ?? ueb?.sichten[s.schluessel];
       const vorhanden = vorhandenId ? sichten.find((x) => x.id === vorhandenId) : undefined;
       if (vorhanden || vorhandenId) return { schluessel: s.schluessel, name: vorhanden?.name ?? s.name, eltern: s.eltern ?? null, vorhanden: true, konflikt: null, vorschlag: null };
       const name = (sichtNamen[s.schluessel] ?? s.name).trim();
@@ -1374,7 +1403,9 @@ export class Paketverwaltung {
     const m = paket.manifest;
     const installierte = await this.d.listePakete();
     const vorher = new Map((await this.d.listeTypen()).map((t) => [t.id, t] as const));
-    const ids = new Map<string, string>(Object.entries(alt?.typen ?? {}));
+    // Übernahme des früheren Ablageorts (#883): gleiche Id, gilt als vorhanden (die Vorschau zählt ihn genauso).
+    const ueb = await this.uebernahme(paket, alt);
+    const ids = new Map<string, string>(Object.entries({ ...alt?.typen, ...ueb?.typen }));
     for (const t of paket.typen) if (!ids.has(t.schluessel)) ids.set(t.schluessel, randomUUID());
     const neueTypen = paket.typen.filter((t) => !plan.typen.find((x) => x.schluessel === t.schluessel)?.vorhanden && !plan.typen.find((x) => x.schluessel === t.schluessel)?.geloescht);
     const angelegt = new Set<string>();
@@ -1384,6 +1415,7 @@ export class Paketverwaltung {
       const [p, s] = vw.includes(':') ? vw.split(':') : [m.id, vw];
       if (p === 'dms') {
         const eintrag = dmsTypen.get(s);
+        if (!eintrag && DMS_ALIAS[s]) throw new Fachfehler(422, t('meldungen.pakete.alias-ohne-ziel', { vw, neu: DMS_ALIAS[s], version: BASIS_ABLAGEORT_AB }));
         if (!eintrag) throw new Fachfehler(422, t('meldungen.pakete.der-verweis-laesst-sich', { vw, DMS_VERWEISE_AB }));
         return eintrag.id;
       }
@@ -1426,8 +1458,8 @@ export class Paketverwaltung {
     // Sprachpaket (#731): Die alten Texte kommen bei einem Fehler zurück.
     const alteSprache = alt?.sprache ? (await this.d.sprachpakete()).find((x) => x.paketId === m.id) ?? null : null;
     let spracheGeschrieben = false;
-    const typMap: Record<string, string> = { ...(alt?.typen ?? {}) };
-    const sichtMap: Record<string, string> = { ...(alt?.sichten ?? {}) };
+    const typMap: Record<string, string> = { ...(alt?.typen ?? {}), ...ueb?.typen };
+    const sichtMap: Record<string, string> = { ...(alt?.sichten ?? {}), ...ueb?.sichten };
     try {
       // 1. Neue Typen: Ziele zuerst; Verweise auf noch fehlende Typen dieses Pakets im zweiten Durchgang.
       const rest = [...neueTypen];
@@ -1567,6 +1599,7 @@ export class Paketverwaltung {
       if (paket.sprache) await this.d.speichereSprachpaket(m.id, { kennung: paket.sprache.angabe.kennung, texte: paket.sprache.texte, beschriftungen: paket.sprache.beschriftungen });
       else if (alt?.sprache) await this.d.loescheSprachpaket(m.id);
       await this.d.speicherePaket(datensatz);
+      if (ueb) log.info('Ablageort an das Paket übergeben', { paket: m.id, typ: ueb.name, ansichten: Object.keys(ueb.sichten).length });
       // #712: mitgelieferte Automatisierungen – aus, außer denen, die beim Installieren angehakt wurden (nach dem
       // Speichern, damit Typen und Herkunft stimmen).
       await Promise.resolve(this.d.paketAutomatisierungen?.(datensatz, paket.automatisierungen, ein))

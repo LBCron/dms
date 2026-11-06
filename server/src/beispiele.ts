@@ -7,8 +7,9 @@ const feld = (key: string, label: string, typ: Feld['typ'], extra: Partial<Feld>
 
 /**
  * Legt Beispiel-Mappentypen und ein paar Mappen an, damit eine frische
- * Installation nicht leer ist. Nur möglich, solange es außer den Systemtypen und dem Ablageort noch keine Typen gibt.
- * Verträge und Rechnungen bekommen das Feld „Verbleib Originaldokumente“ (#168), dazu ein paar Ablageorte.
+ * Installation nicht leer ist. Nur möglich, solange es außer den Systemtypen (und einem früheren Ablageort) noch keine
+ * Typen gibt. Der Kern legt keinen Ablageort an (#883): Nur wenn es einen gibt (z. B. den früheren des Kerns), bekommen Verträge
+ * und Rechnungen das Feld „Verbleib Originaldokumente“ (#168) und es entstehen ein paar Ablageorte; sonst ohne.
  */
 export async function ladeBeispiele(dienst: Dienst, benutzerId: string | null = null) {
   const ablageort = await dienst.ablageortTyp();

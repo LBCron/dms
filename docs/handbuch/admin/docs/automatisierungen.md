@@ -26,6 +26,17 @@ Petra soll 30 Tage vor Ablauf der Kündigungsfrist eines Vertrags eine Aufgabe b
 
 Eine Karte klappst du mit einem Klick auf ihren Namen **auf** (Einstellungen) und wieder **zu** (Kurzzeile wie „Aufgabe → Person im Feld „Verantwortlich““). Unter dem Text stehen die **Platzhalter**, die zur Wenn-Karte passen: die Felder des Mappentyps sowie `{titel}`, `{mappentyp}`, `{heute}`, `{automatisierung}` und beim Datum `{datum}` und `{tage}`. Ein Klick setzt den Platzhalter ein.
 
+## Beispiel: neue Dokumente an die Verwaltung melden
+
+Die Verwaltung soll erfahren, wenn irgendwo ein Dokument dazukommt – gebündelt, nicht für jede Datei einzeln.
+
+1. **+ Neu**, Name „Neue Dokumente melden“.
+2. **Wenn:** **Dokument hochgeladen**. Ohne Mappentyp gilt sie für alle; mit einem Mappentyp (z. B. *Rechnung*) oder einer Feld-Bedingung unter **Und** grenzt du sie ein.
+3. **Dann:** **+ Karte → Aufgabe / Benachrichtigung**, Als *Benachrichtigung*, Empfänger die Rolle *Administrator* (oder eine eigene Rolle wie *Verwaltung*), Text `Neues Dokument an {titel}.`
+4. **Speichern**.
+
+Ablago selbst bringt keine fertigen Automatisierungen mehr mit (seit 0.212): Fachliche Automatisierungen kommen aus [Paketen](#aus-paketen), alles andere baust du wie in diesen Beispielen.
+
 ## Datum erreicht
 
 Die Karte **Datum erreicht** prüft einmal am Tag zur gewählten Uhrzeit, bei welchen Mappen ein Datumsfeld nach dem **Vorlauf** erreicht ist.
@@ -123,7 +134,13 @@ Bis Version 0.176 stellte man Vorlauf, Empfänger und Text einer Erinnerung dire
 
 ## Beispiele
 
-Ablago bringt einige **ausgeschaltete Beispiele** mit (Herkunft „von Ablago“): *An die Kündigungsfrist erinnern*, *Kontosperre melden* und *Neue Dokumente melden*. Beispiele lassen sich einschalten und anpassen, aber nicht löschen; mit **Kopieren** machst du eine eigene daraus (die Kopie ist zunächst aus).
+Bis Version 0.211 legte Ablago drei **ausgeschaltete Beispiele** an (Herkunft „von Ablago“): *An die Kündigungsfrist erinnern*, *Kontosperre melden* und *Neue Dokumente melden*. Seit 0.212 gibt es keine Automatisierungen mehr aus dem Kern (Issue #883):
+
+- Ein Beispiel, das du **nie eingeschaltet und nie geändert** hast, entfernt das Update still.
+- Ein **eingeschaltetes oder geändertes** Beispiel bleibt und wird eine normale **eigene** Automatisierung – du kannst sie jetzt auch löschen.
+- Das [Protokoll](fehlersuche.md#protokoll) nennt beim ersten Start, was entfernt und was übernommen wurde.
+
+Die Erinnerung an die Kündigungsfrist bringt das Paket **Haushalt** mit („Kündigung bald fällig“), das Melden neuer Dokumente steht oben als [Beispiel](#beispiel-neue-dokumente-an-die-verwaltung-melden). Für gesperrte Konten gibt es den [Anmeldeschutz](anmeldeschutz.md) und das Paket **Benachrichtigungen**.
 
 ![Editor in dunkler Darstellung](bilder/werkbank-automatisierung-dunkel.png)
 

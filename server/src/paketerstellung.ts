@@ -4,7 +4,8 @@
  *
  * - Nur, was das Paketformat heute kann; was nicht hineinpasst, steht als Hinweis in der Prüfung.
  * - Typen und Ansichten aus installierten Paketen werden nicht kopiert, sondern Abhängigkeit (>= installierte Version).
- * - Verweise auf Benutzer, Rolle und Ablageort werden dms:…; auf eigene, nicht gewählte Typen: „mit aufnehmen“.
+ * - Verweise auf Benutzer und Rolle werden dms:…, auf den Ablageort basis:ablageort (#883, Abhängigkeit Basis); auf eigene,
+ *   nicht gewählte Typen: „mit aufnehmen“.
  * - Ansichten dürfen ohne ihre Mappentypen ins Paket (#656): Der Typ bleibt über seine Kennung erhalten (`fremde_typen`),
  *   die Prüfung warnt nur.
  * - Keine Mappendaten außer ausdrücklich gewählten Beispiel-Mappen; nie Passwörter, nie Benutzer, keine Ids.
@@ -15,7 +16,7 @@
 import { stringify } from 'yaml';
 import { istLeer, standardliste, trefferlistenVon, type Feld, type Mappe, type Mappentyp, type Register } from '../../shared/src/model';
 import { kreisImStandard } from '../../shared/src/nummernkreis';
-import { ALLE_TYPEN, BEREICH, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEREICH, DMS_ALIAS, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
 import { liesWortgruppe } from '../../shared/src/suche';
 import type { Synonymgruppe } from './repo';
 import { BESCHREIBUNG_LAENGE, EIGENE_LIZENZ, GITHUB, istFreieLizenz, KEINE_LIZENZ, LIZENZ_VORGABE, LIZENZEN, LIZENZNAME_LAENGE, LIZENZTEXT_MAX, lizenzVerweis, NAME_LAENGE, naechsteVersion, naechsteVersionen, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type SelbstErstellt, type SelbstErstelltDetail, type VersionsArt, type VersionsLage } from '../../shared/src/paketerstellung';
@@ -24,7 +25,7 @@ import type { Dienst } from './dienst';
 import { t } from './sprache';
 import { Fachfehler } from './fehler';
 import { LIZENZTEXTE } from './lizenztexte';
-import { ARCHIV_MAX, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, liesZip, type FremderTyp, type Handelnder } from './pakete';
+import { ARCHIV_MAX, BASIS_ABLAGEORT_AB, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, liesZip, type FremderTyp, type Handelnder } from './pakete';
 import { protokoll } from './protokoll';
 import { typBild, typUnterschiede, type TypUnterschiede } from '../../shared/src/typvergleich';
 import { zipPuffer } from './zip';
@@ -119,7 +120,7 @@ export interface ErstellenDaten {
   typen: Mappentyp[];
   sichten: Sicht[];
   pakete: InstalliertesPaket[];
-  /** Mappentypen, auf die Pakete mit dms:… verweisen dürfen: Id → Kennung (benutzer, rolle, ablageort). */
+  /** Mappentypen, auf die Pakete mit dms:… verweisen dürfen: Id → Kennung (benutzer, rolle; ablageort = früherer des Kerns, #883). */
   dmsTypen: Map<string, string>;
   /** Gewählte Beispiel-Mappen (nur aus gewählten eigenen Typen). */
   mappen: Mappe[];
@@ -253,7 +254,8 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     const eintrag = typById.get(tid);
     if (!eintrag) { probleme.push(t('meldungen.paketerstellung.ein-gewaehlter-mappentyp-existiert')); continue; }
     const h = typPaket.get(eintrag.id);
-    if (d.dmsTypen.has(eintrag.id) || eintrag.system) hinweis(t('meldungen.paketerstellung.bringt-jede-installation-von', { name: eintrag.name }));
+    if (d.dmsTypen.get(eintrag.id) === 'ablageort') hinweis(t('meldungen.paketerstellung.ablageort-aus-basis', { name: eintrag.name, version: BASIS_ABLAGEORT_AB }));
+    else if (d.dmsTypen.has(eintrag.id) || eintrag.system) hinweis(t('meldungen.paketerstellung.bringt-jede-installation-von', { name: eintrag.name }));
     else if (h) ausPaket(t('meldungen.paketerstellung.der-mappentyp'), eintrag.name, h.p, eintrag);
     else eigene.push(eintrag);
   }
@@ -273,6 +275,13 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     if (!typId) { probleme.push(`${wo}: ohne Ziel.`); return null; }
     if (schluessel[typId]) return schluessel[typId];
     const k = d.dmsTypen.get(typId);
+    // Früherer Ablageort des Kerns (#883): Das Paket verweist auf basis:ablageort und braucht Basis ab 1.6.0.
+    if (k && DMS_ALIAS[k]) {
+      const [p, s] = DMS_ALIAS[k].split(':');
+      if (!abh[p] || vergleicheVersion(BASIS_ABLAGEORT_AB, untergrenze(abh[p]) ?? '0.0.0') > 0) abh[p] = `>=${BASIS_ABLAGEORT_AB}`;
+      hinweis(t('meldungen.paketerstellung.ablageort-aus-basis', { name: typById.get(typId)?.name ?? k, version: BASIS_ABLAGEORT_AB }));
+      return `${p}:${s}`;
+    }
     if (k && DMS_TYPEN[k]) { dmsVerweise = true; return `dms:${k}`; }
     const eintrag = typById.get(typId);
     const h = typPaket.get(typId);
@@ -548,7 +557,8 @@ export class Paketerstellung {
 
   private async dmsTypen(): Promise<Map<string, string>> {
     const s = await this.d.sichereSystem();
-    const a = await this.d.ablageortTyp();
+    // Den Ablageort von Basis behandelt die Erstellung wie jeden Paket-Typ; den früheren des Kerns gibt es nur noch hier (#883).
+    const a = await this.d.frueherAblageortTyp();
     return new Map<string, string>([[s.benutzer.id, 'benutzer'], [s.rolle.id, 'rolle'], ...(a ? [[a.id, 'ablageort'] as [string, string]] : [])]);
   }
 

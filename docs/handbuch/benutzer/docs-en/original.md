@@ -73,9 +73,9 @@ If you do need an original after all, you'll find it in Ablago. The date tells y
 
 ### Recording where the original is {#festhalten-wo-das-original-liegt}
 
-Every Ablago installation has the view **Storage location**. A storage location is a small folder for a place where paper is kept – and it can be inside another one: "at home › study cupboard › red binder", "Box 2026", "bank safe deposit box", "at the notary's" or simply "destroyed".
+If the **Basis** package is installed (or your Library has the storage location from an older version), there is the view **Storage locations** (in older Libraries *Storage location*). A storage location is a small folder for a place where paper is kept – and it can be inside another one: "at home › study cupboard › red binder", "Box 2026", "bank safe deposit box", "at the notary's" or simply "destroyed".
 
-1. In the view *Storage location*, create a location with **+ New**: enter the *Name* and, under *Located in*, choose the location it is in (e.g. the cupboard for the binder). At the very top, *Located in* stays empty.
+1. In the view *Storage locations*, create a location with **+ New**: enter the *Name* and, under *Located in*, choose the location it is in (e.g. the cupboard for the binder). At the very top, *Located in* stays empty.
 2. In the folder whose paper you keep, choose the location in the field **Whereabouts of original documents** – if your administrator has set up the field.
 3. If the binder moves, you only change *Located in* on the binder. All folders in it then show the new location.
 

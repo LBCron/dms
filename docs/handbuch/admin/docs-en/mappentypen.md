@@ -280,14 +280,18 @@ More on this in [Users and roles](benutzer.md).
 
 ## Storage location: where the originals are { #ablageort-wo-die-originale-liegen }
 
-Since 0.74, every Ablago installation has the folder type **Storage location** (key `ablageort`). With it you record where the paper for a scanned document is – or that it has been destroyed. It is not a system folder type: you can rename it, extend it with fields and tabs and change its permissions as with every folder type. **It can't be deleted**, because packages and examples link to it.
+The folder type **Storage location** comes with the **Basis** package (from Basis 1.6.0, alongside organisation, branch and person). With it you record where the paper for a scanned document is – or that it has been destroyed. It is a normal folder type from a package: you can rename it, extend it with fields and tabs and change its permissions as with every folder type.
+
+- **Without Basis there is no storage location** – that is intended. A new Library only brings the [system folder types](#systemmappentypen-benutzer-rolle-und-post); everything subject-specific you choose via [packages](pakete.md). Packages such as Household, House, Letting and Vehicles need Basis anyway and refer to Basis's storage location in the field *Whereabouts of original documents*.
+- **Older Libraries** (before 0.212) still have the storage location that Ablago used to create itself (key `ablageort`). When you install Basis or update it to 1.6.0, Basis **takes it over**: same folder type ID, all storage locations, links and the view stay; only the origin is "Basis" afterwards. No second storage location is created; the preview mentions the takeover. Until then you can edit it like any folder type of your own and – without folders and links – delete it too.
+- **For package authors:** references are written `basis:ablageort` (dependency `basis: ">=1.6.0"`). The former `dms:ablageort` still applies until Ablago 1.0 and points to the same folder type; the package check gives a notice about it.
 
 - **Fields:** *Name*, *Is in* (a link to another storage location) and *Description*.
 - **Tabs:** *General*, *Contains* (the storage locations that are in here), *Kept here* (all folders that link to this location) and *Photos*.
 - **Title:** `{liegt_in} › {name}`. The red binder is then called, e.g., "at home › study cupboard › red binder". At the very top (without *Is in*) only the name remains.
 - **Moving in one step:** if the cupboard goes into the living room, you only change *Is in* on the cupboard. Ablago updates the titles of the locations below and of all folders that show the location in their title – over at most six levels.
 
-**Whereabouts in your folder types:** give folder types with paper (contract, invoice, insurance, certificate …) a link field to *Storage location* with the key **`verbleib_original`** and the label *Whereabouts of original documents*. The same key in all folder types is important: only then is there the column in shared result lists and the condition in views across several folder types. The [examples](demo.md) bring the field for *Contract* and *Invoice*, plus a few storage locations and the view *Originals by location*.
+**Whereabouts in your folder types:** give folder types with paper (contract, invoice, insurance, certificate …) a link field to *Storage location* with the key **`verbleib_original`** and the label *Whereabouts of original documents*. The same key in all folder types is important: only then is there the column in shared result lists and the condition in views across several folder types. If there is a storage location, the [examples](demo.md) bring the field for *Contract* and *Invoice*, plus a few storage locations and the view *Originals by location*.
 
 !!! note "Deliberately simple"
     The whereabouts apply to the whole folder, not to every single scan. *Kept here* only shows what is directly at this location; what is in locations below you see via *Contains* level by level. When you should keep the paper at all is in the User manual under [Keep or destroy the original?](https://help.ablago.app/benutzer/aktuell/en/original/).
@@ -321,4 +325,4 @@ Below tabs and archive mode you decide who may create, read, edit, delete folder
 
 ## Deleting a folder type { #mappentyp-loschen }
 
-**Delete folder type** only works as long as there are no folders of this folder type – including none in the [bin](papierkorb.md) – and no other folder type links to it. Otherwise Ablago names the reasons. [System folder types](#systemmappentypen-benutzer-rolle-und-post) and the [storage location](#ablageort-wo-die-originale-liegen) can never be deleted.
+**Delete folder type** only works as long as there are no folders of this folder type – including none in the [bin](papierkorb.md) – and no other folder type links to it. Otherwise Ablago names the reasons. [System folder types](#systemmappentypen-benutzer-rolle-und-post) can never be deleted.

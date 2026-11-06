@@ -63,7 +63,7 @@ export interface AutomatisierungRepo {
   /** Neue Fassung speichern; false, wenn inzwischen jemand anderes gespeichert hat (version ≠ erwartet). */
   speichere(id: string, d: AutomatisierungDaten & { aktiv: boolean }, von: string | null, erwartet: number): Promise<boolean>;
   /** Zustand ohne neue Fassung (an/aus von selbst, angehalten, letzter geprüfter Tag). */
-  setze(id: string, d: { aktiv?: boolean; angehalten?: Angehalten | null; letzterTag?: string }): Promise<void>;
+  setze(id: string, d: { aktiv?: boolean; angehalten?: Angehalten | null; letzterTag?: string; herkunft?: Herkunft }): Promise<void>;
   loesche(id: string): Promise<void>;
   fassungen(id: string): Promise<Fassung[]>;
   /** Lauf anlegen; null, wenn es zu dieser Automatisierung und diesem Ereignis schon einen gibt. */
@@ -111,6 +111,7 @@ export function speicherAutomatisierungRepo(uhr: () => number = Date.now): Autom
       if (d.aktiv !== undefined) a.aktiv = d.aktiv;
       if (d.angehalten !== undefined) a.angehalten = structuredClone(d.angehalten);
       if (d.letzterTag !== undefined) a.letzterTag = d.letzterTag;
+      if (d.herkunft !== undefined) a.herkunft = d.herkunft;
     },
     async loesche(id) { autos.delete(id); fassungen.delete(id); for (let i = laeufe.length - 1; i >= 0; i--) if (laeufe[i].automatisierungId === id) laeufe.splice(i, 1); },
     async fassungen(id) { return structuredClone([...(fassungen.get(id) ?? [])].reverse()); },
@@ -198,7 +199,8 @@ export function pgAutomatisierungRepo(sql: postgres.Sql, haushaltId: string): Au
       await sql`UPDATE automatisierungen SET
         aktiv = ${d.aktiv === undefined ? sql`aktiv` : d.aktiv},
         angehalten = ${d.angehalten === undefined ? sql`angehalten` : d.angehalten === null ? null : json(d.angehalten)},
-        letzter_tag = ${d.letzterTag === undefined ? sql`letzter_tag` : d.letzterTag}
+        letzter_tag = ${d.letzterTag === undefined ? sql`letzter_tag` : d.letzterTag},
+        herkunft = ${d.herkunft === undefined ? sql`herkunft` : d.herkunft}
         WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
     },
     async loesche(id) { if (istUuid(id)) await sql`DELETE FROM automatisierungen WHERE haushalt_id = ${haushaltId} AND id = ${id}`; },
@@ -353,10 +355,10 @@ export class Automatisierungen {
   /** Abnehmer anmelden und den Zeitplan starten (Start des Servers). */
   start() {
     this.d.dienst.ereignisse.abonniere('automatisierungen', (e) => this.ereignis(e));
-    // #712: Erinnerungen am Feld werden zu Automatisierungen – erst die Fristen übernehmen, dann die Beispiele.
+    // #712: Erinnerungen am Feld werden zu Automatisierungen – erst die Fristen übernehmen; frühere Beispiele des Kerns räumen (#883).
     void this.fristenUebernehmen().catch((e) => log.warn('Erinnerungen nicht übernommen', { fehler: (e as Error).message }))
       .then(() => this.benachrichtigungenUebernehmen()).catch((e) => log.warn('Benachrichtigungen nicht übernommen', { fehler: (e as Error).message }))
-      .then(() => this.legeBeispiele()).catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
+      .then(() => this.raeumeBeispieleAuf()).catch((e) => log.warn('Frühere Beispiele nicht aufgeräumt', { fehler: (e as Error).message }));
     this.uhr ??= setInterval(() => { void this.zeitplan().catch((e) => log.error('Zeitplan fehlgeschlagen', { fehler: (e as Error).message })); }, ZEITPLAN_MS);
     this.uhr.unref?.();
   }
@@ -516,57 +518,22 @@ export class Automatisierungen {
   }
 
   /**
-   * Einige ausgeschaltete Beispiele (#675) statt Vorlagen: Herkunft „DMS“, also nur kopieren oder einschalten, nicht
-   * löschen. Feste Ids – mehrere Server legen sie nicht doppelt an; einmal angelegt, bleiben Änderungen erhalten.
+   * Frühere Beispiele des Kerns (#675) entfallen (#883): Fachliche Automatisierungen kommen aus Paketen. Ein
+   * unverändertes, nie eingeschaltetes Beispiel (Herkunft „von Ablago“) wird still entfernt; ein eingeschaltetes oder
+   * geändertes bleibt und wird eine normale eigene Automatisierung (löschbar). Das Protokoll nennt beides.
    */
-  async legeBeispiele(): Promise<number> {
-    const k = await this.kontext();
-    const admins = k.rollen.filter((r) => /administrator/i.test(r.name)).slice(0, 1).map((r) => ({ art: 'rolle' as const, id: r.id }));
-    // Kündigungsfrist: ein Mappentyp mit einem Datumsfeld „kündbar …“ / „Frist“, wenn es schon einen gibt. Hat das Feld
-    // schon eine eingebaute Erinnerung, übernimmt das Beispiel deren Vorlauf und Empfänger – dieselbe Person bekommt je
-    // Datum nur eine Frist (#724), es entsteht also keine zweite Aufgabe (bis #712 die eingebaute ersetzt).
-    const kandidaten = k.typen.flatMap((typ) => typ.felder.filter((f) => f.typ === 'datum' && /k(ü|ue)nd|frist/i.test(`${f.key} ${f.label}`)).map((f) => ({ typ, f })));
-    const frist = kandidaten.find((x) => !x.f.frist) ?? kandidaten[0];
-    const benutzerTyp = k.typen.find((x) => x.system === 'benutzer');
-    const eingebaut = frist?.f.frist;
-    const zustaendig = eingebaut ? (eingebaut.empfaengerFeld ? frist.typ.felder.find((f) => f.key === eingebaut.empfaengerFeld) : undefined)
-      : frist?.typ.felder.find((f) => f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id));
-    const empfaenger = zustaendig ? [{ art: 'feld', feld: zustaendig.key }] : eingebaut ? [{ art: 'ersteller' }] : admins;
-    const beispiele: Array<{ key: string; e: Record<string, unknown> }> = [
-      { key: 'kuendigung', e: {
-        name: t('automatisierung.beispiel.kuendigung.name'), beschreibung: t('automatisierung.beispiel.kuendigung.text'),
-        wenn: { art: 'datum', typ: frist?.typ.id ?? '', feld: frist?.f.key ?? '', vorlauf: eingebaut?.vorlauf ?? 30, einheit: eingebaut?.einheit ?? 'tage', uhrzeit: '07:00' },
-        dann: [{ id: 'k1', art: 'aufgabe', als: 'aufgabe', faellig: 7, empfaenger, text: t('automatisierung.beispiel.kuendigung.aufgabe') }],
-      } },
-      { key: 'kontosperre', e: {
-        name: t('automatisierung.beispiel.kontosperre.name'), beschreibung: t('automatisierung.beispiel.kontosperre.text'),
-        wenn: { art: 'benutzer.gesperrt', typ: null },
-        dann: [{ id: 'k1', art: 'aufgabe', als: 'benachrichtigung', empfaenger: admins, text: t('automatisierung.beispiel.kontosperre.aufgabe') }],
-      } },
-      { key: 'dokument', e: {
-        name: t('automatisierung.beispiel.dokument.name'), beschreibung: t('automatisierung.beispiel.dokument.text'),
-        wenn: { art: 'dokument.hochgeladen', typ: null },
-        dann: [{ id: 'k1', art: 'aufgabe', als: 'benachrichtigung', empfaenger: admins, text: t('automatisierung.beispiel.dokument.aufgabe') }],
-      } },
-    ];
-    let neu = 0;
-    for (const b of beispiele) {
-      const id = uuidAus(`beispiel|${b.key}`);
-      const d = bereinigeAutomatisierung(b.e);
-      d.reihenfolge = REIHENFOLGE.dms;
-      const da = await this.d.repo.hole(id);
-      if (da) {
-        // Frage 78: Ein unverändertes Beispiel, das noch nicht passt (frische Installation ohne Vertragstyp), passt
-        // sich an, sobald es einen passenden Mappentyp gibt. Von Hand geändert oder eingeschaltet: nie.
-        if (!da.aktiv && da.geaendertVon === null && automatisierungsProbleme(da, k).length && !automatisierungsProbleme(d, k).length) {
-          if (await this.d.repo.speichere(id, { ...d, aktiv: false }, null, da.version)) log.info('Beispiel an die Ablage angepasst', { beispiel: b.key });
-        }
-        continue;
-      }
-      const a: Automatisierung = { ...d, id, aktiv: false, angehalten: null, herkunft: 'dms', version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
-      try { await this.d.repo.lege(a); neu++; } catch { /* ein anderer Server war schneller */ }
+  async raeumeBeispieleAuf(): Promise<{ entfernt: string[]; uebernommen: string[] }> {
+    const entfernt: string[] = [];
+    const uebernommen: string[] = [];
+    for (const a of (await this.d.repo.liste()).filter((x) => x.herkunft === 'dms')) {
+      const nieEin = !a.aktiv && a.geaendertVon === null && !(await this.d.repo.fassungen(a.id)).some((f) => f.daten.aktiv);
+      if (nieEin) { await this.d.repo.loesche(a.id); entfernt.push(a.name); }
+      else { await this.d.repo.setze(a.id, { herkunft: 'eigen' }); uebernommen.push(a.name); }
     }
-    return neu;
+    if (entfernt.length || uebernommen.length) {
+      log.info('Beispiel-Automatisierungen aus dem Kern aufgeräumt', { entfernt: entfernt.join(', ') || '–', alsEigeneUebernommen: uebernommen.join(', ') || '–' });
+    }
+    return { entfernt, uebernommen };
   }
 
   /* ---------- Verwalten ---------- */
@@ -1030,7 +997,6 @@ export class Automatisierungen {
     if (this.zeitplanLauf) return this.zeitplanLauf;
     this.zeitplanLauf = (async () => {
       if (this.d.pause?.()) return;
-      await this.legeBeispiele().catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
       const jetzt = new Date(this.jetzt());
       const heute = heuteIn(jetzt);
       const uhrzeit = UHR_FORMAT().format(jetzt);

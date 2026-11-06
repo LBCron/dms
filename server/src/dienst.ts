@@ -3236,7 +3236,6 @@ export class Dienst {
     const eintrag = await this.repo.holeTyp(id);
     if (!eintrag) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     if (eintrag.system) throw new Fachfehler(409, t('meldungen.dienst.ist-ein-systemmappentyp-er', { name: eintrag.name }));
-    if (id === (await this.ablageortId())) throw new Fachfehler(409, t('meldungen.dienst.gehoert-zum-standard-von', { name: eintrag.name }));
     const gruende: string[] = [];
     const n = await this.repo.zaehleMappen(id);
     if (n) gruende.push(t('meldungen.dienst.mappen-gehoeren-zu-diesem', { anzahl: n }));
@@ -5370,10 +5369,10 @@ export class Dienst {
   }
 
   /**
-   * Ablageort (#168): ein normaler Mappentyp, den jede Installation hat – für den Verbleib von
-   * Originalen („zu Hause › Arbeitszimmer › roter Ordner“). Erweiterbar und umbenennbar, aber nicht
-   * löschbar, weil Pakete und Beispiele darauf verweisen. Gemerkt wird er über seine Id in den
-   * Einstellungen (ohne Einstellungen, z. B. in Tests: über die Kennung `ablageort`).
+   * Ablageort (#168, #883): Seit #883 bringt ihn das Paket Basis mit (`basis:ablageort`); der Kern legt keinen mehr an.
+   * Ältere Ablagen haben noch den Ablageort, den der Kern früher anlegte – Basis übernimmt ihn beim Installieren bzw.
+   * Aktualisieren mit gleicher Id. Ohne Basis und ohne früheren Ablageort gibt es keinen (gewollt). `dms:ablageort` in
+   * Paketen zeigt eine Zeit lang auf diesen Typ (Alias).
    */
   async ablageortTyp(): Promise<Mappentyp | undefined> {
     await this.sichereSystem();
@@ -5382,41 +5381,20 @@ export class Dienst {
   }
 
   private async ablageortId(): Promise<string | undefined> {
-    const merk = (await this.einstellungen?.lies('ablageort')) as { id?: string } | null | undefined;
-    if (merk?.id) return merk.id;
-    return (await this.repo.listeTypen()).find((t) => !t.system && t.schluessel === 'ablageort')?.id;
+    const basis = (await this.listePakete()).find((p) => p.id === 'basis')?.typen.ablageort;
+    if (basis && (await this.repo.holeTyp(basis))) return basis;
+    return (await this.frueherAblageortTyp())?.id;
   }
 
-  private async sichereAblageort(): Promise<void> {
-    const vorhanden = await this.ablageortId();
-    if (vorhanden && (await this.repo.holeTyp(vorhanden))) {
-      // Schon da (oder ein eigener Mappentyp mit der Kennung „ablageort“): nur merken.
-      if (this.einstellungen && !(await this.einstellungen.lies('ablageort'))) await this.einstellungen.schreibe('ablageort', { id: vorhanden });
-      return;
-    }
-    const typen = await this.repo.listeTypen();
-    const id = randomUUID();
-    const name = typen.some((t) => t.name.trim().toLowerCase() === 'ablageort') ? t('meldungen.dienst.ablageort-standard') : 'Ablageort';
-    const mappentyp = await this.repo.legeTypAn(id, {
-      name, schluessel: freierSchluessel('ablageort', typen.map((x) => x.schluessel ?? '')),
-      beschreibung: t('meldungen.dienst.wo-originale-liegen-verschachtelt'),
-      titelVorlage: '{liegt_in} › {name}',
-      felder: [
-        { key: 'name', label: t('meldungen.dienst.name'), typ: 'text', pflicht: true, maxLen: 120, hilfe: t('meldungen.dienst.z-b-roter-ordner') },
-        { key: 'liegt_in', label: t('meldungen.dienst.liegt-in'), typ: 'referenz', zielTyp: id, verweisart: 'zugehoerigkeit', hilfe: t('meldungen.dienst.der-ort-in-dem') },
-        { key: 'beschreibung', label: t('meldungen.dienst.beschreibung'), typ: 'langtext', maxLen: 2000 },
-      ],
-      register: [
-        { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name', 'liegt_in', 'beschreibung'] },
-        { key: 'enthaelt', name: 'Enthält', art: 'verknuepfungen', quellen: [{ typId: id, feldKey: 'liegt_in' }] },
-        { key: 'liegt_hier', name: t('meldungen.dienst.liegt-hier'), art: 'verknuepfungen', quellen: [] },
-        { key: 'fotos', name: 'Fotos', art: 'dokumente' },
-      ],
-      trefferliste: ['_titel', 'beschreibung'], erstellenErlaubt: true, loeschenErlaubt: true,
-    });
-    await this.sichtFuerTyp(mappentyp);
-    await this.einstellungen?.schreibe('ablageort', { id: mappentyp.id });
-    protokoll.modul('werkbank').info('Mappentyp Ablageort angelegt', { typ: mappentyp.name });
+  /**
+   * Der Ablageort, den der Kern vor #883 angelegt hat – solange ihn kein Paket übernommen hat. Gemerkt über seine Id in
+   * den Einstellungen (ohne Einstellungen, z. B. in Tests: über die Kennung `ablageort`).
+   */
+  async frueherAblageortTyp(): Promise<Mappentyp | undefined> {
+    const merk = (await this.einstellungen?.lies('ablageort')) as { id?: string } | null | undefined;
+    const id = merk?.id ?? (this.einstellungen ? undefined : (await this.repo.listeTypen()).find((t) => !t.system && t.schluessel === 'ablageort')?.id);
+    if (!id || (await this.listePakete()).some((p) => Object.values(p.typen).includes(id))) return undefined;
+    return this.repo.holeTyp(id);
   }
 
   private async sichereSystemJetzt() {
@@ -5496,7 +5474,6 @@ export class Dienst {
       kontorollen.set(r, m.id);
     }
     await this.loeseFruehereAdminrolle(benutzer);
-    await this.sichereAblageort();
     rolle = await this.beschrifteSystemtyp(rolle, rolle.id, benutzer.id);
     benutzer = await this.beschrifteSystemtyp(benutzer, rolle.id, benutzer.id);
     post = await this.beschrifteSystemtyp(post, rolle.id, benutzer.id);

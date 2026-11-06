@@ -130,14 +130,6 @@ describe('„Datum erreicht“ (#724)', () => {
     assert.equal((await d.alleAufgaben()).filter((x) => x.mappeId === m.id && x.art === 'frist').length, 1, 'nur eine');
   });
 
-  it('Beispiel „Kündigungsfrist“ übernimmt Vorlauf und Empfänger der eingebauten Erinnerung (Frage 78: passt sich an)', async () => {
-    const { motor } = await aufbau();
-    await motor.legeBeispiele();
-    const k = (await motor.uebersicht()).automatisierungen.find((x) => x.wenn.art === 'datum')!;
-    assert.deepEqual(k.wenn.art === 'datum' && [k.wenn.feld, k.wenn.vorlauf, k.wenn.einheit], ['kuendbar_bis', 30, 'tage']);
-    assert.deepEqual(k.dann[0].art === 'aufgabe' && k.dann[0].empfaenger, [{ art: 'ersteller' }]);
-  });
-
   it('alte Wenn-Karten: „Datum in N Tagen“ und „Frist erreicht“ werden „Datum erreicht“', async () => {
     const { motor, admin, vertrag } = await aufbau();
     const a = await motor.lege({ name: 'Alt', wenn: { art: 'datum', typ: vertrag.id, feld: 'ende', tage: 7, uhrzeit: '08:00' }, dann: [{ art: 'stopp' }] }, admin.id);

@@ -1231,7 +1231,7 @@
   "demo.laeuft-im-hintergrund-du": "{b} … läuft im Hintergrund, du kannst die Seite auch verlassen.",
   "demo.mappen": "Mappen",
   "demo.beispiel-mappentypen": "Beispiel-Mappentypen",
-  "demo.vertragspartner-vertrag-rechnung-und": "Vertragspartner, Vertrag, Rechnung und Zahlung mit Registern und ein paar Mappen. Nur möglich, solange es außer dem Ablageort noch keine Mappentypen gibt. Verträge und Rechnungen bekommen dabei das Feld „Verbleib Originaldokumente“ und ein paar Ablageorte.",
+  "demo.vertragspartner-vertrag-rechnung-und": "Vertragspartner, Vertrag, Rechnung und Zahlung mit Registern und ein paar Mappen. Nur möglich, solange es noch keine eigenen Mappentypen gibt. Gibt es einen Ablageort (z. B. aus einer älteren Ablage), bekommen Verträge und Rechnungen dabei das Feld „Verbleib Originaldokumente“ und ein paar Ablageorte.",
   "demo.beispiele-geladen": "Beispiele geladen.",
   "demo.beispiele-laden": "Beispiele laden",
   "demo.erzeugen": "Erzeugen",
