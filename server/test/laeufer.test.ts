@@ -572,17 +572,21 @@ describe('Paket-Läufer (#338): Ablauf', () => {
   });
 
   it('Grenzen: Endlosschleife und zu viel Speicher brechen ab und erscheinen in der Übersicht', async () => {
-    const { d, l } = await aufbau({ sekunden: 1 });
-    await installiere(d, 'schleife', SCHLEIFE);
-    await installiere(d, 'gierig', GIERIG);
-    await l.start();
-    await warte(async () => (await l.uebersicht()).laeuft);
-    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
-    await warte(async () => (await l.uebersicht()).pakete.every((p) => p.fehlgeschlagen === 1));
-    const u2 = await l.uebersicht();
-    assert.match(u2.pakete.find((p) => p.id === 'schleife')!.letzte[0].text, /Zeitgrenze/);
-    assert.match(u2.pakete.find((p) => p.id === 'gierig')!.letzte[0].text, /Abbruch im Modul|Speicher/);
-    assert.equal((await d.ereignisStand()).schleife.offen, 1, 'wird später wiederholt');
+    // Je Grenze ein eigener Läufer (#900): Mit 1 s für beide brach „gierig“ unter Last manchmal an der Zeit ab, bevor
+    // der Speicher voll war. Für die Speichergrenze gibt es darum reichlich Zeit.
+    const zeit = await aufbau({ sekunden: 1 });
+    await installiere(zeit.d, 'schleife', SCHLEIFE);
+    const speicher = await aufbau({ sekunden: 60 });
+    await installiere(speicher.d, 'gierig', GIERIG);
+    for (const { d, l } of [zeit, speicher]) {
+      await l.start();
+      await warte(async () => (await l.uebersicht()).laeuft);
+      await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
+    }
+    for (const { l } of [zeit, speicher]) await warte(async () => (await l.uebersicht()).pakete.every((p) => p.fehlgeschlagen === 1));
+    assert.match((await zeit.l.uebersicht()).pakete.find((p) => p.id === 'schleife')!.letzte[0].text, /Zeitgrenze/);
+    assert.match((await speicher.l.uebersicht()).pakete.find((p) => p.id === 'gierig')!.letzte[0].text, /Abbruch im Modul|Speicher/);
+    assert.equal((await zeit.d.ereignisStand()).schleife.offen, 1, 'wird später wiederholt');
   });
 });
 
@@ -617,13 +621,14 @@ describe('Vektoren (#442): Schnittstelle und Suche', () => {
   after(async () => { for (const l of laeufer) await l.stop(); });
   const warte = async (f: () => Promise<boolean> | boolean, ms = 10_000) => { const ende = Date.now() + ms; while (!(await f())) { if (Date.now() > ende) throw new Error('Zeit abgelaufen'); await new Promise((r) => setTimeout(r, 50)); } };
 
-  async function aufbau() {
+  /** `ohneErsteNachberechnung`: Die Nachberechnung läuft nur, wenn der Test sie aufruft (#900). */
+  async function aufbau(o: { ohneErsteNachberechnung?: boolean } = {}) {
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     const konten = new Konten(speicherKontoRepo(), () => null, () => 'http://localhost', d.benutzerspiegel());
     const schluessel = new ApiSchluesselDienst(speicherApiSchluesselRepo());
     const tabelle = routen(d, konten, { apiSchluessel: schluessel });
     const api: ApiAufruf = async () => ({ status: 404, kopf: {}, body: Buffer.from('{}') });
-    const l = new Paketlaeufer({ dienst: d, konten, schluessel, api, einstellungen: async () => ({}), speicher: { lies: async () => ({}), schreibe: async () => {} }, grenzen: { sekunden: 3, speicherMB: 16 }, abrufMs: 100, nachlaufMs: 3_600_000 });
+    const l = new Paketlaeufer({ dienst: d, konten, schluessel, api, einstellungen: async () => ({}), speicher: { lies: async () => ({}), schreibe: async () => {} }, grenzen: { sekunden: 3, speicherMB: 16 }, abrufMs: 100, nachlaufMs: 3_600_000, ...(o.ohneErsteNachberechnung ? { nachlaufErstMs: 3_600_000 } : {}) });
     laeufer.push(l);
     const installiere = async (id: string, wasm: Buffer, rechte: string, ereignisse = '[volltext.fertig]') => {
       const p = liesPaket(new Map([['manifest.yaml', Buffer.from(manifest(id, rechte, ereignisse))], ['code/modul.wasm', wasm]]));
@@ -729,7 +734,9 @@ describe('Vektoren (#442): Schnittstelle und Suche', () => {
   });
 
   it('Ereignis volltext.fertig an das Paket; Nachberechnung des Bestands gedrosselt bis alles da ist', async () => {
-    const x = await aufbau();
+    // Ohne die erste Nachberechnung eine Sekunde nach dem Laden (#900): Lief sie unter Last gleichzeitig mit dem Aufruf
+    // hier, kehrte dieser sofort zurück, und das Modell stand noch nicht fest („Modell beim Paket erfragt“).
+    const x = await aufbau({ ohneErsteNachberechnung: true });
     await x.installiere('ki', VEKTOR, KI_RECHTE);
     const neu = await x.d.legePostAn({ betreff: 'Neu' }, { id: null, name: 'Test' });
     const reg = (await x.d.sichereSystem()).post.register.find((r) => r.art === 'dokumente')!.key;

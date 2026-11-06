@@ -28,6 +28,7 @@ import { routen, type Anfrage } from '../src/routen';
 import { Tresor } from '../src/tresor';
 import { zipStrom } from '../src/zip';
 import { pdfMitText, wieImModus } from './hilfen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 
@@ -78,13 +79,11 @@ function aesAuf(d: Buffer, passwort: string): Buffer {
 const offen: Array<{ end(): Promise<void> }> = [];
 async function repos(pg: boolean): Promise<{ repo: Repo; konto: ReturnType<typeof speicherKontoRepo> }> {
   if (!pg) return { repo: speicherRepo(), konto: speicherKontoRepo() };
-  const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-  const { verbinde, migriere } = await import('../src/db');
+  const { migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
   const { pgKontoRepo } = await import('../src/konto-repo');
-  const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_ausk_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-  await legeDatenbankAn(a);
-  const sql = verbinde(alsUrl(a));
+  // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+  const sql = (await eigeneDatenbank('ausk', { migrieren: false })).sql;
   offen.push(sql);
   await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
   return { repo: pgRepo(sql, H) as never, konto: pgKontoRepo(sql, H) as never };

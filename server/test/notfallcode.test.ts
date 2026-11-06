@@ -4,7 +4,6 @@
  * Anfragen), „nur Heimnetz“ hinter einem Reverse Proxy, 30 s Sperre je Adressbereich, Benachrichtigung vorher.
  */
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
 import { after, describe, it } from 'node:test';
 import { NOTFALLCODE_LAENGE, NOTFALLCODE_ZEICHEN, normiereNotfallcode, notfallcodeInGruppen } from '../../shared/src/notfallcode';
 import { speicherDateien } from '../src/dateispeicher';
@@ -22,6 +21,7 @@ import { routen, ZWEITE_ABGELEHNT, type Anfrage } from '../src/routen';
 import { heikleHandlung } from '../src/verwaltungsbereiche';
 import { Zweifaktor } from '../src/zweifaktor';
 import { imModus } from './hilfen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const PW = 'ein-langes-passwort';
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
@@ -289,10 +289,7 @@ describe('Notfallcode gegen PostgreSQL (#815): Einlösen in einer Transaktion', 
   let sql: any;
   after(async () => { await sql?.end(); });
   it('nur der Hash in der Tabelle; zwei gleichzeitige Einlösungen – genau eine setzt das Passwort', async () => {
-    const { verbinde, migriere } = await import('../src/db');
-    sql = verbinde(url!);
-    await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-    await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
+    sql = (await eigeneDatenbank('notfallcode')).sql;
     const repo = pgKontoRepo(sql, '00000000-0000-4000-8000-000000000001');
     const { konten, n, lena, jonas } = await aufbau({ repo });
     const code = await konten.neuerNotfallcode();

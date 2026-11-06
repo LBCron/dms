@@ -49,11 +49,35 @@ Apart from `deploy/komplett/start.sh`, `deploy/` is excluded from the Docker bui
 | Command | What |
 | --- | --- |
 | `npm test` | all server tests (Node test runner) |
-| `TEST_DATABASE_URL=postgres://… npm test` | additionally the tests against PostgreSQL – **empties the schema of the given database**, so only use a throwaway database |
+| `TEST_DATABASE_URL=postgres://… npm test` | additionally the tests against PostgreSQL – every test file creates its own database next to it (see below); the role needs the right to create databases |
 | `npm run typecheck` | TypeScript for `shared`, `server` and `web` |
 | `npm run build` | build interface and server as in the image |
 
 CI on GitHub runs all of this, builds both images (`dms`, `dms-komplett`) for amd64 and arm64, records the manuals' screenshots and checks the interface at iPhone size.
+
+### Tests with PostgreSQL: own database { #tests-mit-postgresql-eigene-datenbank }
+
+`npm test` starts all test files at the same time. If they shared the database from `TEST_DATABASE_URL`, one file could take the tables away from another – red runs without a real fault. So every test file with PostgreSQL creates its **own database**, using the helper `server/test/hilfe-db.ts`:
+
+```ts
+import { eigeneDatenbank } from './hilfe-db';
+
+const db = await eigeneDatenbank('my_file');                // dms_test_my_file_<pid>_<n>, migrated
+const leer = await eigeneDatenbank('old', { migrieren: false }); // empty, e.g. for the state before a migration
+// db.sql (at most 4 connections), db.url, db.ende()
+```
+
+The database is created next to the one from `TEST_DATABASE_URL` and dropped with `ende()`, at the latest after the file's last test. No test writes to the shared database itself; `test/eigene-datenbank.test.ts` fails CI as soon as a test file empties a schema again. Pools stay small so that many files at once stay below `max_connections` (default 100).
+
+### Quarantine for flaky tests { #quarantane-fur-wackelnde-tests }
+
+A test that is sometimes red and sometimes green without any change goes into `server/test/quarantaene.json` with an issue and a due date:
+
+```json
+{ "name": "Name as in it(…)", "datei": "example.test.ts", "issue": 900, "faellig": "2026-12-06", "grund": "why it is flaky" }
+```
+
+It keeps running but does not fail CI; its result (passed, failed, not found) appears in the run summary. A name can also be a whole section (`describe`). Once the due date has passed, CI fails – then fix the test and remove the entry, or extend the date deliberately (90 days at most). The TAP log is evaluated with `node --import tsx server/test/quarantaene.ts test.log <exit code>`. Before quarantining, look for the cause: usually it is a fixed wait where the test should wait for an event.
 
 ## Manuals { #handbucher }
 

@@ -26,6 +26,7 @@ import { t } from '../src/sprache';
 import { Sprachpakete } from '../src/sprachpakete';
 import { SprachDienst } from '../src/sprachwahl';
 import { zipPuffer } from '../src/zip';
+import { eigeneDatenbank } from './hilfe-db';
 
 const ICH = { id: '00000000-0000-4000-8000-0000000000aa', email: 'admin@example.org' };
 const BASIS = fileURLToPath(new URL('./pakete/basis', import.meta.url));
@@ -326,12 +327,10 @@ describe('Sprachpakete in PostgreSQL (#731)', { skip: !process.env.TEST_DATABASE
   const offen: Array<{ end(): Promise<void> }> = [];
   after(async () => { for (const s of offen) await s.end(); });
   it('Texte und Beschriftungen speichern, lesen, ersetzen, löschen (Migration 082)', async () => {
-    const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-    const { verbinde, migriere } = await import('../src/db');
+    const { migriere } = await import('../src/db');
     const { pgRepo } = await import('../src/repo-pg');
-    const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_sp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-    await legeDatenbankAn(a);
-    const sql = verbinde(alsUrl(a));
+    // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+    const sql = (await eigeneDatenbank('sp', { migrieren: false })).sql;
     offen.push(sql);
     await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
     await sql`INSERT INTO haushalte (id, name) VALUES ('00000000-0000-4000-8000-000000000001', 'Test') ON CONFLICT DO NOTHING`;

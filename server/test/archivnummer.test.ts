@@ -13,6 +13,7 @@ import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
 import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
+import { eigeneDatenbank } from './hilfe-db';
 
 const ANNA = '00000000-0000-4000-8000-0000000000bb';
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
@@ -21,12 +22,10 @@ const status = (s: number, text?: RegExp) => (e: unknown) => e instanceof Fachfe
 const offen: Array<{ end(): Promise<void> }> = [];
 async function repo(pg: boolean): Promise<Repo> {
   if (!pg) return speicherRepo();
-  const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-  const { verbinde, migriere } = await import('../src/db');
+  const { migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
-  const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_asn_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-  await legeDatenbankAn(a);
-  const sql = verbinde(alsUrl(a));
+  // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+  const sql = (await eigeneDatenbank('asn', { migrieren: false })).sql;
   offen.push(sql);
   await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
   await sql`INSERT INTO haushalte (id, name) VALUES (${HAUSHALT}, 'Test') ON CONFLICT DO NOTHING`;

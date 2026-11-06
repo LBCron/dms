@@ -2,7 +2,7 @@
  * Zustand zwischen Anfragen in der Datenbank (#744): Je Punkt zwei Instanzen auf derselben PostgreSQL-Datenbank – so wie
  * zwei Prozesse oder zwei Server. Gezeigt wird, dass der Zustand geteilt wird: Fehlversuche zählen über beide, Tickets
  * und Kennungen lassen sich beim anderen einlösen (genau einmal), Zeitpläne laufen nur in einem.
- * Nur mit TEST_DATABASE_URL (eigene Test-Datenbank; das Schema wird neu angelegt).
+ * Nur mit TEST_DATABASE_URL (in einer eigenen Datenbank, #900).
  */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -29,6 +29,7 @@ import { pgRepo } from '../src/repo-pg';
 import { Wartung } from '../src/wartung';
 import { Ratenbegrenzung } from '../src/webdav-baum';
 import { ausBase32, totp, Zweifaktor } from '../src/zweifaktor';
+import { eigeneDatenbank } from './hilfe-db';
 
 const url = process.env.TEST_DATABASE_URL;
 const MIGRATIONEN = fileURLToPath(new URL('../migrations', import.meta.url));
@@ -44,10 +45,7 @@ describe('Mehrere Prozesse an einer Datenbank (#744)', { skip: !url && 'ohne TES
   let a: Kurzzustand, b: Kurzzustand;
 
   before(async () => {
-    const { verbinde, migriere } = await import('../src/db');
-    sql = verbinde(url!);
-    await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-    await migriere(sql, MIGRATIONEN, () => {});
+    sql = (await eigeneDatenbank('mehrere_prozesse')).sql;
     H = randomUUID();
     await sql`INSERT INTO haushalte (id, name) VALUES (${H}, 'Test')`;
     a = pgKurzzustand(sql, H);
@@ -260,7 +258,9 @@ describe('Mehrere Prozesse an einer Datenbank (#744)', { skip: !url && 'ohne TES
       await mkdir(vor);
       for (const f of (await readdir(MIGRATIONEN)).filter((x) => x.endsWith('.sql') && x < '078')) await cp(join(MIGRATIONEN, f), join(vor, f));
       const { migriere } = await import('../src/db');
-      await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+      // Eigene Datenbank auf dem Stand vor 078 (#900) – die der übrigen Fälle bleibt unberührt.
+      const db = await eigeneDatenbank('mehrere_prozesse_078', { migrieren: false });
+      const sql = db.sql;
       await migriere(sql, vor, () => {});
       const h = '00000000-0000-4000-8000-000000000001';
       const bis = Date.now() + 60_000;
@@ -271,6 +271,7 @@ describe('Mehrere Prozesse an einer Datenbank (#744)', { skip: !url && 'ohne TES
       assert.deepEqual((await s.gesperrt()).map((x) => [x.ip, x.bis, x.grund]), [['203.0.113.1', null, 'Test']]);
       await assert.rejects(s.pruefe('lena@example.org', '203.0.113.2'), status(429));
       assert.equal(await pgEinstellungen(sql, h).lies('anmeldesperren'), null);
+      await db.ende();
     } finally { await rm(ordner, { recursive: true, force: true }); }
   });
 });

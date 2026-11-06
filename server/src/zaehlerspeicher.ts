@@ -166,6 +166,8 @@ export class Haushaltsstand {
   /** Letzte eigene Änderung je Person (Zahl der Änderungen in diesem Prozess danach). */
   private eigene = new Map<string, number>();
   private geplant = false;
+  /** Das zuletzt geplante Hochzählen in der Datenbank (für `hochgezaehlt`). */
+  private offen: Promise<void> = Promise.resolve();
   /** Mehrere Prozesse (#745): eigene Änderungen auch im Kurzzustand, damit ein anderer Prozess sie kennt. */
   private geteilt: Kurzzustand | null = null;
   private wer = new Set<string>();
@@ -210,7 +212,7 @@ export class Haushaltsstand {
     if (this.quelle && !this.geplant) {
       this.geplant = true;
       const q = this.quelle;
-      kontext.exit(() => setImmediate(() => {
+      this.offen = new Promise<void>((fertig) => kontext.exit(() => setImmediate(() => {
         this.geplant = false;
         const wer = [...this.wer];
         this.wer.clear();
@@ -218,12 +220,17 @@ export class Haushaltsstand {
         q.erhoehe().then(async (n) => {
           const z = this.geteilt;
           if (z) for (const w of wer) await z.setze(this.art, w, n, Date.now() + EIGENE_MS);
-        }).catch((e) => log.warn('Haushaltsstand nicht hochgezählt', { fehler: (e as Error).message }));
-      }));
+        }).catch((e) => log.warn('Haushaltsstand nicht hochgezählt', { fehler: (e as Error).message })).finally(fertig);
+      })));
     }
     // Außerhalb der Anfrage (#742): Was der Hörer anstößt (Webhooks zählen nach 3 s), ist Hintergrund und zählt frisch.
     for (const f of this.hoerer) kontext.exit(f);
   }
+  /**
+   * Wartet, bis das zuletzt geplante Hochzählen in der Datenbank durch ist (#900). Für Tests, die nach einer Änderung
+   * denselben Stand in zwei Anfragen brauchen – statt einer festen Wartezeit.
+   */
+  async hochgezaehlt(): Promise<void> { await this.offen; }
   /** Nach jeder Änderung benachrichtigen (Webhooks, #627). Der Hörer muss billig sein – er läuft bei jeder Änderung. */
   beiAenderung(f: () => void) { this.hoerer.push(f); }
 

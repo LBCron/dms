@@ -1,7 +1,6 @@
 /**
  * Integrationstest gegen ein echtes PostgreSQL und die HTTP-Schnittstelle.
- * Läuft nur mit TEST_DATABASE_URL (in GitHub Actions automatisch gesetzt).
- * ACHTUNG: leert das Schema „public“ der angegebenen Datenbank.
+ * Läuft nur mit TEST_DATABASE_URL (in GitHub Actions automatisch gesetzt), in einer eigenen Datenbank (#900).
  */
 import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
@@ -9,8 +8,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, it } from 'node:test';
+import { eigeneDatenbank, type EigeneDatenbank } from './hilfe-db';
 
 const url = process.env.TEST_DATABASE_URL;
+/** Eine Datenbank für die ganze Datei (#900): Die Abschnitte laufen nacheinander und bauen aufeinander auf. */
+let eigene: Promise<EigeneDatenbank> | undefined;
+const dbUrl = async () => (await (eigene ??= eigeneDatenbank('pg', { migrieren: false }))).url;
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
 
 describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
@@ -26,8 +29,7 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     const { pgKontoRepo } = await import('../src/konto-repo');
     const { ordnerSpeicher } = await import('../src/dateispeicher');
     const ordner = await mkdtemp(join(tmpdir(), 'dms-test-'));
-    sql = verbinde(url!);
-    await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    sql = verbinde(await dbUrl());
     const dir = fileURLToPath(new URL('../migrations', import.meta.url));
     await migriere(sql, dir, () => {});
     await migriere(sql, dir, () => {}); // zweiter Lauf darf nichts tun
@@ -1012,7 +1014,7 @@ describe('PostgreSQL: Ereignis in derselben Transaktion (#404)', { skip: url ? f
     const { pgRepo } = await import('../src/repo-pg');
     const { speicherDateien } = await import('../src/dateispeicher');
     const { speicherEinstellungen } = await import('../src/einstellungen');
-    sql = verbinde(url!);
+    sql = verbinde(await dbUrl());
     await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
     const basis = pgRepo(sql, HAUSHALT);
     // Erzwungener Fehler zwischen Änderung und Ereignis: Das Ereignis lässt sich in der Transaktion nicht schreiben.
@@ -1060,7 +1062,7 @@ describe('PostgreSQL: Ereigniskatalog (#670)', { skip: url ? false : 'TEST_DATAB
     const { verbinde, migriere } = await import('../src/db');
     const { pgRepo } = await import('../src/repo-pg');
     const { mischeFelder } = await import('../../shared/src/ereignisse');
-    sql = verbinde(url!);
+    sql = verbinde(await dbUrl());
     await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
     const r = pgRepo(sql, HAUSHALT);
     await sql`DELETE FROM ereignisse WHERE haushalt_id = ${HAUSHALT}`;

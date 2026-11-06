@@ -9,7 +9,6 @@
  */
 import assert from 'node:assert/strict';
 import { wieImModus } from './hilfen';
-import { fileURLToPath } from 'node:url';
 import { after, describe, it } from 'node:test';
 import type { KatalogEreignis } from '../../shared/src/ereignisse';
 import { NICHTS, type Regelwerk } from '../../shared/src/rechte';
@@ -25,6 +24,7 @@ import { speicherKontoRepo, type KontoRepo } from '../src/konto-repo';
 import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { routen, type Anfrage } from '../src/routen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const url = process.env.TEST_DATABASE_URL;
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
@@ -34,12 +34,10 @@ let sql: any;
 after(async () => { await sql?.end(); });
 
 async function pgRepos(): Promise<{ repo: Repo; konto: KontoRepo }> {
-  const { verbinde, migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
   const { pgKontoRepo } = await import('../src/konto-repo');
-  sql ??= verbinde(url!);
-  await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-  await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
+  // Je Aufruf eine frische eigene Datenbank (#900); gelöscht nach dem letzten Test.
+  sql = (await eigeneDatenbank('aufgaben_ohne_leserecht')).sql;
   return { repo: pgRepo(sql, HAUSHALT), konto: pgKontoRepo(sql, HAUSHALT) };
 }
 

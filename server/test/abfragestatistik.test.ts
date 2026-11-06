@@ -6,9 +6,10 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import type { AddressInfo } from 'node:net';
-import postgres from 'postgres';
+import type postgres from 'postgres';
 import { ABFRAGE_ZEICHEN, abfragenZuruecksetzen, EINSCHALTEN, kuerzeAbfrage, teuersteAbfragen } from '../src/abfragestatistik';
 import { bereicheDerRoute } from '../src/verwaltungsbereiche';
+import { eigeneDatenbank } from './hilfe-db';
 
 describe('Teuerste Abfragen: Text (#894)', () => {
   it('Leerraum zusammengezogen, Zeichenketten und Kommentare entfernt, gekürzt', () => {
@@ -32,7 +33,8 @@ describe('Teuerste Abfragen: Datenbank (#894)', { skip: !url && 'TEST_DATABASE_U
   let sql: postgres.Sql;
   let geladen = false;
   before(async () => {
-    sql = postgres(url!, { max: 2, onnotice: () => {} });
+    // Eigene Datenbank (#900): Erweiterung anlegen und Zurücksetzen nicht auf der gemeinsamen.
+    sql = (await eigeneDatenbank('abfragestatistik', { max: 2 })).sql;
     const [z] = await sql`SELECT current_setting('shared_preload_libraries') AS w`;
     geladen = String(z.w).includes('pg_stat_statements');
   });

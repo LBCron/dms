@@ -14,6 +14,7 @@ import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { Umwandlung } from '../src/umwandlung';
 import { zipPuffer } from '../src/zip';
+import { eigeneDatenbank } from './hilfe-db';
 
 const ICH = { id: '00000000-0000-4000-8000-0000000000aa', email: 'admin@example.org' };
 const ADMIN = { id: ICH.id, rolle: 'admin' };
@@ -22,12 +23,10 @@ const KATALOG = 'https://katalog.test/katalog.json';
 const offen: Array<{ end(): Promise<void> }> = [];
 async function repo(pg: boolean): Promise<Repo> {
   if (!pg) return speicherRepo();
-  const { ausUrl, alsUrl, legeDatenbankAn } = await import('../src/anbindung');
-  const { verbinde, migriere } = await import('../src/db');
+  const { migriere } = await import('../src/db');
   const { pgRepo } = await import('../src/repo-pg');
-  const a = { ...ausUrl(process.env.TEST_DATABASE_URL)!, datenbank: `dms_g14_umw_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
-  await legeDatenbankAn(a);
-  const sql = verbinde(alsUrl(a));
+  // Eigene Datenbank (#900), nach dem letzten Test der Datei gelöscht.
+  const sql = (await eigeneDatenbank('g14_umw', { migrieren: false })).sql;
   offen.push(sql);
   await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
   await sql`INSERT INTO haushalte (id, name) VALUES ('00000000-0000-4000-8000-000000000001', 'Test') ON CONFLICT DO NOTHING`.catch(() => {});

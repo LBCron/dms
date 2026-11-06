@@ -25,6 +25,7 @@ import { speicherFassungen } from '../src/dateiumwandlung';
 import { PdfEntsperren } from '../src/entsperren';
 import { ausBase32, totp, Zweifaktor } from '../src/zweifaktor';
 import { imModus } from './hilfen';
+import { eigeneDatenbank } from './hilfe-db';
 
 const PW = 'ein-langes-passwort';
 const stundeBerlin = (t: number) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(t));
@@ -402,11 +403,11 @@ describe('Historie: fremde Mappen im Verwaltungsmodus (#820)', () => {
 const url = process.env.TEST_DATABASE_URL;
 describe('PostgreSQL: Umstellung und Sperre (#818)', { skip: url ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
   it('Migration: Admin-Konten werden Personen mit „Gesamte Verwaltung“; gleichzeitiges Entziehen landet nie bei null', async () => {
-    const { verbinde, migriere } = await import('../src/db');
+    const { migriere } = await import('../src/db');
     const { pgKontoRepo } = await import('../src/konto-repo');
-    const sql = verbinde(url!);
+    const db = await eigeneDatenbank('verwaltungsmodus', { migrieren: false });
+    const sql = db.sql;
     try {
-      await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
       const alle = fileURLToPath(new URL('../migrations', import.meta.url));
       const vorher = await mkdtemp(join(tmpdir(), 'dms-a818-mig-'));
       for (const f of (await readdir(alle)).filter((n) => n.endsWith('.sql') && n < '073')) await cp(join(alle, f), join(vorher, f));
@@ -427,6 +428,6 @@ describe('PostgreSQL: Umstellung und Sperre (#818)', { skip: url ? false : 'TEST
       ]);
       assert.equal(['benutzer' in r1, 'benutzer' in r2].filter(Boolean).length, 1, JSON.stringify([r1, r2]));
       assert.equal((await repo.listeBenutzer()).filter((b) => hatGesamt(b)).length, 1);
-    } finally { await sql.end(); }
+    } finally { await db.ende(); }
   });
 });

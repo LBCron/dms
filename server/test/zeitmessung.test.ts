@@ -9,6 +9,7 @@ import { kontext, type Kontext } from '../src/protokoll';
 import { aufteilungText, Messung, rechteMessen, serverTiming, speicherMessSpeicher, zeitaufteilung } from '../src/messung';
 import { speicherRepo } from '../src/repo-speicher';
 import { liesServerTiming, teileAuf } from '../../shared/src/zeitmessung';
+import { eigeneDatenbank } from './hilfe-db';
 
 const warte = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const neuerKontext = (): Kontext => ({ anfrage: 't', db: { anzahl: 0, ms: 0 } });
@@ -145,11 +146,8 @@ describe('PostgreSQL: mappenMitDatum und Eingang im Zähler (#477)', { skip: url
     await sql`DELETE FROM benutzer WHERE haushalt_id = ${HAUSHALT}`;
   };
   before(async () => {
-    const { verbinde, migriere } = await import('../src/db');
     const { pgRepo } = await import('../src/repo-pg');
-    const { fileURLToPath } = await import('node:url');
-    sql = verbinde(url!);
-    await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
+    sql = (await eigeneDatenbank('zeitmessung')).sql;
     await sql`INSERT INTO haushalte (id, name) VALUES (${HAUSHALT}, 'Zeitmessung') ON CONFLICT DO NOTHING`;
     await aufraeumen();
     await sql`INSERT INTO benutzer (id, haushalt_id, email, name, rolle) VALUES (${BEN}, ${HAUSHALT}, 'ben-477@example.org', 'Ben', 'mitglied')`;

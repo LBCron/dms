@@ -10,13 +10,13 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { after, before, describe, it } from 'node:test';
 import postgres from 'postgres';
 import { NICHTS, type Regelwerk } from '../../shared/src/rechte';
 import { Haushaltsstand, Zaehlerspeicher } from '../src/zaehlerspeicher';
 import { jeAnfrage, Lesespeicher, lesespeicherFuer, merkeAenderung } from '../src/lesespeicher';
 import { kontext, type Kontext } from '../src/protokoll';
+import { eigeneDatenbank } from './hilfe-db';
 
 const url = process.env.TEST_DATABASE_URL;
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
@@ -95,6 +95,8 @@ describe('Zwei Prozesse auf einer Datenbank (#741, #742)', { skip: url ? false :
   const ids = { lena: '', jonas: '', markus: '', petra: '', rechnung: '', fibu: '', andere: '', mappe: '' };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rw!: (rollen: string[]) => Regelwerk;
+  /** Eigene Datenbank (#900); beide „Prozesse“ verbinden sich mit ihr. */
+  let dbUrl = '';
 
   async function prozess(): Promise<Prozess> {
     const { baueApp } = await import('../src/http');
@@ -107,7 +109,7 @@ describe('Zwei Prozesse auf einer Datenbank (#741, #742)', { skip: url ? false :
     const { Zweifaktor } = await import('../src/zweifaktor');
     let n = 0;
     // Wie verbinde() in db.ts, zusätzlich zählt jede SQL-Anweisung (Abfragen je Anfrage).
-    const sql = postgres(url!, { max: 4, onnotice: () => {}, infer: true, debug: () => { n++; } });
+    const sql = postgres(dbUrl, { max: 4, onnotice: () => {}, infer: true, debug: () => { n++; } });
     const dienst = new Dienst(pgRepo(sql, HAUSHALT), ordnerSpeicher(await mkdtemp(join(tmpdir(), 'dms-a741-')), HAUSHALT), { einstellungen: pgEinstellungen(sql, HAUSHALT) });
     const konten = new Konten(pgKontoRepo(sql, HAUSHALT), null, 'http://nas', dienst.benutzerspiegel());
     dienst.verbindeKonten(konten.papierkorbHaken());
@@ -139,11 +141,7 @@ describe('Zwei Prozesse auf einer Datenbank (#741, #742)', { skip: url ? false :
   };
 
   before(async () => {
-    const { migriere } = await import('../src/db');
-    const s = postgres(url!, { max: 1, onnotice: () => {} });
-    await s.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-    await migriere(s, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
-    await s.end();
+    dbUrl = (await eigeneDatenbank('zwischenspeicher')).url;
     A = await prozess(); B = await prozess();
     const { benutzer: lena } = await A.konten.einrichten({ email: 'lena@example.org', name: 'Lena', passwort: PW });
     const mitPasswort = async (email: string, name: string) => {
@@ -234,10 +232,10 @@ describe('Zwei Prozesse auf einer Datenbank (#741, #742)', { skip: url ? false :
     try {
       // Eine Änderung, damit alle frisch zählen.
       await A.dienst.legeMappeAn({ typId: ids.rechnung, werte: { nr: 'R3' } }, ids.lena);
-      // Nach dem Anlegen laufen im Hintergrund noch Ereignisse und Nachträge, die den Stand weiterzählen können.
-      // Darum höchstens ein paar Runden, bis Jonas und Markus denselben Stand sehen – geteilt wird dann sicher.
-      let a = await rechnungen(B, j), b = await rechnungen(B, m);
-      for (let i = 0; i < 5 && b.zs !== 'treffer'; i++) { await new Promise((r) => setTimeout(r, 100)); a = await rechnungen(B, j); b = await rechnungen(B, m); }
+      // Der Stand in der Datenbank zählt kurz nach der Änderung hoch (auch nach den Anmeldungen in B). Darauf warten
+      // (#900) statt auf eine feste Zeit – danach sehen Jonas und Markus denselben Stand.
+      await A.dienst.stand.hochgezaehlt(); await B.dienst.stand.hochgezaehlt();
+      const a = await rechnungen(B, j), b = await rechnungen(B, m);
       const c = await rechnungen(B, p);
       assert.equal(a.n, 3); assert.equal(b.n, 3);
       assert.equal(b.zs, 'treffer', 'Markus hat dieselben Rechte wie Jonas: dieselbe Zählung');

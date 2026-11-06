@@ -14,6 +14,7 @@ import { etagVon, MAX_UPLOADS, Webdav, type WebdavAntwort } from '../src/webdav'
 import { bereinige, eindeutig, href, istHilfsdatei, proppatchNamen, Ratenbegrenzung, xml, zerlege } from '../src/webdav-baum';
 import { pdfAus } from '../src/pdf';
 import { readFileSync } from 'node:fs';
+import { eigeneDatenbank } from './hilfe-db';
 
 const PDF = (t: string) => Buffer.from(`%PDF-1.4\n% ${t}\n`);
 const ALLES = { C: true, R: true, U: true, D: true, P: true };
@@ -581,10 +582,10 @@ describe('WebDAV: Stempel beim Lesen, Pflicht, nur lesend (#722)', () => {
 
 describe('Migration 067 gegen PostgreSQL (#722)', { skip: process.env.TEST_DATABASE_URL ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
   it('ergänzt die WebDAV-Vorlage bei gespeicherten Vorlagen, schaltet den Stempel ein und läuft doppelt ohne Doppel', async () => {
-    const { verbinde, migriere } = await import('../src/db');
-    const sql = verbinde(process.env.TEST_DATABASE_URL!);
+    const { migriere } = await import('../src/db');
+    const db = await eigeneDatenbank('webdav', { migrieren: false });
+    const sql = db.sql;
     try {
-      await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
       const dir = new URL('../migrations', import.meta.url).pathname;
       await migriere(sql, dir, () => {});
       const [h] = await sql`SELECT id FROM haushalte LIMIT 1`;
@@ -605,6 +606,6 @@ describe('Migration 067 gegen PostgreSQL (#722)', { skip: process.env.TEST_DATAB
       await sql`UPDATE einstellungen SET wert = ${sql.json({ aktiv: true, stempel: null })} WHERE haushalt_id = ${haushalt} AND schluessel = 'webdav'`;
       await sql.unsafe(text);
       assert.deepEqual((await sql`SELECT wert FROM einstellungen WHERE haushalt_id = ${haushalt} AND schluessel = 'webdav'`)[0].wert, { aktiv: true, stempel: null });
-    } finally { await sql.end(); }
+    } finally { await db.ende(); }
   });
 });
