@@ -1135,6 +1135,24 @@ export class Dienst {
     return beiVerklemmungWiederholen(() => this.inTransaktion(f));
   }
 
+  /** Läuft das in einer HTTP-Anfrage, die Arbeit nach der Antwort annimmt (#928)? */
+  private inAnfrage(): boolean { return !!kontext.getStore()?.nachAntwort; }
+
+  /**
+   * Nach der Antwort (#928, über den Nachlauf von #741): Arbeit, die nicht zur Antwort gehört und auch nicht zu dem, was
+   * die Person gleich danach sieht. Ohne Anfrage (Tests, Hintergrund, Automatisierungen) gleich – dann wird gewartet.
+   * Erst nach dem Speichern einer Transaktion; wird sie zurückgerollt, nie. Fehler nur im Protokoll.
+   */
+  private nachDerAntwort(f: () => Promise<unknown>): Promise<void> | void {
+    const k = kontext.getStore();
+    if (!k?.nachAntwort) return f().then(() => undefined);
+    const liste = k.nachAntwort;
+    this.danach(() => { if (!liste.includes(f)) liste.push(f); });
+  }
+
+  /** Verteiler des Ereigniskatalogs wecken – in einer Anfrage erst nach der Antwort (#928), einmal je Anfrage. */
+  private readonly weckeVerteiler = async () => { this.ereignisse.wecke(); };
+
   /** Nach dem Speichern (bzw. sofort ohne Transaktion); bei Zurückrollen nie. */
   private danach(f: () => void) {
     const t = transaktionen.getStore();
@@ -2037,15 +2055,18 @@ export class Dienst {
 
   /** Aufgabe von Hand vergeben, z. B. „Bitte Rechnung prüfen“. */
   async legeAufgabeAn(mappeId: string, e: unknown, von: string | null): Promise<Aufgabe> {
-    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
+    const m = await this.repo.holeMappe(mappeId);
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const x = (e ?? {}) as Record<string, unknown>;
     const text = typeof x.text === 'string' ? x.text.trim() : '';
     if (!text) throw new Fachfehler(422, t('meldungen.dienst.bitte-beschreiben-was-zu'));
     if (text.length > AUFGABE_MAX) throw new Fachfehler(422, t('meldungen.dienst.hoechstens-zeichen', { AUFGABE_MAX }));
     const an = await this.pruefeEmpfaenger(x.empfaengerId);
-    const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
-    await this.notiere(mappeId, von, 'aufgabe', { text: t('meldungen.dienst.fuer', { name: await this.name(an), text }), aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
-    protokoll.modul('ablage').info('Aufgabe vergeben', { mappeId, an: await this.name(an) });
+    // #928: Typ und Name nur einmal lesen (je eine Abfrage weniger).
+    const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null }, m.typId);
+    const name = await this.name(an);
+    await this.notiere(mappeId, von, 'aufgabe', { text: t('meldungen.dienst.fuer', { name, text }), aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
+    protokoll.modul('ablage').info('Aufgabe vergeben', { mappeId, an: name });
     const erg = await this.leiteUm(a);
     // #798: Darf der Empfänger die Mappe nicht lesen, entsteht ein Fall – der Admin erfährt davon.
     await this.faelleNach([mappeId]);
@@ -2263,10 +2284,27 @@ export class Dienst {
     return { neu, beendet };
   }
 
-  /** Abgleich für einzelne Mappen nach dem Vergeben, Weitergeben oder Erledigen (#798) – ein Fehler hält die Aufgabe nicht auf. */
+  /**
+   * Abgleich für einzelne Mappen nach dem Vergeben, Weitergeben oder Erledigen (#798) – ein Fehler hält die Aufgabe nicht auf.
+   *
+   * In einer Anfrage (#928) nach der Antwort, solange an diesen Mappen kein Leserecht auf Zeit hängt: Dann legt der Abgleich
+   * höchstens Fälle für die Werkbank an oder schließt welche ohne Recht – an den Rechten ändert sich nichts, und die
+   * Übersicht in der Werkbank gleicht vor dem Anzeigen ohnehin selbst ab. Hängt ein Leserecht auf Zeit daran, sofort:
+   * Es endet mit der Aufgabe, nicht erst kurz danach („Nachhinken ja, falsch nie“).
+   */
   private async faelleNach(mappeIds: string[]) {
-    try { await this.faelleAbgleichen({ mappeIds: [...new Set(mappeIds)] }); }
-    catch (e) { protokoll.modul('ablage').warn('Aufgaben ohne Leserecht nicht abgeglichen', { fehler: (e as Error).message }); }
+    const ids = [...new Set(mappeIds)];
+    const abgleichen = async () => {
+      try { await this.faelleAbgleichen({ mappeIds: ids }); }
+      catch (e) { protokoll.modul('ablage').warn('Aufgaben ohne Leserecht nicht abgeglichen', { fehler: (e as Error).message }); }
+    };
+    if (!ids.length || !this.konten?.benutzer) return;
+    if (this.inAnfrage()) {
+      let mitRecht = true;
+      try { mitRecht = (await this.repo.faelleOhneLeserecht({ offen: true, mappeIds: ids })).some((f) => f.leserechtSeit); } catch { /* dann sofort */ }
+      if (!mitRecht) { this.nachDerAntwort(abgleichen); return; }
+    }
+    await abgleichen();
   }
 
   /** Offene Fälle (#798) – für den Hinweis in der Werkbank und die Mail an die Administratoren (#719). */
@@ -2808,11 +2846,13 @@ export class Dienst {
   }
 
   async legeNotizAn(mappeId: string, text: unknown, von: string | null): Promise<Notiz> {
-    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
+    const m = await this.repo.holeMappe(mappeId);
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const text2 = Dienst.notiztext(text);
     const n = await this.repo.legeNotizAn({ id: randomUUID(), mappeId, text: text2, erstellt: '', erstelltVon: von, geaendert: '', geaendertVon: von });
     await this.notiere(mappeId, von, 'notiz', { text: t('meldungen.dienst.angelegt', { vorschau: Dienst.vorschau(text2) }), voll: text2 });
-    await this.ereignis('mappe.notiz', { mappe: mappeId, typ: await this.typVon(mappeId), notiz: n.id }, von);
+    // Typ von oben (#928) – eine Abfrage weniger.
+    await this.ereignis('mappe.notiz', { mappe: mappeId, typ: m.typId, notiz: n.id }, von);
     await this.erwaehnungenAbgleichen(mappeId, { key: `notiz:${n.id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(text2) }, '', text2, von);
     return n;
   }
@@ -4484,7 +4524,10 @@ export class Dienst {
         id: randomUUID(), art, daten, ausloeser: { ...this.ausloeser(von), ...(still ? { still: true } : {}) },
         ...(k.buendelS && mappe ? { buendel: `${art}|${mappe}`, buendelS: k.buendelS } : {}),
       }, k.buendelS ? (alt) => mischeFelder(alt, daten) : undefined);
-      this.danach(() => this.ereignisse.wecke());
+      // #928: Der Verteiler (Automatisierungen, Pakete, Webhooks) teilte sich sonst Datenbank und Rechenzeit mit der
+      // Anfrage, die das Ereignis auslöst; das Ereignis steht schon im Ausgangskorb.
+      if (this.inAnfrage()) void this.nachDerAntwort(this.weckeVerteiler);
+      else this.danach(() => this.ereignisse.wecke());
     } catch (e) {
       if (inTx) throw e;
       protokoll.modul('ereignisse').error('Ereignis nicht gespeichert', { art, fehler: (e as Error).message });
@@ -4492,9 +4535,9 @@ export class Dienst {
   }
 
   /** Aufgabe anlegen und als „etwas ist zu erledigen“ melden (#670). */
-  private async neueAufgabe(a: Aufgabe): Promise<Aufgabe> {
+  private async neueAufgabe(a: Aufgabe, typ?: string): Promise<Aufgabe> {
     const x = await this.repo.legeAufgabeAn(a);
-    await this.ereignis('aufgabe.neu', { aufgabe: x.id, mappe: x.mappeId, typ: await this.typVon(x.mappeId), empfaenger: x.empfaengerId ?? null, aufgabenart: x.art }, a.erstelltVon ?? null);
+    await this.ereignis('aufgabe.neu', { aufgabe: x.id, mappe: x.mappeId, typ: typ ?? await this.typVon(x.mappeId), empfaenger: x.empfaengerId ?? null, aufgabenart: x.art }, a.erstelltVon ?? null);
     return x;
   }
 
