@@ -114,15 +114,16 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   const favSicht = d.zaehler.favoritenSicht ? d.sicht(d.zaehler.favoritenSicht) : undefined;
   // Zahlen kommen nach (#512): bis dahin ein Platzhalter (warte) bei den Einträgen, die aus dem Zähler kommen.
   const warte = !d.zahlenDa;
-  const feste: Array<{ pfad: string; name: string; symbol: SymbolName; titel?: string; zahl?: number; warte?: boolean; hervor?: boolean; an: boolean }> = [
-    { pfad: '/ablage/suche', name: t('ablage.ablage.erweiterte-suche'), symbol: 'suche', titel: t('ablage.ablage.mappentypen-waehlen-in-feldern'), an: istSuche },
+  // `anker` (#831): fester Ankerpunkt für Rundgänge und Tipps.
+  const feste: Array<{ pfad: string; name: string; symbol: SymbolName; titel?: string; zahl?: number; warte?: boolean; hervor?: boolean; an: boolean; anker?: string }> = [
+    { pfad: '/ablage/suche', name: t('ablage.ablage.erweiterte-suche'), symbol: 'suche', titel: t('ablage.ablage.mappentypen-waehlen-in-feldern'), an: istSuche, anker: 'navigation.erweiterte-suche' },
     ...(mitStart ? [{ pfad: '/ablage/start', name: t('ablage.ablage.start'), symbol: 'haus' as const, an: sicht === 'start' }] : []),
-    { pfad: '/ablage/eingang', name: t('ablage.ablage.zu-erledigen'), symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang' },
-    ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: sichtName(neuePost), symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
+    { pfad: '/ablage/eingang', name: t('ablage.ablage.zu-erledigen'), symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang', anker: 'navigation.zu-erledigen' },
+    ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: sichtName(neuePost), symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id, anker: 'navigation.neue-post' }] : []),
     // Favoriten (#725): die mitgelieferte Ansicht oben wie „Neue Post“; die feste Liste nur, wenn der Administrator sie gelöscht hat.
     favSicht
-      ? { pfad: `/ablage/${favSicht.id}`, name: sichtName(favSicht), symbol: 'stern', titel: favSicht.beschreibung || undefined, zahl: d.zaehler.sichten?.[favSicht.id] ?? d.zaehler.favoriten, warte, an: sicht === favSicht.id }
-      : { pfad: '/ablage/favoriten', name: t('ablage.ablage.favoriten'), symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten' },
+      ? { pfad: `/ablage/${favSicht.id}`, name: sichtName(favSicht), symbol: 'stern', titel: favSicht.beschreibung || undefined, zahl: d.zaehler.sichten?.[favSicht.id] ?? d.zaehler.favoriten, warte, an: sicht === favSicht.id, anker: 'navigation.favoriten' }
+      : { pfad: '/ablage/favoriten', name: t('ablage.ablage.favoriten'), symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten', anker: 'navigation.favoriten' },
     // Papierkorb (#43): sichtbar, solange er an ist oder noch etwas darin liegt.
     ...(!!d.zaehler.papierkorbTage || !!d.zaehler.papierkorb ? [{ pfad: '/ablage/papierkorb', name: t('ablage.ablage.papierkorb'), symbol: 'geloescht' as const, zahl: d.zaehler.papierkorb, warte, an: sicht === 'papierkorb' }] : []),
   ];
@@ -131,7 +132,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts. Ebenso die erweiterte
     // Suche (#426) und der Kalender in „Zu erledigen“ (#528, #725): Sie nutzen Mitte und rechts, bis ein Eintrag geöffnet wird.
     <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche || kalender) && !dritt)}>
-      <aside className="spalte sichten" aria-label={t('ablage.ablage.ansichten')}>
+      <aside className="spalte sichten" aria-label={t('ablage.ablage.ansichten')} data-anker="navigation.ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
         <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? t('ablage.ablage.start') : istSuche ? t('ablage.ablage.erweiterte-suche') : sicht === 'eingang' ? t('ablage.ablage.zu-erledigen') : sicht === 'favoriten' ? t('ablage.ablage.favoriten') : sicht === 'papierkorb' ? t('ablage.ablage.papierkorb') : verwaltet?.name ?? typ?.name ?? t('ablage.ablage.ansicht-waehlen')}
           feste={feste.map((f) => ({ pfad: f.pfad, name: <><Symbol name={f.symbol} /> {f.name}</>, text: f.name, zahl: f.zahl, warte: f.warte, hervor: f.hervor, an: f.an }))} ohne={[neuePost?.id, favSicht?.id].filter((x): x is string => !!x)} />
@@ -139,7 +140,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
         <nav className="sichtliste">
           {/* Feste Einträge (#507): immer mit Symbol, in fester Reihenfolge; darunter nur die eingerichteten Ansichten. */}
           {feste.map((f) => (
-            <Link key={f.pfad} to={f.pfad} className={`sicht ${f.an ? 'an' : ''}`} title={f.titel}>
+            <Link key={f.pfad} to={f.pfad} className={`sicht ${f.an ? 'an' : ''}`} title={f.titel} anker={f.anker}>
               <span className="nm"><Symbol name={f.symbol} className="fest-sym" /> {f.name}</span>{f.warte ? <ZahlWarte /> : !!f.zahl && <span className={f.hervor ? 'zaehler' : 'zahl'}>{zahl(f.zahl)}</span>}
             </Link>
           ))}
@@ -150,7 +151,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
         {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">{tn('ablage.ablage.noch-keine-ansichten', { wert: ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">{t('ablage.ablage.ansichten-einrichten')}</Link> : t('ablage.ablage.wer-ablago-verwaltet-muss') })}</p>}
       </aside>
 
-      <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}${kalender ? ' ka-mitte' : ''}`} aria-label={t('ablage.ablage.mappen')}>
+      <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}${kalender ? ' ka-mitte' : ''}`} aria-label={t('ablage.ablage.mappen')} data-anker="liste">
         {istSuche
           ? <SuchListe suche={suche} offen={dritt} formular={formular} setFormular={setFormular} />
           : link
@@ -184,7 +185,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
           : sicht ? <div className="leer"><p>{t('ablage.ablage.diese-ansicht-gibt-es')}</p></div> : null}
       </section>
 
-      <section className="spalte mappe" aria-label={t('ablage.ablage.mappe')}>
+      <section className="spalte mappe" aria-label={t('ablage.ablage.mappe')} data-anker="mappe">
         <Link to={`/ablage/${sicht ?? 'eingang'}${anhang}`} className="verweis nur-schmal">{t('ablage.ablage.zur-liste')}</Link>
         {rechts}
       </section>

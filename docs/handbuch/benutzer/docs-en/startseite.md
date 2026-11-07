@@ -29,6 +29,10 @@ If your administrator has set up a package such as **AI assistant**, there is a 
 
 The answer is written by an AI service. It can be wrong or fail to find something – check important things in the sources. The answer is only text: it doesn't change anything in your Library. The excerpts go to the AI service your administrator has set up – either a computer on your home network, then everything stays with you, or a provider. Which one it is your administrator sees under Workbench → Packages at the package's service address.
 
+## Tip of the day {#tipp-des-tages}
+
+Below *Ask your library* or below the search box there is now and then a quiet line with a tip – at most one a day. The sentence is the link; the small × hides the tip. More under [Discover Ablago](entdecken.md#tipps).
+
 ## The tiles {#die-kacheln}
 
 | Tile | Number | A click opens |

@@ -276,4 +276,5 @@ You can also test several packages as your own catalogue: `python3 werkzeuge/kat
 
 ## Outlook { #ausblick }
 
+- **Tours and tips from packages** (#831, #832): `inhalt.rundgaenge` and `inhalt.tipps` in the manifest, in the same format as Ablago's own – see [Tours, tips and anchor points](aufbau.md#entdecken). Ablago reads them from a later version; the check comes with [dms-registry #132](https://github.com/motom001/dms-registry/issues/132).
 - **Packages with code** have existed since 0.88.0: WebAssembly modules that react to events and work via the API with confirmed permissions – see [Packages with code](pakete-code.md), with the overview of the [core's interfaces](pakete-code.md#schnittstellen) (vectors, answers, recognition, text recognition, [converting files](pakete-code.md#dateien-umwandeln), [supplying full text](pakete-code.md#volltext-liefern)).

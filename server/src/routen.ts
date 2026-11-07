@@ -42,6 +42,8 @@ import { hatSchnittstelle, type AblaufEingabe, type AblaufInstallation } from '.
 import { Paketerstellung } from './paketerstellung';
 import { Umwandlung } from './umwandlung';
 import type { LaeuferSicht } from './laeufer/fern';
+import { Entdecken } from './entdecken';
+import { heuteIn } from '../../shared/src/sichten';
 import { eigeneVersion, standKennung, uebersicht, versionsabgleich, type SystemQuelle } from './system';
 import type { Fehlermeldungen } from './fehlermeldungen';
 import type { Verwaltung } from './verwaltung';
@@ -303,6 +305,8 @@ async function engpassStand(x: RoutenExtras, p: Awaited<ReturnType<typeof prozes
 }
 
 export interface RoutenExtras {
+  /** Rundgänge und Tipps (#831, #832); Standard: aus shared/entdecken. */
+  entdecken?: Entdecken;
   /** Mehrere Prozesse (#745): Verbund dieses Prozesses und die Einstellung DMS_PROZESSE. */
   verbund?: Verbund;
   prozessEinstellung?: ProzessEinstellung;
@@ -411,6 +415,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const log = x.log ?? ((m: string) => L.mail.warn(m));
   const pakete = x.pakete ?? new Paketverwaltung(dienst, { version: eigeneVersion, benutzer: async () => (await konten.listeBenutzer()).filter((b) => b.aktiv !== false).map((b) => ({ id: b.id, name: b.name || b.email })) });
   const paketerstellung = new Paketerstellung(dienst, { version: eigeneVersion });
+  // Ablago entdecken (#831, #832): Rundgänge und Tipps je Person; Funktionen, nach denen Tipps gefiltert werden.
+  const entdecken = x.entdecken ?? new Entdecken({
+    einstellungen: (b) => konten.einstellungen(b), setzeEinstellung: (b, k, w) => konten.setzeEinstellung(b, k, w),
+    version: eigeneVersion, heute: () => heuteIn(),
+    funktionen: async () => {
+      const f = new Set<'fragen' | 'laufwerk' | 'mail'>();
+      if ((await dienst.fragen.stand()).verfuegbar) f.add('fragen');
+      if (x.webdav && (await x.webdav.einstellung()).aktiv) f.add('laufwerk');
+      if (konten.mailAktiv) f.add('mail');
+      return f;
+    },
+    log: L.konto,
+  });
   const umwandlung = new Umwandlung(dienst);
   const wer = (a: Anfrage) => ({ id: a.benutzer?.id ?? null, email: a.benutzer?.email ?? null });
   /**
@@ -983,6 +1000,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       let k = a.params.schluessel;
       try { k = decodeURIComponent(k); } catch { /* bleibt, wie er ist */ }
       await konten.setzeEinstellung(ich(a), k, b(a).wert);
+      return leer;
+    } },
+
+    /* ---------- Ablago entdecken (#831, #832) ---------- */
+    // Gefiltert nach der Person (Verwaltungsrecht, eingeschaltete Funktionen). In Vertretung startet nichts von selbst,
+    // und Ablago merkt sich nichts für die vertretene Person.
+    { methode: 'GET', pfad: '/api/entdecken', zugang: 'angemeldet', handler: async (a) => ok(await entdecken.stand(ich(a), { vertretung: !!a.sitzungsDaten?.vertretungId })) },
+    { methode: 'POST', pfad: '/api/entdecken/tipps/:schluessel', zugang: 'angemeldet', handler: async (a) => {
+      if (!a.sitzungsDaten?.vertretungId) await entdecken.tipp(ich(a), a.params.schluessel, b(a).aktion);
+      return leer;
+    } },
+    { methode: 'POST', pfad: '/api/entdecken/rundgaenge/:schluessel', zugang: 'angemeldet', handler: async (a) => {
+      if (!a.sitzungsDaten?.vertretungId) await entdecken.rundgang(ich(a), a.params.schluessel, b(a).stand);
       return leer;
     } },
 

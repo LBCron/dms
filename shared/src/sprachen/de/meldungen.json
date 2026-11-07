@@ -1645,5 +1645,9 @@
   "uebersetzung.paket-fehler": "„{name}“ konnte den Text nicht übersetzen: {grund}",
   "uebersetzung.kein-json": "Die Antwort ist kein JSON-Objekt.",
   "uebersetzung.ohne-text": "In der Antwort fehlt „text“.",
-  "verwaltung.text-uebersetzt": "Text übersetzt"
+  "verwaltung.text-uebersetzt": "Text übersetzt",
+  "entdecken.aktion": "Unbekannte Handlung an einem Tipp.",
+  "entdecken.tipp": "Diesen Tipp gibt es nicht.",
+  "entdecken.stand": "Ein Rundgang ist „gesehen“ oder „spaeter“.",
+  "entdecken.rundgang": "Diesen Rundgang gibt es nicht."
 }

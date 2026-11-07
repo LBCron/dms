@@ -26,6 +26,10 @@ Siehe auch: [Verbleib Originaldokumente](#verbleib-originaldokumente), [Mappenty
 Der Name des Programms – eine Dokumentenablage für zu Hause und kleine Betriebe. Ein Wort, nur das A groß. Ist die Programmart gemeint, heißt es weiter „DMS“ (Dokumentenmanagementsystem).  
 Siehe auch: [Ablage](#ablage), [Werkbank](#werkbank).
 
+<a id="ablago-entdecken"></a>**Ablago entdecken** · ✓ Alltagswort · alle  
+Seite im Benutzermenü (bei der Hilfe) mit allem, was Ablago noch kann – Neues seit dem letzten Besuch, Rundgänge und alle Tipps nach Bereich. Ausgeblendete Tipps bleiben dort sichtbar.  
+Siehe auch: [Rundgang](#rundgang), [Tipp](#tipp).
+
 <a id="ansicht"></a>**Ansicht** · ~ mit Erklärung · alle  
 Eine gespeicherte Auswahl von Mappen – welche Mappentypen, mit welchen Bedingungen. Ansichten stehen im Baum links in der Ablage. Wie etwas aussieht, heißt dagegen „Darstellung“.  
 Siehe auch: [Unteransicht](#unteransicht), [Bedingung](#bedingung), [Trefferliste](#trefferliste).
@@ -102,12 +106,20 @@ Siehe auch: [Eindeutig](#eindeutig).
 <a id="register"></a>**Register** · ~ mit Erklärung · alle  
 Ein Trennblatt in einer Mappe, z. B. Allgemein (mit Feldern), Dokumente, Verknüpfungen oder Historie. Notizen und Historie sind feste Register jeder Mappe.
 
+<a id="rundgang"></a>**Rundgang** · ✓ Alltagswort · alle  
+Kurze Führung an der echten Oberfläche in wenigen Schritten, jeder Schritt hebt eine Stelle hervor. Ablagos eigener Rundgang startet bei der ersten Anmeldung eines neuen Kontos; alle finden ihn unter „Ablago entdecken“.  
+Siehe auch: [Tipp](#tipp), [Ablago entdecken](#ablago-entdecken).
+
 <a id="standardwert"></a>**Standardwert** · ~ mit Erklärung · Administratoren  
 Die Vorbelegung eines Feldes beim Anlegen einer Mappe, auch mit Platzhaltern wie einem Nummernkreis.
 
 <a id="systemmappentyp"></a>**Systemmappentyp** · ~ mit Erklärung · Administratoren  
 Ein Mappentyp, den Ablago selbst mitbringt – Benutzer, Rolle und Post.  
 Siehe auch: [Mappentyp](#mappentyp).
+
+<a id="tipp"></a>**Tipp** · ✓ Alltagswort · alle  
+Ein Satz, der zeigt, was man in Ablago noch tun kann – höchstens einer am Tag als leise Zeile auf der Startseite; der Satz führt an die Stelle oder startet einen Rundgang. Mit × ausblenden, in Mein Konto ganz abschalten.  
+Siehe auch: [Rundgang](#rundgang), [Ablago entdecken](#ablago-entdecken).
 
 <a id="titel"></a>**Titel** · ✓ Alltagswort · alle  
 Der Anzeigename einer Mappe. Er wird aus einer Vorlage mit Feldwerten gebildet.

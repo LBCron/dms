@@ -11,6 +11,7 @@ Ein Klick auf deinen Namen oben rechts öffnet ein Menü:
 - **Ablago verwalten** – nur, wenn du verwalten darfst: wechselt in den [Verwaltungsmodus](#ablago-verwalten). Im Modus steht hier **Verwaltung beenden**.
 - Solange eine Abwesenheit wirkt, steht oben im Menü „Du bist abwesend“ – ein Klick darauf führt direkt dorthin –, und neben deinem Namen ist ein Punkt.
 - **Hilfe** – öffnet dieses Handbuch.
+- **Ablago entdecken** – Rundgang und Tipps zum Stöbern, siehe [Ablago entdecken](entdecken.md).
 - **Fehler melden** – siehe [Fehler melden](#fehler-melden).
 - **Über Ablago** – siehe [Über Ablago](#uber-das-dms).
 - **Abmelden**.
@@ -104,7 +105,7 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
 
 - **Design** – wie Ablago für dich aussieht. **Standard** folgt dem Design, das der Administrator festgelegt hat. Gilt für dein Konto auf allen Geräten.
 - **Schriftgröße auf diesem Gerät** – klein, normal oder groß. Gilt nur für das Gerät, an dem du gerade sitzt; am Smartphone kannst du eine andere Größe wählen als am PC.
-- <span id="startseite"></span>**Startseite** – **Mit der Startseite beginnen** schaltet die [Startseite](startseite.md) ein oder aus; ohne sie geht es nach der Anmeldung direkt zu *Zu erledigen*. **Vierte Kachel** wählt, was neben Zu erledigen, Neue Post und Nächster Termin steht: deine Favoriten oder eine Ansicht.
+- <span id="startseite"></span>**Startseite** – **Mit der Startseite beginnen** schaltet die [Startseite](startseite.md) ein oder aus; ohne sie geht es nach der Anmeldung direkt zu *Zu erledigen*. **Vierte Kachel** wählt, was neben Zu erledigen, Neue Post und Nächster Termin steht: deine Favoriten oder eine Ansicht. **Tipps auf der Startseite zeigen** schaltet den [Tipp des Tages](entdecken.md#tipps) ein oder aus.
 - <span id="geaenderte"></span>**Geänderte Mappen** – **Geänderte Favoriten und eigene Mappen in Listen hervorheben** (Standard: an) setzt einen Punkt vor den Titel, bis du die Mappe öffnest. Was dahintersteckt, steht unter [Favoriten als Abo](ablage.md#favoriten-als-abo).
 - **Darstellung auf diesem Gerät** – die Breite der Spalten und eingeklappte Bereiche merkt sich jedes Gerät. Ist etwas nicht mehr zu finden, stellt **Standard-Darstellung wiederherstellen** die ursprüngliche Aufteilung her.
 - **Entwicklermodus** – zeigt unten rechts, wie lange ein Seitenaufruf gedauert hat.

@@ -77,6 +77,8 @@ async function messen() {
     const H = { headers: { 'x-dms': '1' } };
     const r = await ctx.request.post(`${BASIS}/api/konto/anmelden`, { ...H, data: { email, passwort } });
     if (!r.ok()) throw new Error(await r.text());
+    // Rundgang bei der ersten Anmeldung (#831) nicht mitmessen: Die Messkonten haben ihn gesehen.
+    await ctx.request.post(`${BASIS}/api/entdecken/rundgaenge/ablago`, { ...H, data: { stand: 'gesehen' } });
     const typen = await (await ctx.request.get(`${BASIS}/api/typen`, H)).json();
     const rechnung = typen.find((t) => t.name === 'Rechnung');
     const mappe = (await (await ctx.request.get(`${BASIS}/api/mappen?sicht=${rechnung.id}&von=0&anzahl=1`, H)).json()).mappen[0].id;

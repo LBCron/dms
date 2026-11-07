@@ -1,0 +1,77 @@
+# Ablagos eigene Tipps (#832) – im selben Format wie inhalt/tipps.yaml in Paketen (Stufe 2).
+#
+# Regel: Jede sichtbare neue Funktion bringt ihren Tipp im selben PR mit. Der Wortlaut ist für Lena verständlich, nutzt
+# nur Begriffe aus dem Glossar (docs/glossar.yml), spricht mit „du“ und hat höchstens zwei Sätze und 160 Zeichen.
+# Die Texte stehen in den Sprachdateien (shared/src/sprachen/<sprache>/entdecken.json) unter tipp.<schluessel>
+# (Unterstriche werden dort zu Bindestrichen). Pakete schreiben den Text direkt hierher (text).
+#
+# Je Tipp:
+#   schluessel  Name (klein, Ziffern, _)
+#   bereich     suche | post | fristen | mappen | konto | verwalten – Gruppe auf „Ablago entdecken“
+#   ziel        Anker aus anker.yaml (mit fester Seite): der Satz öffnet die Seite und hebt die Stelle hervor …
+#   rundgang    … oder der Satz startet diesen Rundgang (genau eines von beiden)
+#   fuer        lesen (alle, Vorgabe) | verwalten (nur Personen mit Verwaltungsrecht)
+#   funktion    nur, wenn eingeschaltet: fragen (Antwort-Paket) | laufwerk | mail (E-Mail-Versand)
+#   ab_version  „Neu seit deinem letzten Besuch“ für alle, die auf diese Version aktualisiert haben
+# Die Reihenfolge hier ist die Reihenfolge des Tipps des Tages.
+
+- schluessel: suche_in_dokumenten
+  bereich: suche
+  ziel: startseite.suche
+- schluessel: favoriten
+  bereich: mappen
+  ziel: navigation.favoriten
+- schluessel: zu_erledigen_monat
+  bereich: fristen
+  ziel: zu-erledigen.ansicht
+- schluessel: neue_post_zuordnen
+  bereich: post
+  ziel: navigation.neue-post
+- schluessel: schriftgroesse
+  bereich: konto
+  ziel: konto.schrift
+- schluessel: archivnummer
+  bereich: suche
+  ziel: startseite.suche
+- schluessel: post_ablegen
+  bereich: post
+  ziel: neu
+- schluessel: frag_deine_ablage
+  bereich: suche
+  ziel: startseite.fragen
+  funktion: fragen
+- schluessel: erinnern
+  bereich: fristen
+  ziel: navigation.zu-erledigen
+- schluessel: abwesenheit
+  bereich: fristen
+  ziel: konto.abwesenheit
+- schluessel: erweiterte_suche
+  bereich: suche
+  ziel: navigation.erweiterte-suche
+- schluessel: zusammenfassung
+  bereich: fristen
+  ziel: konto.zusammenfassung
+  funktion: mail
+- schluessel: startseite_kachel
+  bereich: konto
+  ziel: konto.startseite
+- schluessel: laufwerk
+  bereich: konto
+  ziel: benutzermenue
+  funktion: laufwerk
+- schluessel: rundgang
+  bereich: konto
+  rundgang: ablago
+- schluessel: pakete
+  bereich: verwalten
+  ziel: benutzermenue
+  fuer: verwalten
+- schluessel: benutzer_einladen
+  bereich: verwalten
+  ziel: benutzermenue
+  fuer: verwalten
+- schluessel: sicherung
+  bereich: verwalten
+  ziel: benutzermenue
+  fuer: verwalten

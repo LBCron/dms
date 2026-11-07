@@ -311,7 +311,7 @@ export function WerkbankNavigation({ bereich, eintraege, zeigen = () => true, be
   const eintrag = (e: WerkbankEintrag) => {
     const aus = !zeigen(e.pfad);
     return (
-      <Link key={e.pfad} to={e.pfad === 'uebersicht' ? '/werkbank' : `/werkbank/${e.pfad}`} className={`sicht ${bereich === e.pfad ? 'an' : ''} ${aus ? 'ausgeblendet' : ''}`}
+      <Link key={e.pfad} anker={`werkbank.bereich:${e.pfad}`} to={e.pfad === 'uebersicht' ? '/werkbank' : `/werkbank/${e.pfad}`} className={`sicht ${bereich === e.pfad ? 'an' : ''} ${aus ? 'ausgeblendet' : ''}`}
         title={aus ? (e.warn ? t('werkbank.uebersicht.ausgeblendet-steht-hier-wegen') : t('werkbank.uebersicht.ausgeblendet')) : undefined}>
         <span className="nm">{e.name}</span>
         {e.warn ? <span className="zaehler" title={e.warnTitel} aria-label={e.warnTitel ? `${e.warn} – ${e.warnTitel}` : undefined}>{e.warn}</span> : e.zahl ? <span className="zahl">{e.zahl}</span> : null}

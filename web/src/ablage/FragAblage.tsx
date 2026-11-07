@@ -71,7 +71,7 @@ export function FragAblage() {
   }
 
   return (
-    <section className="frag blatt" aria-label={t('fragen.titel')} data-kachel="fragen">
+    <section className="frag blatt" aria-label={t('fragen.titel')} data-kachel="fragen" data-anker="startseite.fragen">
       <h2 className="h3"><Symbol name="frage" /> {t('fragen.titel')} <Hilfe ort="ablage.fragen" /></h2>
       {runden.length > 0 && (
         <ol className="frag-chat" aria-live="polite">

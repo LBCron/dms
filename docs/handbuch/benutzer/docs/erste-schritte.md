@@ -27,7 +27,9 @@ Oben siehst du die Bereiche:
 - **Ablage** – hier arbeitest du mit Mappen. Das ist für die meisten Benutzer der einzige Bereich.
 - **Werkbank** – nur für Administratoren; hier wird Ablago eingerichtet.
 - **+ Neu** – legt von überall neue [Post](post.md) an (Dateien wählen oder am Handy fotografieren) oder eine neue Mappe eines Mappentyps, den du anlegen darfst.
-- **Dein Name** – öffnet ein Menü mit *Mein Konto* (dort auch Darstellung und Abwesenheit), der Hilfe, *Fehler melden* und Abmelden.
+- **Dein Name** – öffnet ein Menü mit *Mein Konto* (dort auch Darstellung und Abwesenheit), der Hilfe, *Ablago entdecken*, *Fehler melden* und Abmelden.
+
+Bei der ersten Anmeldung zeigt dir ein kurzer [Rundgang](entdecken.md#rundgang) diese Stellen. Du findest ihn später jederzeit unter deinem Namen → *Ablago entdecken*.
 
 Die Ablage ist in **drei Spalten** geteilt, von groß nach klein:
 

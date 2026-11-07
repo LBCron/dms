@@ -22,7 +22,7 @@
 # Neue Begriffe kommen mit dem Release hierher (Qualitätskontrolle).
 # Die Personas: docs/handbuch/entwickler/docs/personas.md
 
-stand: '2026-11-04'
+stand: '2026-11-07'
 
 begriffe:
 
@@ -477,6 +477,28 @@ begriffe:
     begegnet: alle
     nicht_verwenden: [Theme, Ansicht (für das Aussehen)]
     verwandt: [Design, Mein Konto]
+  - begriff: Ablago entdecken
+    bereich: grundbegriffe
+    beschreibung: Seite im Benutzermenü (bei der Hilfe) mit allem, was Ablago noch kann – Neues seit dem letzten Besuch, Rundgänge und alle Tipps nach Bereich. Ausgeblendete Tipps bleiben dort sichtbar.
+    einsteiger: alltag
+    begegnet: alle
+    verwandt: [Rundgang, Tipp]
+  - begriff: Rundgang
+    bereich: grundbegriffe
+    beschreibung: Kurze Führung an der echten Oberfläche in wenigen Schritten, jeder Schritt hebt eine Stelle hervor. Ablagos eigener Rundgang startet bei der ersten Anmeldung eines neuen Kontos; alle finden ihn unter „Ablago entdecken“.
+    einsteiger: alltag
+    begegnet: alle
+    nicht_verwenden: [Tour, Onboarding, Tutorial]
+    verwandt: [Tipp, Ablago entdecken]
+    code: Rundgang, rundgaenge.yaml
+  - begriff: Tipp
+    bereich: grundbegriffe
+    beschreibung: Ein Satz, der zeigt, was man in Ablago noch tun kann – höchstens einer am Tag als leise Zeile auf der Startseite; der Satz führt an die Stelle oder startet einen Rundgang. Mit × ausblenden, in Mein Konto ganz abschalten.
+    einsteiger: alltag
+    begegnet: alle
+    nicht_verwenden: [Hinweis (für Tipps), Hilfe-Tipp]
+    verwandt: [Rundgang, Ablago entdecken]
+    code: Tipp, tipps.yaml
   - begriff: Paket
     bereich: werkbank
     beschreibung: Ein installierbares Bündel aus Mappentypen, Ansichten und Beispielen aus einem Paketkatalog, z. B. „Basis“. Ein Update ergänzt nur; es entfernt und ändert nichts.

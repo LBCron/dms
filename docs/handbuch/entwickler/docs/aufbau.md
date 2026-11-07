@@ -395,6 +395,70 @@ Bauregel „später mehrere Server möglich halten“: Was zwischen zwei Anfrage
 
 **Darf je Prozess bleiben** (macht höchstens langsamer, nie falsch): Zwischenspeicher für Seitenbilder und PDF-Anzeige, gestempelte WebDAV-Fassungen (#722: höchstens 64 MB bzw. 2000 Einträge; seit #874 teilen sich mehrere Prozesse die Bytes, `zwischenspeicher.ts`), Schutzart je PDF, Discovery und Schlüssel des Anbieters (OIDC), gelesene Einstellungen mit kurzer Frist (Anmeldeschutz 10 s, WebDAV 5 s, OIDC 30 s), Anfragen an Pakete „schon angefordert“, Grenzen gleichzeitiger Arbeit, die die Rechenzeit dieses Prozesses schützen (scrypt an der Abrufseite, Uploads je Benutzer, Fragen), Messwerte und Auslastung. Was #744 für mehrere Prozesse offen ließ, löst #745 ([Mehrere Prozesse](#mehrere-prozesse)).
 
+## Rundgänge, Tipps und Ankerpunkte (#831, #832) { #entdecken }
+
+Rundgänge und Tipps sind **Daten, kein Code**. Ablagos eigene liegen in `shared/entdecken/` – im selben Format, das Pakete später als `inhalt/rundgaenge.yaml` und `inhalt/tipps.yaml` mitbringen (Stufe 2, Prüfung in [dms-registry #132](https://github.com/motom001/dms-registry/issues/132)). Es gibt einen Mechanismus für alle: Eine Quelle liefert rohe Einträge, `pruefeRundgaenge` und `pruefeTipps` (`shared/src/entdecken.ts`) prüfen sie, der Server filtert sie je Person (`server/src/entdecken.ts`). Ein Paket fügt später nur eine weitere Quelle hinzu.
+
+| Datei | Inhalt |
+| --- | --- |
+| `shared/entdecken/anker.yaml` | feste Ankerpunkte der Oberfläche (maschinenlesbar, auch für die Registry) |
+| `shared/entdecken/rundgaenge.yaml` | Ablagos Rundgang |
+| `shared/entdecken/tipps.yaml` | Ablagos Tipps (Reihenfolge = Reihenfolge des Tipps des Tages) |
+| `shared/src/sprachen/<sprache>/entdecken.json` | die Texte dazu |
+
+Der Server liest die YAML-Dateien zur Laufzeit (im Image unter `/app/shared/entdecken`, siehe Dockerfile). Fehlerhafte Einträge fallen weg und stehen einmal im Protokoll; für die Person ändert sich nichts.
+
+### Rundgang
+
+```yaml
+- schluessel: ablago            # klein, Ziffern, _
+  start: erste_anmeldung        # manuell | erste_anmeldung (nur Ablago selbst)
+  fuer: lesen                   # lesen (alle) | verwalten (nur mit Verwaltungsrecht)
+  oeffne: { seite: start }      # diese Seite vor dem ersten Schritt öffnen
+  schritte:                     # höchstens 8
+    - schluessel: dreiteilung
+      bild: dreiteilung         # eingebaute Grafik
+    - schluessel: erledigen
+      ziel: [navigation.zu-erledigen, startseite.zu-erledigen]   # der erste sichtbare Anker gilt
+      fuer: lesen               # verwalten: Schritt nur für Verwaltende (z. B. Werkbank)
+```
+
+Texte: Titel, Beschreibung und Schlusssatz unter `rundgang.<rundgang>.titel | .beschreibung | .ende`, je Schritt `rundgang.<rundgang>.<schritt>.titel | .text | .text-handy | .text-verwalten | .ort` (Unterstriche im Schlüssel werden in der Sprachdatei zu Bindestrichen). `text-handy` gilt in der Handyfassung, `text-verwalten` für Personen mit Verwaltungsrecht, `ort` sagt Screenreadern, wo das hervorgehobene Element steht – zu jedem `ziel` ist es Pflicht. Pakete schreiben die Texte später direkt in die Datei (`titel`, `text`, `text_handy`, `text_verwalten`, `ort`). Grenzen: Titel 60, Texte 200 Zeichen.
+
+Zur Laufzeit fällt ein Schritt still weg, wenn keiner seiner Anker sichtbar ist (z. B. am Handy) – mit einem Vermerk in der Konsole (`console.debug`), ohne Meldung für die Person.
+
+### Tipp
+
+```yaml
+- schluessel: suche_in_dokumenten
+  bereich: suche                # suche | post | fristen | mappen | konto | verwalten
+  ziel: startseite.suche        # Anker mit fester Seite …
+  # rundgang: ablago            # … oder ein Rundgang (genau eines von beiden)
+  fuer: lesen                   # lesen | verwalten
+  funktion: fragen              # optional: fragen | laufwerk | mail – nur, wenn eingeschaltet
+  ab_version: 0.216.0           # optional: „Neu seit deinem letzten Besuch“
+```
+
+Text unter `tipp.<schluessel>`: höchstens 160 Zeichen und zwei Sätze, Du-Form, nur Begriffe aus dem [Glossar](https://github.com/motom001/dms/blob/main/docs/glossar.yml). **Jede sichtbare neue Funktion bringt ihren Tipp im selben PR mit** (mit `ab_version` der Version, in der sie erscheint); den Wortlaut prüft die laufende Qualitätskontrolle. Höchstens 20 Tipps je Paket.
+
+### Ankerpunkte { #anker }
+
+Ziele sind feste Ankerpunkte, keine HTML-Ids: Das Element trägt `data-anker="<anker>"` (bei `Link` die Eigenschaft `anker`). Die Liste steht in `shared/entdecken/anker.yaml` mit Seite, Beschreibung, `handy` (auch in der Handyfassung sichtbar) und `clients` (gibt es so auch in Clients). Muster wie `mappe.register:<key>`, `mappe.feld:<key>` und `werkbank.bereich:<route>` passen auf jeden Schlüssel. Heute gibt es unter anderem:
+
+`neu`, `benutzermenue`, `navigation.ansichten`, `navigation.ansicht-waehlen`, `navigation.erweiterte-suche`, `navigation.zu-erledigen`, `navigation.neue-post`, `navigation.favoriten`, `liste`, `mappe`, `startseite.suche`, `startseite.fragen`, `startseite.tipp`, `startseite.zu-erledigen`, `startseite.neue-post`, `startseite.termin`, `zu-erledigen.ansicht`, `mappe.aktionen`, `mappe.stern`, `mappe.register:<key>`, `mappe.feld:<key>`, `konto.abwesenheit`, `konto.schrift`, `konto.startseite`, `konto.tipps`, `konto.zusammenfassung`, `entdecken.rundgaenge`, `werkbank.bereich:<route>`.
+
+`server/test/entdecken.test.ts` prüft beim Bauen: jeder Anker kommt im Quelltext der Oberfläche vor, Format, Ziele und Rundgänge existieren, Längen stimmen, und jeder Text steht in Deutsch und Englisch. Wer ein Element umbaut, behält das Attribut; neue Anker kommen dazu, vorhandene werden nicht umbenannt.
+
+### Schnittstelle und Merker
+
+- `GET /api/entdecken` – Rundgänge und Tipps für die angemeldete Person in ihrer Sprache (gefiltert nach Verwaltungsrecht und eingeschalteten Funktionen), dazu der Tipp des Tages (`tipp`), ob die Tipp-Zeile an ist (`tippsAn`) und welcher Rundgang jetzt von selbst startet (`starten`). Je Tipp: Anker und Seite bzw. Rundgang, Herkunft (`ablago`, später `paket:<id>`), `neu`, `ausgeblendet` und `clients` (für Clients geeignet: kein Rundgang, Anker gibt es auch dort).
+- `POST /api/entdecken/tipps/:schluessel` mit `aktion`: `gezeigt`, `erledigt`, `ausblenden`, `einblenden`.
+- `POST /api/entdecken/rundgaenge/:schluessel` mit `stand`: `gesehen` oder `spaeter`.
+
+Gemerkt wird je Person in ihren Einstellungen (`entdecken_rundgaenge`, `entdecken_tipps`, `entdecken_version`; Tipp-Zeile aus: `tipps` = false) – keine Telemetrie. In einer Vertretung startet nichts von selbst, und nichts wird gemerkt. Migration 088 setzt für Konten, die sich vor dem Update schon angemeldet hatten, Ablagos Rundgang auf „gesehen“. Die Handbuch-Aufnahmen und Messskripte markieren ihre Konten ebenso (`aufnehmen.mjs`, `ladezeiten.mjs`).
+
+**Pakete folgen:** `inhalt.rundgaenge` und `inhalt.tipps` im Manifest, die Prüfung beim Installieren, Werkbank → Tipps verwalten (eigene Tipps, Anpassungen) und der Export in „Paket erstellen“ kommen in einer späteren Stufe; ebenso die Einträge in `/api/v1`.
+
 ## Mehrere Prozesse (#745) { #mehrere-prozesse }
 
 `DMS_PROZESSE` (Vorgabe 1, `auto` = Kerne − 1, höchstens 2 (`PROZESSE_EMPFOHLEN_MAX`; mit PostgreSQL im selben Container auch künftig höchstens 2), je Prozess 1 GB Arbeitsspeicher plus 1 GB Reserve, und nicht mehr, als `DMS_DB_VERBINDUNGEN` trägt; `prozesseAus`/`empfohleneProzesse` in `server/src/prozesse.ts`, #874). Mit 1 läuft alles wie vorher in einem Prozess.

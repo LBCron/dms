@@ -205,6 +205,8 @@ async function vorbereiten() {
   // Administrator und Schlüssel hat der Einrichtungsassistent angelegt (einrichtenImBrowser).
   const admin = (await api('GET', '/api/konto/status')).benutzer;
   const adminCookie = cookie;
+  // Rundgang bei der ersten Anmeldung (#831): Die Konten der Bilder kennen Ablago schon – er läge sonst über jedem Bild.
+  await api('POST', '/api/entdecken/rundgaenge/ablago', { stand: 'gesehen' });
   // Die Bilder zeigen alle Bereiche der Werkbank; der Assistent stellt sonst „Haushalt“ ein (#281).
   await api('PUT', '/api/werkbank/ansicht', { installation: { vorlage: 'alles', ein: [], aus: [] } });
   await api('POST', '/api/beispiele');
@@ -222,6 +224,8 @@ async function vorbereiten() {
   const einladung = await api('POST', '/api/benutzer', { email: MITGLIED.email, name: MITGLIED.name, rolle: 'mitglied', rollen: [steuern.id] });
   const schluessel = einladung.link.split('/passwort/')[1];
   await api('POST', '/api/konto/passwort-setzen', { schluessel, passwort: MITGLIED.passwort });
+  await api('POST', '/api/konto/anmelden', { email: MITGLIED.email, passwort: MITGLIED.passwort });
+  await api('POST', '/api/entdecken/rundgaenge/ablago', { stand: 'gesehen' });
   cookie = adminCookie;
 
   // Vertrag bekommt einen verantwortlichen Benutzer (#26)
@@ -515,6 +519,19 @@ async function main() {
     await geheZu(s, '/ablage/eingang');
     await s.locator('.verwaltungsbalken').waitFor();
     await bild(s, 'admin-hinweis');
+    await k.close();
+  }
+
+  // Ablago entdecken (#831, #832): die Seite und der erste Schritt des Rundgangs (gestartet von dort).
+  {
+    const k = await kontext(true, 1440, 860);
+    const s = await k.newPage();
+    await geheZu(s, '/entdecken');
+    await s.getByRole('heading', { name: w('Ablago entdecken'), level: 1 }).waitFor();
+    await bild(s, 'entdecken', { fullPage: true });
+    await s.getByRole('button', { name: w('Rundgang starten') }).first().click();
+    await s.locator('dialog.rundgang').waitFor();
+    await bild(s, 'rundgang');
     await k.close();
   }
 

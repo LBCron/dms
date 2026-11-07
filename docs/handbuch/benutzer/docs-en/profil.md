@@ -11,6 +11,7 @@ A click on your name at the top right opens a menu:
 - **Administer Ablago** – only if you may administer: switches into [administration mode](#ablago-verwalten). In the mode, it says **End administration** here.
 - While an absence is in effect, "You are absent" appears at the top of the menu – a click on it leads straight there –, and there is a dot next to your name.
 - **Help** – opens this manual.
+- **Discover Ablago** – the tour and tips to browse, see [Discover Ablago](entdecken.md).
 - **Report a problem** – see [Report a problem](#fehler-melden).
 - **About Ablago** – see [About Ablago](#uber-das-dms).
 - **Sign out**.
@@ -104,7 +105,7 @@ A link to reset the password also asks for the code afterwards. Lost your phone 
 
 - **Design** – how Ablago looks for you. **Default** follows the design the administrator has set. Applies to your account on all devices.
 - **Font size on this device** – small, normal or large. Only applies to the device you are sitting at; on your smartphone you can choose a different size than on your PC.
-- <span id="startseite"></span>**Home page** – **Start with the home page** switches the [home page](startseite.md) on or off; without it you go directly to *To do* after signing in. **Fourth tile** chooses what appears next to To do, New post and Next date: your favourites or a view.
+- <span id="startseite"></span>**Home page** – **Start with the home page** switches the [home page](startseite.md) on or off; without it you go directly to *To do* after signing in. **Fourth tile** chooses what appears next to To do, New post and Next date: your favourites or a view. **Show tips on the start page** switches the [tip of the day](entdecken.md#tipps) on or off.
 - <span id="geaenderte"></span>**Changed folders** – **Highlight changed favourites and own folders in lists** (default: on) puts a dot in front of the title until you open the folder. What's behind it is described under [Favourites as a subscription](ablage.md#favoriten-als-abo).
 - **Appearance on this device** – every device remembers the width of the columns and collapsed areas. If something can no longer be found, **Restore default appearance** restores the original layout.
 - **Developer mode** – shows at the bottom right how long a page request took.

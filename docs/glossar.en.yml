@@ -211,6 +211,15 @@ begriffe:
   Darstellung:
     begriff: Appearance
     beschreibung: The area under My account in which everyone sets how Ablago looks for them – the design (for their account), the font size and the width of the areas (per device).
+  Ablago entdecken:
+    begriff: Discover Ablago
+    beschreibung: Page in the user menu (next to Help) with everything else Ablago can do – what is new since the last visit, tours and all tips by area. Hidden tips stay visible there.
+  Rundgang:
+    begriff: Tour
+    beschreibung: A short guided walk on the real interface in a few steps; each step highlights one place. Ablago's own tour starts the first time a new account signs in; everyone finds it under "Discover Ablago".
+  Tipp:
+    begriff: Tip
+    beschreibung: One sentence showing what else you can do in Ablago – at most one a day as a quiet line on the start page; the sentence leads to the place or starts a tour. Hide it with ×, switch it off completely in My account.
   Paket:
     begriff: Package
     beschreibung: An installable bundle of folder types, views and examples from a package catalogue, e.g. "Basis". An update only adds; it removes and changes nothing.

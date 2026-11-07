@@ -40,14 +40,15 @@ export function useOrt() {
   return ort;
 }
 
-export function Link({ to, className, children, title }: { to: string; className?: string; children: ReactNode; title?: string }) {
+/** `anker`: fester Ankerpunkt für Rundgänge und Tipps (#831, `data-anker`). */
+export function Link({ to, className, children, title, anker }: { to: string; className?: string; children: ReactNode; title?: string; anker?: string }) {
   const klick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     geheZu(to);
   };
   const aktiv = location.pathname === to;
-  return <a href={to} onClick={klick} className={className} title={title} aria-current={aktiv ? 'page' : undefined}>{children}</a>;
+  return <a href={to} onClick={klick} className={className} title={title} aria-current={aktiv ? 'page' : undefined} data-anker={anker}>{children}</a>;
 }
 
 /** Fragt vor dem Verlassen nach, solange `ungespeichert` wahr ist. */

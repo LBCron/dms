@@ -56,7 +56,7 @@ type AnsichtDaten = ReturnType<typeof useErledigenAnsicht>;
 export function ErledigenUmschalter({ a }: { a: AnsichtDaten }) {
   const ansichten: ErledigenAnsicht[] = a.schmal ? ['liste', 'monat'] : ['liste', 'monat', 'jahr'];
   return (
-    <div className="segmente ka-umschalter" role="radiogroup" aria-label={t('termine.ansicht')}>
+    <div className="segmente ka-umschalter" role="radiogroup" aria-label={t('termine.ansicht')} data-anker="zu-erledigen.ansicht">
       {ansichten.map((x) => (
         <button key={x} type="button" role="radio" aria-checked={a.ansicht === x} className={a.ansicht === x ? 'an' : ''} onClick={() => a.setze(x)}>{t.frei(`termine.ansicht.${x}`)}</button>
       ))}

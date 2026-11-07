@@ -11,6 +11,7 @@ import api from './sprachen/en/api.json';
 import automatisierung from './sprachen/en/automatisierung.json';
 import dritte from './sprachen/en/dritte.json';
 import einrichtung from './sprachen/en/einrichtung.json';
+import entdecken from './sprachen/en/entdecken.json';
 import ereignisse from './sprachen/en/ereignisse.json';
 import erkennung from './sprachen/en/erkennung.json';
 import felder from './sprachen/en/felder.json';
@@ -35,7 +36,7 @@ import volltext from './sprachen/en/volltext.json';
 import webhook from './sprachen/en/webhook.json';
 import werkbank from './sprachen/en/werkbank.json';
 
-export const ENGLISCH: Readonly<Record<string, Sprachdatei>> = { ablage, aehnlich, anmeldung, api, automatisierung, dritte, einrichtung, ereignisse, erkennung, felder, fragen, gemeinsam, konten, lasttest, mail, mappen, mappentypen, meldungen, notfall, oberflaeche, pakete, profil, spalten, start, suche, systemzustand, termine, volltext, webhook, werkbank };
+export const ENGLISCH: Readonly<Record<string, Sprachdatei>> = { ablage, aehnlich, anmeldung, api, automatisierung, dritte, einrichtung, entdecken, ereignisse, erkennung, felder, fragen, gemeinsam, konten, lasttest, mail, mappen, mappentypen, meldungen, notfall, oberflaeche, pakete, profil, spalten, start, suche, systemzustand, termine, volltext, webhook, werkbank };
 
 /** Englisch eintragen – danach liefert jeder Übersetzer englische Texte, sobald die Sprache „en“ gilt. */
 export const registriereEnglisch = () => registriereSprache('en', ENGLISCH);

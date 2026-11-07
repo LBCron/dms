@@ -394,6 +394,70 @@ Build rule "keep several servers possible later": whatever applies between two r
 
 **May stay per process** (at most makes things slower, never wrong): caches for page images and PDF display, stamped WebDAV versions (#722: at most 64 MB or 2000 entries; since #874 several processes share the bytes, `zwischenspeicher.ts`), protection type per PDF, the provider's discovery and keys (OIDC), settings read with a short lifetime (sign-in protection 10 s, WebDAV 5 s, OIDC 30 s), requests to packages "already requested", limits on concurrent work that protect this process's computing time (scrypt on the retrieval page, uploads per user, questions), metrics and load. What #744 left open for several processes is solved by #745 ([Several processes](#mehrere-prozesse)).
 
+## Tours, tips and anchor points (#831, #832) { #entdecken }
+
+Tours and tips are **data, not code**. Ablago's own live in `shared/entdecken/` – in the same format that packages will later bring as `inhalt/rundgaenge.yaml` and `inhalt/tipps.yaml` (stage 2, checks in [dms-registry #132](https://github.com/motom001/dms-registry/issues/132)). There is one mechanism for everything: a source supplies raw entries, `pruefeRundgaenge` and `pruefeTipps` (`shared/src/entdecken.ts`) check them, and the server filters them per person (`server/src/entdecken.ts`). A package will later only add another source.
+
+| File | Content |
+| --- | --- |
+| `shared/entdecken/anker.yaml` | fixed anchor points of the interface (machine-readable, also for the registry) |
+| `shared/entdecken/rundgaenge.yaml` | Ablago's tour |
+| `shared/entdecken/tipps.yaml` | Ablago's tips (order = order of the tip of the day) |
+| `shared/src/sprachen/<language>/entdecken.json` | their texts |
+
+The server reads the YAML files at runtime (in the image under `/app/shared/entdecken`, see the Dockerfile). Faulty entries are dropped and logged once; nothing changes for the person.
+
+### Tour
+
+```yaml
+- schluessel: ablago            # lower case, digits, _
+  start: erste_anmeldung        # manuell | erste_anmeldung (Ablago itself only)
+  fuer: lesen                   # lesen (everyone) | verwalten (only with the right to administer)
+  oeffne: { seite: start }      # open this page before the first step
+  schritte:                     # at most 8
+    - schluessel: dreiteilung
+      bild: dreiteilung         # built-in picture
+    - schluessel: erledigen
+      ziel: [navigation.zu-erledigen, startseite.zu-erledigen]   # the first visible anchor wins
+      fuer: lesen               # verwalten: step only for administrators (e.g. Workbench)
+```
+
+Texts: title, description and closing sentence under `rundgang.<tour>.titel | .beschreibung | .ende`, per step `rundgang.<tour>.<step>.titel | .text | .text-handy | .text-verwalten | .ort` (underscores in the key become hyphens in the language file). `text-handy` applies on a phone, `text-verwalten` for people who may administer, `ort` tells screen readers where the highlighted element is – it is required for every `ziel`. Packages will write the texts directly into the file (`titel`, `text`, `text_handy`, `text_verwalten`, `ort`). Limits: title 60, texts 200 characters.
+
+At runtime a step is dropped silently if none of its anchors is visible (for example on a phone) – with a note in the console (`console.debug`), without a message for the person.
+
+### Tip
+
+```yaml
+- schluessel: suche_in_dokumenten
+  bereich: suche                # suche | post | fristen | mappen | konto | verwalten
+  ziel: startseite.suche        # anchor with a fixed page …
+  # rundgang: ablago            # … or a tour (exactly one of the two)
+  fuer: lesen                   # lesen | verwalten
+  funktion: fragen              # optional: fragen | laufwerk | mail – only if switched on
+  ab_version: 0.216.0           # optional: "New since your last visit"
+```
+
+Text under `tipp.<key>`: at most 160 characters and two sentences, addressing the reader as “du”/“you”, only terms from the [glossary](https://github.com/motom001/dms/blob/main/docs/glossar.yml). **Every visible new feature brings its tip in the same PR** (with `ab_version` of the version in which it appears); the wording is checked in the ongoing quality control. At most 20 tips per package.
+
+### Anchor points { #anker }
+
+Targets are fixed anchor points, not HTML ids: the element carries `data-anker="<anchor>"` (on `Link` the property `anker`). The list is in `shared/entdecken/anker.yaml` with page, description, `handy` (also visible on a phone) and `clients` (also exists in clients). Patterns such as `mappe.register:<key>`, `mappe.feld:<key>` and `werkbank.bereich:<route>` match any key. Today they include:
+
+`neu`, `benutzermenue`, `navigation.ansichten`, `navigation.ansicht-waehlen`, `navigation.erweiterte-suche`, `navigation.zu-erledigen`, `navigation.neue-post`, `navigation.favoriten`, `liste`, `mappe`, `startseite.suche`, `startseite.fragen`, `startseite.tipp`, `startseite.zu-erledigen`, `startseite.neue-post`, `startseite.termin`, `zu-erledigen.ansicht`, `mappe.aktionen`, `mappe.stern`, `mappe.register:<key>`, `mappe.feld:<key>`, `konto.abwesenheit`, `konto.schrift`, `konto.startseite`, `konto.tipps`, `konto.zusammenfassung`, `entdecken.rundgaenge`, `werkbank.bereich:<route>`.
+
+`server/test/entdecken.test.ts` checks during the build: every anchor appears in the interface's source, format, targets and tours exist, lengths are right, and every text is there in German and English. Whoever rebuilds an element keeps the attribute; new anchors are added, existing ones are not renamed.
+
+### Interface and what is remembered
+
+- `GET /api/entdecken` – tours and tips for the signed-in person in their language (filtered by the right to administer and by switched-on features), plus the tip of the day (`tipp`), whether the tip line is on (`tippsAn`) and which tour starts by itself now (`starten`). Per tip: anchor and page or tour, origin (`ablago`, later `paket:<id>`), `neu`, `ausgeblendet` and `clients` (suitable for clients: no tour, the anchor exists there too).
+- `POST /api/entdecken/tipps/:schluessel` with `aktion`: `gezeigt`, `erledigt`, `ausblenden`, `einblenden`.
+- `POST /api/entdecken/rundgaenge/:schluessel` with `stand`: `gesehen` or `spaeter`.
+
+This is stored per person in their settings (`entdecken_rundgaenge`, `entdecken_tipps`, `entdecken_version`; tip line off: `tipps` = false) – no telemetry. While standing in for someone, nothing starts by itself and nothing is remembered. Migration 088 sets Ablago's tour to “seen” for accounts that had signed in before the update. The manual's screenshot and timing scripts mark their accounts the same way (`aufnehmen.mjs`, `ladezeiten.mjs`).
+
+**Packages follow:** `inhalt.rundgaenge` and `inhalt.tipps` in the manifest, the check on installation, Workbench → managing tips (own tips, adjustments) and the export in “Create package” come in a later stage; so do the entries in `/api/v1`.
+
 ## Several processes (#745) { #mehrere-prozesse }
 
 `DMS_PROZESSE` (default 1, `auto` = cores − 1, at most 2 (`PROZESSE_EMPFOHLEN_MAX`; with PostgreSQL in the same container at most 2 in future too), 1 GB of memory per process plus 1 GB reserve, and no more than `DMS_DB_VERBINDUNGEN` carries; `prozesseAus`/`empfohleneProzesse` in `server/src/prozesse.ts`, #874). With 1, everything runs in one process as before.
