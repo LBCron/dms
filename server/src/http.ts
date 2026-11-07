@@ -17,7 +17,7 @@ import type { SystemQuelle } from './system';
 import type { Designs } from './designs';
 import type { ApiSchluesselDienst } from './apischluessel';
 import { wer } from './api-v1';
-import { hilfeAntwort, hilfeSenden } from './hilfe';
+import { oberflaecheSenden } from './oberflaeche';
 import { einbettenAus, sicherheitsKoepfe, type Einbetten } from './koepfe';
 import { kontext, protokoll, type Kontext } from './protokoll';
 import type { Betrieb } from './betrieb';
@@ -371,12 +371,10 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
 
   if (opt.webDir && existsSync(opt.webDir)) {
     await app.register(fastifyStatic, { root: opt.webDir, wildcard: false });
-    // Alle Nicht-API-Pfade liefern die Oberfläche aus (Routing im Browser).
+    // Alle Nicht-API-Pfade liefern die Oberfläche aus (Routing im Browser) – fehlende Dateien nicht (#932).
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/')) return reply.code(404).send({ fehler: t('meldungen.http.diese-schnittstelle-gibt-es') });
-      const hilfe = hilfeAntwort(req.url, opt.webDir);
-      if (hilfe) return hilfeSenden(reply, hilfe);
-      return reply.sendFile('index.html');
+      return oberflaecheSenden(req.url, reply, opt.webDir);
     });
   }
 

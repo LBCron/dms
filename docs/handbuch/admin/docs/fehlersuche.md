@@ -100,6 +100,9 @@ Wie die Bausteine zusammenhängen, beschreibt [Technik](technik.md).
 ??? question "Rote Meldung: „Die Datenbank liegt nur im Container …“"
     Bei dms-komplett fehlt in der Compose-Datei die Zeile für `/data/postgres`. Erst die Daten retten (`docker compose stop`, nicht `down`, dann `docker cp`), dann die Zeile eintragen – Schritt für Schritt unter [Datenbank aus dem Container retten](https://help.ablago.app/installieren/aktuell/komplett/#datenbank-retten).
 
+??? question "Nach dem Update ist die Seite leer oder zeigt längst behobene Fehler."
+    Dann läuft im Browser noch die Oberfläche der alten Version gegen den neuen Server. Ablago erkennt das auf allen Seiten – auch beim Anmelden und im Einrichtungsassistenten – und zeigt oben „Eine neue Version ist da“ mit **Seite neu laden**; der Einrichtungsassistent lädt sich selbst neu (eingegebene Passwörter musst du dann noch einmal eingeben). Fehlt eine Datei der Oberfläche, antwortet Ablago mit „nicht gefunden“ (404). Hilft das nicht, lade die Seite ohne Zwischenspeicher neu (meist Strg+Umschalt+R bzw. Cmd+Umschalt+R).
+
 ??? question "E-Mails kommen nicht an."
     Unter **Werkbank → E-Mail und Adresse** zuerst **Verbindung prüfen**, dann **Testmail senden** – darunter steht die Meldung des Mailservers. Typisch: falsches Passwort (bei vielen Anbietern braucht es ein App-Passwort), Verbindungsart passt nicht zum Port (STARTTLS ↔ 587, SSL/TLS ↔ 465), Port vom Netz gesperrt. Im Protokoll (Modul `mail`) steht jeder Versand mit Fehler. Auch im Spam-Ordner nachsehen.
 

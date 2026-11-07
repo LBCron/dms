@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Erreichbarkeit } from '../../shared/src/erreichbarkeit';
 import { t, tn } from './sprache';
 import { sprache } from '../../shared/src/sprache';
+import { automatischNeuLaden } from '../../shared/src/veraltet';
+import { beiVeraltet, beobachteVeraltet, neuGeladenHinweis, neuGeladenHinweisSchliessen, selbstNeuLaden, zuletztNeuGeladen } from './veraltet';
 
 /**
  * Erreichbarkeit (#122): Leiste, wenn das DMS weg ist (Update, Neustart), wenn es wieder da ist
@@ -29,15 +31,34 @@ export function starteErreichbarkeit() {
   addEventListener('focus', bedarf);
   addEventListener('online', bedarf);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') bedarf(); });
-  // Vite: Ein nachgeladener Teil fehlt – die Seite gehört zu einem älteren Stand.
-  addEventListener('vite:preloadError', (e) => { e.preventDefault(); erreichbarkeit.veraltet(); });
+  // Ein nachgeladener Teil oder ein Stylesheet fehlt (#933) – die Seite gehört zu einem älteren Stand.
+  beobachteVeraltet();
+  beiVeraltet(() => erreichbarkeit.veraltet());
+}
+
+/**
+ * Ohne Rückfrage neu laden, sobald eine neue Version erkannt ist (#933) – für den Einrichtungsassistenten (der Stand
+ * liegt im Browser) und die Fehlermeldung statt einer leeren Seite. Nicht, solange `laeuft` („Jetzt einrichten“), und
+ * höchstens einmal je Minute; sonst bleibt die Leiste mit dem Knopf.
+ */
+export function useNeuLadenBeiNeuerVersion(laeuft = false, schritt?: string) {
+  const z = useErreichbarkeit();
+  useEffect(() => {
+    if (automatischNeuLaden({ neueVersion: z.neueVersion, laeuft, zuletzt: zuletztNeuGeladen(), jetzt: Date.now() })) selbstNeuLaden();
+  }, [laeuft, z.neueVersion]);
+  // Am Schrittwechsel nachsehen (eine kleine Abfrage), nicht erst beim Zurückkehren ins Fenster.
+  const erster = useRef(true);
+  useEffect(() => {
+    if (erster.current) { erster.current = false; return; }
+    if (!laeuft) void erreichbarkeit.pruefe();
+  }, [schritt]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /** Für regelmäßige Abfragen: solange das DMS weg ist, auslassen. */
 export const istWeg = () => erreichbarkeit.zustand.stufe === 'weg';
 
 export function useErreichbarkeit() {
-  return useSyncExternalStore(erreichbarkeit.abonniere, () => erreichbarkeit.zustand);
+  return useSyncExternalStore(erreichbarkeit.abonniere, () => erreichbarkeit.zustand, () => erreichbarkeit.zustand);
 }
 
 /** Ruft f auf, sobald das DMS nach einem Ausfall wieder antwortet. */
@@ -55,9 +76,15 @@ export function useBeiWiederErreichbar(f: () => void) {
  * Leiste oben. „Ansicht neu laden“ baut den Inhalt neu auf (Eingaben gehen dabei verloren,
  * deshalb nur auf Knopfdruck); „Seite neu laden“ holt die neue Oberfläche.
  */
-export function ErreichbarkeitsBanner({ version, ansichtNeuLaden }: { version?: string | null; ansichtNeuLaden: () => void }) {
+export function ErreichbarkeitsBanner({ version, ansichtNeuLaden, aussen }: {
+  version?: string | null; ansichtNeuLaden: () => void;
+  /** Außerhalb der angemeldeten Ablage (#933): Anmelden, Einrichtung, Wiederherstellung – die Leiste bleibt oben stehen. */
+  aussen?: boolean;
+}) {
   const z = useErreichbarkeit();
   const [, setTick] = useState(0);
+  const [neuGeladen, setNeuGeladen] = useState(neuGeladenHinweis);
+  const art = aussen ? ' aussen' : '';
   useEffect(() => {
     if (z.stufe !== 'weg') return;
     const timer = setInterval(() => setTick((n) => n + 1), 1000);
@@ -67,7 +94,7 @@ export function ErreichbarkeitsBanner({ version, ansichtNeuLaden }: { version?: 
   if (z.stufe === 'weg') {
     const s = z.naechsterVersuch === null ? null : Math.max(0, Math.ceil((z.naechsterVersuch - Date.now()) / 1000));
     return (
-      <div className="vertretungsbanner erreichbarkeit weg" role="alert">
+      <div className={`vertretungsbanner erreichbarkeit weg${art}`} role="alert">
         <p>{tn('oberflaeche.erreichbar.vermutlich-laeuft-ein-update', { b: <strong>{NICHT_ERREICHBAR}</strong>, wert: s ? t('oberflaeche.erreichbar.naechster-versuch-in-s', { s }) : ' …' })}</p>
         <button className="knopf klein" onClick={() => void erreichbarkeit.pruefe()}>{t('oberflaeche.erreichbar.jetzt-pruefen')}</button>
       </div>
@@ -75,7 +102,7 @@ export function ErreichbarkeitsBanner({ version, ansichtNeuLaden }: { version?: 
   }
   if (z.neueVersion) {
     return (
-      <div className="vertretungsbanner erreichbarkeit neu" role="alert">
+      <div className={`vertretungsbanner erreichbarkeit neu${art}`} role="alert">
         <p>{tn('oberflaeche.erreichbar.lade-die-seite-neu', { b: <strong>{version ? t('oberflaeche.erreichbar.neue-version-ist-da', { version }) : t('oberflaeche.erreichbar.eine-neue-version-ist')}</strong> })}</p>
         <button className="knopf klein" onClick={() => location.reload()}>{t('oberflaeche.erreichbar.seite-neu-laden')}</button>
       </div>
@@ -83,12 +110,21 @@ export function ErreichbarkeitsBanner({ version, ansichtNeuLaden }: { version?: 
   }
   if (z.stufe === 'zurueck') {
     return (
-      <div className="vertretungsbanner erreichbarkeit zurueck" role="status">
+      <div className={`vertretungsbanner erreichbarkeit zurueck${art}`} role="status">
         <p>{tn('oberflaeche.erreichbar.zeigt-die-seite-noch', { b: <strong>{t('oberflaeche.erreichbar.ablago-ist-wieder-erreichbar')}</strong> })}</p>
         <span className="knoepfe">
           <button className="knopf klein" onClick={() => { erreichbarkeit.schliessen(); ansichtNeuLaden(); }}>{t('oberflaeche.erreichbar.seite-neu-laden')}</button>
           <button className="knopf klein" onClick={() => erreichbarkeit.schliessen()} aria-label={t('oberflaeche.erreichbar.hinweis-schliessen')}>{t('oberflaeche.erreichbar.ok')}</button>
         </span>
+      </div>
+    );
+  }
+  // Nach dem eigenen Neuladen (#933): einmal sagen, warum – etwa, warum ein Passwortfeld leer ist.
+  if (neuGeladen) {
+    return (
+      <div className={`vertretungsbanner erreichbarkeit zurueck${art}`} role="status" id="neu-geladen-hinweis">
+        <p>{tn('oberflaeche.veraltet.neu-geladen', { b: <strong>{t('oberflaeche.veraltet.neu-geladen-titel')}</strong> })}</p>
+        <button className="knopf klein" onClick={() => { neuGeladenHinweisSchliessen(); setNeuGeladen(false); }} aria-label={t('oberflaeche.erreichbar.hinweis-schliessen')}>{t('oberflaeche.erreichbar.ok')}</button>
       </div>
     );
   }

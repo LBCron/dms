@@ -100,6 +100,9 @@ How the building blocks fit together is described under [Technology](technik.md)
 ??? question "Red message: “The database is only stored inside the container …”"
     With dms-komplett, the line for `/data/postgres` is missing from the Compose file. Rescue the data first (`docker compose stop`, not `down`, then `docker cp`), then add the line – step by step under [Rescue the database from the container](https://help.ablago.app/installieren/aktuell/en/komplett/#datenbank-retten).
 
+??? question "After the update the page is blank or shows errors that were fixed long ago."
+    The browser is still running the interface of the old version against the new server. Ablago detects this on every page – including sign-in and the setup assistant – and shows “A new version is available” at the top with **Reload page**; the setup assistant reloads itself (you then need to enter any passwords again). If a file of the interface is missing, Ablago answers with “not found” (404). If that doesn’t help, reload the page without the cache (usually Ctrl+Shift+R or Cmd+Shift+R).
+
 ??? question "Emails don't arrive."
     Under **Workbench → email and address**, first **Check connection**, then **Send test email** – the mail server's message is shown below. Typical: wrong password (many providers need an app password), connection type doesn't match the port (STARTTLS ↔ 587, SSL/TLS ↔ 465), port blocked by the network. The log (module `mail`) records every sending with an error. Also look in the spam folder.
 

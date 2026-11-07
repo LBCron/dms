@@ -1,5 +1,9 @@
 import './styles.css';
-import { browserSprache, gemerkteSprache, ladeSprache } from './sprache';
+import { browserSprache, gemerkteSprache, ladeSprache, t } from './sprache';
+import { beobachteVeraltet, selbstNeuLaden } from './veraltet';
+
+// Fehlende Dateien der Oberfläche (#933) schon vor dem ersten Bild erkennen – auch der Start selbst wird nachgeladen.
+beobachteVeraltet();
 
 /**
  * Start der Oberfläche. Zuerst die Sprache (#729): Der Server nennt die der angemeldeten Person, sonst die mitgeschickte
@@ -17,7 +21,12 @@ async function sprachwahl(): Promise<string> {
 
 async function starte() {
   await ladeSprache(await sprachwahl()).catch(() => {});
-  const { zeige } = await import('./start');
-  zeige();
+  // Fehlt der Teil „start“, gehört diese Seite zu einem älteren Stand (#933): einmal selbst neu laden, sonst ein Satz
+  // statt einer leeren Seite.
+  const start = await import('./start').catch(() => undefined);
+  if (start?.zeige) { start.zeige(); return; }
+  if (selbstNeuLaden()) return;
+  const wurzel = document.getElementById('root');
+  if (wurzel) wurzel.textContent = t('oberflaeche.veraltet.nicht-geladen');
 }
 void starte();

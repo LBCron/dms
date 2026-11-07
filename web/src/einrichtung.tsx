@@ -7,6 +7,7 @@ import { t, tn } from './sprache';
 import { nachDemLaden, nimmDatei, ladeDatei } from './assistent/datei';
 import { Rahmen, Sammelassistent, SprachSchritt, unterbrochenerLauf, VOR, zurSprache, type Leiste } from './assistent/Schritte';
 import { setzeStand, useAssistent } from './assistent/stand';
+import { useNeuLadenBeiNeuerVersion } from './erreichbar';
 
 /**
  * Einrichtungsassistent (#119). Seit #804: Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch
@@ -48,6 +49,9 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
   const [codeOk, setCodeOk] = useState(!e?.code || false);
   const [sicherung, setSicherung] = useState(false);
   const st = useAssistent();
+  // Neue Version (#933): ohne Rückfrage neu laden – der Stand liegt im Browser, nur Passwörter gehen verloren. Nicht,
+  // solange „Jetzt einrichten“ läuft.
+  useNeuLadenBeiNeuerVersion(!!st.lauf?.laeuft, `${phase}-${codeOk}-${st.spracheGewaehlt}-${st.neu}-${sicherung}-${st.aendern ?? st.sammlung.ansicht}`);
 
   // Gespeicherten Code (sessionStorage) beim Laden prüfen.
   useEffect(() => {
@@ -195,6 +199,7 @@ function DatenbankSchritt({ status, weiter }: { status: KontoStatus; weiter: () 
 export function AssistentAngemeldet() {
   const { aktualisieren, version } = useKonto();
   const st = useAssistent();
+  useNeuLadenBeiNeuerVersion(!!st.lauf?.laeuft, `${st.lauf?.fertig}-${st.aendern ?? st.sammlung.ansicht}`);
   useEffect(() => { if (!st.lauf) unterbrochenerLauf(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (!st.lauf) return <p className="leise mittig">{t('einrichtung.assistent.lade')}</p>;
   return <Sammelassistent zurWahl={() => {}} abschliessen={aktualisieren} version={version} />;
