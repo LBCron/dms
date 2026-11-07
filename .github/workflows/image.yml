@@ -89,6 +89,60 @@ jobs:
       - name: Bauen
         run: npm run build
 
+      # Rauchtests für die Oberfläche (#897): die wichtigsten Wege einmal im Browser, gegen das eben gebaute Ablago –
+      # gestartet wie im Workflow „Handbuch“: ohne Datenbank-Anbindung, der erste Test geht den Assistenten durch und
+      # legt dabei die eigene Datenbank dms_rauchtest im PostgreSQL dieses Jobs an.
+      - name: Ablago für die Rauchtests starten
+        run: nohup node server/dist/index.js > "$RUNNER_TEMP/rauchtest-dms.log" 2>&1 &
+        env:
+          DMS_DATENWURZEL: ${{ runner.temp }}/rauchtest-daten
+          PORT: '3000'
+          DMS_VERSION: rauchtest
+      # Dieselbe feste Playwright-Version wie im Workflow „Handbuch“ (#289), nur Chromium. Die Rechner von GitHub
+      # bringen die Bibliotheken für Chromium mit; nur wenn der Browser so nicht startet, kommen sie per apt dazu –
+      # höchstens 5 Minuten je Versuch, dann ein zweiter (die apt-Installation hängt gelegentlich).
+      - name: Playwright für die Rauchtests installieren
+        working-directory: web/rauchtest
+        shell: bash
+        run: |
+          npm install --no-audit --no-fund --no-save playwright@1.64.1
+          timeout 300 npx playwright install chromium || { echo "::warning::Download von Chromium hing oder scheiterte – zweiter Versuch"; timeout 300 npx playwright install chromium; }
+          if node -e "const { chromium } = require('playwright'); chromium.launch().then((b) => b.close())"; then exit 0; fi
+          echo "::notice::Chromium startet nicht – Bibliotheken per apt nachinstallieren"
+          for versuch in 1 2; do
+            timeout 300 npx playwright install-deps chromium && exit 0
+            [ "$versuch" = 2 ] && exit 1
+            echo "::warning::Installation der Bibliotheken hing oder scheiterte – zweiter Versuch"
+            sudo pkill -x apt-get || true; sudo pkill -x dpkg || true; sleep 5
+            sudo dpkg --configure -a || true
+          done
+      - name: Rauchtests der Oberfläche
+        shell: bash
+        run: |
+          set -o pipefail
+          node web/rauchtest/rauchtest.mjs "$RUNNER_TEMP/rauchtest-fehler" 2>&1 | tee "$RUNNER_TEMP/rauchtest.log"
+        env:
+          DMS_URL: http://localhost:3000
+          DMS_DATENWURZEL: ${{ runner.temp }}/rauchtest-daten
+          DB_HOST: localhost
+          DB_PASSWORT: dms
+          DB_NAME: dms_rauchtest
+      # Fehler als Anmerkungen (die Job-Logs sind nicht überall abrufbar) und Bilder der Seiten zum Nachsehen.
+      - name: Fehler der Rauchtests melden
+        if: failure()
+        shell: bash
+        run: |
+          grep -n -A12 "^not ok" "$RUNNER_TEMP/rauchtest.log" 2>/dev/null | head -80 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=Rauchtests::/'; echo
+          grep -E "ERROR|WARN" "$RUNNER_TEMP/rauchtest-dms.log" 2>/dev/null | tail -n 30 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=Ablago-Protokoll (Rauchtests)::/'; echo
+      - name: Bilder der Rauchtests hochladen
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rauchtest-fehler
+          path: ${{ runner.temp }}/rauchtest-fehler
+          if-no-files-found: ignore
+          retention-days: 7
+
   # Pull Requests: Image für beide Architekturen bauen (ohne Veröffentlichung), jeweils auf
   # einem passenden Rechner (#88), und prüfen, ob die Werkzeuge im Image laufen – so fallen
   # falsche Paketnamen und Probleme mit arm64 vor dem Merge auf.

@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Rauchtests für die Oberfläche (#897) – Playwright wird im Workflow installiert"
+}

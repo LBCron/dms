@@ -1,0 +1,450 @@
+/**
+ * Rauchtests für die Oberfläche (#897): die wichtigsten Wege einmal im echten Browser.
+ *
+ * Erwartet ein frisch gestartetes Ablago ohne Datenbank-Anbindung (Einrichtungsmodus), wie im Job „pruefen“:
+ * Der erste Test geht den Einrichtungsassistenten durch (die Datenbank legt er selbst an), danach legt das Skript
+ * über die Schnittstelle ein paar Daten an (Beispiele, zwei Briefe in „Neue Post“, ein zweites Konto). Jeder
+ * weitere Test öffnet einen eigenen Browser-Kontext und prüft
+ *   - das sichtbare Ergebnis seines Wegs (Überschrift, Meldung, gespeicherter Wert),
+ *   - keine Fehler in der Konsole und keine Fehler im Skript der Seite,
+ *   - keine fehlgeschlagene Anfrage und keine Antwort ab 400 von Ablago (außer den beim Test erwarteten).
+ *
+ *   DMS_URL=http://localhost:3000 DMS_DATENWURZEL=… DB_HOST=localhost DB_PASSWORT=dms node web/rauchtest/rauchtest.mjs [fehlerordner]
+ *
+ * Weitere Variablen: DB_NAME (Vorgabe dms_rauchtest), DB_BENUTZER (Vorgabe dms), DMS_EINRICHTUNGSCODE (statt der
+ * Datei unter DMS_DATENWURZEL/geheim). Bei einem Fehler liegt ein Bild der Seite im Fehlerordner.
+ *
+ * Braucht Playwright mit Chromium (im Workflow: npm install --no-save playwright im Ordner web/rauchtest).
+ * Gewartet wird immer auf Elemente oder Ereignisse, nie eine feste Zeit – sonst wackeln die Tests.
+ * Neue Abläufe bekommen ihren Rauchtest im selben PR: einen Block `rauchtest(…)` unten ergänzen
+ * (Entwicklerhandbuch, Seite „Tests“).
+ */
+import assert from 'node:assert/strict';
+import { mkdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { test, after, before } from 'node:test';
+import { chromium } from 'playwright';
+
+const BASIS = (process.env.DMS_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+const FEHLERORDNER = process.argv[2] ?? process.env.DMS_RAUCHTEST_BILDER ?? 'rauchtest-fehler';
+// Persona-Namen (Lena richtet ein, Jonas ist neu dabei) und nur Beispiel-Domains.
+const LENA = { email: 'lena@example.org', name: 'Lena Beispiel', passwort: 'rauchtest-passwort-1' };
+const JONAS = { email: 'jonas@example.org', name: 'Jonas Beispiel', passwort: 'rauchtest-passwort-2' };
+const DESKTOP = { viewport: { width: 1366, height: 900 } };
+const HANDY = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
+
+let browser;
+/** Ist Ablago eingerichtet und sind die Daten angelegt? Sonst sind die übrigen Tests sinnlos. */
+let bereit = false;
+/** Ids der Daten, die die Tests brauchen (vorbereiten). */
+const daten = {};
+
+before(async () => {
+  await mkdir(FEHLERORDNER, { recursive: true });
+  browser = await chromium.launch();
+});
+after(async () => { await browser?.close(); });
+
+/* ---------- Schnittstelle ---------- */
+
+async function api(methode, pfad, { cookie, body, roh } = {}) {
+  const r = await fetch(BASIS + pfad, {
+    method: methode,
+    headers: { 'x-dms': '1', ...(cookie ? { cookie } : {}), ...(body !== undefined ? { 'content-type': roh ? 'application/octet-stream' : 'application/json' } : {}) },
+    body: body === undefined ? undefined : roh ? body : JSON.stringify(body),
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`${methode} ${pfad}: ${r.status} ${text}`);
+  return { daten: text ? JSON.parse(text) : null, cookie: r.headers.get('set-cookie')?.split(';')[0] };
+}
+
+/** Anmelden über die Schnittstelle (schneller als das Formular, das nur „Anmelden“ selbst prüft). */
+async function sitzung(person) {
+  const { cookie } = await api('POST', '/api/konto/anmelden', { body: { email: person.email, passwort: person.passwort } });
+  if (!cookie) throw new Error(`Anmelden als ${person.email}: kein Cookie`);
+  return cookie;
+}
+
+async function warteAufAblago() {
+  for (let i = 0; i < 120; i++) {
+    // Auch im Einrichtungsmodus erreichbar.
+    try { if ((await fetch(`${BASIS}/api/konto/status`)).ok) return; } catch { /* startet noch */ }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`Ablago unter ${BASIS} antwortet nicht.`);
+}
+
+async function einrichtungscode() {
+  if (process.env.DMS_EINRICHTUNGSCODE) return process.env.DMS_EINRICHTUNGSCODE;
+  const datei = join(process.env.DMS_DATENWURZEL ?? join(import.meta.dirname, '../../data'), 'geheim', 'EINRICHTUNGSCODE');
+  for (let i = 0; i < 60; i++) {
+    try { return (await readFile(datei, 'utf8')).trim(); } catch { await new Promise((r) => setTimeout(r, 500)); }
+  }
+  throw new Error(`Einrichtungscode nicht gefunden (${datei}).`);
+}
+
+/** Kleines, gültiges PDF mit einer Zeile Text. */
+function beispielPdf(zeile) {
+  const inhalt = `BT /F1 18 Tf 60 760 Td (${zeile}) Tj ET`;
+  const objekte = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    `<< /Length ${inhalt.length} >>\nstream\n${inhalt}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const pos = [];
+  objekte.forEach((o, i) => { pos.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objekte.length + 1}\n0000000000 65535 f \n${pos.map((p) => `${String(p).padStart(10, '0')} 00000 n \n`).join('')}`;
+  pdf += `trailer\n<< /Size ${objekte.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf, 'latin1');
+}
+
+/* ---------- Rahmen für einen Rauchtest ---------- */
+
+/**
+ * Ein Rauchtest: eigener Browser-Kontext (Desktop oder Handy), auf Wunsch schon angemeldet. Sammelt Fehler der
+ * Konsole und der Seite, fehlgeschlagene Anfragen und Antworten ab 400; am Ende muss die Liste leer sein.
+ *
+ * optionen.erwartet: Antworten, die zu diesem Weg gehören – je { status, pfad: RegExp }.
+ * Nicht als Fehler zählen:
+ *   - „Failed to load resource“ in der Konsole: Chromium meldet so jede Antwort ab 400 – die prüft der Test selbst
+ *     (mit den erwarteten Ausnahmen);
+ *   - net::ERR_ABORTED: abgebrochene Anfragen (Seitenwechsel, Download abgebrochen) und Antworten ohne gelesenen
+ *     Inhalt (z. B. 204 auf einen Merker) meldet Chromium so, obwohl Ablago geantwortet hat.
+ */
+function rauchtest(name, optionen, ablauf) {
+  test(name, { timeout: 120_000 }, async (t) => {
+    if (!optionen.einrichtung && !bereit) { t.skip('Einrichtung gescheitert'); return; }
+    const k = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', ...(optionen.handy ? HANDY : DESKTOP) });
+    // Kürzer als die Vorgabe von Playwright (30 s): Ein kaputter Weg soll schnell auffallen.
+    k.setDefaultTimeout(15_000);
+    k.setDefaultNavigationTimeout(30_000);
+    const erwartet = optionen.erwartet ?? [];
+    const fehler = [];
+    k.on('console', (m) => { if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) fehler.push(`Konsole: ${m.text()}`); });
+    k.on('weberror', (e) => fehler.push(`Fehler in der Seite: ${e.error().message}`));
+    k.on('requestfailed', (r) => { if (r.failure()?.errorText !== 'net::ERR_ABORTED') fehler.push(`Anfrage fehlgeschlagen: ${r.method()} ${r.url()} (${r.failure()?.errorText})`); });
+    k.on('response', (r) => {
+      if (r.status() < 400 || !r.url().startsWith(BASIS)) return;
+      const pfad = new URL(r.url()).pathname;
+      if (erwartet.some((e) => e.status === r.status() && e.pfad.test(pfad))) return;
+      fehler.push(`Antwort ${r.status()}: ${r.request().method()} ${pfad}`);
+    });
+    if (optionen.als) {
+      const c = await sitzung(optionen.als);
+      const i = c.indexOf('=');
+      await k.addCookies([{ name: c.slice(0, i), value: c.slice(i + 1), url: BASIS }]);
+    }
+    const s = await k.newPage();
+    try {
+      await ablauf(s, k);
+    } catch (e) {
+      const datei = join(FEHLERORDNER, `${name.replace(/[^a-z0-9äöüß]+/gi, '-').toLowerCase()}.png`);
+      await s.screenshot({ path: datei, fullPage: true }).catch(() => {});
+      throw new Error(`${e.message}\n(Bild: ${datei}${fehler.length ? `; außerdem: ${fehler.join(' | ')}` : ''})`, { cause: e });
+    } finally {
+      await k.close();
+    }
+    assert.deepEqual(fehler, [], `Fehler im Browser bei „${name}“`);
+  });
+}
+
+/** Das Benutzermenü oben rechts öffnen (Knopf mit dem eigenen Namen). */
+async function benutzermenue(s, person) {
+  await s.getByRole('banner').getByRole('button', { name: person.name }).click();
+  return s.getByRole('banner').getByRole('menu');
+}
+
+/* ---------- Einrichtung und Daten ---------- */
+
+rauchtest('Einrichtung: Assistent im Browser', {
+  einrichtung: true,
+  // Nach „Übernehmen und weiter“ startet Ablago mit der Datenbank neu; bis dahin antwortet der Status mit 503.
+  erwartet: [{ status: 503, pfad: /^\/api\/konto\/status$/ }],
+}, async (s, k) => {
+  await warteAufAblago();
+  await s.goto(BASIS + '/');
+  await s.getByRole('heading', { name: 'Sprache' }).waitFor();
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByLabel('Einrichtungscode').fill(await einrichtungscode());
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByRole('heading', { name: 'Datenbank', exact: true }).waitFor();
+  await s.getByRole('textbox', { name: /^Server/ }).fill(process.env.DB_HOST ?? 'localhost');
+  await s.getByRole('textbox', { name: /^Datenbank/ }).fill(process.env.DB_NAME ?? 'dms_rauchtest');
+  await s.getByRole('textbox', { name: /^Benutzer/ }).fill(process.env.DB_BENUTZER ?? 'dms');
+  await s.getByLabel(/^Passwort/).fill(process.env.DB_PASSWORT ?? 'dms');
+  await s.getByRole('button', { name: 'Verbindung prüfen' }).click();
+  // Eine leere Datenbank legt der Assistent auf Wunsch selbst an.
+  const anlegen = s.getByRole('button', { name: /^Datenbank „.*“ anlegen$/ });
+  const weiter = s.getByRole('button', { name: 'Übernehmen und weiter' });
+  await anlegen.or(weiter).first().waitFor();
+  if (await anlegen.isVisible()) await anlegen.click();
+  await weiter.click();
+  await s.getByRole('heading', { name: 'Neu einrichten oder wiederherstellen?' }).waitFor({ timeout: 90_000 });
+  await s.getByRole('button', { name: /^Neu einrichten/ }).click();
+  await s.getByLabel(/Name deiner Ablage/).fill('Familie Beispiel');
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByRole('heading', { name: 'Dein Konto' }).waitFor();
+  await s.getByLabel('Name', { exact: true }).fill(LENA.name);
+  await s.getByLabel(/E-Mail-Adresse/).fill(LENA.email);
+  await s.locator('label').filter({ has: s.getByText(/^mindestens .* Zeichen$/) }).locator('input').fill(LENA.passwort);
+  await s.getByLabel('Passwort wiederholen').fill(LENA.passwort);
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  // Pakete: ohne Internet nur ein Hinweis – die Rauchtests brauchen keine Pakete.
+  await s.getByRole('heading', { name: 'Pakete dazuholen' }).waitFor();
+  await s.getByRole('button', { name: 'Überspringen' }).click({ timeout: 30_000 });
+  await s.getByRole('heading', { name: 'Optionales' }).waitFor();
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByRole('heading', { name: 'Zusammenfassung' }).waitFor();
+  await s.getByRole('button', { name: 'Jetzt einrichten' }).click();
+  await s.getByRole('heading', { name: /ist eingerichtet/ }).waitFor({ timeout: 60_000 });
+  const download = s.waitForEvent('download');
+  await s.getByRole('button', { name: 'Notfallblatt herunterladen' }).click();
+  await (await download).cancel().catch(() => {});
+  await s.getByText(/Notfallblatt heruntergeladen/).waitFor();
+  await s.getByRole('button', { name: 'Später' }).click();
+  await s.getByRole('button', { name: 'Einrichtung abschließen' }).click();
+  await s.waitForURL(/\/werkbank/);
+  const sitzungscookie = (await k.cookies()).find((c) => c.name === 'dms_sitzung');
+  assert.ok(sitzungscookie, 'Nach der Einrichtung keine Sitzung im Browser');
+  await vorbereiten(`${sitzungscookie.name}=${sitzungscookie.value}`);
+  bereit = true;
+});
+
+/** Daten für die Tests über die Schnittstelle – mit der Sitzung aus dem Assistenten (im Verwaltungsmodus). */
+async function vorbereiten(cookie) {
+  // Lena kennt Ablago schon: kein Rundgang über ihren Tests. Den zeigt der Test mit dem neuen Konto.
+  await api('POST', '/api/entdecken/rundgaenge/ablago', { cookie, body: { stand: 'gesehen' } });
+  await api('POST', '/api/beispiele', { cookie });
+  for (const [schluessel, betreff] of [['brief', 'Preisanpassung Strom 2027'], ['briefHandy', 'Beitragsrechnung Hausrat 2027']]) {
+    const brief = (await api('POST', '/api/post', { cookie, body: { betreff } })).daten;
+    await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent(`${betreff}.pdf`)}&typ=application/pdf`, { cookie, body: beispielPdf(betreff), roh: true });
+    daten[schluessel] = brief;
+  }
+  const einladung = (await api('POST', '/api/benutzer', { cookie, body: { email: JONAS.email, name: JONAS.name, rolle: 'mitglied', rollen: [] } })).daten;
+  await api('POST', '/api/konto/passwort-setzen', { body: { schluessel: einladung.link.split('/passwort/')[1], passwort: JONAS.passwort } });
+}
+
+/* ---------- Desktop ---------- */
+
+rauchtest('Anmelden und Startseite', {}, async (s) => {
+  await s.goto(BASIS + '/');
+  await s.getByRole('heading', { name: 'Anmelden' }).waitFor();
+  await s.getByLabel('E-Mail-Adresse').fill(LENA.email);
+  await s.getByLabel('Passwort', { exact: true }).fill(LENA.passwort);
+  await s.getByRole('button', { name: 'Anmelden' }).click();
+  await s.waitForURL(/\/ablage\/start$/);
+  await s.getByRole('heading', { name: /^Start/, level: 1 }).waitFor();
+  await s.getByText('Hallo Lena! Hier fängst du an.').waitFor();
+  // Kacheln der Startseite: zwei Briefe in „Neue Post“.
+  await s.getByRole('link', { name: /^Neue Post 2 Noch nicht zugeordnet/ }).waitFor();
+  await s.getByRole('link', { name: /^Zu erledigen/ }).first().waitFor();
+});
+
+rauchtest('Neue Post öffnen und einer Mappe zuordnen', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('link', { name: /^Neue Post 2/ }).first().click();
+  const liste = s.getByRole('region', { name: 'Mappen' });
+  await liste.getByRole('heading', { name: /^Neue Post/, level: 1 }).waitFor();
+  await liste.getByText(/^2 Mappen\b/).waitFor();
+  await liste.locator(`a[href$="/${daten.brief.id}"]`).click();
+  const mappe = s.getByRole('region', { name: 'Mappe' });
+  await mappe.getByRole('heading', { name: 'Preisanpassung Strom 2027', level: 1 }).waitFor();
+  await mappe.getByRole('tab', { name: 'Dokumente 1' }).waitFor();
+  await mappe.getByRole('button', { name: 'Zuordnen …' }).click();
+  const zuordnen = mappe.getByRole('region', { name: 'Zuordnen' });
+  await zuordnen.getByLabel('Mappentyp').selectOption({ label: 'Vertrag' });
+  await zuordnen.getByRole('button', { name: 'Stromvertrag Haus' }).click();
+  await zuordnen.getByRole('button', { name: 'Zu „Stromvertrag Haus“ zuordnen' }).click();
+  // Ergebnis: Die Post verweist auf den Vertrag und ist aus „Neue Post“ verschwunden.
+  // (Der Verweis steht oben unter dem Stand und im Feld „Zugeordnet zu“.)
+  const verweis = mappe.getByRole('link', { name: 'Stromvertrag Haus' }).first();
+  await verweis.waitFor();
+  await liste.getByText(/^1 Mappe\b/).waitFor();
+  // Das Dokument liegt jetzt beim Vertrag.
+  await verweis.click();
+  await mappe.getByRole('heading', { name: 'Stromvertrag Haus', level: 1 }).waitFor();
+  await mappe.getByRole('tab', { name: 'Vertragsunterlagen 1' }).waitFor();
+});
+
+rauchtest('„+ Neu“: Mappe anlegen und speichern', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('button', { name: '+ Neu' }).click();
+  const menue = s.getByRole('banner').getByRole('menu');
+  await menue.getByRole('menuitem', { name: /^Post/ }).waitFor();
+  await menue.getByRole('menuitem', { name: 'Mappe …' }).click();
+  await menue.getByRole('menuitem', { name: 'Vertragspartner' }).click();
+  await s.waitForURL(/\/neu$/);
+  const mappe = s.getByRole('region', { name: 'Mappe' });
+  await mappe.getByRole('heading', { name: 'Neue Mappe', level: 1 }).waitFor();
+  await mappe.getByRole('textbox', { name: 'Name*' }).fill('Versicherung Beispiel AG');
+  await mappe.getByRole('textbox', { name: 'Kundennummer' }).fill('K-2027-42');
+  await mappe.getByRole('button', { name: 'Mappe speichern' }).click();
+  await mappe.getByRole('heading', { name: 'Versicherung Beispiel AG', level: 1 }).waitFor();
+  await s.waitForURL((u) => !u.pathname.endsWith('/neu'));
+  // Nach dem Neuladen noch da.
+  await s.reload();
+  await mappe.getByRole('heading', { name: 'Versicherung Beispiel AG', level: 1 }).waitFor();
+  assert.equal(await mappe.getByRole('textbox', { name: 'Kundennummer' }).inputValue(), 'K-2027-42');
+});
+
+rauchtest('Mappe öffnen, ändern und speichern', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('complementary', { name: 'Ansichten' }).getByRole('link', { name: /^Vertrag \d/ }).click();
+  await s.getByRole('region', { name: 'Mappen' }).getByRole('link', { name: /Wartungsvertrag Heizung/ }).first().click();
+  const mappe = s.getByRole('region', { name: 'Mappe' });
+  await mappe.getByRole('heading', { name: 'Wartungsvertrag Heizung', level: 1 }).waitFor();
+  // „Änderungen verwerfen“ geht nur mit ungespeicherten Änderungen – daran sieht man, dass gespeichert ist.
+  const verwerfen = (gesperrt) => mappe.getByRole('button', { name: 'Änderungen verwerfen', disabled: gesperrt }).waitFor();
+  await verwerfen(true);
+  await mappe.getByRole('textbox', { name: 'Vertragsnummer' }).fill('WV-2027-1');
+  await verwerfen(false);
+  await mappe.getByRole('button', { name: 'Mappe speichern' }).click();
+  await verwerfen(true);
+  await s.reload();
+  await mappe.getByRole('heading', { name: 'Wartungsvertrag Heizung', level: 1 }).waitFor();
+  assert.equal(await mappe.getByRole('textbox', { name: 'Vertragsnummer' }).inputValue(), 'WV-2027-1');
+});
+
+rauchtest('Suche auf der Startseite', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  const schnell = s.getByRole('region', { name: 'Schnell finden' });
+  await schnell.getByRole('searchbox', { name: 'Alle Mappen durchsuchen' }).fill('Stadtwerke');
+  await schnell.getByText('Ein Treffer').waitFor();
+  await schnell.getByRole('link', { name: 'Stadtwerke Musterstadt' }).click();
+  await s.getByRole('region', { name: 'Mappe' }).getByRole('heading', { name: 'Stadtwerke Musterstadt', level: 1 }).waitFor();
+  // Ohne Treffer: ein Hinweis statt einer leeren Seite.
+  await s.goto(BASIS + '/ablage/start');
+  await schnell.getByRole('searchbox', { name: 'Alle Mappen durchsuchen' }).fill('Xylofonunterricht');
+  await schnell.getByText('Nichts gefunden für „Xylofonunterricht“.').waitFor();
+});
+
+/** Verwaltungsmodus über das Benutzermenü; fragt Ablago nach dem Passwort, wird es eingegeben. */
+async function verwalten(s) {
+  const menue = await benutzermenue(s, LENA);
+  await menue.getByRole('button', { name: 'Ablago verwalten' }).click();
+  const balken = s.getByRole('region', { name: 'Du verwaltest gerade Ablago.' });
+  const dialog = s.getByRole('dialog');
+  await balken.or(dialog).first().waitFor();
+  if (await dialog.isVisible()) {
+    await dialog.getByLabel('Passwort').fill(LENA.passwort);
+    await dialog.locator('button[type="submit"]').click();
+  }
+  await balken.waitFor();
+}
+
+rauchtest('Verwaltungsmodus betreten, Werkbank und Pakete', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await verwalten(s);
+  await s.waitForURL(/\/werkbank/);
+  const bereiche = s.getByRole('complementary', { name: 'Bereiche' });
+  await bereiche.getByRole('link', { name: 'Pakete', exact: true }).click();
+  const elemente = s.getByRole('region', { name: 'Elemente' });
+  await elemente.getByRole('heading', { name: /^Pakete/, level: 1 }).first().waitFor();
+  await elemente.getByRole('button', { name: 'Katalog abrufen' }).waitFor();
+  // Zurück in die Ablage: Der rote Balken bleibt, bis man die Verwaltung beendet.
+  await s.getByRole('button', { name: 'Verwaltung beenden' }).click();
+  await s.getByRole('region', { name: 'Du verwaltest gerade Ablago.' }).waitFor({ state: 'detached' });
+  await s.waitForURL(/\/ablage/);
+});
+
+rauchtest('Werkbank: Mappentyp bearbeiten (Felder)', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await verwalten(s);
+  await s.getByRole('complementary', { name: 'Bereiche' }).getByRole('link', { name: /^Mappentypen/ }).click();
+  await s.getByRole('link', { name: /^Vertrag \d+ Felder/ }).click();
+  const bearbeitung = s.getByRole('region', { name: 'Bearbeitung' });
+  await bearbeitung.getByRole('heading', { name: 'Vertrag', level: 1 }).waitFor();
+  const felder = bearbeitung.getByRole('region', { name: 'Felder' });
+  await felder.getByRole('button', { name: 'Felder' }).click();
+  await felder.getByRole('button', { name: '+ Feld hinzufügen' }).click();
+  await felder.getByRole('textbox', { name: 'Bezeichnung' }).fill('Kundenportal');
+  await bearbeitung.getByRole('button', { name: 'Mappentyp speichern' }).click();
+  await bearbeitung.getByRole('button', { name: 'Mappentyp speichern', disabled: true }).waitFor();
+  await felder.getByRole('button', { name: /^Kundenportal kundenportal/ }).waitFor();
+  // Das neue Feld steht im Formular der Mappen.
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('complementary', { name: 'Ansichten' }).getByRole('link', { name: /^Vertrag \d/ }).click();
+  await s.getByRole('region', { name: 'Mappen' }).getByRole('link', { name: /Stromvertrag Haus/ }).first().click();
+  await s.getByRole('region', { name: 'Mappe' }).getByRole('textbox', { name: 'Kundenportal' }).waitFor();
+});
+
+rauchtest('Rundgang beim ersten Anmelden und „Ablago entdecken“', {}, async (s) => {
+  await s.goto(BASIS + '/');
+  await s.getByLabel('E-Mail-Adresse').fill(JONAS.email);
+  await s.getByLabel('Passwort', { exact: true }).fill(JONAS.passwort);
+  await s.getByRole('button', { name: 'Anmelden' }).click();
+  const rundgang = s.getByRole('dialog');
+  await rundgang.getByText('Schritt 1 von 5').waitFor();
+  for (let i = 2; i <= 5; i++) {
+    await rundgang.getByRole('button', { name: 'Weiter' }).click();
+    await rundgang.getByText(`Schritt ${i} von 5`).waitFor();
+  }
+  await rundgang.getByRole('button', { name: 'Fertig' }).click();
+  await rundgang.waitFor({ state: 'detached' });
+  await s.getByText('Hallo Jonas! Hier fängst du an.').waitFor();
+  // „Ablago entdecken“ im Benutzermenü: Tipps und der Rundgang zum Wiederholen.
+  const menue = await benutzermenue(s, JONAS);
+  await menue.getByRole('link', { name: 'Ablago entdecken' }).click();
+  await s.getByRole('heading', { name: 'Ablago entdecken', level: 1 }).waitFor();
+  await s.getByRole('region', { name: 'Tipps' }).getByRole('link').first().waitFor();
+  await s.getByRole('region', { name: 'Rundgänge' }).getByRole('button', { name: 'Rundgang starten' }).click();
+  await rundgang.getByText('Schritt 1 von 5').waitFor();
+  await rundgang.getByRole('button', { name: 'Überspringen' }).click();
+  await rundgang.waitFor({ state: 'detached' });
+});
+
+rauchtest('Abmelden', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByText('Hallo Lena! Hier fängst du an.').waitFor();
+  const menue = await benutzermenue(s, LENA);
+  await menue.getByRole('button', { name: 'Abmelden' }).click();
+  await s.getByRole('heading', { name: 'Anmelden' }).waitFor();
+  // Die Sitzung ist wirklich weg: Die Ablage führt wieder zur Anmeldung.
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('heading', { name: 'Anmelden' }).waitFor();
+});
+
+/* ---------- Handy ---------- */
+
+rauchtest('Handy: Anmelden und Startseite', { handy: true }, async (s) => {
+  await s.goto(BASIS + '/');
+  await s.getByLabel('E-Mail-Adresse').fill(LENA.email);
+  await s.getByLabel('Passwort', { exact: true }).fill(LENA.passwort);
+  await s.getByRole('button', { name: 'Anmelden' }).click();
+  await s.waitForURL(/\/ablage\/start$/);
+  // Am Handy: Ansicht oben als Auswahl, Startseite einspaltig mit „Post fotografieren“.
+  await s.getByRole('heading', { name: /^Start/, level: 1 }).waitFor();
+  await s.getByRole('button', { name: /Post fotografieren/ }).waitFor();
+  await s.getByRole('link', { name: /^Neue Post 1/ }).waitFor();
+  await s.getByRole('button', { name: '+ Neu' }).waitFor();
+  await keineWaagerechteRolle(s);
+});
+
+rauchtest('Handy: Neue Post öffnen', { handy: true, als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('link', { name: /^Neue Post 1/ }).first().click();
+  await s.locator(`a[href$="/${daten.briefHandy.id}"]`).click();
+  await s.getByRole('heading', { name: 'Beitragsrechnung Hausrat 2027', level: 1 }).waitFor();
+  await s.getByRole('button', { name: 'Zuordnen …' }).waitFor();
+  await keineWaagerechteRolle(s);
+});
+
+rauchtest('Handy: Suche', { handy: true, als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('searchbox', { name: 'Alle Mappen durchsuchen' }).fill('Stromvertrag');
+  await s.getByRole('link', { name: 'Stromvertrag Haus' }).click();
+  await s.getByRole('heading', { name: 'Stromvertrag Haus', level: 1 }).waitFor();
+  await keineWaagerechteRolle(s);
+});
+
+/* ---------- Hilfen ---------- */
+
+/** Am Handy darf die Seite nicht waagerecht rollen (die genaue Prüfung je Element macht mobil-pruefen.mjs). */
+async function keineWaagerechteRolle(s) {
+  const { breit, sicht } = await s.evaluate(() => ({ breit: document.documentElement.scrollWidth, sicht: document.documentElement.clientWidth }));
+  assert.ok(breit <= sicht, `Die Seite ist am Handy breiter als der Bildschirm (${breit} > ${sicht} px)`);
+}
