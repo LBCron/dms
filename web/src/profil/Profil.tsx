@@ -77,7 +77,7 @@ export function Profil({ teile = [] }: { teile?: string[] }) {
           {(Object.keys(BEREICHE) as Array<keyof typeof BEREICHE>).map((k) => (
             <Link key={k} to={`/profil/${k}`} className={`typeintrag ${b === k ? 'an' : ''}`}><span className="nm">{BEREICHE[k]}</span></Link>
           ))}
-          <Link to="/profil/abwesenheit" className={`typeintrag ${b === 'abwesenheit' ? 'an' : ''}`}><span className="nm">{t('profil.profil.abwesenheit')}</span></Link>
+          <Link to="/profil/abwesenheit" anker="konto.abwesenheit" className={`typeintrag ${b === 'abwesenheit' ? 'an' : ''}`}><span className="nm">{t('profil.profil.abwesenheit')}</span></Link>
           {laufwerk && <Link to="/profil/laufwerk" className={`typeintrag ${b === 'laufwerk' ? 'an' : ''}`}><span className="nm">{t('profil.laufwerk.bereich')}</span></Link>}
         </nav>
       </aside>
@@ -201,7 +201,7 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
       <SchriftWahl />
 
       {/* #420: Die Startseite steuert, was du siehst – deshalb unter Darstellung. */}
-      <div className="blatt">
+      <div className="blatt" data-anker="konto.startseite">
         <h2 className="h3">{t('profil.profil.startseite')}</h2>
         <p className="leise">{t('profil.profil.die-startseite-der-ablage')}</p>
         <label className="haken"><input type="checkbox" checked={d.einstellungen.startseite !== false}
@@ -215,6 +215,10 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
               {d.sichten.filter((s) => s.typen.length > 0).map((s) => <option key={s.id} value={s.id}>{t('profil.profil.ansicht', { name: s.name })}</option>)}
             </select></label>
         )}
+        {/* Tipp des Tages (#832): an (Vorgabe) oder aus; „Ablago entdecken“ zeigt alle Tipps trotzdem. */}
+        <label className="haken" data-anker="konto.tipps"><input type="checkbox" checked={d.einstellungen.tipps !== false}
+          onChange={(e) => d.setzeEinstellung('tipps', e.target.checked ? null : false)} />
+          <span>{tn('entdecken.konto.tipps', { klein: <small className="hilfe">{t('entdecken.konto.tipps.hilfe')}</small> })}</span></label>
       </div>
 
       {/* #725: Darstellung, keine Benachrichtigung – deshalb hier statt unter Benachrichtigungen. */}
@@ -241,7 +245,7 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
       </>}
 
       {bereich === 'benachrichtigungen' && <>
-      <div className="blatt">
+      <div className="blatt" data-anker="konto.zusammenfassung">
         <h2 className="h3">{tn('profil.profil.aufgaben', { hilfe: <Hilfe ort="profil.benachrichtigungen" /> })}</h2>
         <p className="leise">{tn('profil.profil.mappen-mit-offenen-aufgaben', { b: <strong>{t('profil.profil.taegliche-zusammenfassung')}</strong> })}</p>
         <ZusammenfassungEinstellen />
@@ -272,7 +276,7 @@ function SchriftWahl() {
   const { ich } = useKonto();
   const [schrift, setSchrift] = useState<Schrift>(() => leseSchrift(ich.id));
   return (
-    <div className="blatt">
+    <div className="blatt" data-anker="konto.schrift">
       <h2 className="h3">{t('profil.profil.schriftgroesse-auf-diesem-geraet')}</h2>
       <p className="leise">{t('profil.profil.gilt-nur-fuer-das')}</p>
       <div className="segmente" role="radiogroup" aria-label={t('profil.profil.schriftgroesse')}>

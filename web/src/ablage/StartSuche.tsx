@@ -69,7 +69,7 @@ export function StartSuche({ sonst, ohneSuche = false }: { sonst?: ReactNode; oh
 
   return (
     <section className="ss-suche" aria-label={t('ablage.startsuche.schnell-finden')}>
-      <form role="search" onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement | null)?.blur?.(); void absenden(); }}>
+      <form role="search" data-anker="startseite.suche" onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement | null)?.blur?.(); void absenden(); }}>
         <label className="sr-only" htmlFor="ss-feld">{t('ablage.startsuche.alle-mappen-durchsuchen')}</label>
         <input id="ss-feld" className="ss-feld" type="search" enterKeyHint="search" autoComplete="off" spellCheck={false}
           placeholder={t('ablage.startsuche.suchen-name-nummer-kennzeichen')} value={eingabe} onChange={(e) => setEingabe(e.target.value)} />

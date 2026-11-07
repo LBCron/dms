@@ -11,6 +11,7 @@ import api from './sprachen/de/api.json';
 import automatisierung from './sprachen/de/automatisierung.json';
 import dritte from './sprachen/de/dritte.json';
 import einrichtung from './sprachen/de/einrichtung.json';
+import entdecken from './sprachen/de/entdecken.json';
 import ereignisse from './sprachen/de/ereignisse.json';
 import erkennung from './sprachen/de/erkennung.json';
 import felder from './sprachen/de/felder.json';
@@ -35,4 +36,4 @@ import volltext from './sprachen/de/volltext.json';
 import webhook from './sprachen/de/webhook.json';
 import werkbank from './sprachen/de/werkbank.json';
 
-export const DEUTSCH: Readonly<Record<string, Sprachdatei>> = { ablage, aehnlich, anmeldung, api, automatisierung, dritte, einrichtung, ereignisse, erkennung, felder, fragen, gemeinsam, konten, lasttest, mail, mappen, mappentypen, meldungen, notfall, oberflaeche, pakete, profil, spalten, start, suche, systemzustand, termine, volltext, webhook, werkbank };
+export const DEUTSCH: Readonly<Record<string, Sprachdatei>> = { ablage, aehnlich, anmeldung, api, automatisierung, dritte, einrichtung, entdecken, ereignisse, erkennung, felder, fragen, gemeinsam, konten, lasttest, mail, mappen, mappentypen, meldungen, notfall, oberflaeche, pakete, profil, spalten, start, suche, systemzustand, termine, volltext, webhook, werkbank };

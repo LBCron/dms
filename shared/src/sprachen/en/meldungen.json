@@ -1645,5 +1645,9 @@
   "uebersetzung.paket-fehler": "“{name}” couldn’t translate the text: {grund}",
   "uebersetzung.kein-json": "The answer is not a JSON object.",
   "uebersetzung.ohne-text": "The answer has no “text”.",
-  "verwaltung.text-uebersetzt": "Text translated"
+  "verwaltung.text-uebersetzt": "Text translated",
+  "entdecken.aktion": "Unknown action for a tip.",
+  "entdecken.tipp": "This tip does not exist.",
+  "entdecken.stand": "A tour is “gesehen” (seen) or “spaeter” (later).",
+  "entdecken.rundgang": "This tour does not exist."
 }

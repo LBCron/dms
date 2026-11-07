@@ -18,6 +18,7 @@ import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten'
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
 import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
 import type { Einstellungsbeschreibung } from '../../shared/src/paketeinstellungen';
+import type { EntdeckenStand } from '../../shared/src/entdecken';
 import type { DateiFehler, Einrichtungsplan, Planprobleme } from '../../shared/src/einrichtungsplan';
 import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung, SelbstErstellt, SelbstErstelltDetail } from '../../shared/src/paketerstellung';
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
@@ -617,6 +618,10 @@ export const api = {
   mappenLoeschen: (ids: string[], probe = false, anlass?: LoeschAnlass) =>
     anfrage<{ mappen: number; dokumente: number; geloescht: number; ausgelassen: Array<{ id: string; titel: string; grund: string }> }>('POST', '/api/mappen/loeschen', { ids, probe, ...grundAus(anlass) }),
   einstellungen: () => anfrage<Record<string, unknown>>('GET', '/api/konto/einstellungen'),
+  // Ablago entdecken (#831, #832): Rundgänge, Tipps, Tipp des Tages; gesehen/ausgeblendet je Person.
+  entdecken: () => anfrage<EntdeckenStand>('GET', '/api/entdecken'),
+  tippHandlung: (schluessel: string, aktion: 'gezeigt' | 'erledigt' | 'ausblenden' | 'einblenden') => anfrage<null>('POST', `/api/entdecken/tipps/${encodeURIComponent(schluessel)}`, { aktion }),
+  rundgangMerken: (schluessel: string, stand: 'gesehen' | 'spaeter') => anfrage<null>('POST', `/api/entdecken/rundgaenge/${encodeURIComponent(schluessel)}`, { stand }),
   designs: () => anfrage<{ designs: Design[]; standard: string | null }>('GET', '/api/designs'),
   apiSchluessel: () => anfrage<ApiSchluessel[]>('GET', '/api/konto/api-schluessel'),
   apiSchluesselAnlegen: (d: ApiSchluesselEingabe) => anfrage<ApiSchluessel & { schluessel: string }>('POST', '/api/konto/api-schluessel', d),

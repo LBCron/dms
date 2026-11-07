@@ -62,6 +62,8 @@ RUN npm ci --omit=dev --workspace server --no-audit --no-fund && npm cache clean
      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /root/.npm
 COPY --from=bau /app/server/dist server/dist
 COPY server/migrations server/migrations
+# Ablagos eigene Rundgänge, Tipps und die Ankerliste (#831, #832): YAML, liest der Server beim Start.
+COPY shared/entdecken shared/entdecken
 COPY --from=bau /app/web/dist web/dist
 COPY --from=hilfe /hilfe web/dist/hilfe
 # Befehl dms in der Konsole des Containers (#244): docker exec -it <container> dms hilfe

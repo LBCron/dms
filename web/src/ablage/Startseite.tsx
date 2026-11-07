@@ -12,6 +12,7 @@ import { titelOder } from '../seiten';
 import { neuePost } from './NeuePost';
 import { StartSuche } from './StartSuche';
 import { FragAblage } from './FragAblage';
+import { TippZeile } from '../entdecken/TippZeile';
 import { istTouch, postFotografieren } from './PostKamera';
 import { AnsichtSymbol, Symbol } from '../Symbol';
 import { darfPostAnlegen } from '../../../shared/src/model';
@@ -31,10 +32,10 @@ import { sichtName } from '../../../shared/src/beschriftung';
 const zahl = (n: number) => n.toLocaleString(gebietsschema());
 type Startdaten = { zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean };
 
-function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null }) {
+function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol, anker }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null; anker?: string }) {
   const nichts = anzahl === 0;
   return (
-    <div className="start-feld" data-kachel={name}>
+    <div className="start-feld" data-kachel={name} data-anker={anker}>
       <Link to={to} className={`kachel ${art} ${nichts ? 'erledigt' : ''}`}>
         <span className="kacheltitel">{symbol && <><AnsichtSymbol name={symbol} /> </>}{titel}</span>
         {anzahl === null ? <span className="kachelzahl leise">…</span> : nichts ? <span className="kachelleer"><Symbol name="haken" /> {leer}</span> : <span className="kachelzahl">{zahl(anzahl)}</span>}
@@ -50,7 +51,7 @@ function TerminKachel({ z }: { z: { termin: Termin | null; ueberfaellig: number 
   const zumMonat = () => { if (d.einstellungen.erledigen_ansicht !== 'monat' && d.einstellungen.erledigen_ansicht !== 'jahr') d.setzeEinstellung('erledigen_ansicht', 'monat'); };
   const x = z?.termin;
   return (
-    <div className="start-feld" data-kachel="termin" onClickCapture={zumMonat}>
+    <div className="start-feld" data-kachel="termin" data-anker="startseite.termin" onClickCapture={zumMonat}>
       <Link to="/ablage/eingang" className={`kachel ruhig ${z && !x ? 'erledigt' : ''}`}>
         <span className="kacheltitel">{t('termine.kachel')}</span>
         {!z ? <span className="kachelzahl leise">…</span>
@@ -114,6 +115,8 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
         <StartSuche ohneSuche={!!daten?.leer} sonst={<>
         {/* Frag deine Ablage (#444): eigenes Feld, nur mit einem Antwort-Paket. */}
         {!daten?.leer && <FragAblage />}
+        {/* Tipp des Tages (#832): eine leise Zeile unter „Frag deine Ablage“ – bleibt dort, wenn die Startseite zum Dashboard wird (#421). */}
+        {!daten?.leer && <TippZeile />}
         {/* Handy (#490): mit einem Tipp in die Kamera – mehrseitig, ein PDF, eine Post. */}
         {kamera && <button type="button" className="knopf gruen pk-start" onClick={() => postFotografieren()}>{tn('ablage.startseite.post-fotografieren', { symbol: <Symbol name="kamera" /> })}</button>}
         {daten?.leer ? (
@@ -135,8 +138,8 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
           </div>
         ) : (
           <div className="kacheln start-raster">
-            <Kachel name="eingang" to="/ablage/eingang" art="auffaellig" titel={t('ablage.startseite.zu-erledigen')} anzahl={z(d.zaehler.eingang)} leer={t('ablage.startseite.nichts-zu-erledigen')} unter={t('ablage.startseite.aufgaben-und-mappen-an')} />
-            {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={sichtName(postSicht)} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer={t('ablage.startseite.keine-neue-post')} unter={t('ablage.startseite.noch-nicht-zugeordnet')} />}
+            <Kachel name="eingang" anker="startseite.zu-erledigen" to="/ablage/eingang" art="auffaellig" titel={t('ablage.startseite.zu-erledigen')} anzahl={z(d.zaehler.eingang)} leer={t('ablage.startseite.nichts-zu-erledigen')} unter={t('ablage.startseite.aufgaben-und-mappen-an')} />
+            {postSicht && <Kachel name="post" anker="startseite.neue-post" to={`/ablage/${postSicht.id}`} art="post" titel={sichtName(postSicht)} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer={t('ablage.startseite.keine-neue-post')} unter={t('ablage.startseite.noch-nicht-zugeordnet')} />}
             <TerminKachel z={termin} />
             {lieblings
               ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} symbol={lieblings.symbol} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer={t('ablage.startseite.leer')} />

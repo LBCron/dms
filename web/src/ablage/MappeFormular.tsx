@@ -128,7 +128,7 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
         {/* Kopfzeile (#427): „Mappe ▾“ neben dem Stern – gehört sichtbar zur Mappe, nicht zum Aufgaben-Banner. */}
         <div className="titelzeile"><h1><Ehemalig id={mappe.id}>{titelOder(mappe.titel)}</Ehemalig></h1>
           <div className="mappenkopf-knoepfe">
-            <Stern mappeId={mappe.id} an={!!details.favorit} />
+            <Stern mappeId={mappe.id} an={!!details.favorit} anker="mappe.stern" />
             <Aktionsmenue aufgabe={() => setAufgabeOffen(true)} erinnern={() => setErinnernOffen(true)} email={details.exportierbar === false ? undefined : () => setEmailOffen(true)} drucken={details.exportierbar === false ? undefined : () => setDrucken(true)}
               link={direktlink ? () => { const l = location.origin + direktlink; void kopiere(l).then((ok) => setKopiert({ link: l, ok })); } : undefined}
               auskunft={details.auskunft ? () => geheZu(`/werkbank/auskuenfte/neu?mappe=${encodeURIComponent(details.mappe.id)}`) : undefined}
@@ -601,7 +601,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
           const n = fehlerAuf(r);
           const zahl = anzahl(r);
           return (
-            <button key={r.key} type="button" role="tab" aria-selected={r.key === reg?.key} className={`registertab art-${r.art} ${r.key === reg?.key ? 'an' : ''}`}
+            <button key={r.key} type="button" role="tab" data-anker={`mappe.register:${r.key}`} aria-selected={r.key === reg?.key} className={`registertab art-${r.art} ${r.key === reg?.key ? 'an' : ''}`}
               onClick={() => setAktiv(r.key)}>
               {registerName(r)}
               {n > 0 && <span className="fehlerpunkt" title={t('ablage.mappeformular.felder-mit-fehler', { anzahl: n })}>{n}</span>}
@@ -729,7 +729,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
         : f.typ === 'text' && f.format ? <FormatWert f={f} wert={String(roh ?? '')} /> : String(roh ?? '')
     }</div>;
     return (
-      <div className={`feld ${f.typ === 'langtext' || f.typ === 'formatiert' ? 'breit' : ''}`}>
+      <div className={`feld ${f.typ === 'langtext' || f.typ === 'formatiert' ? 'breit' : ''}`} data-anker={`mappe.feld:${f.key}`}>
         <div className="feldkopf"><span className="label">{feldLabel(f)}</span></div>
         {ctl}
         {uebersetzung}
@@ -813,7 +813,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
   }
 
   return (
-    <div className={`feld ${breit ? 'breit' : ''} ${fehler ? 'fehlerhaft' : ''}`}>
+    <div className={`feld ${breit ? 'breit' : ''} ${fehler ? 'fehlerhaft' : ''}`} data-anker={`mappe.feld:${f.key}`}>
       <div className="feldkopf">
         {mitLabelFor ? <label htmlFor={id}>{feldLabel(f)}{f.pflicht && <span className="pflicht">*</span>}</label> : <span className="label">{feldLabel(f)}{f.pflicht && <span className="pflicht">*</span>}</span>}
         {f.typ === 'referenz' && <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span>}

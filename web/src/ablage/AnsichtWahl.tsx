@@ -74,7 +74,7 @@ export function AnsichtWahl({ aktiv, aktuell, feste, ohne = [] }: { aktiv?: stri
 
   return (
     <div className="aw">
-      <button type="button" className="aw-knopf" aria-haspopup="dialog" aria-expanded={offen} onClick={() => setOffen(true)}>
+      <button type="button" className="aw-knopf" data-anker="navigation.ansicht-waehlen" aria-haspopup="dialog" aria-expanded={offen} onClick={() => setOffen(true)}>
         <span className="ueber">{t('ablage.ansichtwahl.ansicht')}</span><span className="aw-aktuell">{aktuell}</span><span aria-hidden="true">▾</span>
       </button>
       {offen && <>

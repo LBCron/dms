@@ -23,6 +23,9 @@ import { UeberDms } from './UeberDms';
 import { ADMIN_START, startseiteVon } from '../../shared/src/startseite';
 import { t, tn } from './sprache';
 import { gebietsschema } from '../../shared/src/sprache';
+import { Entdecken } from './entdecken/Entdecken';
+import { RundgangAnzeige } from './entdecken/Rundgang';
+import { starteRundgang, useEntdecken } from './entdecken/stand';
 
 export function App() {
   const { pfad, suche } = useOrt();
@@ -38,10 +41,20 @@ export function App() {
   // Titel und Symbol im Browser-Tab aus dem Design (#72).
   const marke = schriftzugVon(d.meinDesign) || 'Ablago';
   const symbol = logoUrl(d.meinDesign);
+  const entdeckenSeite = teile[0] === 'entdecken';
   useEffect(() => {
-    document.title = `${marke} – ${{ ablage: t('oberflaeche.app.ablage'), werkbank: t('oberflaeche.app.werkbank'), profil: t('oberflaeche.app.mein-konto') }[bereich]}`;
+    document.title = `${marke} – ${entdeckenSeite ? t('entdecken.menue') : { ablage: t('oberflaeche.app.ablage'), werkbank: t('oberflaeche.app.werkbank'), profil: t('oberflaeche.app.mein-konto') }[bereich]}`;
     setzeSymbol(symbol);
-  }, [marke, symbol, bereich]);
+  }, [marke, symbol, bereich, entdeckenSeite]);
+  // Rundgang bei der ersten Anmeldung (#831): nur neue Konten (der Server entscheidet: `starten`), nur in der Ablage,
+  // nie in Vertretung – und je Laden der Seite höchstens einmal.
+  const { stand: entdecken } = useEntdecken();
+  const rundgangGestartet = useRef(false);
+  useEffect(() => {
+    if (rundgangGestartet.current || !entdecken?.starten || vertretung || !d.geladen || bereich !== 'ablage' || entdeckenSeite) return;
+    rundgangGestartet.current = true;
+    starteRundgang(entdecken.starten, true);
+  }, [entdecken, vertretung, d.geladen, bereich, entdeckenSeite]);
   // Schriftgröße dieses Geräts (#69: gewählt in Profil → Darstellung).
   useEffect(() => { setzeSchrift(ich.id, leseSchrift(ich.id)); }, [ich.id]);
 
@@ -60,11 +73,12 @@ export function App() {
   else if (bereich === 'werkbank' && !admin) inhalt = <OhneModus paket={teile[1] === 'pakete' && new URLSearchParams(location.search).has('installieren')} />;
   else if (bereich === 'werkbank') inhalt = <Werkbank teile={teile} />;
   else if (teile[0] === 'api-doku') inhalt = <ApiDoku />;
+  else if (entdeckenSeite) inhalt = <Entdecken />;
   else if (bereich === 'profil') inhalt = <Profil teile={teile} />;
   else inhalt = <Ablage teile={teile} suche={suche} />;
 
   return (
-    <div className={`rahmen ${bereich}`}>
+    <div className={`rahmen ${entdeckenSeite ? 'entdecken-seite' : bereich}`}>
       {vertretung && (
         <div className="vertretungsbanner" role="alert">
           <p>{tn('oberflaeche.app.seit-alles-was-du', { b: <strong>{t('oberflaeche.app.du-agierst-als', { adminName: vertretung.adminName, wert: ich.name || ich.email })}</strong>, email: ich.email, uhrzeit: uhrzeit(vertretung.beginn) })}</p>
@@ -120,6 +134,7 @@ export function App() {
       </main>
       <PostAblage werkbank={bereich === 'werkbank'} />
       <PostKamera />
+      <RundgangAnzeige />
       {ich.entwicklermodus && <Messpanel />}
     </div>
   );
@@ -183,7 +198,7 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
   }, [offen]);
   return (
     <div className="benutzermenue" ref={rahmen}>
-      <button type="button" className={`wer ${an ? 'an' : ''}`} aria-haspopup="menu" aria-expanded={offen} onClick={() => setOffen(!offen)}>
+      <button type="button" className={`wer ${an ? 'an' : ''}`} data-anker="benutzermenue" aria-haspopup="menu" aria-expanded={offen} onClick={() => setOffen(!offen)}>
         {ich.name || ich.email}{abwesend && <span className="abwesend-punkt" title={t('oberflaeche.app.du-bist-abwesend')} aria-label={t('oberflaeche.app.abwesend')} />} <span aria-hidden="true">▾</span>
       </button>
       {offen && <div className="hy-schleier" aria-hidden="true" onClick={() => setOffen(false)} />}
@@ -205,6 +220,8 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
             : <button type="button" id="menue-verwalten" className="menuepunkt" onClick={() => { setOffen(false); void verwalten(); }}><Pikto name="verwalten" />{t('konten.verwaltung.menue.verwalten')}</button>)}
           {laufwerk && <Link to="/profil/laufwerk" className="menuepunkt"><Pikto name="laufwerk" />{t('profil.laufwerk.menue')}</Link>}
           <a href={handbuch('benutzer')} target="_blank" rel="noreferrer" className="menuepunkt" onClick={() => setOffen(false)}><Pikto name="hilfe" />{tn('oberflaeche.app.hilfe', { span: <span aria-hidden="true">↗</span> })}</a>
+          {/* #832: Rundgänge und Tipps zum Stöbern – bei der Hilfe, ohne eigenen Menüpunkt „Rundgang starten“. */}
+          <Link to="/entdecken" className="menuepunkt"><Pikto name="entdecken" />{t('entdecken.menue')}</Link>
           <Link to="/profil/fehler-melden" className="menuepunkt"><Pikto name="fehler" />{t('oberflaeche.app.fehler-melden')}</Link>
           <button type="button" className="menuepunkt" onClick={() => { setOffen(false); setUeber(true); }}><Pikto name="info" />{t('oberflaeche.app.ueber-ablago')}</button>
           <button type="button" className="menuepunkt" onClick={() => void abmelden()}><Pikto name="abmelden" />{t('oberflaeche.app.abmelden')}</button>

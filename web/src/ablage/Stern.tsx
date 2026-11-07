@@ -8,7 +8,7 @@ import { t } from '../sprache';
  * Favorit (#62): Stern zum Merken einer Mappe. Persönlich – ändert weder „zuletzt geändert“
  * noch das Protokoll. Nach dem Umschalten werden Zähler und Listen neu geladen.
  */
-export function Stern({ mappeId, an, titel, klein }: { mappeId: string; an: boolean; titel?: string; klein?: boolean }) {
+export function Stern({ mappeId, an, titel, klein, anker }: { mappeId: string; an: boolean; titel?: string; klein?: boolean; anker?: string }) {
   const d = useDaten();
   const [jetzt, setJetzt] = useState(an);
   const [laeuft, setLaeuft] = useState(false);
@@ -22,7 +22,7 @@ export function Stern({ mappeId, an, titel, klein }: { mappeId: string; an: bool
   }
   const text = jetzt ? t('ablage.stern.aus-den-favoriten-entfernen') : t('ablage.stern.zu-den-favoriten');
   return (
-    <button type="button" className={`stern ${jetzt ? 'an' : ''} ${klein ? 'klein' : ''}`} aria-pressed={jetzt}
+    <button type="button" className={`stern ${jetzt ? 'an' : ''} ${klein ? 'klein' : ''}`} data-anker={anker} aria-pressed={jetzt}
       aria-label={titel ? `${titel}: ${text}` : text} title={text} onClick={(e) => void umschalten(e)}>
       {/* #507: Symbol statt Textzeichen; gesetzt = gefüllt. */}
       <Symbol name="stern" className={jetzt ? 'sym-voll' : undefined} />

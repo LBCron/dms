@@ -1,0 +1,36 @@
+# Ablagos eigene Rundgänge (#831) – im selben Format wie inhalt/rundgaenge.yaml in Paketen (Stufe 2).
+#
+# Die Schritte sind Daten, kein Code: Ändern, Streichen und Umstellen ist ein kleiner Patch hier. Die Texte stehen in
+# den Sprachdateien (shared/src/sprachen/<sprache>/entdecken.json) unter
+#   rundgang.<rundgang>.titel | .beschreibung | .ende
+#   rundgang.<rundgang>.<schritt>.titel | .text | .text-handy | .text-verwalten | .ort
+# (Unterstriche im Schlüssel werden dort zu Bindestrichen). Pakete schreiben die Texte direkt hierher (titel, text …).
+#
+# Je Rundgang:
+#   schluessel  Name (klein, Ziffern, _)
+#   start       manuell | erste_anmeldung (nur Ablago: bei der ersten Anmeldung neuer Konten)
+#   fuer        lesen (alle, Vorgabe) | verwalten (nur Personen mit Verwaltungsrecht)
+#   oeffne      { seite: start } – diese Seite vor dem ersten Schritt öffnen
+#   schritte    höchstens 8; je Schritt:
+#     schluessel  Name
+#     ziel        Anker aus anker.yaml oder eine Liste davon: der erste, der sichtbar ist, gilt (sonst fällt der
+#                 Schritt weg); ohne ziel steht der Schritt in der Mitte
+#     bild        eingebaute Grafik (dreiteilung)
+#     fuer        lesen | verwalten – z. B. Werkbank-Schritte nur für Verwaltende
+# Grenzen: Titel 60, Texte 200 Zeichen. Zu einem ziel gehört der Text „ort“ für Screenreader.
+
+- schluessel: ablago
+  start: erste_anmeldung
+  fuer: lesen
+  oeffne: { seite: start }
+  schritte:
+    - schluessel: dreiteilung
+      bild: dreiteilung
+    - schluessel: neu
+      ziel: neu
+    - schluessel: suche
+      ziel: startseite.suche
+    - schluessel: erledigen
+      ziel: [navigation.zu-erledigen, startseite.zu-erledigen]
+    - schluessel: konto
+      ziel: benutzermenue

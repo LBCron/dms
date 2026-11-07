@@ -240,7 +240,7 @@ export function NeuKnopf() {
   if (!post && !typen.length) return null;
   return (
     <div className="neuknopf" ref={rahmen}>
-      <button type="button" className="knopf gruen klein" aria-haspopup="menu" aria-expanded={offen} onClick={() => { setOffen(!offen); setMappe(false); }}>{t('ablage.neuepost.neu')}</button>
+      <button type="button" className="knopf gruen klein" data-anker="neu" aria-haspopup="menu" aria-expanded={offen} onClick={() => { setOffen(!offen); setMappe(false); }}>{t('ablage.neuepost.neu')}</button>
       {offen && <div className="hy-schleier" aria-hidden="true" onClick={() => { setOffen(false); setMappe(false); }} />}
       {offen && (
         <div className="menue" role="menu">

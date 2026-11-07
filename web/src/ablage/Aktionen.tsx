@@ -46,7 +46,7 @@ export function Aktionsmenue({ aufgabe, erinnern, email, drucken, link, auskunft
   const waehle = (f: () => void) => () => { setOffen(false); f(); };
   return (
     <div className="aktionsmenue" ref={ref}>
-      <button type="button" className={`knopf klein ${offen ? 'an' : ''}`} aria-haspopup="menu" aria-expanded={offen} onClick={() => setOffen(!offen)} title={t('ablage.aktionen.was-du-mit-dieser')}>
+      <button type="button" className={`knopf klein ${offen ? 'an' : ''}`} data-anker="mappe.aktionen" aria-haspopup="menu" aria-expanded={offen} onClick={() => setOffen(!offen)} title={t('ablage.aktionen.was-du-mit-dieser')}>
         {tn('ablage.aktionen.mappe', { span: <span aria-hidden="true">▾</span> })}</button>
       {offen && <div className="hy-schleier" aria-hidden="true" onClick={() => setOffen(false)} />}
       {offen && (

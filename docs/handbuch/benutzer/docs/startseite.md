@@ -29,6 +29,10 @@ Hat dein Administrator ein Paket wie **KI-Assistent** eingerichtet, steht unter 
 
 Die Antwort schreibt ein KI-Dienst. Er kann sich irren oder etwas nicht finden – prüfe Wichtiges in den Quellen. Die Antwort ist nur Text: Sie ändert nichts in deiner Ablage. Die Ausschnitte gehen an den KI-Dienst, den dein Administrator eingerichtet hat – entweder ein Rechner bei dir im Heimnetz, dann bleibt alles bei dir, oder ein Anbieter. Welcher es ist, sieht dein Administrator unter Werkbank → Pakete an der Dienst-Adresse des Pakets.
 
+## Tipp des Tages
+
+Unter *Frag deine Ablage* bzw. unter dem Suchfeld steht ab und zu eine leise Zeile mit einem Tipp – höchstens einer am Tag. Der Satz ist der Link; das kleine × blendet den Tipp aus. Mehr unter [Ablago entdecken](entdecken.md#tipps).
+
 ## Die Kacheln
 
 | Kachel | Zahl | Klick öffnet |

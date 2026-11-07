@@ -12,6 +12,7 @@ import oberflaeche from '../../shared/src/sprachen/de/oberflaeche.json';
 import aehnlich from '../../shared/src/sprachen/de/aehnlich.json';
 import api from '../../shared/src/sprachen/de/api.json';
 import einrichtung from '../../shared/src/sprachen/de/einrichtung.json';
+import entdecken from '../../shared/src/sprachen/de/entdecken.json';
 import anmeldung from '../../shared/src/sprachen/de/anmeldung.json';
 import termine from '../../shared/src/sprachen/de/termine.json';
 import automatisierung from '../../shared/src/sprachen/de/automatisierung.json';
@@ -31,7 +32,7 @@ import volltext from '../../shared/src/sprachen/de/volltext.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-const bereiche = { ablage, aehnlich, api, anmeldung, automatisierung, einrichtung, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, mappentypen, notfall, oberflaeche, pakete, profil, spalten, suche, systemzustand, termine, volltext, webhook, werkbank };
+const bereiche = { ablage, aehnlich, api, anmeldung, automatisierung, einrichtung, entdecken, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, mappentypen, notfall, oberflaeche, pakete, profil, spalten, suche, systemzustand, termine, volltext, webhook, werkbank };
 export const t = uebersetzer(bereiche);
 
 /**

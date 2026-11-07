@@ -39,6 +39,10 @@ A view's filter on field values, counts, deadlines or personal things, e.g. a fi
 <a id="standardwert"></a>**Default value** (*Standardwert*) · ~ with explanation · administrators  
 The prefilled value of a field when creating a folder, also with placeholders such as a number sequence.
 
+<a id="ablago-entdecken"></a>**Discover Ablago** (*Ablago entdecken*) · ✓ everyday word · everyone  
+Page in the user menu (next to Help) with everything else Ablago can do – what is new since the last visit, tours and all tips by area. Hidden tips stay visible there.  
+See also: [Tour](#rundgang), [Tip](#tipp).
+
 <a id="dokument"></a>**Document** (*Dokument*) · ✓ everyday word · everyone  
 A file that lies in a document tab of a folder in Ablago. A file is uploaded; in Ablago it is a document. On an email it is called an attachment.  
 See also: [Version](#version).
@@ -120,8 +124,16 @@ See also: [Folder type](#mappentyp).
 <a id="register"></a>**Tab** (*Register*) · ~ with explanation · everyone  
 A divider in a folder, e.g. General (with fields), Documents, Links or History. Notes and History are fixed tabs of every folder.
 
+<a id="tipp"></a>**Tip** (*Tipp*) · ✓ everyday word · everyone  
+One sentence showing what else you can do in Ablago – at most one a day as a quiet line on the start page; the sentence leads to the place or starts a tour. Hide it with ×, switch it off completely in My account.  
+See also: [Tour](#rundgang), [Discover Ablago](#ablago-entdecken).
+
 <a id="titel"></a>**Title** (*Titel*) · ✓ everyday word · everyone  
 The display name of a folder. It is formed from a template with field values.
+
+<a id="rundgang"></a>**Tour** (*Rundgang*) · ✓ everyday word · everyone  
+A short guided walk on the real interface in a few steps; each step highlights one place. Ablago's own tour starts the first time a new account signs in; everyone finds it under "Discover Ablago".  
+See also: [Tip](#tipp), [Discover Ablago](#ablago-entdecken).
 
 <a id="eindeutig"></a>**Unique** (*Eindeutig*) · ~ with explanation · administrators  
 A field value that may occur only once in this folder type, e.g. an invoice number.
