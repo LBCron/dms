@@ -5,7 +5,7 @@ import { erlaubteSprachen, setzeErlaubteSprachen } from '../../shared/src/beschr
 import { sprache } from '../../shared/src/sprache';
 import type { UebersetzenAngebot } from '../../shared/src/uebersetzung';
 import { WartungsHinweis } from './wartung';
-import { WIEDER_ERREICHBAR } from './erreichbar';
+import { ErreichbarkeitsBanner, WIEDER_ERREICHBAR } from './erreichbar';
 import { Wiederherstellungsbildschirm } from './wiederherstellen';
 import { AssistentAngemeldet, Einrichtungsassistent } from './einrichtung';
 import { geheZu, useOrt } from './ort';
@@ -143,28 +143,31 @@ export function KontoProvider({ children }: { children: ReactNode }) {
     geheZu('/', true);
   }, []);
 
+  // Außerhalb der angemeldeten Ablage dieselbe Leiste wie in App.tsx (#933): Ausfall, neue Version, wieder erreichbar.
+  // Immer an derselben Stelle vor dem Inhalt, damit sie beim Wechsel zwischen den Bildschirmen stehen bleibt.
+  const seite = (inhalt: ReactNode) => <><ErreichbarkeitsBanner aussen version={status?.version ?? null} ansichtNeuLaden={() => void laden()} />{inhalt}</>;
   // Anbieter bestätigt, jetzt der Code (#241, #242).
-  if (pfad === '/anmelden/code' && location.hash.length > 1) return <CodeSchritt kennung={location.hash.slice(1)} fertig={async () => { geheZu(nachAnmeldung(false) ?? '/', true); await laden(); }} zurueck={() => geheZu('/', true)} />;
-  if (pfad.startsWith('/passwort/')) return <PasswortSetzen schluessel={decodeURIComponent(pfad.slice('/passwort/'.length))} fertig={laden} />;
-  if (fehler) return <Karte titel={t('anmeldung.verbindung.titel')}><p className="hinweis schlecht">{fehler}</p><button className="knopf" onClick={() => void laden()}>{t('anmeldung.verbindung.erneut')}</button></Karte>;
-  if (!status) return <p className="leise mittig">{t('anmeldung.lade')}</p>;
+  if (pfad === '/anmelden/code' && location.hash.length > 1) return seite(<CodeSchritt kennung={location.hash.slice(1)} fertig={async () => { geheZu(nachAnmeldung(false) ?? '/', true); await laden(); }} zurueck={() => geheZu('/', true)} />);
+  if (pfad.startsWith('/passwort/')) return seite(<PasswortSetzen schluessel={decodeURIComponent(pfad.slice('/passwort/'.length))} fertig={laden} />);
+  if (fehler) return seite(<Karte titel={t('anmeldung.verbindung.titel')}><p className="hinweis schlecht">{fehler}</p><button className="knopf" onClick={() => void laden()}>{t('anmeldung.verbindung.erneut')}</button></Karte>);
+  if (!status) return seite(<p className="leise mittig">{t('anmeldung.lade')}</p>);
   // Lasttest-Modus (#612): nur die Seite mit Fortschritt und Ergebnis – keine Anmeldung, keine Ablage.
-  if (status.lasttest) return <LasttestSeite />;
+  if (status.lasttest) return seite(<LasttestSeite />);
   // Wiederherstellung (#107): eigener Bildschirm, auch nach Neuladen und Neustart.
-  if (status.wiederherstellung?.laeuft || status.wiederherstellung?.abschluss) return <Wiederherstellungsbildschirm fertig={() => void laden()} />;
+  if (status.wiederherstellung?.laeuft || status.wiederherstellung?.abschluss) return seite(<Wiederherstellungsbildschirm fertig={() => void laden()} />);
   // Einrichtungsassistent (#119, #804): ohne Datenbank, mit Code; sammeln bis „Jetzt einrichten“ …
   // Der Dialog für die erneute Anmeldung (#819) auch hier: Nach „Jetzt einrichten“ läuft der Assistent zunächst in
   // dieser Oberfläche weiter, und das Notfallblatt kann eine frische Anmeldung verlangen (#821). Danach nicht neu
   // laden – sonst wechselte die Oberfläche mitten im Herunterladen; das übernimmt „Einrichtung abschließen“.
-  if (status.einrichtungNoetig || status.einrichtung?.phase === 'datenbank' || status.einrichtung?.phase === 'startet') return (
+  if (status.einrichtungNoetig || status.einrichtung?.phase === 'datenbank' || status.einrichtung?.phase === 'startet') return seite(
     <>
       <Einrichtungsassistent status={status} fertig={laden} />
       <Verwaltungsanmeldung stand={status.verwaltungsmodus ?? null} nachher={() => {}} />
     </>
   );
-  if (!status.benutzer) return <Anmelden mail={status.mail} wartung={status.wartung} anbieter={status.anbieter ?? null} fertig={laden} />;
+  if (!status.benutzer) return seite(<Anmelden mail={status.mail} wartung={status.wartung} anbieter={status.anbieter ?? null} fertig={laden} />);
   // Zwei-Faktor vorgeschrieben (#242), aber noch nicht eingerichtet: erst einrichten.
-  if (status.zweifaktor?.fehlt) return (
+  if (status.zweifaktor?.fehlt) return seite(
     <Karte titel={t('anmeldung.zweifaktor.titel')} unter={t('anmeldung.zweifaktor.text')}>
       <ZweifaktorEinrichten fertig={() => void laden()} />
       <button className="textknopf" onClick={() => void abmelden()}>{t('anmeldung.abmelden')}</button>
@@ -186,7 +189,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true, verwaltungsmodus: modus, verwalten, verwaltungBeenden, sprachen: status.sprachen ?? { sprache: sprache(), standard: 'de', erlaubt: erlaubteSprachen(), maschinell: [] }, uebersetzen: status.uebersetzen ?? null }}>
       {/* … danach mit „Gesamte Verwaltung“ (#818) im Verwaltungsmodus: „Jetzt einrichten“ läuft weiter, dann Notfallblatt und Abschluss (#804). */}
-      {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
+      {status.einrichtung?.assistent ? seite(<AssistentAngemeldet />) : children}
       <Verwaltungsanmeldung stand={modus} nachher={() => void laden()} />
     </Ctx.Provider>
   );

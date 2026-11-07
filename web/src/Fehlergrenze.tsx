@@ -1,5 +1,6 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
 import { jemandAngemeldet } from './konto';
+import { ErreichbarkeitsBanner, erreichbarkeit, useNeuLadenBeiNeuerVersion } from './erreichbar';
 import { t } from './sprache';
 
 /**
@@ -16,6 +17,8 @@ export class Fehlergrenze extends Component<{ children: ReactNode }, { fehler: E
 
   componentDidCatch(fehler: unknown, info: ErrorInfo) {
     console.error(fehler, info.componentStack);
+    // Oft steckt eine veraltete Oberfläche dahinter (#933): gleich nachsehen, ob der Server einen neuen Stand hat.
+    void erreichbarkeit.pruefe();
   }
 
   render() {
@@ -36,12 +39,16 @@ export function fehlerAngaben(fehler: Error, wo = typeof location === 'undefined
 
 export function FehlerAnzeige({ fehler }: { fehler: Error }) {
   const [kopiert, setKopiert] = useState<'ja' | 'nein' | null>(null);
+  // Läuft inzwischen eine neue Version (#933), behebt Neuladen den Fehler meist – ohne Rückfrage, höchstens einmal je Minute.
+  useNeuLadenBeiNeuerVersion();
   async function melden() {
     if (jemandAngemeldet()) { location.href = '/profil/fehler-melden'; return; }
     try { await navigator.clipboard.writeText(fehlerAngaben(fehler)); setKopiert('ja'); }
     catch { setKopiert('nein'); }
   }
   return (
+    <>
+    <ErreichbarkeitsBanner aussen ansichtNeuLaden={() => location.reload()} />
     <div className="kartenseite">
       <div className="karte fehlergrenze" role="alert">
         <h1>{t('oberflaeche.fehlergrenze.titel')}</h1>
@@ -58,5 +65,6 @@ export function FehlerAnzeige({ fehler }: { fehler: Error }) {
         </div>
       </div>
     </div>
+    </>
   );
 }

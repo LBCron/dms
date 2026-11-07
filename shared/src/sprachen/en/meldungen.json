@@ -763,6 +763,7 @@
   "http.ohne-verwaltungsrecht": "ohne Verwaltungsrecht",
   "http.im-verwaltungsmodus": " (im Verwaltungsmodus)",
   "http.diese-schnittstelle-gibt-es": "This interface doesn’t exist.",
+  "http.diese-datei-gibt-es": "This file doesn’t exist. If the open page belongs to a different version of Ablago, reload it.",
   "imap.anhang": "Attachment {wert}{endung}",
   "index.unbehandelter-fehler": "Unbehandelter Fehler",
   "index.unerwarteter-fehler": "Unexpected error – the process exits and restarts",

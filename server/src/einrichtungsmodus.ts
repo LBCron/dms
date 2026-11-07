@@ -8,7 +8,7 @@ import { liesEinrichtungsdatei } from './einrichtungsdatei';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { standKennung } from './system';
-import { hilfeAntwort, hilfeSenden } from './hilfe';
+import { oberflaecheSenden } from './oberflaeche';
 import { einbettenAus, sicherheitsKoepfe, type Einbetten } from './koepfe';
 import { t } from './sprache';
 import { EINGEBAUTE_SPRACHEN, setzeSprache } from '../../shared/src/sprache';
@@ -132,10 +132,7 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
 
   if (o.webDir && existsSync(o.webDir)) {
     await app.register(fastifyStatic, { root: o.webDir, wildcard: false });
-    app.setNotFoundHandler((req, reply) => {
-      const hilfe = hilfeAntwort(req.url, o.webDir);
-      return hilfe ? hilfeSenden(reply, hilfe) : reply.sendFile('index.html');
-    });
+    app.setNotFoundHandler((req, reply) => oberflaecheSenden(req.url, reply, o.webDir));
   }
 
   // Eine Anbindung, die nur noch nicht erreichbar war (Datenbank-Container startet noch): weiter versuchen.

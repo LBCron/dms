@@ -2159,3 +2159,5 @@ dialog.rundgang.schmal.mit-ziel .rg-karte { left: 16px; right: 16px; width: auto
 .ent-gruppe h3 { margin: 6px 0 2px; }
 .ent-suche input { width: 100%; }
 main.rumpf[tabindex="-1"]:focus { outline: none; }
+/* Außerhalb der angemeldeten Ablage (#933): Anmelden, Einrichtung – die Leiste bleibt beim Blättern oben. */
+.erreichbarkeit.aussen { position: sticky; top: 0; z-index: 20; }
