@@ -14,7 +14,7 @@ import { ibanGruppen, pruefeFormatDefinition } from './feldformate';
 import { datumsformat } from './region';
 import { t, t as tx } from './texte';
 import { gebietsschema, registrierteSprachen, textNur } from './sprache';
-import { optionText, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from './beschriftung';
+import { optionText, type AbschnittTeile, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from './beschriftung';
 export { zeitzone } from './region';
 
 export const FELDTYPEN = {
@@ -92,7 +92,30 @@ export interface Feld {
   landFeld?: string | null;
   /** Bezeichnung, Hilfetext und Optionen in weiteren Sprachen (#728); fehlt etwas, gilt der Ausgangstext. */
   beschriftungen?: Beschriftungen<FeldTeile>;
+  /**
+   * Ausgeblendet (#655): nicht im Formular, nicht in der Mappenansicht, nicht zur Auswahl für neue Spalten und
+   * Bedingungen. Die Werte bleiben gespeichert (Sicherung, Vollexport, API). Nie Pflicht, nie an Systemfeldern.
+   */
+  ausgeblendet?: boolean;
 }
+
+/**
+ * Abschnitt in einem Feldregister (#890): Ab dem Feld `vor` beginnt eine neue Zeile. Mit Überschrift (`titel`) zeigt
+ * die Mappe eine dünne Linie und die Überschrift, auf Wunsch eingeklappt; ohne Überschrift ist es nur ein Umbruch.
+ * Nur Darstellung – Werte, Export, PDF der Angaben und API kennen keine Abschnitte.
+ */
+export interface Abschnitt {
+  /** Kennung des Felds, vor dem der Abschnitt beginnt (ein Feld dieses Registers). */
+  vor: string;
+  /** Überschrift; fehlt = nur ein Zeilenumbruch. */
+  titel?: string;
+  /** Vorgabe beim Öffnen einer Mappe: eingeklappt (nur mit Überschrift). Jede Person kann es sich anders merken. */
+  eingeklappt?: boolean;
+  /** Überschrift in weiteren Sprachen (#728). */
+  beschriftungen?: Beschriftungen<AbschnittTeile>;
+}
+/** Höchstlänge der Überschrift eines Abschnitts (#890). */
+export const ABSCHNITT_TITEL_MAX = 80;
 
 export const REGISTERARTEN = {
   felder: 'Feldregister',
@@ -130,6 +153,13 @@ export interface Register {
   zeigt?: Historiengruppe[];
   /** Name in weiteren Sprachen (#728). */
   beschriftungen?: Beschriftungen<NamensTeile>;
+  /** Feldregister (#890): Abschnitte zwischen den Feldern – Zeilenumbruch, Überschrift, eingeklappt. Fehlt = keine. */
+  abschnitte?: Abschnitt[];
+  /**
+   * Ausgeblendet (#655): Die Mappe zeigt das Register nicht; Felder darauf gelten als ausgeblendet, ihre Werte bleiben.
+   * Nicht bei Dokumentenregistern und nicht bei Registern mit Systemfeldern.
+   */
+  ausgeblendet?: boolean;
 }
 
 export interface MappentypDaten {
@@ -581,6 +611,8 @@ function pruefeRegister(mappentypDaten: MappentypDaten, ctx: TypKontext, p: Prue
       }
     }
   }
+  // Ausblenden (#655): Ein Register muss die Mappe zeigen.
+  if (reg.every((r) => r.ausgeblendet)) melde(p, 'register', t('gemeinsam.model.ein-register-muss-sichtbar'));
   if (mappentypDaten.felder.length && !reg.some((r) => r.art === 'felder')) melde(p, 'register', t('gemeinsam.model.es-gibt-felder-aber'));
   const ohne = mappentypDaten.felder.filter((f) => !feldAuf.has(f.key));
   if (ohne.length && reg.some((r) => r.art === 'felder')) melde(p, 'register', t('gemeinsam.model.diese-felder-liegen-auf', { map: ohne.map((f) => f.label || f.key).join(', ') }));

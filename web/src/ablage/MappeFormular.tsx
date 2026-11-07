@@ -1,4 +1,5 @@
-import { feldHilfe, feldLabel, optionText, registerName, typName } from '../../../shared/src/beschriftung';
+import { abschnittTitel, feldHilfe, feldLabel, optionText, registerName, typName } from '../../../shared/src/beschriftung';
+import { abschnittEinstellung, abschnittId, ausgeblendeteFelder, gruppiere, sichtbareRegister } from '../../../shared/src/darstellung';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Symbol } from '../Symbol';
 import { Stern } from './Stern';
@@ -6,7 +7,7 @@ import { spaltenName, zelle } from './spalten';
 import { eigeneFelderIm, vorbelegungAus } from '../../../shared/src/sichten';
 import { datumText, inFrist } from '../../../shared/src/archiv';
 import { deutschePlz, eingabemodus, formatFehler, mitSchema, pruefeFormate, telefonLink } from '../../../shared/src/feldformate';
-import { darfErstellen, darfLoeschen, formatiere, trefferlistenVon, geschuetzteFelder, istLeer, istOk,  standardRegister, VERWEISARTEN, verweisAusText, type Dokument, type Feld, type Mappe, type Mappenkonflikt, type Mappentyp, type Pruefergebnis, type Register, type Wert, type Werte } from '../../../shared/src/model';
+import { darfErstellen, darfLoeschen, formatiere, trefferlistenVon, geschuetzteFelder, istLeer, istOk,  standardRegister, VERWEISARTEN, verweisAusText, type Dokument, type Feld, type Mappe, type Abschnitt, type Mappenkonflikt, type Mappentyp, type Pruefergebnis, type Register, type Wert, type Werte } from '../../../shared/src/model';
 import { api, ApiFehler, type Bezuege, type MappeDetails, type Rueckverweis } from '../api';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
@@ -38,8 +39,8 @@ import { gebietsschema } from '../../../shared/src/sprache';
 
 const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { dateStyle: 'medium', timeStyle: 'short' });
 
-/** Register des Typs; ältere Typen ohne Register bekommen die Standardregister. */
-const registerVon = (mappentyp: Mappentyp): Register[] => (mappentyp.register?.length ? mappentyp.register : standardRegister(mappentyp.felder));
+/** Register des Typs; ältere Typen ohne Register bekommen die Standardregister. Ausgeblendete (#655) zeigt die Mappe nicht. */
+const registerVon = (mappentyp: Mappentyp): Register[] => sichtbareRegister(mappentyp.register?.length ? mappentyp.register : standardRegister(mappentyp.felder));
 
 /** Neue Mappe als Ziel von „Zuordnen“ (#192): danach wird die Post ihr zugeordnet. */
 export interface ZuordnenNachher { post: string; register?: string; dokumente: string[]; kopieren: boolean; vorschlag: Record<string, Wert> }
@@ -320,8 +321,53 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   const verwerfen = () => { setKonflikt(undefined); setRoh(JSON.parse(basis)); setNeueDateien([]); setEntfernt([]); setFehler(null); setMeldung(undefined); setHinweise([]); setVorschlaege({}); setAdNeu({}); setAdMeldung(undefined); };
 
   const reg = register.find((r) => r.key === aktiv) ?? register[0];
-  const felderAuf = (r: Register) => typ.felder.filter((f) => r.felder?.includes(f.key));
+  // Ausgeblendete Felder (#655) zeigt die Mappe nicht; ihre Werte bleiben, wie sie sind.
+  const ausgeblendet = useMemo(() => ausgeblendeteFelder(typ), [typ]);
+  const alleAuf = (r: Register) => typ.felder.filter((f) => r.felder?.includes(f.key));
+  const felderAuf = (r: Register) => alleAuf(r).filter((f) => !ausgeblendet.has(f.key));
   const fehlerAuf = (r: AnsichtsRegister) => (r.art === 'felder' ? felderAuf(r).filter((f) => fehler?.felder[f.key]).length : 0);
+
+  /*
+   * Abschnitte (#890): offen oder eingeklappt. Vorgabe aus dem Mappentyp, gemerkt je Person (persönliche Einstellung je
+   * Typ, auf allen Geräten). Ablago klappt selbst auf, wo ein Pflichtfeld leer ist, die Suche oder ein Link auf ein Feld
+   * zeigt (beides beim Öffnen) und wo ein Fehler beim Speichern oder ein Vorschlag aus „Aus Dokument ausfüllen“ steckt.
+   */
+  const gemerkt = (d.einstellungen[abschnittEinstellung(typ.id)] ?? {}) as Record<string, boolean>;
+  const abschnittVon = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of registerVon(typ)) {
+      if (r.art !== 'felder') continue;
+      for (const g of gruppiere(r.abschnitte, alleAuf(r), (f) => !ausgeblendet.has(f.key))) if (g.abschnitt?.titel) for (const f of g.felder) m.set(f.key, abschnittId(r.key, g.abschnitt));
+    }
+    return m;
+  }, [typ, ausgeblendet]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [jetzt, setJetzt] = useState<Record<string, boolean>>(() => {
+    const such = new URLSearchParams(location.search);
+    const gesucht = new Set([...such.keys()].map((k) => k.split('.')[0]).concat(such.getAll('feld')));
+    const auf: Record<string, boolean> = {};
+    for (const f of typ.felder) {
+      const id = abschnittVon.get(f.key);
+      if (id && ((f.pflicht && f.typ !== 'janein' && istLeer(ausRoh(f, start[f.key]))) || gesucht.has(f.key))) auf[id] = true;
+    }
+    return auf;
+  });
+  const oeffneAbschnitte = (keys: string[]) => {
+    const ids = keys.map((k) => abschnittVon.get(k)).filter((x): x is string => !!x);
+    if (ids.length) setJetzt((x) => ({ ...x, ...Object.fromEntries(ids.map((id) => [id, true])) }));
+  };
+  const abschnittOffen = (r: Register, a: Abschnitt) => {
+    const id = abschnittId(r.key, a);
+    return jetzt[id] ?? gemerkt[id] ?? !a.eingeklappt;
+  };
+  const umschaltenAbschnitt = (r: Register, a: Abschnitt) => {
+    const id = abschnittId(r.key, a);
+    const offen = !abschnittOffen(r, a);
+    setJetzt((x) => ({ ...x, [id]: offen }));
+    // Gemerkt wird nur, was von der Vorgabe abweicht; Abschnitte, die es nicht mehr gibt, fallen dabei weg.
+    const neu = Object.fromEntries(Object.entries({ ...gemerkt, [id]: offen }).filter(([k, v]) => [...abschnittVon.values()].includes(k) && v !== !alleAbschnitte.get(k)?.eingeklappt));
+    d.setzeEinstellung(abschnittEinstellung(typ.id), Object.keys(neu).length ? neu : null);
+  };
+  const alleAbschnitte = useMemo(() => new Map(registerVon(typ).flatMap((r) => (r.abschnitte ?? []).map((a) => [abschnittId(r.key, a), a] as const))), [typ]);
 
   /** Auswahlfilter mit Werten dieser Mappe (#173): nur die Felder, von denen er abhängt. */
   const eigeneWerte = (f: Feld): Werte | undefined => {
@@ -341,7 +387,8 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const werte: RohWerte = {};
     for (const [k, v] of Object.entries(r.vorschlaege)) {
       const f = typ.felder.find((x) => x.key === k);
-      if (!f || geschuetzt[k] !== undefined) continue;
+      // Ausgeblendete Felder (#655) bekommen nichts – den Vorschlag sähe niemand.
+      if (!f || geschuetzt[k] !== undefined || ausgeblendet.has(k)) continue;
       const vorschlag = zuRoh(f, v.wert);
       if (istLeer(ausRoh(f, roh[k]))) { werte[k] = vorschlag; neu[k] = { ...v, art: 'eingetragen', vorher: roh[k] }; }
       else if (JSON.stringify(roh[k]) !== JSON.stringify(vorschlag)) neu[k] = { ...v, art: 'alternative' };
@@ -349,6 +396,8 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     for (const [id, b] of Object.entries(r.bezuege)) merke(id, b);
     setRoh((x) => ({ ...x, ...werte }));
     setVorschlaege(neu);
+    // Abschnitte mit Vorschlägen klappen auf (#890).
+    oeffneAbschnitte(Object.keys(neu));
     setAdNeu(Object.fromEntries(Object.entries(r.neu).filter(([k]) => istLeer(ausRoh(typ.felder.find((x) => x.key === k)!, roh[k])))));
     if (ablegen && dateien.length) setNeueDateien((x) => [...x, ...dateien.map((datei) => ({ uid: `n${++zaehler}`, datei, register: ablegen }))]);
     const n = Object.values(neu).filter((v) => v.art === 'eingetragen').length;
@@ -415,6 +464,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
 
   function zeigeFehler(p: Pruefergebnis) {
     setFehler(p);
+    oeffneAbschnitte(Object.keys(p.felder));
     // Zum ersten Register mit Fehler springen, falls das aktuelle keinen hat.
     if (reg?.art === 'felder' && felderAuf(reg).some((f) => p.felder[f.key])) return;
     const ziel = register.find((r) => r.art === 'felder' && felderAuf(r).some((f) => p.felder[f.key]));
@@ -438,6 +488,8 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const p = d.pruefe(typ, werte, (id) => bekannt[id]?.typId);
     // Formate und Datumsgrenzen (#535): neue Mappe ganz, sonst nur, was sich ändert.
     for (const [k, m] of Object.entries(pruefeFormate(typ, werte, mappe?.werte))) p.felder[k] ??= m;
+    // Ausgeblendete Felder (#655): Was dort unverändert steht, hält das Speichern nicht auf (wie auf dem Server).
+    for (const k of Object.keys(p.felder)) if (ausgeblendet.has(k) && !geaenderteFelder.includes(k)) delete p.felder[k];
     if (!istOk(p)) { zeigeFehler(p); setMeldung(t('ablage.mappeformular.bitte-die-markierten-felder')); return; }
     // Würde man sich mit diesen Werten selbst das Lesen oder Bearbeiten entziehen? Dann erst fragen (#126).
     if (mappe && werteGeaendert && ich.rolle !== 'admin') {
@@ -544,11 +596,34 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   let inhalt: ReactNode = null;
   if (!reg) inhalt = <p className="leise">{t('ablage.mappeformular.dieser-mappentyp-hat-keine')}</p>;
   else if (reg.art === 'felder') {
-    const felder = felderAuf(reg).filter(sichtbar);
-    inhalt = felder.length
-      ? <div className="formular">{felder.map((f) => <FeldEingabe key={f.key} feld={f} roh={roh[f.key]} fehler={fehler?.felder[f.key]?.[0]} setze={(v) => setze(f.key, v)} eigeneId={mappe?.id} bekannt={bekannt} merke={merke}
-          typId={typ.id} unpassend={details?.unpassend?.[f.key]} eigene={eigeneWerte(f)}
-          gesperrt={geschuetzt[f.key] ?? (nurLesen && f.typ !== 'passwort' ? '' : undefined)} nurLesen={nurLesen} plzDeutsch={f.format === 'plz' ? deutschePlz(f, typ.felder, roh as Werte) : undefined} passwortSehen={!rechte || rechte.P} zusatz={hinweisAm(f)} gespeichert={mappe ? mappe.werte[f.key] : undefined} />)}</div>
+    const r = reg;
+    const eingabe = (f: Feld) => <FeldEingabe key={f.key} feld={f} roh={roh[f.key]} fehler={fehler?.felder[f.key]?.[0]} setze={(v) => setze(f.key, v)} eigeneId={mappe?.id} bekannt={bekannt} merke={merke}
+      typId={typ.id} unpassend={details?.unpassend?.[f.key]} eigene={eigeneWerte(f)}
+      gesperrt={geschuetzt[f.key] ?? (nurLesen && f.typ !== 'passwort' ? '' : undefined)} nurLesen={nurLesen} plzDeutsch={f.format === 'plz' ? deutschePlz(f, typ.felder, roh as Werte) : undefined} passwortSehen={!rechte || rechte.P} zusatz={hinweisAm(f)} gespeichert={mappe ? mappe.werte[f.key] : undefined} />;
+    // Abschnitte (#890): jede Gruppe ein eigenes Raster – so beginnt nach jedem Abschnitt eine neue Zeile.
+    const gruppen = gruppiere(r.abschnitte, alleAuf(r), (f) => !ausgeblendet.has(f.key) && sichtbar(f));
+    inhalt = gruppen.length
+      ? <div className="feldgruppen">{gruppen.map((g) => {
+          const a = g.abschnitt;
+          if (!a?.titel) return <div key={a?.vor ?? '_'} className={`formular${a ? ' nach-umbruch' : ''}`}>{g.felder.map(eingabe)}</div>;
+          const offen = abschnittOffen(r, a);
+          const id = `abschnitt-${r.key}-${a.vor}`;
+          const gefuellt = g.felder.filter((f) => !istLeer(ausRoh(f, roh[f.key]))).length;
+          const mitFehler = g.felder.filter((f) => fehler?.felder[f.key]).length;
+          return (
+            <section key={a.vor} className={`feldabschnitt${offen ? ' offen' : ''}`} aria-labelledby={`${id}-kopf`}>
+              <h3 className="abschnittkopf">
+                <button type="button" id={`${id}-kopf`} aria-expanded={offen} aria-controls={id} onClick={() => umschaltenAbschnitt(r, a)}>
+                  <Symbol name="pfeil-rechts" />
+                  <span className="abschnitttitel">{abschnittTitel(a)}</span>
+                  {!offen && <span className="leise klein"><span aria-hidden="true">· </span>{t('ablage.abschnitt.ausgefuellt', { gefuellt, anzahl: g.felder.length })}</span>}
+                  {mitFehler > 0 && <span className="fehlerpunkt" title={t('ablage.mappeformular.felder-mit-fehler', { anzahl: mitFehler })}>{mitFehler}</span>}
+                </button>
+              </h3>
+              <div id={id} className="formular" hidden={!offen}>{g.felder.map(eingabe)}</div>
+            </section>
+          );
+        })}</div>
       : <p className="leise">{t('ablage.mappeformular.auf-diesem-register-liegen')}</p>;
   } else if (reg.art === 'dokumente') {
     inhalt = mappe && !details ? <p className="leise">{t('ablage.mappeformular.lade')}</p> : (

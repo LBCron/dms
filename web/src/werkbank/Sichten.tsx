@@ -7,6 +7,7 @@ import {
   bedingungsfelder, bedingungsProblem, beschreibeBedingung, DYNAMISCH, EINHEITEN, gemeinsameTrefferlisten, kinderVon, mitNachkommen, OPERATOREN, OPERATOREN_JE_ART, spaltenDerSicht, trefferlistenProblem, wirksameTypen, typenDerSicht, zeigtAlleTypen, ALLE_TYPEN,
   ZAEHLVERGLEICHE, auswahlProbleme, OPS_EIGENES_FELD, passendeEigeneFelder, type Bedingung, type Bedingungsfeld, type Feldbedingung, type Einheit, type Operator, type Sicht, type SichtDaten, type WertAngabe, type Zaehlvergleich,
 } from '../../../shared/src/sichten';
+import { ausgeblendeteFelder } from '../../../shared/src/darstellung';
 import { api } from '../api';
 import { useDaten } from '../daten';
 import { geheZu, Link, loeseWache } from '../ort';
@@ -388,6 +389,8 @@ function gemeinsameRegister(typen: Mappentyp[]): Array<{ wert: 'dokumente' | 've
 function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: SichtDaten) => SichtDaten) => void; typen: Mappentyp[]; klappe: Klappe }) {
   const d = useDaten();
   const felder = useMemo(() => bedingungsfelder(typen), [typen]);
+  // Ausgeblendete Felder (#655) nicht für neue Bedingungen; bestehende bleiben wählbar.
+  const aus = useMemo(() => new Set(typen.flatMap((x) => [...ausgeblendeteFelder(x)])), [typen]);
   const ziele: Ziel[] = [
     ...felder.map((f) => ({ wert: 'feld' as const, feld: f })),
     { wert: 'dokumenteGesamt' }, { wert: 'verknuepfungenGesamt' },
@@ -426,7 +429,7 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
                       <div className="bedingungszeile">
                         <select aria-label={t('werkbank.sichten.feld-oder-register')} value={ziel ? zielKey(ziel) : ''} onChange={(x) => { const z = ziele.find((y) => zielKey(y) === x.target.value); if (z) setze(i, neu(z)); }}>
                           {!ziel && <option value="">{t('werkbank.sichten.fehlt-2', { wert: b.art === 'feld' ? b.feld : 'register' in b ? b.register : b.art })}</option>}
-                          <optgroup label={t('werkbank.sichten.felder')}>{ziele.filter((z) => z.wert === 'feld' && !z.feld.key.startsWith('_')).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
+                          <optgroup label={t('werkbank.sichten.felder')}>{ziele.filter((z) => z.wert === 'feld' && !z.feld.key.startsWith('_') && (!aus.has(z.feld.key) || zielKey(z) === bKey(b))).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
                           <optgroup label={t('werkbank.sichten.systemwerte')}>{ziele.filter((z) => z.wert === 'feld' && z.feld.key.startsWith('_')).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
                           <optgroup label={t('werkbank.sichten.anzahl')}>{ziele.filter((z) => z.wert !== 'feld' && z.wert !== 'favorit' && z.wert !== 'frist').map((z) => <option key={zielKey(z)} value={zielKey(z)}>{zielName(z)}</option>)}</optgroup>
                           <optgroup label={t('werkbank.sichten.fristen')}><option value="frist">{ZIEL_GESAMT.frist}</option></optgroup>
@@ -449,7 +452,7 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
                 })}
               </ol>
             )}
-            <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setE((x) => ({ ...x, bedingungen: [...x.bedingungen, neu(ziele[0])] }))}>{t('werkbank.sichten.bedingung')}</button></div>
+            <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setE((x) => ({ ...x, bedingungen: [...x.bedingungen, neu(ziele.find((z) => z.wert !== 'feld' || !aus.has(z.feld.key)) ?? ziele[0])] }))}>{t('werkbank.sichten.bedingung')}</button></div>
           </>}
     </Bereich>
   );

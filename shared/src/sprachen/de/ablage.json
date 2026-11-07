@@ -1170,5 +1170,6 @@
   "uebersetzung.original-zeigen": "Original zeigen",
   "uebersetzung.original-verbergen": "Original verbergen",
   "uebersetzung.zurueck": "Zurück zum Original",
-  "uebersetzung.geaendert": "Das Original hat sich gerade geändert. Bitte noch einmal übersetzen."
+  "uebersetzung.geaendert": "Das Original hat sich gerade geändert. Bitte noch einmal übersetzen.",
+  "abschnitt.ausgefuellt": "{gefuellt} von {anzahl} ausgefüllt"
 }

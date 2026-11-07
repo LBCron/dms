@@ -27,6 +27,7 @@ import { istUuid, KonfigurationVeraltet, StandVeraltet, WOERTER_JE_LAUF, type Do
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
 import { ausgangAus, bereinigeBeschriftungen, ergaenzeBeschriftungen, optionsGruppen, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
 import { inSprache } from '../../shared/src/sprache';
+import { ausgeblendeteFelder, bereinigeAbschnitte, festigeDarstellung } from '../../shared/src/darstellung';
 /** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
 const SYNONYM_GRUPPEN_MAX = 2000;
 import {
@@ -297,6 +298,8 @@ export function bereinigeFeld(e: unknown): Feld {
     ...(typ === 'text' && text(f.format) === 'plz' && text(f.landFeld) ? { landFeld: text(f.landFeld) } : {}),
     // Beschriftungen je Sprache (#728): Bezeichnung, Hilfetext und – bei Auswahl – die Optionen.
     ...mitBeschriftungen(bereinigeBeschriftungen<FeldTeile>(f.beschriftungen, FELD_TEILE, typ === 'auswahl' ? optionen : undefined)),
+    // Ausgeblendet (#655): nur gespeichert, wenn an; Pflicht hebt festigeDarstellung auf.
+    ...(f.ausgeblendet === true ? { ausgeblendet: true } : {}),
   };
 }
 
@@ -314,6 +317,8 @@ export function bereinigeRegister(e: unknown, felder: Feld[]): Register[] {
     const name = ausgangAus(x?.beschriftungen, 'name', text(x?.name));
     const r: Register = { key: text(x?.key) || schluesselAus(name), name, art, ...mitBeschriftungen(bereinigeBeschriftungen<NamensTeile>(x?.beschriftungen, NAMENS_TEILE)) };
     if (art === 'felder') r.felder = (Array.isArray(x?.felder) ? x.felder.map(text) : []).filter((k) => bekannt.has(k));
+    // Ausgeblendet (#655): ob es bei diesem Register geht, prüft festigeDarstellung.
+    if (x?.ausgeblendet === true) r.ausgeblendet = true;
     if (art === 'verknuepfungen') {
       r.quellen = (Array.isArray(x?.quellen) ? x.quellen : [])
         .map((q: Record<string, unknown>): Quelle => ({ typId: text(q?.typId), feldKey: text(q?.feldKey), ...(text(q?.trefferliste) ? { trefferliste: text(q?.trefferliste).slice(0, 40) } : {}) }))
@@ -337,6 +342,12 @@ export function bereinigeRegister(e: unknown, felder: Feld[]): Register[] {
     const vergeben = new Set(reg.flatMap((r) => r.felder ?? []));
     for (const f of felder) if (!vergeben.has(f.key)) erstes.felder!.push(f.key);
   }
+  // Abschnitte (#890): nur in Feldregistern, nur vor eigenen Feldern; leer = keine (nichts gespeichert).
+  reg.forEach((r, i) => {
+    if (r.art !== 'felder') return;
+    const a = bereinigeAbschnitte((e[i] as Record<string, unknown> | undefined)?.abschnitte, r.felder ?? []);
+    if (a?.length) r.abschnitte = a;
+  });
   return reg;
 }
 
@@ -379,6 +390,8 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
   const register = bereinigeRegister(t.register, felder);
   // Im Archivmodus ist die Versionierung Pflicht, und ältere Versionen bleiben bis zum Fristende.
   if (archiv) for (const r of register) if (r.art === 'dokumente') { r.versionierung = true; delete r.versionenBehalten; }
+  // Ausblenden (#655): nur, wo es geht; ausgeblendete Felder sind nie Pflicht.
+  festigeDarstellung({ felder, register });
   return {
     name: ausgangAus(t.beschriftungen, 'name', text(t.name)),
     ...(text(t.schluessel) ? { schluessel: text(t.schluessel) } : {}),
@@ -426,6 +439,34 @@ export function behalteErkennung(roh: unknown, d: MappentypDaten, alt: Pick<Mapp
     ...('ausPost' in r ? {} : { ausPost: alt.ausPost ?? null }),
     ...('erkennbarAn' in r || hatErkennbarAnBeschriftung(r.beschriftungen) ? {} : { erkennbarAn: alt.erkennbarAn ?? '' }),
   };
+}
+/**
+ * Darstellung behalten (#655, #890): Wer einen Mappentyp ohne `ausgeblendet` an Feld bzw. Register oder ohne `abschnitte`
+ * an einem Feldregister speichert (z. B. ein älteres Programm über die API), behält die bisherigen Angaben. Abschnitte
+ * vor Feldern, die nicht mehr auf dem Register liegen, fallen weg.
+ */
+export function behalteDarstellung(roh: unknown, d: MappentypDaten, alt: Pick<MappentypDaten, 'felder' | 'register'>): MappentypDaten {
+  const r = (roh ?? {}) as Record<string, unknown>;
+  const quelle = (liste: unknown, key: string) => (Array.isArray(liste) ? liste : []).find((y) => !!y && typeof y === 'object' && text((y as Record<string, unknown>).key) === key) as Record<string, unknown> | undefined;
+  const felder = d.felder.map((f) => {
+    const q = quelle(r.felder, f.key);
+    if (q && 'ausgeblendet' in q) return f;
+    return alt.felder.find((y) => y.key === f.key)?.ausgeblendet ? { ...f, ausgeblendet: true } : f;
+  });
+  const register = d.register.map((x) => {
+    const q = quelle(r.register, x.key);
+    const vorher = alt.register.find((y) => y.key === x.key && y.art === x.art);
+    let neu = x;
+    if (!(q && 'ausgeblendet' in q) && vorher?.ausgeblendet) neu = { ...neu, ausgeblendet: true };
+    if (x.art === 'felder' && !(q && 'abschnitte' in q) && vorher?.abschnitte?.length) {
+      const a = bereinigeAbschnitte(vorher.abschnitte, x.felder ?? []);
+      if (a?.length) neu = { ...neu, abschnitte: a };
+    }
+    return neu;
+  });
+  const erg = { ...d, felder, register };
+  festigeDarstellung(erg);
+  return erg;
 }
 const hatErkennbarAnBeschriftung = (b: unknown) => !!b && typeof b === 'object' && Object.values(b as Record<string, unknown>).some((x) => !!x && typeof x === 'object' && 'erkennbarAn' in x && (x as Record<string, unknown>).erkennbarAn != null);
 
@@ -3314,8 +3355,10 @@ export class Dienst {
     if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     const stand = liesStand((eingabe as { stand?: unknown } | null)?.stand, 'meldungen.dienst.stand-ungueltig');
     if (stand !== undefined && alt.geaendert !== stand) throw Dienst.konfigurationKonflikt('typ', alt.geaendert);
-    let d = behalteErkennung(eingabe, behalteBeschriftungen(eingabe, bereinigeTyp(eingabe), alt), alt);
+    let d = behalteDarstellung(eingabe, behalteErkennung(eingabe, behalteBeschriftungen(eingabe, bereinigeTyp(eingabe), alt), alt), alt);
     if (alt.system) d = await this.mitSystemfeldern(d, alt.system);
+    // Ausblenden (#655): erst jetzt sind die Systemfelder bekannt – sie und ihre Register bleiben sichtbar.
+    festigeDarstellung(d);
     // Der Schlüssel ist fest (#145); fehlt er noch, gilt der eingegebene bzw. einer aus dem Namen.
     d.schluessel = alt.schluessel ?? d.schluessel ?? freierSchluessel(d.name || 'mappentyp', (await this.repo.listeTypen()).filter((t) => t.id !== id).map((t) => t.schluessel ?? ''));
     await this.pruefeTyp(d, id);
@@ -4971,6 +5014,11 @@ export class Dienst {
     const p = pruefeMappe(typ, werte, { typVon: (id) => typen.get(id), doppelt: (k) => doppelt.get(k) });
     // Formate und Datumsgrenzen (#535): beim Bearbeiten nur, was sich ändert – der Bestand bleibt gültig.
     for (const [k, m] of Object.entries(pruefeFormate(typ, werte, alt))) p.felder[k] ??= m;
+    // Ausgeblendete Felder (#655): Was dort unverändert steht, hält das Speichern nicht auf – sehen kann es hier keiner.
+    if (alt) {
+      const aus = ausgeblendeteFelder(typ);
+      for (const k of Object.keys(p.felder)) if (aus.has(k) && JSON.stringify(werte[k] ?? null) === JSON.stringify(alt[k] ?? null)) delete p.felder[k];
+    }
     if (!istOk(p)) {
       const namen = Object.keys(p.felder).map((k) => typ.felder.find((f) => f.key === k)?.label ?? k);
       throw new Fachfehler(422, namen.length ? t('meldungen.dienst.bitte-die-markierten-felder', { namen: namen.join(', ') }) : t('meldungen.dienst.bitte-die-markierten-felder-2'), p);

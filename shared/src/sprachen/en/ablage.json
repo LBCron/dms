@@ -1170,5 +1170,6 @@
   "uebersetzung.original-zeigen": "Show original",
   "uebersetzung.original-verbergen": "Hide original",
   "uebersetzung.zurueck": "Back to the original",
-  "uebersetzung.geaendert": "The original has just changed. Please translate it again."
+  "uebersetzung.geaendert": "The original has just changed. Please translate it again.",
+  "abschnitt.ausgefuellt": "{gefuellt} of {anzahl} filled in"
 }

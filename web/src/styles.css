@@ -158,6 +158,21 @@ tbody tr:last-child > * { border-bottom: 0; }
 .feldkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .feldkopf label, .feldkopf .label { font-size: calc(12.5px * var(--skala, 1)); font-weight: 600; }
 .pflicht { color: var(--schlecht); margin-left: 3px; }
+/* Abschnitte im Feldregister (#890): je Gruppe ein Raster, Abstand wie zwischen zwei Zeilen – so wirkt ein Umbruch
+   ohne Überschrift in schmaler Ansicht (ein Feld je Zeile) gar nicht. Mit Überschrift: dünne Linie und Titel. */
+.feldgruppen { display: grid; gap: 16px; }
+.feldabschnitt { border-top: 1px solid var(--linie); padding-top: 6px; }
+.abschnittkopf { margin: 0; font-size: calc(13px * var(--skala, 1)); font-weight: 600; }
+.feldabschnitt.offen .abschnittkopf { margin-bottom: 10px; }
+.abschnittkopf button { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; border: 0; background: none; padding: 4px 2px; font: inherit; color: var(--tinte); cursor: pointer; text-align: left; border-radius: 4px; }
+.abschnittkopf button:hover .abschnitttitel { color: var(--akzent); }
+.abschnittkopf button:focus-visible { outline: 2px solid var(--akzent); outline-offset: 1px; }
+.abschnittkopf svg { flex: none; transition: transform .15s; }
+.feldabschnitt.offen .abschnittkopf svg { transform: rotate(90deg); }
+.abschnittkopf .leise { font-weight: 400; }
+.feldabschnitt > .formular[hidden] { display: none; }
+@media (max-width: 560px) { .feldabschnitt { border-top: 0; padding-top: 0; } }
+@media (prefers-reduced-motion: reduce) { .abschnittkopf svg { transition: none; } }
 .hilfe { font-size: calc(12px * var(--skala, 1)); color: var(--leise); font-weight: 400; }
 .fehlertext { color: var(--schlecht); font-size: calc(12.5px * var(--skala, 1)); }
 .fehlertext.eingerueckt { padding: 0 12px 10px; }
@@ -389,6 +404,21 @@ a.textknopf { text-decoration: none; }
 .registerzeile.art-verknuepfungen { border-left-color: var(--warn); }
 .registerkopf { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
 .registerkopf .chip { justify-content: center; }
+.registerchip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+/* Ausgeblendet (#655): im Editor leiser, aber lesbar. */
+.feldzeile.ausgeblendet .flabel, .registerzeile.ausgeblendet .registerkopf input { color: var(--leise); }
+.feldzeile.ausgeblendet { border-style: dashed; }
+/* Abschnitte im Feldregister (#890) */
+.feldaufteilung { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.feldaufteilung > p { margin: 0; }
+.aufteilung { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.aufteilungsfeld { padding: 3px 8px; border-left: 2px solid var(--linie-stark); font-size: calc(13px * var(--skala, 1)); display: flex; align-items: center; gap: 6px; }
+.aufteilungsfeld.ausgeblendet { color: var(--leise); }
+.abschnittzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0 2px; padding: 4px 6px; border: 1px dashed var(--linie-stark); border-radius: var(--r); background: var(--senke); }
+.abschnittzeile.mit-titel { border-style: solid; }
+.abschnittzeile .sprachtext { flex: 1 1 220px; }
+.abschnittzeile .haken { margin: 0; }
+.abschnittzeile .feldaktionen { margin-left: auto; padding-right: 0; }
 
 /* Werkbank, Profil, vorgemerkte Dokumente */
 .eintrag.werk.an { background: var(--akzent-zart); border-left-color: var(--akzent); }

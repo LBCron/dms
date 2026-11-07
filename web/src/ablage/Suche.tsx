@@ -1,5 +1,6 @@
 import { optionText, typName } from '../../../shared/src/beschriftung';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ausgeblendeteFelder } from '../../../shared/src/darstellung';
 import { abfrageAus, alsParameter, chipsVon, eingabeart, istGesetzt, kannLeer, liesSuche, ohneChip, suchfelder, SUCHE_PFAD, zeitraumVon, ZEITRAEUME, type Feldeingabe, type Suchformular, type Zeitraum } from '../../../shared/src/erweitertesuche';
 import { heuteIn, type Bedingungsfeld } from '../../../shared/src/sichten';
 import type { Mappentyp } from '../../../shared/src/model';
@@ -77,7 +78,9 @@ export function Suchformular({ suche, fokus, zeigeTreffer, einklappen }: { suche
   const gewaehlt = useMemo(() => abfrageAus(f, d.typen).typen, [f, d.typen]);
   const felder = useMemo(() => suchfelder(gewaehlt), [gewaehlt]);
   const sichtbar = aktiv.map((k) => felder.find((x) => x.key === k)).filter((x): x is Bedingungsfeld => !!x);
-  const frei = felder.filter((x) => !aktiv.includes(x.key));
+  // Ausgeblendete Felder (#655) nicht zum Hinzufügen; was die Adresse schon nennt, bleibt.
+  const aus = useMemo(() => new Set(gewaehlt.flatMap((x) => [...ausgeblendeteFelder(x)])), [gewaehlt]);
+  const frei = felder.filter((x) => !aktiv.includes(x.key) && !aus.has(x.key));
   const entfallen = Object.entries(f.felder).filter(([k, e]) => istGesetzt(e) && !felder.some((x) => x.key === k)).map(([k]) => k);
   const setzeFeld = (key: string, e: Feldeingabe | undefined) => setF((x) => {
     const n = { ...x.felder };
