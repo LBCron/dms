@@ -19,8 +19,8 @@ import type { SichtDaten } from './sichten';
 export type Beschriftungen<T> = Partial<Record<string, T>>;
 /** Name eines Registers, einer Trefferliste. */
 export interface NamensTeile { name?: string }
-/** Name und Beschreibung eines Mappentyps bzw. einer Ansicht. */
-export interface TypTeile { name?: string; beschreibung?: string }
+/** Name und Beschreibung eines Mappentyps bzw. einer Ansicht; beim Mappentyp auch „Woran man ihn erkennt“ (#937). */
+export interface TypTeile { name?: string; beschreibung?: string; erkennbarAn?: string }
 /** Bezeichnung, Hilfetext und Beschriftung der Optionen (fester Wert → Text) eines Felds. */
 export interface FeldTeile { label?: string; hilfe?: string; optionen?: Record<string, string> }
 
@@ -62,6 +62,8 @@ export const feldLabel = (f: Pick<Feld, 'label' | 'key' | 'beschriftungen'>, spr
 export const feldHilfe = (f: Pick<Feld, 'hilfe' | 'beschriftungen'>, spr = sprache()) => (f.hilfe ? inSprache(f.hilfe, f.beschriftungen, 'hilfe', spr) : '');
 export const typName = (t: Pick<MappentypDaten, 'name' | 'beschriftungen'>, spr = sprache()) => inSprache(t.name, t.beschriftungen, 'name', spr);
 export const typBeschreibung = (t: Pick<MappentypDaten, 'beschreibung' | 'beschriftungen'>, spr = sprache()) => (t.beschreibung ? inSprache(t.beschreibung, t.beschriftungen, 'beschreibung', spr) : '');
+/** „Woran man ihn erkennt“ (#937) in einer Sprache. */
+export const typErkennbarAn = (t: Pick<MappentypDaten, 'erkennbarAn' | 'beschriftungen'>, spr = sprache()) => (t.erkennbarAn ? inSprache(t.erkennbarAn, t.beschriftungen, 'erkennbarAn', spr) : '');
 export const registerName = (r: Pick<Register, 'name' | 'key' | 'beschriftungen'>, spr = sprache()) => inSprache(r.name || r.key, r.beschriftungen, 'name', spr);
 export const listenName = (l: Pick<Trefferliste, 'name' | 'beschriftungen'>, spr = sprache()) => inSprache(l.name, l.beschriftungen, 'name', spr);
 export const sichtName = (s: Pick<SichtDaten, 'name' | 'beschriftungen'>, spr = sprache()) => inSprache(s.name, s.beschriftungen, 'name', spr);
@@ -108,11 +110,12 @@ export function optionsGruppen(felder: Array<Pick<Feld, 'typ' | 'optionen' | 'be
 /* ---------- Stand je Sprache (Werkbank: „12 von 14 Beschriftungen auf Englisch“) ---------- */
 
 /** Wie viele der beschriftbaren Texte eines Mappentyps es in einer Sprache gibt. Hinweis, nie Fehler. */
-export function beschriftungsstand(t: Pick<MappentypDaten, 'name' | 'beschreibung' | 'beschriftungen' | 'felder' | 'register' | 'trefferlisten'>, spr: string): { vorhanden: number; gesamt: number } {
+export function beschriftungsstand(t: Pick<MappentypDaten, 'name' | 'beschreibung' | 'beschriftungen' | 'felder' | 'register' | 'trefferlisten'> & { erkennbarAn?: string }, spr: string): { vorhanden: number; gesamt: number } {
   let vorhanden = 0, gesamt = 0;
   const zaehle = (ausgang: string | undefined, da: boolean) => { if (!ausgang?.trim()) return; gesamt++; if (da) vorhanden++; };
   zaehle(t.name, !!teil(t.beschriftungen, spr, 'name'));
   zaehle(t.beschreibung, !!teil(t.beschriftungen, spr, 'beschreibung'));
+  zaehle(t.erkennbarAn, !!teil(t.beschriftungen, spr, 'erkennbarAn'));
   for (const f of t.felder ?? []) {
     zaehle(f.label, !!teil(f.beschriftungen, spr, 'label'));
     zaehle(f.hilfe, !!teil(f.beschriftungen, spr, 'hilfe'));

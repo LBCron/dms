@@ -28,6 +28,18 @@ begriffe:
   Systemmappentyp:
     begriff: System folder type
     beschreibung: A folder type that Ablago brings itself – User, Role and Post.
+  Kann aus Post angelegt werden:
+    begriff: Can be created from post
+    beschreibung: Tick in the basics of a folder type (#937). Only folder types with it can be chosen under "Where does this belong?" when a document is taken over from the post – for everyone who may create folders there. On by default for folder types with a documents tab; never for system folder types.
+  Woran man ihn erkennt:
+    begriff: How to recognise it
+    beschreibung: Short sentence in the basics of a folder type (#937, at most 300 characters), e.g. "Contains invoice number, amount and payment deadline". Helps recognition assign a document to the right folder type. The description is for people, this sentence for recognition.
+  Aus Dokument füllen:
+    begriff: Fill from document
+    beschreibung: Tick on a field (#938, formerly "Use for recognition") – the button "Fill in from document" may fill this field from a photo or document as a suggestion. With kind ("What is in the field?") and recognition hint.
+  Zum Wiederfinden nutzen:
+    begriff: Use to find existing folders
+    beschreibung: Tick on a field (#938) – Ablago uses this value to find existing folders again in a document, e.g. customer number, contract number, invoice number or registration number. This results in suggestions with evidence ("How Ablago recognises it") and the warning if a folder already exists. Independent of "Unique".
   Feld:
     begriff: Field
     beschreibung: A detail in a folder, e.g. the contract number. Every field has a field kind – text, long text, formatted text, number, amount, date, yes/no, choice list, link or password.

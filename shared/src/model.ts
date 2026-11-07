@@ -70,8 +70,17 @@ export interface Feld {
   frist?: import('./fristen').FristEinstellung | null;
   /** Referenzfeld (#172): nur Mappen des Zieltyps, die alle Bedingungen erfüllen. */
   auswahlFilter?: import('./sichten').Feldbedingung[];
-  /** Für die Erkennung nutzen (#336, #391): vorhanden = an, mit Art und Erkennungshinweis. */
+  /**
+   * „Aus Dokument füllen“ (#336, #391; bis #938 „Für die Erkennung nutzen“): vorhanden = an, mit Art und
+   * Erkennungshinweis. Der Name im Code bleibt `erkennung` – gespeicherte Daten und Pakete ändern sich nicht.
+   */
   erkennung?: import('./erkennung').FeldErkennung | null;
+  /**
+   * „Zum Wiederfinden nutzen“ (#938): Über diesen Wert findet Ablago vorhandene Mappen wieder (Kundennummer,
+   * Vertragsnummer, Rechnungsnummer, Kennzeichen …) – für Vorschläge, Belege und die Warnung vor Doppelten.
+   * Unabhängig von „eindeutig“. Nur bei Text, Zahl und Verweis (WIEDERFINDEN_FELDTYPEN in erkennung.ts).
+   */
+  wiederfinden?: boolean;
   /**
    * Verweisfeld aus einem Paket-Update (#534): Kennung des bisherigen Textfelds, aus dem es sich füllen lässt
    * (`aus_text` im Paket). Solange der Verweis leer ist, zeigen Titel und Trefferliste den alten Text.
@@ -154,8 +163,26 @@ export interface MappentypDaten {
   ausDokument?: import('./erkennung').AusDokument | null;
   /** Erkannte Post automatisch zuordnen (#337), Standard aus; wie der Stempel in den Einstellungen. */
   autoZuordnen?: boolean;
-  /** Name und Beschreibung in weiteren Sprachen (#728). */
+  /**
+   * „Kann aus Post angelegt werden“ (#937): Der Typ steht bei „Wohin gehört das?“ zur Wahl. Fehlt bzw. null = Vorgabe:
+   * an, wenn der Typ ein Dokumentenregister hat (siehe `kannAusPost`). Systemtypen nie.
+   */
+  ausPost?: boolean | null;
+  /** „Woran man ihn erkennt“ (#937): kurzer Text für die Klassifizierung (#939), höchstens ERKENNBAR_AN_MAX Zeichen. */
+  erkennbarAn?: string;
+  /** Name, Beschreibung und „Woran man ihn erkennt“ in weiteren Sprachen (#728, #937). */
   beschriftungen?: Beschriftungen<TypTeile>;
+}
+
+/** Höchstlänge von „Woran man ihn erkennt“ (#937). */
+export const ERKENNBAR_AN_MAX = 300;
+/**
+ * „Kann aus Post angelegt werden“ (#937): eingestellt – sonst an, wenn der Typ ein Dokumentenregister hat.
+ * Systemtypen (Benutzer, Rolle, Post) nie.
+ */
+export function kannAusPost(t: Pick<MappentypDaten, 'ausPost' | 'register'> & { system?: Systemtyp | null }): boolean {
+  if (t.system) return false;
+  return t.ausPost ?? t.register.some((r) => r.art === 'dokumente');
 }
 export interface Mappentyp extends MappentypDaten {
   id: string;

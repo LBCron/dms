@@ -251,6 +251,10 @@ Eine Einstellung je Mappentyp für Aufbewahrungspflichten – mit Versionen und 
 <a id="aufbewahrung-abgelaufen"></a>**Aufbewahrung abgelaufen** · ✓ Alltagswort · Administratoren  
 Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist (Werkbank → Benutzer und Sicherheit). Früher „Darf weg“.
 
+<a id="aus-dokument-fullen"></a>**Aus Dokument füllen** · ~ mit Erklärung · Administratoren  
+Haken an einem Feld (#938, früher „Für die Erkennung nutzen“) – der Knopf „Aus Dokument ausfüllen“ darf dieses Feld aus einem Foto oder Dokument als Vorschlag füllen. Mit Art („Was steht im Feld?“) und Erkennungshinweis.  
+Siehe auch: [Zum Wiederfinden nutzen](#zum-wiederfinden-nutzen).
+
 <a id="benutzer"></a>**Benutzer** · ✓ Alltagswort · alle  
 Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe in Ablago. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
 
@@ -278,6 +282,10 @@ Siehe auch: [Paket](#paket), [Paketkatalog](#paketkatalog).
 
 <a id="fehler-nachstellen"></a>**Fehler nachstellen** · ~ mit Erklärung · Administratoren  
 Ein Administrator arbeitet vorübergehend unter dem Konto eines anderen Benutzers, um einen Fehler zu sehen. Zurück geht es mit „Zurück zum eigenen Konto“.
+
+<a id="kann-aus-post-angelegt-werden"></a>**Kann aus Post angelegt werden** · ~ mit Erklärung · Administratoren  
+Haken in den Grunddaten eines Mappentyps (#937). Nur Mappentypen damit stehen beim Übernehmen eines Dokuments aus der Post unter „Wohin gehört das?“ zur Wahl – für alle, die dort Mappen anlegen dürfen. Vorgabe an bei Mappentypen mit Dokumentenregister; Systemmappentypen nie.  
+Siehe auch: [Mappentyp](#mappentyp), [Post](#post), [Woran man ihn erkennt](#woran-man-ihn-erkennt).
 
 <a id="nummernkreis"></a>**Nummernkreis** · ✗ Fachwort · Administratoren  
 Fortlaufende Nummern nach einem Muster wie {jjjj}-R{zaehler:4} (ergibt z. B. 2026-R0001), etwa für Rechnungsnummern.
@@ -326,12 +334,20 @@ Prüft, welche Rechte ein bestimmter Benutzer am Ende hat.
 Erkennt Text in Bildern und gescannten PDFs, damit er durchsuchbar wird.
 
 <a id="tagliche-zusammenfassung"></a>**Tägliche Zusammenfassung** · ✓ Alltagswort · alle  
-Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Ob und wann sie kommt, stellen Administratoren in der Automatisierung „Tägliche Zusammenfassung“ ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.  
+Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.  
 Siehe auch: [Aufgabe](#aufgabe), [Zu erledigen](#zu-erledigen).
 
 <a id="werkbank-anpassen"></a>**Werkbank anpassen** · ~ mit Erklärung · Administratoren  
 Legt fest, welche Bereiche links in der Werkbank stehen – nach einer Vorlage („Haushalt“, „Betrieb“ oder „Alles“) und mit Abweichungen. Ausblenden schaltet nichts ab. Neue Installationen starten mit „Haushalt“; Installationen von vor dieser Einstellung zeigen alles.  
 Siehe auch: [Werkbank](#werkbank), [Übersicht](#ubersicht), [Betrieb](#betrieb).
+
+<a id="woran-man-ihn-erkennt"></a>**Woran man ihn erkennt** · ~ mit Erklärung · Administratoren  
+Kurzer Satz in den Grunddaten eines Mappentyps (#937, höchstens 300 Zeichen), z. B. „Enthält Rechnungsnummer, Betrag und Zahlungsziel“. Hilft der Erkennung, ein Dokument dem richtigen Mappentyp zuzuordnen. Die Beschreibung ist für Menschen, dieser Satz für die Erkennung.  
+Siehe auch: [Kann aus Post angelegt werden](#kann-aus-post-angelegt-werden).
+
+<a id="zum-wiederfinden-nutzen"></a>**Zum Wiederfinden nutzen** · ~ mit Erklärung · Administratoren  
+Haken an einem Feld (#938) – über diesen Wert findet Ablago vorhandene Mappen in einem Dokument wieder, z. B. Kundennummer, Vertragsnummer, Rechnungsnummer oder Kennzeichen. Daraus entstehen Vorschläge mit Belegen („Woran Ablago das erkennt“) und die Warnung, wenn es eine Mappe schon gibt. Unabhängig von „Eindeutig“.  
+Siehe auch: [Aus Dokument füllen](#aus-dokument-fullen).
 
 <a id="zwei-faktor-anmeldung"></a>**Zwei-Faktor-Anmeldung** · ~ mit Erklärung · alle  
 Ein zusätzlicher Code aus einer App bei der Anmeldung.
@@ -482,7 +498,7 @@ Datei = was hochgeladen oder heruntergeladen wird, Dokument = was in Ablago in e
 Zwei Begriffe – „Version“ gehört zu einem Dokument, „Version von Ablago“ ist der Stand des Programms. Erklärt auf der Seite „Versionen verstehen“.
 
 <a id="offen-19"></a>**19. Design, Darstellung, Theme** (31.10.2026)  
-„Design“ legen Administratoren in der Werkbank an (Logo, Farben, eigenes CSS); „Darstellung“ ist der Bereich unter Mein Konto, in dem jeder sein Design, die Schriftgröße und die Breiten wählt. „Theme“ nicht verwenden.
+„Design“ legen Administratoren in der Werkbank an (Logo, Farben, eigenes CSS); „Darstellung“ ist der Bereich im Profil, in dem jeder sein Design, die Schriftgröße und die Breiten wählt. „Theme“ nicht verwenden.
 
 <a id="offen-20"></a>**20. „Neue Post“ als Ansicht und als Art einer Aufgabe** (31.10.2026)  
 Die Aufgabenart heißt „Post für dich“; die Ansicht „Neue Post“ bleibt.
@@ -511,6 +527,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Aufbewahrung abgelaufen | Darf weg | – |
 | Aufgabe | Auftrag, Task, Todo | `Aufgabe, AUFGABENARTEN` |
 | Auftrag | Job | `Auftrag` |
+| Aus Dokument füllen | Für die Erkennung nutzen (alter Name) | `Feld.erkennung` |
 | Bedingung | – | `Bedingung` |
 | Benutzer | User, Account | `Benutzer` |
 | Berechtigungen | Permissions | `Rechte` |
@@ -528,6 +545,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Format | Validierung, Datentyp | `Feld.format, Feld.landFeld, FELDFORMATE, shared/src/feldformate.ts` |
 | Gemeldete Fehler | Fehlermeldungen | – |
 | Historie | Protokoll (an der Mappe), Verlauf | `Historieneintrag` |
+| Kann aus Post angelegt werden | – | `Mappentyp.ausPost` |
 | Kennung | Schlüssel (für Felder), Key | `key, schluessel` |
 | Link | Direktlink, sprechender Link | `Direktlink` |
 | Mappe | Akte, Ordner, Datensatz | `Mappe` |
@@ -548,12 +566,14 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Region | Standort, Gebietsschema, Locale | `region` |
 | Register | Tab, Reiter | `Register` |
 | Rolle | Gruppe, Weitere Rollen | `rolle (Systemtyp), Benutzer.rollen` |
+| Rundgang | Tour, Onboarding, Tutorial | `Rundgang, rundgaenge.yaml` |
 | Sicherung | Backup (in der Oberfläche) | – |
 | Standardwert | Defaultwert | – |
 | Systemmappentyp | – | `Systemtyp` |
 | Systemrolle | Rolle (für Administrator/Mitglied) | `Rolle, Benutzer.rolle` |
 | Systemzustand | Systemumgebung | – |
 | Texterkennung | OCR (in der Oberfläche) | `OcrStand` |
+| Tipp | Hinweis (für Tipps), Hilfe-Tipp | `Tipp, tipps.yaml` |
 | Trefferliste | – | `Trefferliste` |
 | Tägliche Zusammenfassung | Übersicht per E-Mail, Digest | – |
 | Unteransicht | Untersicht | – |
@@ -565,7 +585,9 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Verweisart | – | `Verweisart, VERWEISARTEN` |
 | Vorschaubild | Thumbnail, Miniatur | `vorschau` |
 | Werkbank anpassen | – | `WerkbankAnsicht, VORLAGEN` |
+| Woran man ihn erkennt | – | `Mappentyp.erkennbarAn` |
 | Zu erledigen | Eingang, Inbox, Posteingang, Anstehend | `eingang` |
+| Zum Wiederfinden nutzen | – | `Feld.wiederfinden` |
 | Zwei-Faktor-Anmeldung | 2FA, MFA (in der Oberfläche) | – |
 
-*Stand: 2026-11-04*
+*Stand: 2026-11-07*

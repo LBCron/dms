@@ -40,12 +40,12 @@ async function aufbau() {
   const { benutzer: lena } = await konten.einrichten({ email: 'lena@example.org', name: 'Lena', passwort: 'ein-langes-passwort' });
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const register = [{ key: 'allgemein', name: 'Allgemein', art: 'felder' as const }, { key: 'dokumente', name: 'Dokumente', art: 'dokumente' as const }];
-  const organisation = await d.legeTypAn({ name: 'Organisation', felder: [{ key: 'name', label: 'Name', typ: 'text', erkennung: {} }], register });
+  const organisation = await d.legeTypAn({ name: 'Organisation', felder: [{ key: 'name', label: 'Name', typ: 'text', erkennung: {}, wiederfinden: true }], register });
   const person = await d.legeTypAn({ name: 'Person', felder: [
     { key: 'vorname', label: 'Vorname', typ: 'text', erkennung: {} },
     { key: 'nachname', label: 'Nachname', typ: 'text', erkennung: {} },
     { key: 'funktion', label: 'Funktion', typ: 'text', erkennung: {} },
-    { key: 'email', label: 'E-Mail', typ: 'text', erkennung: {} },
+    { key: 'email', label: 'E-Mail', typ: 'text', erkennung: {}, wiederfinden: true },
     { key: 'geburtstag', label: 'Geburtstag', typ: 'datum', erkennung: {} },
     { key: 'anrede', label: 'Anrede', typ: 'auswahl', optionen: ['Frau', 'Herr'], erkennung: {} },
     { key: 'organisation', label: 'Organisation', typ: 'referenz', zielTyp: organisation.id, erkennung: {} },

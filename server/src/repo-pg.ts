@@ -51,6 +51,9 @@ const alsTyp = (r: Zeile): Mappentyp => ({
   archiv: (r.archiv as Mappentyp['archiv']) ?? null,
   // Beschriftungen je Sprache (#728, Migration 080): nur, wenn es welche gibt.
   ...(r.beschriftungen ? { beschriftungen: r.beschriftungen as Mappentyp['beschriftungen'] } : {}),
+  // Dokument übernehmen (#937, Migration 089): null = Vorgabe.
+  ausPost: (r.aus_post as boolean | null) ?? null,
+  erkennbarAn: (r.erkennbar_an as string | null) ?? '',
   erstellt: iso(r.erstellt),
   geaendert: iso(r.geaendert),
 });
@@ -696,9 +699,10 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     },
     async legeTypAn(id, d: MappentypDaten, system) {
       const [r] = await sql`
-        INSERT INTO mappentypen (id, haushalt_id, name, schluessel, beschreibung, titel_vorlage, felder, register, trefferliste, trefferlisten, erstellen_erlaubt, loeschen_erlaubt, system, archiv, beschriftungen)
+        INSERT INTO mappentypen (id, haushalt_id, name, schluessel, beschreibung, titel_vorlage, felder, register, trefferliste, trefferlisten, erstellen_erlaubt, loeschen_erlaubt, system, archiv, beschriftungen, aus_post, erkennbar_an)
         VALUES (${id}, ${haushaltId}, ${d.name}, ${d.schluessel ?? null}, ${d.beschreibung}, ${d.titelVorlage}, ${json(sql, d.felder)}, ${json(sql, d.register)}, ${json(sql, standardliste(d).spalten)}, ${json(sql, trefferlistenVon(d))},
-          ${d.erstellenErlaubt !== false}, ${d.loeschenErlaubt !== false}, ${system ?? null}, ${d.archiv ? json(sql, d.archiv) : null}, ${d.beschriftungen ? json(sql, d.beschriftungen) : null})
+          ${d.erstellenErlaubt !== false}, ${d.loeschenErlaubt !== false}, ${system ?? null}, ${d.archiv ? json(sql, d.archiv) : null}, ${d.beschriftungen ? json(sql, d.beschriftungen) : null},
+          ${typeof d.ausPost === 'boolean' ? d.ausPost : null}, ${d.erkennbarAn ?? ''})
         RETURNING *`;
       return alsTyp(r);
     },
@@ -713,7 +717,8 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
           UPDATE mappentypen SET name = ${d.name}, schluessel = coalesce(schluessel, ${d.schluessel ?? null}), beschreibung = ${d.beschreibung}, titel_vorlage = ${d.titelVorlage},
             felder = ${json(sql, d.felder)}, register = ${json(sql, d.register)}, trefferliste = ${json(sql, standardliste(d).spalten)}, trefferlisten = ${json(sql, trefferlistenVon(d))},
             erstellen_erlaubt = ${d.erstellenErlaubt !== false}, loeschen_erlaubt = ${d.loeschenErlaubt !== false}, archiv = ${d.archiv ? json(sql, d.archiv) : null},
-            beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = ${STAND_WEITER}
+            beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, aus_post = ${typeof d.ausPost === 'boolean' ? d.ausPost : null}, erkennbar_an = ${d.erkennbarAn ?? ''},
+            geaendert = ${STAND_WEITER}
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
           RETURNING *`;
         const refKeys = d.felder.filter((f) => f.typ === 'referenz').map((f) => f.key);

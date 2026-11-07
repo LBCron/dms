@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
+  darfErstellen, ERKENNBAR_AN_MAX, kannAusPost, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
   REGISTERARTEN, REGISTERNAMEN, ABRUF_ART, type Abrufweg, type Abruffassung, historienartenVon, historiengruppenVon, istHistoriengruppe, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemBeschriftung, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
@@ -78,7 +78,7 @@ import type { PaketEntwurf } from '../../shared/src/paketerstellung';
 import { systemkontoAuffaellig, type SystemkontoFehler } from '../../shared/src/systemkonten';
 import { abfrageAus, liesSuche } from '../../shared/src/erweitertesuche';
 import type { Lesefilter } from '../../shared/src/rechte';
-import { liesAusDokument, liesFeldErkennung, type AusDokument } from '../../shared/src/erkennung';
+import { liesAusDokument, liesFeldErkennung, liesWiederfinden, type AusDokument } from '../../shared/src/erkennung';
 import { gleicheFormateAn, hatVorgaben, HEUTE, pruefeFormate, unpassendeAngaben, type Feldformat } from '../../shared/src/feldformate';
 import { FragenAnDieAblage } from './fragen';
 import { Uebersetzung } from './uebersetzung';
@@ -238,6 +238,8 @@ function zahlOderNull(v: unknown): number | null {
 const FELD_TEILE = ['label', 'hilfe', 'optionen'] as const satisfies ReadonlyArray<keyof FeldTeile>;
 const NAMENS_TEILE = ['name'] as const satisfies ReadonlyArray<keyof NamensTeile>;
 const TYP_TEILE = ['name', 'beschreibung'] as const satisfies ReadonlyArray<keyof TypTeile>;
+/** Am Mappentyp zusätzlich „Woran man ihn erkennt“ (#937); Ansichten haben das nicht. */
+const MAPPENTYP_TEILE = [...TYP_TEILE, 'erkennbarAn'] as const satisfies ReadonlyArray<keyof TypTeile>;
 /** Beschriftungen oder nichts – leere Angaben werden nicht gespeichert. */
 const mitBeschriftungen = <T extends object>(b: T | undefined): { beschriftungen?: T } => (b ? { beschriftungen: b } : {});
 /**
@@ -284,8 +286,10 @@ export function bereinigeFeld(e: unknown): Feld {
     verweisart: f.verweisart === 'zugehoerigkeit' ? 'zugehoerigkeit' : 'bezug',
     // Fristen (#129): nur an Datumsfeldern.
     ...(typ === 'datum' && bereinigeFrist(f.frist) ? { frist: bereinigeFrist(f.frist) } : {}),
-    // Für die Erkennung nutzen (#336): Art und Erkennungshinweis; nur bei geeigneten Feldarten.
+    // Aus Dokument füllen (#336, #938; früher „Für die Erkennung nutzen“): Art und Erkennungshinweis; nur bei geeigneten Feldarten.
     ...(liesFeldErkennung(f.erkennung, typ) ? { erkennung: liesFeldErkennung(f.erkennung, typ) } : {}),
+    // Zum Wiederfinden nutzen (#938): nur Text, Zahl und Verweis.
+    ...(liesWiederfinden(f.wiederfinden, typ) ? { wiederfinden: true } : {}),
     // Paket-Update (#534): Verweisfeld, das sich aus einem alten Textfeld füllen lässt.
     ...(typ === 'referenz' && /^[a-z][a-z0-9_]{0,39}$/.test(text(f.ausText)) && text(f.ausText) !== text(f.key) ? { ausText: text(f.ausText) } : {}),
     // Feldformat (#535): nur an Textfeldern; das Land-Feld nur beim Format PLZ.
@@ -379,8 +383,12 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
     name: ausgangAus(t.beschriftungen, 'name', text(t.name)),
     ...(text(t.schluessel) ? { schluessel: text(t.schluessel) } : {}),
     beschreibung: ausgangAus(t.beschriftungen, 'beschreibung', text(t.beschreibung)),
-    // Name und Beschreibung je Sprache (#728); undefined = keine (die Datenbank speichert NULL).
-    beschriftungen: bereinigeBeschriftungen<TypTeile>(t.beschriftungen, TYP_TEILE),
+    // Name, Beschreibung und „Woran man ihn erkennt“ je Sprache (#728, #937); undefined = keine (die Datenbank speichert NULL).
+    beschriftungen: kuerzeErkennbarAn(bereinigeBeschriftungen<TypTeile>(t.beschriftungen, MAPPENTYP_TEILE)),
+    // Kann aus Post angelegt werden (#937): ja, nein oder null = Vorgabe (an mit Dokumentenregister).
+    ausPost: typeof t.ausPost === 'boolean' ? t.ausPost : null,
+    // Woran man ihn erkennt (#937): kurz, für die Klassifizierung.
+    erkennbarAn: ausgangAus(t.beschriftungen, 'erkennbarAn', text(t.erkennbarAn)).replace(/\s+/g, ' ').trim().slice(0, ERKENNBAR_AN_MAX),
     // Altes Format: titelFeld → Vorlage {feld}
     titelVorlage: text(t.titelVorlage) || (text(t.titelFeld) ? `{${text(t.titelFeld)}}` : ''),
     felder,
@@ -392,6 +400,34 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
     loeschenErlaubt: true,
   };
 }
+
+/** „Woran man ihn erkennt“ (#937) auch in anderen Sprachen höchstens ERKENNBAR_AN_MAX Zeichen. */
+function kuerzeErkennbarAn(b: Beschriftungen<TypTeile> | undefined): Beschriftungen<TypTeile> | undefined {
+  if (!b) return b;
+  for (const x of Object.values(b)) if (x?.erkennbarAn) x.erkennbarAn = x.erkennbarAn.replace(/\s+/g, ' ').trim().slice(0, ERKENNBAR_AN_MAX);
+  return b;
+}
+
+/**
+ * Angaben behalten, die eine Eingabe nicht nennt (#937, #938): Wer einen Mappentyp ohne `ausPost` bzw. `erkennbarAn`
+ * speichert (z. B. ein älteres Programm über die API), behält die bisherigen; ebenso je Feld `wiederfinden`.
+ */
+export function behalteErkennung(roh: unknown, d: MappentypDaten, alt: Pick<MappentypDaten, 'ausPost' | 'erkennbarAn' | 'felder'>): MappentypDaten {
+  const r = (roh ?? {}) as Record<string, unknown>;
+  const rohFelder = Array.isArray(r.felder) ? r.felder as unknown[] : [];
+  const felder = d.felder.map((f) => {
+    const q = rohFelder.find((y) => !!y && typeof y === 'object' && text((y as Record<string, unknown>).key) === f.key) as Record<string, unknown> | undefined;
+    if (q && 'wiederfinden' in q) return f;
+    const vorher = alt.felder.find((y) => y.key === f.key && y.typ === f.typ);
+    return vorher?.wiederfinden ? { ...f, wiederfinden: true } : f;
+  });
+  return {
+    ...d, felder,
+    ...('ausPost' in r ? {} : { ausPost: alt.ausPost ?? null }),
+    ...('erkennbarAn' in r || hatErkennbarAnBeschriftung(r.beschriftungen) ? {} : { erkennbarAn: alt.erkennbarAn ?? '' }),
+  };
+}
+const hatErkennbarAnBeschriftung = (b: unknown) => !!b && typeof b === 'object' && Object.values(b as Record<string, unknown>).some((x) => !!x && typeof x === 'object' && 'erkennbarAn' in x && (x as Record<string, unknown>).erkennbarAn != null);
 
 /**
  * Beschriftungen behalten (#728): Wer einen Mappentyp ohne die Angabe `beschriftungen` speichert (z. B. ein älteres
@@ -3163,6 +3199,17 @@ export class Dienst {
     return typen.map(({ berechtigungen, ...t }) => ({ ...t, berechtigungen: null, darfAnlegen: rechteUebersicht({ ...t, berechtigungen }, z.wer, z.a).C !== 'nie' }));
   }
 
+  /**
+   * „Wohin gehört das?“ (#937): Mappentypen, die man aus Post anlegen kann – mit dem Haken „Kann aus Post angelegt
+   * werden“ (Vorgabe: mit Dokumentenregister), nie Systemtypen, und nur solche, in denen die Person anlegen darf.
+   * Grundlage für die Seite „Dokument übernehmen“ (#934) und die Klassifizierung (#939).
+   */
+  async ausPostZiele(z?: Zugriff): Promise<Mappentyp[]> {
+    const typen = z ? [...z.typen.values()] : await this.repo.listeTypen();
+    return typen.filter((x) => kannAusPost(x) && (!z || z.admin || (z.paket ? z.paket.schreiben.has(x.id) : rechteUebersicht(x, z.wer, z.a).C !== 'nie')))
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  }
+
   /** Profil (#126): je Mappentyp, welche Rechte man hat – „immer“, „nie“ oder „je nach Mappe“. */
   async rechteUebersicht(z: Zugriff) {
     return [...z.typen.values()].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((t) => ({
@@ -3264,7 +3311,7 @@ export class Dienst {
     if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
     const stand = liesStand((eingabe as { stand?: unknown } | null)?.stand, 'meldungen.dienst.stand-ungueltig');
     if (stand !== undefined && alt.geaendert !== stand) throw Dienst.konfigurationKonflikt('typ', alt.geaendert);
-    let d = behalteBeschriftungen(eingabe, bereinigeTyp(eingabe), alt);
+    let d = behalteErkennung(eingabe, behalteBeschriftungen(eingabe, bereinigeTyp(eingabe), alt), alt);
     if (alt.system) d = await this.mitSystemfeldern(d, alt.system);
     // Der Schlüssel ist fest (#145); fehlt er noch, gilt der eingegebene bzw. einer aus dem Namen.
     d.schluessel = alt.schluessel ?? d.schluessel ?? freierSchluessel(d.name || 'mappentyp', (await this.repo.listeTypen()).filter((t) => t.id !== id).map((t) => t.schluessel ?? ''));
@@ -3311,7 +3358,9 @@ export class Dienst {
       // Beschriftungen je Sprache (#728) darf der Administrator wie Bezeichnung und Hilfetext setzen.
       return s ? { ...s, label: f.label || s.label, hilfe: f.hilfe || s.hilfe, ...mitSystemBeschriftung(f, s) } : f;
     });
-    return { ...d, felder, ...(system === 'benutzer' ? { erstellenErlaubt: false, loeschenErlaubt: false } : system === 'post' ? { erstellenErlaubt: false } : {}) };
+    // Systemtypen (#937): nie aus Post anzulegen, kein „Woran man ihn erkennt“.
+    const ohneErkennbar = d.beschriftungen ? Object.fromEntries(Object.entries(d.beschriftungen).map(([k, v]) => { const { erkennbarAn: _e, ...rest } = v ?? {}; return [k, rest]; })) : undefined;
+    return { ...d, felder, ausPost: false, erkennbarAn: '', beschriftungen: ohneErkennbar, ...(system === 'benutzer' ? { erstellenErlaubt: false, loeschenErlaubt: false } : system === 'post' ? { erstellenErlaubt: false } : {}) };
   }
 
   async loescheTyp(id: string): Promise<void> {

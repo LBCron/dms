@@ -98,7 +98,7 @@ Sobald der Text einer Post da ist (aus der Texterkennung, der Textebene eines PD
 
 Unter **Zuordnen …** stehen oben die **Vorschläge** für die Zielmappe, der beste ist schon ausgewählt und als *Vorschlag* markiert: ein Vertrag, dessen Vertragsnummer im Brief steht; Mappen, die auf den Absender verweisen (z. B. sein Stromvertrag); Mappen, zu denen frühere Post dieses Absenders ging; der Absender selbst. Unter jedem Vorschlag steht, warum. Ein Klick wählt einen anderen, die Suche darunter geht wie immer – nichts passiert, bis du **Zu „…“ zuordnen** klickst.
 
-Woran Ablago Absender wiedererkennt, legt der Mappentyp fest: Felder, die ein Administrator „für die Erkennung“ markiert hat (die Pakete *Basis* & Co. bringen das mit). Hast du gerade eine Organisation angelegt oder eine Kundennummer nachgetragen, klick im Kasten auf **Neu erkennen**. Vorgeschlagen werden nur Mappen, die du sehen darfst.
+Woran Ablago Absender wiedererkennt, legt der Mappentyp fest: Felder, an denen ein Administrator „Zum Wiederfinden nutzen“ eingestellt hat (die Pakete *Basis* & Co. bringen das mit). Hast du gerade eine Organisation angelegt oder eine Kundennummer nachgetragen, klick im Kasten auf **Neu erkennen**. Vorgeschlagen werden nur Mappen, die du sehen darfst.
 
 ### Automatisch zugeordnet
 

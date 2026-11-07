@@ -23,10 +23,21 @@ Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: 
 - **Name** – so heißt die Ansicht in der Ablage, z. B. „Vertrag“. Er lässt sich jederzeit ändern.
 - **Kennung** – fester, technischer Name, z. B. `vertrag`. Sie wird aus dem Namen vorgeschlagen, lässt sich beim Anlegen ändern und ist nach dem ersten Speichern **fest**. [Links über Mappentyp und Feldwerte](direktlinks.md) und Skripte über die [Schnittstelle](api.md) können sie nutzen – so bleiben sie gültig, auch wenn der Mappentyp umbenannt wird. Die Systemtypen heißen `benutzer`, `rolle` und `post` (bis 0.40 hieß *Post* noch *E-Mail* mit der Kennung `email`).
 - **Beschreibung** – steht über der Liste und hilft beim Einordnen.
+- **Kann aus Post angelegt werden** – dann steht der Mappentyp zur Wahl, wenn jemand ein Dokument aus der Post übernimmt und gefragt wird: *Wohin gehört das?* Mehr unter [Dokument übernehmen](#dokument-ubernehmen).
+- **Woran man ihn erkennt** – ein kurzer Satz, höchstens 300 Zeichen. Mehr unter [Dokument übernehmen](#dokument-ubernehmen).
 
 Beim **Anlegen** gibt es zusätzlich **Eigene Ansicht in der Ablage anlegen** (standardmäßig an): Dann erscheint der neue Mappentyp in der Ablage als eigene Ansicht. Abwählen, wenn seine Mappen nur in einer bestehenden [Ansicht](sichten.md) erscheinen sollen.
 
 Wer Mappen anlegen oder löschen darf, regeln die [Berechtigungen](berechtigungen.md) (Rechte C und D). Die früheren Haken *Neue Mappen erlauben* und *Löschen erlauben* gibt es seit Version 0.32 nicht mehr; sie wurden beim Update in die Berechtigungen übernommen.
+
+### Dokument übernehmen
+
+Post landet zuerst unter *Post*. Von dort übernimmt man ein Dokument in eine Mappe. Zwei Angaben in den Grunddaten sagen Ablago, welche Mappentypen dafür in Frage kommen:
+
+- **Kann aus Post angelegt werden** – Nur Mappentypen mit diesem Haken stehen unter *Wohin gehört das?* zur Wahl, und nur für Personen, die dort Mappen anlegen dürfen ([Berechtigungen](berechtigungen.md), Recht C). Vorgabe: an bei Mappentypen mit Dokumentenregister, sonst aus. Nimm den Haken weg, wenn Post nie zu diesem Typ gehört, z. B. bei *Ablageort*.
+- **Woran man ihn erkennt** – ein kurzer Satz, der hilft, ein Dokument dem richtigen Mappentyp zuzuordnen, z. B. bei *Rechnung*: „Enthält Rechnungsnummer, Betrag und Zahlungsziel; Absender ist ein Vertragspartner“. Die Beschreibung ist für Menschen gedacht; dieser Satz ist für die Erkennung und darf knapp sein. Wie Name und Beschreibung lässt er sich in [weiteren Sprachen](#beschriftungen-je-sprache) angeben.
+
+Die **Systemmappentypen** Benutzer, Rolle und Post sind nie wählbar; bei ihnen gibt es beide Angaben nicht. Die Pakete können beides vorgeben. Bei einem Update übernimmt Ablago die Angaben nur, wenn du sie noch nicht eingestellt hast.
 
 **Verwendet in** (bei gespeicherten Mappentypen) zeigt, wo der Mappentyp genutzt wird, jeweils mit Link: Ansichten, die ihn zeigen, Verweisfelder anderer Mappentypen, die auf ihn verweisen, und Verknüpfungsregister anderer Mappentypen, die seine Felder als Quelle nutzen. So siehst du vor einer Änderung, was davon betroffen ist. Steht dort „Nirgends verwendet“, hängt nichts an ihm.
 
@@ -83,17 +94,38 @@ Die Fehlermeldungen sagen, was zu tun ist, z. B. „Eine Telefonnummer enthält 
 
 Die Erkennung nutzt das Format: Ein Feld mit Format Telefon gilt als Telefon, auch wenn es anders heißt, und sie schlägt nur Werte vor, die passen.
 
-### Für die Erkennung nutzen
+### Aus Dokument füllen
 
-Mit dem Haken **Für die Erkennung nutzen** an einem Feld sagst du der Erkennung in Ablago, dass sich der Wert zum Wiedererkennen eignet bzw. dass sie das Feld füllen darf. Die Erkennung läuft in Ablago selbst, ohne KI und ohne Internet:
+Mit dem Haken **Aus Dokument füllen** an einem Feld darf der Knopf [Aus Dokument ausfüllen](#erkennung) in einer Mappe dieses Feld aus einem Foto oder Dokument als Vorschlag füllen. Bis Version 0.216 hieß der Haken **Für die Erkennung nutzen**; die Einstellungen sind dieselben geblieben. Die Erkennung läuft in Ablago selbst, ohne KI und ohne Internet.
 
-- **Vorschläge beim Zuordnen von Post:** Steht der Wert eines markierten Felds – z. B. Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail-Adresse, Internetseite (auch als Domain einer E-Mail-Adresse), Telefon oder Name – im Text eines Briefs, schlägt Ablago diese Mappe als **Absender** vor, mit Begründung („gefunden: Kundennummer 100-4711“). Ein Typ mit markiertem Namen oder Kontaktangaben gilt als möglicher Absender (Organisation, Niederlassung, Person); ein Typ, der nur Nummern markiert (z. B. Vertragsnummer), als mögliche **Zielmappe**. Leerzeichen, Punkte und Bindestriche in Nummern zählen nicht, `100-4711` findet also auch `100 4711`. Gerechnet wird einmal, sobald der Volltext einer Post fertig ist – egal ob von der eingebauten Texterkennung oder einem Paket.
-
-- **Aus Dokument ausfüllen:** In einer Mappe füllt die Erkennung die markierten Felder aus einem Foto oder Dokument als Vorschlag (siehe [Erkennung](#erkennung)). Hat ein Mappentyp gar keine markierten Felder, nimmt sie alle, deren Art sie aus der Bezeichnung erkennt. Verweisfelder schlagen eine vorhandene Mappe des Zieltyps vor, die im Text steht – an ihren markierten Feldern, sonst am Titel.
+Hat ein Mappentyp gar kein Feld mit diesem Haken, füllt sie alle Felder, deren Art sie aus der Bezeichnung erkennt. Verweisfelder schlagen eine vorhandene Mappe des Zieltyps vor, die im Text steht – an ihren Feldern mit [Zum Wiederfinden nutzen](#zum-wiederfinden-nutzen), sonst am Titel.
 
 Geeignet sind Text, Langtext, Zahl, Betrag, Datum, Auswahlliste und Verweis – Passwortfelder nie. Ist der Haken an, wählst du optional **Was steht im Feld?** (Name oder Firma, Nummer, IBAN, E-Mail-Adresse, Telefon, Straße, PLZ, Ort …). Ohne Angabe schließt Ablago es aus Feldart, Kennung und Bezeichnung („Kundennummer“ → Nummer, „E-Mail“ → E-Mail-Adresse); was es erkannt hat, steht in der Auswahl hinter *automatisch*. Der **Erkennungshinweis** ist ein freier Text, z. B. „Kundennummer oben rechts, Muster 100-####“ – ein Muster nach dem Wort *Muster* (`#` = Ziffer, `A` = Großbuchstabe) sucht die Erkennung gezielt.
 
-Die Pakete der Registry (z. B. *Basis*) markieren ihre Felder selbst. Bei einem Update übernimmt Ablago die Markierung nur an Feldern, an denen du noch nichts eingestellt hast; die Vorschau nennt sie unter „für die Erkennung“.
+Die Pakete der Registry (z. B. *Basis*) setzen den Haken selbst. Bei einem Update übernimmt Ablago ihn nur an Feldern, an denen du noch nichts eingestellt hast; die Vorschau nennt sie unter „Aus Dokument füllen“.
+
+### Zum Wiederfinden nutzen
+
+Mit dem Haken **Zum Wiederfinden nutzen** sagst du Ablago, über welche Werte es **vorhandene Mappen** in einem Dokument wiederfindet. Typische Felder:
+
+| Mappentyp | Feld |
+| --- | --- |
+| Vertragspartner | Kundennummer, IBAN, E-Mail, Name |
+| Vertrag | Vertragsnummer, Vertragspartner (Verweis) |
+| Rechnung | Rechnungsnummer |
+| Fahrzeug | Kennzeichen |
+
+Geeignet sind Text (auch mit Format IBAN, E-Mail oder Telefon), Zahl und Verweis. Der Haken ist unabhängig von **Eindeutig**: Eine Kundennummer muss nicht eindeutig sein, um beim Wiederfinden zu helfen.
+
+So arbeitet Ablago damit, ohne KI und nur mit den Mappen, die die Person lesen darf:
+
+- **Woran Ablago das erkennt:** Steht der Wert eines solchen Felds im Dokument, ist das ein **Beleg** – mit Feld und Fundstelle, z. B. „Vertragsnummer WV-1043, gefunden: … Vertrag WV-1043 vom …“. Leerzeichen, Punkte und Bindestriche in Nummern zählen nicht, `100-4711` findet also auch `100 4711`.
+- **Über Verweise:** Hat ein **Verweisfeld** den Haken, zählen die Belege der Mappe, auf die es zeigt, auch für diese Mappe. So findet Ablago den Vertrag auch über seinen Vertragspartner, wenn dessen Kundennummer im Brief steht.
+- **Mehrere Belege** machen einen Vorschlag sicher. Ein einzelner schwacher Beleg – etwa nur der Name – gilt als **unsicher**.
+- **Schon vorhanden:** Stehen alle Werte zum Wiederfinden einer vorhandenen Mappe im Dokument, etwa dieselbe Rechnungsnummer, warnt Ablago, bevor eine zweite Mappe entsteht.
+- **Vorschläge beim Zuordnen von Post:** Ein Typ, der den Haken an Namen oder Kontaktangaben hat, gilt als möglicher **Absender** (Organisation, Niederlassung, Person); ein Typ, der ihn nur an Nummern hat (z. B. Vertragsnummer), als mögliche **Zielmappe**.
+
+Mit dem Update, das den Haken brachte, hat Ablago ihn an die Felder gesetzt, über die es bisher Mappen wiedergefunden hat: Felder mit *Für die Erkennung nutzen*, die Nummern, IBAN, Umsatzsteuer-Id, E-Mail, Internetseite, Telefon oder einen Namen enthalten. Pakete ohne diese Angabe behandelt Ablago genauso.
 
 ### Die Kennung
 
@@ -306,7 +338,7 @@ Unter **Erkennung** (nicht bei Systemmappentypen) stellst du den Knopf **Aus Dok
 - **Erkennung** – nur, wenn ein Paket mit dem Recht [Felder aus Dokumenten vorschlagen](pakete.md#recht-erkennen) installiert ist: **Standard aus der Werkbank** (Vorgabe), **eingebaut (ohne KI)** oder ein **Paket**, etwa ein KI-Assistent. Ein Paket, das ins Netz darf, steht mit „schickt Text über das Netz“ in der Liste; wählst du es, fragt Ablago nach und du bestätigst den Datenabfluss. Mehr unter [Erkennung durch ein Paket](pakete.md#erkennung-durch-ein-paket).
 - **Post automatisch zuordnen, wenn die Erkennung sicher ist** (Standard: aus) – für Mappentypen, zu denen Post gehört, z. B. *Vertrag*. Sicher heißt: Absender eindeutig an einem starken Merkmal erkannt (Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail, Internetseite, Telefon) **und** genau eine passende Mappe dieses Typs (sie verweist auf den Absender, frühere Post ging dorthin oder ihre Nummer steht im Brief; steht genau eine Nummer im Brief, gewinnt diese Mappe). Ablago legt dabei nie neue Mappen an, ordnet nie zu, wenn der Empfänger die Mappe nicht lesen darf, und nie bei Mappentypen im [Archivmodus](archiv.md) (dort ist der Haken gesperrt). Der Empfänger (*Für*, sonst wer die Post gebracht hat) bekommt die Aufgabe **Automatisch zugeordnet – bitte prüfen** mit **Passt** und **Rückgängig**; die Begründung steht in der Historie von Post und Mappe. Je Post höchstens einmal, und nur nach neuem Volltext – vorhandene Post bleibt, wie sie ist.
 
-Darunter steht, welche Felder für die Erkennung markiert sind; markieren lässt sich jedes Feld unter [Für die Erkennung nutzen](#fur-die-erkennung-nutzen). Die Erkennung ist eingebaut und arbeitet ohne KI: Muster für E-Mail, Telefon, Internetseite, IBAN, Datum, Betrag, PLZ/Ort, Briefkopf und Visitenkarte sowie vCards (`.vcf`); Fotos und PDFs liest die [Texterkennung](texterkennung.md) sofort (höchstens 5 Seiten, mit den Sprachen ihrer Einstellungen). Jeder Wert wird gegen die Feldart geprüft, bevor er erscheint; gespeichert wird erst mit *Mappe speichern*. QR-Codes (z. B. vCard-QR auf Visitenkarten) liest sie noch nicht. Statt der eingebauten Erkennung kann ein Paket erkennen, etwa mit KI auf dem eigenen Rechner – siehe [Erkennung durch ein Paket](pakete.md#erkennung-durch-ein-paket).
+Darunter steht, welche Felder *Aus Dokument ausfüllen* füllt und über welche Felder Ablago vorhandene Mappen dieses Typs wiederfindet; einstellen lässt sich das an jedem Feld unter [Aus Dokument füllen](#aus-dokument-fullen) und [Zum Wiederfinden nutzen](#zum-wiederfinden-nutzen). Die Erkennung ist eingebaut und arbeitet ohne KI: Muster für E-Mail, Telefon, Internetseite, IBAN, Datum, Betrag, PLZ/Ort, Briefkopf und Visitenkarte sowie vCards (`.vcf`); Fotos und PDFs liest die [Texterkennung](texterkennung.md) sofort (höchstens 5 Seiten, mit den Sprachen ihrer Einstellungen). Jeder Wert wird gegen die Feldart geprüft, bevor er erscheint; gespeichert wird erst mit *Mappe speichern*. QR-Codes (z. B. vCard-QR auf Visitenkarten) liest sie noch nicht. Statt der eingebauten Erkennung kann ein Paket erkennen, etwa mit KI auf dem eigenen Rechner – siehe [Erkennung durch ein Paket](pakete.md#erkennung-durch-ein-paket).
 
 ## Archivmodus
 

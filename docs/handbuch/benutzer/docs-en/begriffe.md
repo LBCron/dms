@@ -246,6 +246,10 @@ A setting per folder type for retention obligations – with versions and a dele
 The template under "Customise the workbench" for the self-employed and small businesses – with number sequences, archive mode, mailboxes and further areas. Its counterpart is the template "Household".  
 See also: [Customise the workbench](#werkbank-anpassen), [Household](#haushalt).
 
+<a id="kann-aus-post-angelegt-werden"></a>**Can be created from post** (*Kann aus Post angelegt werden*) · ~ with explanation · administrators  
+Tick in the basics of a folder type (#937). Only folder types with it can be chosen under "Where does this belong?" when a document is taken over from the post – for everyone who may create folders there. On by default for folder types with a documents tab; never for system folder types.  
+See also: [Folder type](#mappentyp), [Post](#post), [How to recognise it](#woran-man-ihn-erkennt).
+
 <a id="werkbank-anpassen"></a>**Customise the workbench** (*Werkbank anpassen*) · ~ with explanation · administrators  
 Sets which areas are on the left of the workbench – following a template ("Household", "Business" or "Everything") and with exceptions. Hiding doesn't switch anything off. New installations start with "Household"; installations from before this setting show everything.  
 See also: [Workbench](#werkbank), [Overview](#ubersicht), [Business](#betrieb).
@@ -261,6 +265,14 @@ See also: [Appearance](#darstellung).
 <a id="expertenmodus"></a>**Expert mode** (*Expertenmodus*) · ✗ technical term · advanced users  
 An expandable section under Workbench → Packages, directly below the buttons. Expanded, it shows "Further sources" and "Upload package" – for package developers and Ablago without the internet. Collapsed at first; the browser remembers per user whether it is open.  
 See also: [Package](#paket), [Package catalogue](#paketkatalog).
+
+<a id="aus-dokument-fullen"></a>**Fill from document** (*Aus Dokument füllen*) · ~ with explanation · administrators  
+Tick on a field (#938, formerly "Use for recognition") – the button "Fill in from document" may fill this field from a photo or document as a suggestion. With kind ("What is in the field?") and recognition hint.  
+See also: [Use to find existing folders](#zum-wiederfinden-nutzen).
+
+<a id="woran-man-ihn-erkennt"></a>**How to recognise it** (*Woran man ihn erkennt*) · ~ with explanation · administrators  
+Short sentence in the basics of a folder type (#937, at most 300 characters), e.g. "Contains invoice number, amount and payment deadline". Helps recognition assign a document to the right folder type. The description is for people, this sentence for recognition.  
+See also: [Can be created from post](#kann-aus-post-angelegt-werden).
 
 <a id="eingangsordner"></a>**Intake folder** (*Eingangsordner*) · ~ with explanation · administrators  
 A folder that Ablago watches, e.g. for "Scan to Folder". Every file in it becomes post.
@@ -336,6 +348,10 @@ See also: [Test run](#testlauf).
 
 <a id="zwei-faktor-anmeldung"></a>**Two-factor sign-in** (*Zwei-Faktor-Anmeldung*) · ~ with explanation · everyone  
 An additional code from an app when signing in.
+
+<a id="zum-wiederfinden-nutzen"></a>**Use to find existing folders** (*Zum Wiederfinden nutzen*) · ~ with explanation · administrators  
+Tick on a field (#938) – Ablago uses this value to find existing folders again in a document, e.g. customer number, contract number, invoice number or registration number. This results in suggestions with evidence ("How Ablago recognises it") and the warning if a folder already exists. Independent of "Unique".  
+See also: [Fill from document](#aus-dokument-fullen).
 
 <a id="benutzer"></a>**User** (*Benutzer*) · ✓ everyday word · everyone  
 An account with which someone signs in. Stored as a system folder in Ablago. People and companies you deal with (contacts) are not users, but ordinary folders of the folder type "Person" or "Organisation" from the package Basis.
@@ -423,4 +439,4 @@ See also: [Version](#version).
 
 Which German words are still being discussed, which questions have been decided and which words the German texts avoid is listed on the [German page](../../begriffe/). It concerns the German wording.
 
-*As of: 2026-11-04*
+*As of: 2026-11-07*

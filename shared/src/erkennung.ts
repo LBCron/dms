@@ -4,9 +4,11 @@
  * Mappen. Dieselben reinen Funktionen dienen „Vorschläge beim Zuordnen“ (Post → Absender, Angaben,
  * Zielmappe) und „Aus Dokument ausfüllen“ (Dokument → Felder einer Mappe).
  *
- * Welche Felder die Erkennung nutzt, legt der Mappentyp fest: Feld-Eigenschaft „für die Erkennung
- * nutzen“ (`Feld.erkennung`) mit optionaler Art (was im Feld steht) und Erkennungshinweis. Ohne Art
- * ergibt sie sich aus Feldart, Kennung und Bezeichnung (z. B. „E-Mail“ → E-Mail).
+ * Welche Felder die Erkennung nutzt, legt der Mappentyp fest: Feld-Eigenschaft „Aus Dokument füllen“
+ * (`Feld.erkennung`, bis #938 „Für die Erkennung nutzen“) mit optionaler Art (was im Feld steht) und
+ * Erkennungshinweis. Ohne Art ergibt sie sich aus Feldart, Kennung und Bezeichnung (z. B. „E-Mail“ → E-Mail).
+ * Über welche Werte Ablago vorhandene Mappen wiederfindet, sagt der eigene Haken „Zum Wiederfinden nutzen“
+ * (`Feld.wiederfinden`, #938); den Abgleich mit Belegen macht `gleicheAb`.
  *
  * Für Engines aus Paketen (#511, später) beschreibt `schemaFuer` die Felder als JSON Schema;
  * `pruefeVorschlaege` prüft jede Antwort gegen die Feldtypen, bevor etwas angezeigt wird.
@@ -43,7 +45,7 @@ export const ERKENNUNGSARTEN = {
 } as const;
 export type Erkennungsart = keyof typeof ERKENNUNGSARTEN;
 
-/** Feld-Eigenschaft „für die Erkennung nutzen“: vorhanden = an. */
+/** Feld-Eigenschaft „Aus Dokument füllen“ (bis #938 „Für die Erkennung nutzen“): vorhanden = an. */
 export interface FeldErkennung {
   /** Was im Feld steht; fehlt = aus Feldart, Kennung und Bezeichnung. */
   art?: Erkennungsart;
@@ -122,9 +124,28 @@ const MERKMAL: Partial<Record<Erkennungsart, 'stark' | 'schwach'>> = {
 /** Arten, die eine Mappe als möglichen Absender ausweisen (Organisation, Niederlassung, Person). */
 const ABSENDER_ARTEN: Erkennungsart[] = ['name', 'iban', 'ustid', 'email', 'internet', 'telefon', 'mobil', 'fax'];
 
-/** Felder eines Typs, die zum Wiedererkennen taugen (markiert und mit passender Art). */
+/* ---------- Zum Wiederfinden nutzen (#938) ---------- */
+
+/** Feldarten für „Zum Wiederfinden nutzen“: Text (auch IBAN, E-Mail …), Zahl und Verweis. */
+export const WIEDERFINDEN_FELDTYPEN: readonly Feldtyp[] = ['text', 'zahl', 'referenz'];
+/** Haken aus einer Eingabe (Werkbank, API, Paket): nur bei geeigneten Feldarten. */
+export const liesWiederfinden = (v: unknown, typ: Feldtyp): boolean => v === true && WIEDERFINDEN_FELDTYPEN.includes(typ);
+/**
+ * Vorgabe für Felder, die den Haken noch nicht kennen (#938): Bis dahin fand die Erkennung Mappen über Felder mit
+ * „Für die Erkennung nutzen“, deren Art ein Merkmal ist (Kundennummer, IBAN, E-Mail, Name …). Gilt für Pakete ohne
+ * die Angabe `wiederfinden` – so finden ältere Pakete Mappen wieder wie bisher. Migration 089 tut dasselbe in SQL.
+ */
+export function wiederfindenVorgabe(f: Pick<Feld, 'key' | 'label' | 'typ' | 'format'> & { erkennung?: FeldErkennung | null }): boolean {
+  if (!f.erkennung || (f.typ !== 'text' && f.typ !== 'zahl')) return false;
+  const a = artVon(f);
+  return !!a && !!MERKMAL[a];
+}
+/** Art, mit der ein Wiederfinden-Feld im Text gesucht wird: die erkannte Merkmalsart, sonst als Nummer. */
+const wiederfindenArt = (f: Feld): Erkennungsart => { const a = artVon(f); return a && MERKMAL[a] ? a : 'nummer'; };
+
+/** Felder eines Typs, über die sich seine Mappen im Text wiederfinden lassen (Haken „Zum Wiederfinden nutzen“, ohne Verweise). */
 export function merkmalsfelder(t: Pick<Mappentyp, 'felder'>): Array<{ feld: Feld; art: Erkennungsart }> {
-  return t.felder.filter((f) => f.erkennung && f.typ !== 'passwort').map((f) => ({ feld: f, art: artVon(f) })).filter((x): x is { feld: Feld; art: Erkennungsart } => !!x.art && !!MERKMAL[x.art]);
+  return t.felder.filter((f) => f.wiederfinden && (f.typ === 'text' || f.typ === 'zahl')).map((f) => ({ feld: f, art: wiederfindenArt(f) }));
 }
 /** Ist ein Typ ein möglicher Absender? Er hat markierte Felder mit Name oder Kontaktangaben. */
 export const istAbsenderTyp = (t: Pick<Mappentyp, 'felder' | 'system'>) => !t.system && merkmalsfelder(t).some((x) => ABSENDER_ARTEN.includes(x.art));
@@ -508,6 +529,114 @@ export function findeMappen(text: string, typen: Array<Pick<Mappentyp, 'id' | 'f
 export function eindeutigerTreffer(treffer: Treffer[]): Treffer | null {
   const stark = treffer.filter((x) => x.stark);
   return stark.length === 1 ? stark[0] : null;
+}
+
+/* ---------- Abgleich mit vorhandenen Mappen (#938) ---------- */
+
+/** Ein Beleg „Woran Ablago das erkennt“: ein Wert eines Wiederfinden-Felds, der im Dokument steht. */
+export interface Beleg {
+  /** Mappe, an der der Wert steht, und ihr Typ. */
+  mappeId: string; typId: string;
+  /** Feld mit dem Haken „Zum Wiederfinden nutzen“ und seine Bezeichnung (Ausgangstext). */
+  feldKey: string; feld: string;
+  /** Der Wert, wie er in der Mappe steht. */
+  wert: string;
+  /** Fundstelle im Dokument. */
+  fundstelle: string;
+  /** stark = ein eindeutiges Merkmal (Nummer, IBAN, E-Mail …); schwach = etwa nur der Name. */
+  stark: boolean;
+  /** Über einen Verweis (z. B. Vertrag → Vertragspartner): das Verweisfeld der vorgeschlagenen Mappe. */
+  ueber?: { feldKey: string; feld: string };
+}
+/** Eine vorhandene Mappe, die das Dokument betrifft, mit ihren Belegen. */
+export interface Abgleichtreffer {
+  mappeId: string; typId: string;
+  belege: Beleg[];
+  /** hoch: ein starker Beleg und weitere; mittel: ein starker; niedrig: nur schwache. */
+  sicherheit: Sicherheit;
+  /** Nur schwache Belege (z. B. nur der Name) – so zeigen, nicht vorauswählen. */
+  unsicher: boolean;
+  punkte: number;
+}
+export interface Abgleich {
+  /** Alle wiedergefundenen Mappen, beste zuerst. */
+  treffer: Abgleichtreffer[];
+  /** Je Verweisfeld des Zieltyps die passenden Mappen, beste zuerst (z. B. Aussteller → Vertragspartner, Vertrag → Vertrag). */
+  verweise: Record<string, Abgleichtreffer[]>;
+  /** Mappen des Zieltyps, die es schon gibt: Alle ihre Werte zum Wiederfinden stehen im Dokument (z. B. dieselbe Rechnungsnummer). */
+  doppelt: Abgleichtreffer[];
+}
+/** Höchstens so viele Vorschläge je Verweisfeld. */
+export const ABGLEICH_JE_FELD = 5;
+
+const sicherheitAus = (belege: Beleg[]): Sicherheit => {
+  const stark = belege.some((b) => b.stark);
+  return stark && belege.length >= 2 ? 'hoch' : stark ? 'mittel' : belege.length >= 2 ? 'mittel' : 'niedrig';
+};
+
+/**
+ * Abgleich im Kern, ohne KI (#938): Welche vorhandenen Mappen finden sich im Text wieder – über die Werte ihrer Felder
+ * mit „Zum Wiederfinden nutzen“? Jeder Fund ist ein Beleg mit Feld und Fundstelle. Eine Mappe, deren Verweisfeld mit
+ * dem Haken auf eine wiedergefundene Mappe zeigt, erbt deren Belege (Vertrag → Vertragspartner, über die Kundennummer).
+ * Mehrere Belege stärken einen Treffer; ein einzelner schwacher (nur der Name) bleibt „unsicher“.
+ *
+ * Mit `ziel` (dem gewählten Mappentyp) kommen Vorschläge für seine Verweisfelder und die Warnung vor Doppelten dazu.
+ * `mappen` sind nur die, die die Person lesen darf – das prüft der Aufrufer. Reine Funktion.
+ */
+export function gleicheAb(text: string, typen: Array<Pick<Mappentyp, 'id' | 'felder'>>, mappen: Vergleichsmappe[], ziel?: Pick<Mappentyp, 'id' | 'felder'>): Abgleich {
+  const t = (text ?? '').replace(/\u00a0/g, ' ');
+  const typVon = new Map(typen.map((x) => [x.id, x]));
+  const merkmale = new Map(typen.map((x) => [x.id, merkmalsfelder(x)]));
+  // 1. Direkte Belege: Werte der Wiederfinden-Felder, die im Text stehen.
+  const direkt = new Map<string, Beleg[]>();
+  for (const m of mappen) {
+    for (const { feld, art } of merkmale.get(m.typId) ?? []) {
+      const roh = m.werte[feld.key];
+      for (const w of (Array.isArray(roh) ? roh : [roh]).filter((x): x is string | number => typeof x === 'string' || typeof x === 'number')) {
+        const re = wertMuster(String(w), art);
+        const fund = re?.exec(t);
+        if (!fund) continue;
+        const b: Beleg = { mappeId: m.id, typId: m.typId, feldKey: feld.key, feld: feld.label || feld.key, wert: String(w).trim(), fundstelle: ausschnitt(t, fund.index, fund[0].length), stark: MERKMAL[art] === 'stark' };
+        direkt.set(m.id, [...direkt.get(m.id) ?? [], b]);
+        break;
+      }
+    }
+  }
+  // 2. Über Verweise: Verweisfelder mit dem Haken, die auf eine wiedergefundene Mappe zeigen.
+  const belegeJe = new Map<string, Beleg[]>(direkt);
+  for (const m of mappen) {
+    const typ = typVon.get(m.typId);
+    for (const f of typ?.felder.filter((x) => x.wiederfinden && x.typ === 'referenz') ?? []) {
+      const ziele = (Array.isArray(m.werte[f.key]) ? m.werte[f.key] as unknown[] : [m.werte[f.key]]).filter((x): x is string => typeof x === 'string');
+      for (const z of ziele) {
+        if (z === m.id) continue;
+        const geerbt = (direkt.get(z) ?? []).map((b) => ({ ...b, ueber: { feldKey: f.key, feld: f.label || f.key } }));
+        if (geerbt.length) belegeJe.set(m.id, [...belegeJe.get(m.id) ?? [], ...geerbt]);
+      }
+    }
+  }
+  const punkteVon = (belege: Beleg[]) => belege.reduce((n, b) => n + (b.ueber ? (b.stark ? 2 : 1) : b.stark ? 3 : 1), 0);
+  const treffer: Abgleichtreffer[] = [...belegeJe.entries()].map(([mappeId, belege]) => {
+    const sicherheit = sicherheitAus(belege);
+    return { mappeId, typId: mappen.find((m) => m.id === mappeId)!.typId, belege, sicherheit, unsicher: sicherheit === 'niedrig', punkte: punkteVon(belege) };
+  }).sort((a, b) => b.punkte - a.punkte || b.belege.length - a.belege.length);
+  const verweise: Record<string, Abgleichtreffer[]> = {};
+  const doppelt: Abgleichtreffer[] = [];
+  if (ziel) {
+    for (const f of ziel.felder.filter((x) => x.typ === 'referenz' && x.zielTyp && x.zielTyp !== '*')) {
+      const passend = treffer.filter((x) => x.typId === f.zielTyp).slice(0, ABGLEICH_JE_FELD);
+      if (passend.length) verweise[f.key] = passend;
+    }
+    // Doppelt: jede gefüllte Angabe zum Wiederfinden der vorhandenen Mappe steht im Dokument, mindestens eine stark.
+    const felder = merkmalsfelder(ziel);
+    for (const x of treffer.filter((y) => y.typId === ziel.id)) {
+      const m = mappen.find((y) => y.id === x.mappeId)!;
+      const eigene = x.belege.filter((b) => !b.ueber);
+      const gefuellt = felder.filter(({ feld }) => { const w = m.werte[feld.key]; return w != null && w !== '' && !(Array.isArray(w) && !w.length); });
+      if (eigene.some((b) => b.stark) && gefuellt.every(({ feld }) => eigene.some((b) => b.feldKey === feld.key))) doppelt.push(x);
+    }
+  }
+  return { treffer, verweise, doppelt };
 }
 
 /* ---------- Vorschläge für die Felder eines Mappentyps ---------- */

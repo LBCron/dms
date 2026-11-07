@@ -409,6 +409,35 @@ begriffe:
     verwandt: [Organisation, Person]
     nicht_verwenden: [Standort (verwechselbar mit Ablageort), Filiale (als Mappentyp – ist eine der Arten)]
     code: basis_niederlassung
+  - begriff: Kann aus Post angelegt werden
+    bereich: werkbank
+    beschreibung: Haken in den Grunddaten eines Mappentyps (#937). Nur Mappentypen damit stehen beim Übernehmen eines Dokuments aus der Post unter „Wohin gehört das?“ zur Wahl – für alle, die dort Mappen anlegen dürfen. Vorgabe an bei Mappentypen mit Dokumentenregister; Systemmappentypen nie.
+    einsteiger: erklaeren
+    begegnet: admin
+    verwandt: [Mappentyp, Post, Woran man ihn erkennt]
+    code: Mappentyp.ausPost
+  - begriff: Woran man ihn erkennt
+    bereich: werkbank
+    beschreibung: Kurzer Satz in den Grunddaten eines Mappentyps (#937, höchstens 300 Zeichen), z. B. „Enthält Rechnungsnummer, Betrag und Zahlungsziel“. Hilft der Erkennung, ein Dokument dem richtigen Mappentyp zuzuordnen. Die Beschreibung ist für Menschen, dieser Satz für die Erkennung.
+    einsteiger: erklaeren
+    begegnet: admin
+    verwandt: [Kann aus Post angelegt werden]
+    code: Mappentyp.erkennbarAn
+  - begriff: Aus Dokument füllen
+    bereich: werkbank
+    beschreibung: Haken an einem Feld (#938, früher „Für die Erkennung nutzen“) – der Knopf „Aus Dokument ausfüllen“ darf dieses Feld aus einem Foto oder Dokument als Vorschlag füllen. Mit Art („Was steht im Feld?“) und Erkennungshinweis.
+    einsteiger: erklaeren
+    begegnet: admin
+    nicht_verwenden: [Für die Erkennung nutzen (alter Name)]
+    verwandt: [Zum Wiederfinden nutzen]
+    code: Feld.erkennung
+  - begriff: Zum Wiederfinden nutzen
+    bereich: werkbank
+    beschreibung: Haken an einem Feld (#938) – über diesen Wert findet Ablago vorhandene Mappen in einem Dokument wieder, z. B. Kundennummer, Vertragsnummer, Rechnungsnummer oder Kennzeichen. Daraus entstehen Vorschläge mit Belegen („Woran Ablago das erkennt“) und die Warnung, wenn es eine Mappe schon gibt. Unabhängig von „Eindeutig“.
+    einsteiger: erklaeren
+    begegnet: admin
+    verwandt: [Aus Dokument füllen]
+    code: Feld.wiederfinden
   - begriff: Administrator
     bereich: werkbank
     beschreibung: Ein Benutzer mit Zugang zur Werkbank. Für ihn gelten keine Einschränkungen durch Berechtigungen.
