@@ -53,7 +53,7 @@ Apart from `deploy/komplett/start.sh`, `deploy/` is excluded from the Docker bui
 | `npm run typecheck` | TypeScript for `shared`, `server` and `web` |
 | `npm run build` | build interface and server as in the image |
 
-CI on GitHub runs all of this, builds both images (`dms`, `dms-komplett`) for amd64 and arm64, records the manuals' screenshots and checks the interface at iPhone size.
+CI on GitHub runs all of this plus the [smoke tests of the interface](#rauchtests-der-oberflache), builds both images (`dms`, `dms-komplett`) for amd64 and arm64, records the manuals' screenshots and checks the interface at iPhone size.
 
 ### Tests with PostgreSQL: own database { #tests-mit-postgresql-eigene-datenbank }
 
@@ -78,6 +78,33 @@ A test that is sometimes red and sometimes green without any change goes into `s
 ```
 
 It keeps running but does not fail CI; its result (passed, failed, not found) appears in the run summary. A name can also be a whole section (`describe`). Once the due date has passed, CI fails – then fix the test and remove the entry, or extend the date deliberately (90 days at most). The TAP log is evaluated with `node --import tsx server/test/quarantaene.ts test.log <exit code>`. Before quarantining, look for the cause: usually it is a fixed wait where the test should wait for an event.
+
+### Smoke tests of the interface { #rauchtests-der-oberflache }
+
+The smoke tests in `web/rauchtest/rauchtest.mjs` walk through the most important paths once in the browser (Chromium with Playwright): setup in the wizard, signing in and the start page, opening new post and assigning it to a folder, “+ New”, changing and saving a folder, search, admin mode with Workbench → Packages, editing a folder type, the tour and “Discover Ablago” for a new account, signing out – and three paths at phone size. Each test checks the visible result and that there were no errors in the console, no failed request and no response of 400 or above (apart from expected ones). They run in the `pruefen` job after the build and take less than a minute altogether.
+
+Locally they need a freshly built Ablago **without** a database connection, its own data root and a PostgreSQL in which the role may create databases – the first test goes through the wizard and creates the database itself:
+
+```bash
+npm run build
+DMS_DATENWURZEL=/tmp/rauchtest PORT=3000 node server/dist/index.js &
+cd web/rauchtest && npm install --no-save playwright@1.64.1 && npx playwright install chromium && cd ../..
+DMS_URL=http://localhost:3000 DMS_DATENWURZEL=/tmp/rauchtest DB_HOST=localhost DB_PASSWORT=dms node web/rauchtest/rauchtest.mjs
+```
+
+For a second run, stop Ablago and delete the data root and the database `dms_rauchtest` (or change `DB_NAME`). If a test fails, a picture of the page is in `rauchtest-fehler/` (in CI as the artefact `rauchtest-fehler`).
+
+**When to add a smoke test:** a new flow in the interface – a new page, a new path to a result – gets its smoke test in the same PR; so does a path that easily breaks unnoticed during a rework. There is no coverage target; the server tests check the details. A test looks like this:
+
+```js
+rauchtest('Favorit merken', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  // … click and fill in like a person would: getByRole, getByLabel, visible texts
+  await s.getByRole('button', { name: 'Aus den Favoriten entfernen' }).waitFor(); // visible result
+});
+```
+
+The tests search for the German texts of the interface. `{ handy: true }` opens the test at phone size, `erwartet: [{ status: 404, pfad: /…/ }]` allows responses that belong to this path. Always wait for an element or event, never a fixed time – otherwise the test becomes flaky. Data that several tests need is created by `vorbereiten()` through the API.
 
 ## Manuals { #handbucher }
 

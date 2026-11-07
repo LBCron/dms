@@ -53,7 +53,7 @@ deploy/vorlagen-probe.sh dms                           # NAS-Vorlagen mit dem sc
 | `npm run typecheck` | TypeScript für `shared`, `server` und `web` |
 | `npm run build` | Oberfläche und Server bauen wie im Image |
 
-Die CI auf GitHub führt all das aus, baut beide Images (`dms`, `dms-komplett`) für amd64 und arm64, nimmt die Screenshots der Handbücher auf und prüft die Oberfläche in iPhone-Größe.
+Die CI auf GitHub führt all das aus, dazu die [Rauchtests der Oberfläche](#rauchtests-der-oberflache), baut beide Images (`dms`, `dms-komplett`) für amd64 und arm64, nimmt die Screenshots der Handbücher auf und prüft die Oberfläche in iPhone-Größe.
 
 ### Tests mit PostgreSQL: eigene Datenbank
 
@@ -78,6 +78,33 @@ Ein Test, der ohne Änderung mal rot, mal grün ist, kommt mit Issue und Fällig
 ```
 
 Er läuft weiter, bricht die CI aber nicht ab; sein Ergebnis (bestanden, fehlgeschlagen, nicht gefunden) steht in der Zusammenfassung des Laufs. Ein Name kann auch ein ganzer Abschnitt (`describe`) sein. Ist die Fälligkeit überschritten, scheitert die CI – dann den Test beheben und den Eintrag entfernen oder die Fälligkeit bewusst verlängern (höchstens 90 Tage). Ausgewertet wird das TAP-Protokoll mit `node --import tsx server/test/quarantaene.ts test.log <Exit-Code>`. Vor der Quarantäne lohnt der Blick auf die Ursache: Meist ist es eine feste Wartezeit, wo der Test auf ein Ereignis warten sollte.
+
+### Rauchtests der Oberfläche
+
+Die Rauchtests in `web/rauchtest/rauchtest.mjs` gehen die wichtigsten Wege einmal im Browser (Chromium mit Playwright): Einrichtung im Assistenten, Anmelden und Startseite, Neue Post öffnen und einer Mappe zuordnen, „+ Neu“, Mappe ändern und speichern, Suche, Verwaltungsmodus mit Werkbank → Pakete, Mappentyp bearbeiten, Rundgang und „Ablago entdecken“ für ein neues Konto, Abmelden – und drei Wege in Handy-Größe. Jeder Test prüft das sichtbare Ergebnis und dass es dabei keine Fehler in der Konsole, keine fehlgeschlagene Anfrage und keine Antwort ab 400 gab (außer den erwarteten). Sie laufen im Job `pruefen` nach dem Bauen und dauern zusammen unter einer Minute.
+
+Lokal brauchen sie ein frisch gebautes Ablago **ohne** Datenbank-Anbindung, eine eigene Datenwurzel und ein PostgreSQL, in dem die Rolle Datenbanken anlegen darf – der erste Test geht den Assistenten durch und legt die Datenbank selbst an:
+
+```bash
+npm run build
+DMS_DATENWURZEL=/tmp/rauchtest PORT=3000 node server/dist/index.js &
+cd web/rauchtest && npm install --no-save playwright@1.64.1 && npx playwright install chromium && cd ../..
+DMS_URL=http://localhost:3000 DMS_DATENWURZEL=/tmp/rauchtest DB_HOST=localhost DB_PASSWORT=dms node web/rauchtest/rauchtest.mjs
+```
+
+Für einen zweiten Lauf Ablago beenden, die Datenwurzel und die Datenbank `dms_rauchtest` löschen (oder `DB_NAME` ändern). Bei einem Fehler liegt ein Bild der Seite in `rauchtest-fehler/` (in der CI als Artefakt `rauchtest-fehler`).
+
+**Wann ein Rauchtest dazukommt:** Ein neuer Ablauf in der Oberfläche – eine neue Seite, ein neuer Weg zu einem Ergebnis – bekommt seinen Rauchtest im selben PR; ebenso ein Weg, der bei einem Umbau leicht unbemerkt kaputtgeht. Ein Ziel für die Abdeckung gibt es nicht, Einzelheiten prüfen die Tests des Servers. So sieht ein Test aus:
+
+```js
+rauchtest('Favorit merken', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  // … klicken und ausfüllen wie eine Person: getByRole, getByLabel, sichtbare Texte
+  await s.getByRole('button', { name: 'Aus den Favoriten entfernen' }).waitFor(); // sichtbares Ergebnis
+});
+```
+
+Die Tests suchen die deutschen Texte der Oberfläche. `{ handy: true }` öffnet den Test in Handy-Größe, `erwartet: [{ status: 404, pfad: /…/ }]` erlaubt Antworten, die zu diesem Weg gehören. Gewartet wird immer auf ein Element oder Ereignis, nie eine feste Zeit – sonst wackelt der Test. Daten, die mehrere Tests brauchen, legt `vorbereiten()` über die Schnittstelle an.
 
 ## Handbücher
 
