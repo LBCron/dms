@@ -5,6 +5,7 @@
 #   3. docker stop → PostgreSQL sauber heruntergefahren, Exit-Code 0
 #   4. Prozess abschießen → Container endet
 #   5. Ordner einer anderen PostgreSQL-Hauptversion → Container startet nicht
+#  5b. Rechte (#943): eingebundener Ordner mit 000 → startet; nicht beschreibbar → klare Meldung
 #   6. Eigener PORT → Healthcheck gesund
 #   7. Lasttest-Modus ohne Ordner (#612) → Seite, Ergebnis, „Test beenden“ → Container weg
 #
@@ -14,7 +15,7 @@ IMAGE="${1:?Image angeben, z. B. dms-komplett:probe}"
 PORT=18090
 arbeit=$(mktemp -d)
 NAME=probe-komplett
-aufraeumen() { docker rm -f "$NAME" "$NAME-alt" >/dev/null 2>&1 || true; sudo rm -rf "$arbeit" 2>/dev/null || rm -rf "$arbeit" || true; }
+aufraeumen() { docker rm -f "$NAME" "$NAME-alt" "$NAME-rechte" >/dev/null 2>&1 || true; sudo rm -rf "$arbeit" 2>/dev/null || rm -rf "$arbeit" || true; }
 trap aufraeumen EXIT
 # Job-Logs sind nicht überall lesbar: jeden unerwarteten Fehler als Anmerkung melden.
 set -E
@@ -120,6 +121,21 @@ docker run --name "$NAME-alt" -v "$alt:/data/postgres" "$IMAGE" > "$altlog" 2>&1
 grep -q "stammt von PostgreSQL 15" "$altlog" || { sed 's/^/::error::/' "$altlog"; fehler "keine klare Meldung bei anderer Hauptversion"; }
 sudo rm -rf "$alt" "$altlog"
 echo "::endgroup::"; echo "::notice::dms-komplett: Schritt erledigt"
+echo "::group::5b. Rechte am Datenbank-Ordner (#943)"
+# Wie auf dem UGREEN-NAS: Der Ordner für /data/postgres hat 000. Ablago selbst startet nicht (DMS_START=true),
+# es genügt, dass initdb und PostgreSQL als Benutzer postgres durchlaufen.
+rechte=$(mktemp -d); chmod 000 "$rechte"; rechtelog=$(mktemp)
+docker run --rm --name "$NAME-rechte" -e DMS_START=true -v "$rechte:/data/postgres" "$IMAGE" > "$rechtelog" 2>&1 \
+  || { sed 's/^/::error::/' "$rechtelog"; fehler "startet nicht, wenn /data/postgres die Rechte 000 hat"; }
+sudo test -s "$rechte/daten/PG_VERSION" || fehler "keine Datenbank bei Rechten 000"
+# Nicht beschreibbar (hier: schreibgeschützt eingebunden) → Abbruch vor initdb mit verständlicher Meldung.
+sudo rm -rf "$rechte"; rechte=$(mktemp -d)
+docker run --rm --name "$NAME-rechte" -v "$rechte:/data/postgres:ro" "$IMAGE" > "$rechtelog" 2>&1 && fehler "startet trotz nicht beschreibbarem Ordner"
+grep -q "FEHLER: PostgreSQL (Benutzer 70) kann nicht in /data/postgres/daten schreiben. Bitte die Rechte des Ordners auf dem NAS prüfen" "$rechtelog" \
+  || { sed 's/^/::error::/' "$rechtelog"; fehler "keine klare Meldung bei nicht beschreibbarem Ordner"; }
+grep -q "komplett/#container-startet-nicht" "$rechtelog" || fehler "kein Link ins Handbuch bei nicht beschreibbarem Ordner"
+sudo rm -rf "$rechte" "$rechtelog"
+echo "::endgroup::"; echo "::notice::dms-komplett: Rechte am Datenbank-Ordner in Ordnung"
 echo "::group::6. Eigener PORT: Healthcheck bleibt gesund (#321)"
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" -e PORT=4000 -p "$PORT:4000" \
@@ -157,4 +173,4 @@ curl -fsS -X POST "http://127.0.0.1:$PORT/api/lasttest/beenden" -H 'x-dms: 1' -H
 for _ in $(seq 1 60); do docker inspect "$NAME" >/dev/null 2>&1 || break; sleep 1; done
 docker inspect "$NAME" >/dev/null 2>&1 && fehler "Container nach „Test beenden“ noch da (--rm)"
 echo "::endgroup::"; echo "::notice::dms-komplett: Lasttest ohne Ordner in Ordnung"
-echo "dms-komplett: Einrichten, Neustart, Stopp, Absturz, Versionsprüfung, Healthcheck und Lasttest-Modus in Ordnung."
+echo "dms-komplett: Einrichten, Neustart, Stopp, Absturz, Versionsprüfung, Ordnerrechte, Healthcheck und Lasttest-Modus in Ordnung."

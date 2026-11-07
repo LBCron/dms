@@ -48,11 +48,61 @@ Open `http://<device>:8080`. The wizard asks for the **setup code**. It is in th
 
 If you already have a DMS with two containers, choose **Restore from a backup** in the wizard and restore a backup from there. This way you move without losing anything.
 
+## Database on the SSD {#datenbank-auf-der-ssd}
+
+The database lives in the folder you enter for `/data/postgres`. It doesn't have to sit next to the other folders: if your NAS has an SSD, put it there – PostgreSQL benefits noticeably, and the files (`files`) can stay on the hard drives.
+
+```yaml
+    volumes:
+      - /volume1/docker/dms/files:/data/files
+      # Database on the SSD
+      - /volume2/ssd/dms/postgres:/data/postgres
+```
+
+- **Permissions:** on start, the container hands the folder to the user `postgres` (number 70) and sets the permissions to `700` – even if the folder was created on the NAS with `000` (`d---------`). You don't need to set anything by hand.
+- **Named volume as an alternative:** if the NAS causes trouble with permissions (network shares, ACLs), use a named Docker volume. Docker creates it on the disk Docker itself lives on:
+
+    ```yaml
+    services:
+      dms:
+        volumes:
+          - dms-postgres:/data/postgres
+    volumes:
+      dms-postgres:
+    ```
+
+    A named volume survives `docker compose down` and updates. It is only deleted with `docker compose down -v` or `docker volume rm`.
+- **Don't forget it:** if the line for `/data/postgres` is missing, the database is only stored inside the container. Ablago shows this in red under **Workbench → Overview** and **Database connection** and writes it to the log on start. How to rescue the data is described [below](#datenbank-retten).
+
+## The container doesn't start {#container-startet-nicht}
+
+The container's log tells you what is wrong (`docker compose logs dms` or "Log" in your NAS interface). The lines start with `[dms-komplett]`. The messages are in German:
+
+| Message | What to do |
+| --- | --- |
+| `FEHLER: PostgreSQL (Benutzer 70) kann nicht in /data/postgres/daten schreiben. …` (PostgreSQL, user 70, cannot write to /data/postgres/daten) | The container couldn't fix the permissions itself, usually because of a network share (NFS with `root_squash`, SMB) or ACLs that override the normal permissions. Check the folder on the NAS with `ls -la` and `getfacl`. User 70 needs read, write and enter (`rwx`) on the folder and on `daten`. Easier: use a local folder on the NAS or a [named volume](#datenbank-auf-der-ssd). |
+| `FEHLER: Die Datenbank in /data/postgres stammt von PostgreSQL …` (database from another PostgreSQL version) | The database comes from another major version. Switch via backup and restore, see [Growing and moving](https://help.ablago.app/admin/aktuell/en/wachsen/#neue-hauptversion-von-postgresql). |
+| `FEHLER: /data/postgres/daten ist nicht leer, enthält aber keine Datenbank.` (not empty, but no database) | The `daten` folder contains something other than a database, e.g. leftovers from an aborted first start. If nothing has been set up yet, empty the folder and start again. |
+| `FEHLER: PostgreSQL ist beim Start beendet worden (siehe oben).` (PostgreSQL stopped during start) | The lines above give the reason. If the container was previously killed, PostgreSQL usually cleans up by itself on the next start – see `stop_grace_period` below. |
+
+**Don't leave out `stop_grace_period: 60s`.** When stopping, the container first shuts down Ablago and then PostgreSQL cleanly. Without this line Docker only waits 10 seconds and then kills the container. PostgreSQL then has to clean up on the next start, and in the worst case it doesn't start. The template contains the line; with `docker run` it is `--stop-timeout 60`. In a NAS interface without this setting, stop the container through the interface (not "Force") and wait until it is off.
+
+## Rescue the database from the container {#datenbank-retten}
+
+If the line `/data/postgres` is missing, the database is only stored inside the container. A restart does no harm. But once the container is recreated – `docker compose down`, an update or "Recreate" in your NAS interface – it is gone. This is how you rescue it first:
+
+1. **Stop, don't remove:** `docker compose stop` (not `down`). The container and its data are kept.
+2. **Copy it out:** `docker cp <container>:/data/postgres ./postgres` – `docker ps -a` shows the container's name, with the template usually `dms-dms-1`.
+3. **Add the line:** in the Compose file under `volumes:`, add `- ./postgres:/data/postgres`.
+4. **Start again:** `docker compose up -d`. The container takes over the copied folder and sets the permissions itself. The red message in the Workbench disappears.
+
+Safer on top: create and download a backup under **Workbench → Backup** beforehand.
+
 ## Good to know {#gut-zu-wissen}
 
 - **No password:** the database can only be reached inside the container. There is no database port to the outside.
-- **Folders:** all four must be on the device (volumes), otherwise they are gone with the next update. The container sets the permissions of `postgres` itself on start.
-- **Stopping:** when stopping, the container first shuts down Ablago and then the database cleanly. Give it up to a minute for this (`stop_grace_period` or `--stop-timeout`). If one of the two parts ends unexpectedly, the whole container ends, and Docker restarts it.
+- **Folders:** all four must be on the device (volumes), otherwise they are gone with the next update. The container sets the permissions of `postgres` itself on start, see [Database on the SSD](#datenbank-auf-der-ssd).
+- **Stopping:** when stopping, the container first shuts down Ablago and then the database cleanly. Give it up to a minute for this (`stop_grace_period: 60s` or `--stop-timeout 60`) – don't leave the line out, otherwise Docker kills PostgreSQL after 10 seconds (see [The container doesn't start](#container-startet-nicht)). If one of the two parts ends unexpectedly, the whole container ends, and Docker restarts it.
 - **Updates:** `docker compose pull && docker compose up -d`, or pull the image again and recreate the container. PostgreSQL updates come with the Ablago image; **Workbench → system health → Version and updates** shows whether there is one. With a version number instead of `main`, i.e. `ghcr.io/motom001/dms-komplett:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on that release. With `main`, PostgreSQL is rebuilt weekly; with a fixed version only with the next release.
 - **New major version of PostgreSQL:** if a future image brings a new major version (e.g. 18), the container deliberately does not start with the old database and says so in the log. The switch then works via backup and restore, see [Growing and moving](https://help.ablago.app/admin/aktuell/en/wachsen/#neue-hauptversion-von-postgresql).
 - **Workbench → system health → Version and updates** shows "dms-komplett (with PostgreSQL in the container)" for the image and "in the container (dms-komplett)" as the location of the database.

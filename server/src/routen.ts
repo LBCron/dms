@@ -1820,8 +1820,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         erweiterungen: x.erweiterungen ? (await sicher(() => x.erweiterungen!()))?.filter((e) => e.zustand !== 'ok') ?? [] : [],
         // Je Variable mit Grund (#478).
         variablen: ueberfluessigeVariablen({ ordner: x.ordner?.ueberfluessig, datenbank: x.anbindung?.stand().umgebung === 'gleich', haushalt: !!(x.mandantHinweis && process.env.HAUSHALT_ID) }),
-        // DATABASE_URL weicht von der Anbindung in /data/geheim ab und wird ignoriert (#119).
-        anbindung: x.anbindung ? { umgebung: x.anbindung.stand().umgebung, neustartNoetig: x.anbindung.stand().neustartNoetig } : null,
+        // DATABASE_URL weicht von der Anbindung in /data/geheim ab und wird ignoriert (#119); dms-komplett ohne Volume
+        // für /data/postgres (#943): Die Datenbank ginge beim nächsten Update verloren.
+        anbindung: x.anbindung ? { umgebung: x.anbindung.stand().umgebung, neustartNoetig: x.anbindung.stand().neustartNoetig, ohneVolume: x.anbindung.stand().ohneVolume } : null,
         // DMS_LASTTEST in einer echten Installation (#612): nicht gestartet, das DMS läuft normal.
         lasttestAbbruch: x.lasttestAbbruch?.() ?? null,
         einrichtung: x.einrichtung ? await sicher(() => x.einrichtung!.stand()) : null,

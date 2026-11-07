@@ -38,7 +38,7 @@ import { lebenszeichen, pgKurzzustand } from './kurzzustand';
 import { Betrieb, pgBetriebSpeicher } from './betrieb';
 import { Tresor } from './tresor';
 import { pruefeOrdner, SCHLUESSELDATEI } from './ordner';
-import { alsUrl, ANBINDUNG_DATEI, AnbindungVerwaltung, ausUrl, ausVariablen, datenbankVomImage, liesAnbindung, pruefeAnbindung, schreibeAnbindung, umgebungAusCompose, type Anbindung } from './anbindung';
+import { alsUrl, ANBINDUNG_DATEI, AnbindungVerwaltung, ausUrl, ausVariablen, DATENBANK_RETTEN, datenbankOhneVolume, datenbankVomImage, liesAnbindung, pruefeAnbindung, schreibeAnbindung, umgebungAusCompose, type Anbindung } from './anbindung';
 import { Einrichtungscode } from './einrichtungscode';
 import { einrichtungsmodus } from './einrichtungsmodus';
 import { Einrichtung } from './einrichtung';
@@ -129,6 +129,10 @@ const lasttest = lasttestAus(leiter ? env : {});
 if (lasttest.fehler) log.warn(lasttest.fehler);
 /** Grund, warum der Lasttest trotz DMS_LASTTEST nicht läuft (echte Ablage) – für die Werkbank-Übersicht. */
 let lasttestAbbruch: string | null = null;
+// dms-komplett (#943): /data/postgres nicht eingebunden – die Datenbank ginge beim nächsten Update verloren.
+// Einmal beim Start geprüft (Einhängepunkte ändern sich zur Laufzeit nicht); Übersicht und Anbindung zeigen es rot.
+const ohneDatenbankVolume = datenbankOhneVolume(env);
+if (ohneDatenbankVolume && leiter) log.error(tDe('meldungen.index.datenbank-ohne-volume', { link: DATENBANK_RETTEN }));
 
 // Unerwartete Fehler außerhalb von Anfragen nicht verschlucken.
 process.on('unhandledRejection', (e) => protokoll.schreibe('error', 'system', tDe('meldungen.index.unbehandelter-fehler'), { fehler: e instanceof Error ? e.stack : String(e) }));
@@ -458,7 +462,7 @@ const postfaecher = new Postfaecher({
   })()),
 });
 // Hinweise zu DATABASE_URL nur, wenn sie aus der Compose-Datei kommt, nicht vom Start-Skript von dms-komplett (#805).
-const anbindungVerwaltung = new AnbindungVerwaltung(ordner.geheim, db, umgebungAusCompose(env, umgebung), () => ganzBeenden('Datenbank-Anbindung geändert'));
+const anbindungVerwaltung = new AnbindungVerwaltung(ordner.geheim, db, umgebungAusCompose(env, umgebung), () => ganzBeenden('Datenbank-Anbindung geändert'), undefined, ohneDatenbankVolume);
 // Befehl dms im Container (#244).
 // Mehrere Prozesse (#745): ein gemeinsamer Schlüssel vom Hauptprozess; die Datei schreibt der Leiter.
 const konsole = new Konsolenzugang(undefined, verbund.konsole ?? undefined);

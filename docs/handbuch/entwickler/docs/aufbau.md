@@ -61,6 +61,15 @@ Die Prüfung **Abhängigkeiten** (`.github/workflows/abhaengigkeiten.yml`) melde
 
 Nur für Bau und Tests (nicht im Image): `typescript`, `tsx`, `esbuild`, `vite` mit `@vitejs/plugin-react` und die Typen unter `@types/…`. Auch hier gilt: lieber Bordmittel – die Tests laufen mit dem Testläufer von Node.js (`node --test`), ohne eigenes Test-Framework.
 
+## dms-komplett: Datenbank-Ordner { #komplett-datenbankordner }
+
+`deploy/komplett/start.sh` startet PostgreSQL und Ablago im Image `dms-komplett`. Für den Ordner `/data/postgres` gilt (#943):
+
+- **Rechte:** Das Skript gibt `/data/postgres` und `/data/postgres/daten` dem Benutzer `postgres` (70) und setzt beide auf `700`. Der Elternordner zählt mit: Ohne `x` daran kommt `postgres` nicht bis zu `daten`, obwohl root dort alles anlegen kann (NAS-Ordner mit `000`). `chown`/`chmod` brechen den Start nicht ab, denn auf Netzwerkfreigaben scheitern sie oft. Danach legt das Skript als `postgres` eine Probedatei in `daten` an und löscht sie wieder. Klappt das nicht, endet der Start vor `initdb` mit einer Meldung samt Link ins Installationshandbuch. Geprüft wird das in `deploy/komplett-probe.sh` (Schritt 5b).
+- **Nicht eingebunden:** `datenbankOhneVolume()` (`server/src/anbindung.ts`) prüft mit `aufVolume` (wie Schlüsseldatei, Sicherung und Exporte), ob `/data/postgres` ein eigener Einhängepunkt ist. Wenn nicht: Fehler im Protokoll beim Start, rote Meldung in der Übersicht (`anbindung.ohneVolume`, nicht akzeptierbar) und unter Datenbank-Anbindung.
+- **Bewusst kein `VOLUME /data/postgres` im Image.** Ein anonymes Volume sähe nach Schutz aus, hilft aber gerade in den Fällen nicht, um die es geht: `docker run` und „Container neu erstellen“ in der Oberfläche eines NAS legen jedes Mal ein neues, leeres anonymes Volume an. Die alte Datenbank liegt dann unter einem Hash-Namen herum, und Ablago fängt leer an. Nur Compose übernimmt anonyme Volumes beim Neuanlegen. Dazu landet die Datenbank unbemerkt dort, wo Docker liegt (auf einem NAS oft die kleine Systempartition), und die Prüfung oben könnte sie nicht mehr von einem echten Ordner unterscheiden – die Warnung fiele weg. Auch `/data/files`, `/data/geheim` und `/data/sicherung` haben kein `VOLUME` (#115), und ein `VOLUME` lässt sich in abgeleiteten Images nicht zurücknehmen. Deshalb: kein `VOLUME`, dafür eine laute Warnung und eine Anleitung zum Retten.
+- **Stoppen:** Die Vorlage `deploy/komplett/docker-compose.yml` setzt `stop_grace_period: 60s`, damit Ablago und PostgreSQL sauber herunterfahren. Die Vorlagen mit zwei Containern brauchen das nicht: Das Image `postgres` beendet sich mit `SIGINT` („fast shutdown“) innerhalb der üblichen 10 Sekunden.
+
 ## PDF-Stelle { #pdf-stelle }
 
 Alle Arbeiten an PDFs mit **pdf-lib** liegen in einem Ordner: `server/src/pdf/` (#541). Nur dort wird pdf-lib eingebunden; die Prüfung `server/test/pdf-stelle.test.ts` (läuft mit `npm test` in der CI) schlägt fehl, sobald Server, Oberfläche oder `shared` pdf-lib anderswo importieren – auch per `import()` oder `require()`. Tests dürfen pdf-lib weiter nutzen, um erzeugte PDFs zu untersuchen.

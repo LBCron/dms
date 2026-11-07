@@ -8,7 +8,8 @@ services:
   dms:
     image: ghcr.io/motom001/dms-komplett:stabil
     restart: unless-stopped
-    # Beim Stoppen fährt der Container erst Ablago, dann die Datenbank sauber herunter.
+    # Beim Stoppen fährt der Container erst Ablago, dann die Datenbank sauber herunter. Nicht entfernen:
+    # Ohne diese Zeile beendet Docker PostgreSQL nach 10 Sekunden hart (#943).
     stop_grace_period: 60s
     volumes:
       # Hochgeladene Dateien
@@ -21,7 +22,8 @@ services:
       # Ohne diese Zeile liegen sie im Container; nach dem Herunterladen bzw. nach 7 Tagen sind sie ohnehin weg.
       # Mit eigenem Ort (z. B. für große Exporte zum Kopieren) nie in den Sicherungsordner legen.
       # - ./export:/data/export
-      # Datenbank (PostgreSQL 17)
+      # Datenbank (PostgreSQL 17) – darf nicht fehlen, sonst ist sie beim nächsten Update weg. Gern auf der SSD;
+      # die Rechte richtet der Container selbst (#943).
       - ./postgres:/data/postgres
       # Eingangsordner (optional): Scanner und NAS legen hier Dateien ab → neue Post
       - ./eingang:/eingang

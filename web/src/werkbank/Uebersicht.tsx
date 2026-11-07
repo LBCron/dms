@@ -78,6 +78,9 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   // Export-Ordner (#797): im Sicherungsordner, oder Exporte beim Update von dort verschoben.
   if (u.exporte) for (const x of exportHinweise(u.exporte)) h.push({ ...x, ziel: '/werkbank/vollexport', knopf: t('werkbank.export.knopf') });
   // #128: API-Schlüssel gehören zu normalen Benutzern.
+  // dms-komplett ohne Volume für /data/postgres (#943): rot, lässt sich nicht akzeptieren. Die Anleitung zum Retten
+  // verlinkt die Seite Datenbank-Anbindung (hier stünde ein Link im Link).
+  if (u.anbindung?.ohneVolume) h.push({ schluessel: 'datenbank.ohne-volume', art: 'schlecht', text: <><strong>{t('werkbank.uebersicht.datenbank-ohne-volume')}</strong> {t('werkbank.uebersicht.datenbank-ohne-volume.text')}</>, ziel: '/werkbank/anbindung', knopf: t('werkbank.uebersicht.zur-anbindung') });
   // Datenbank-Anbindung (#119)
   if (u.anbindung?.umgebung === 'abweichend') h.push({ schluessel: 'anbindung.abweichend', art: 'warn', text: <>{tn('werkbank.uebersicht.fuehrend-ist-die-anbindung', { b: <strong>{t('werkbank.uebersicht.database-url-weicht-von')}</strong> })}</>, ziel: '/werkbank/anbindung', knopf: t('werkbank.uebersicht.zur-anbindung') });
   if (u.anbindung?.neustartNoetig) h.push({ schluessel: 'anbindung.neustart', art: 'warn', text: <>{tn('werkbank.uebersicht.und-gilt-erst-nach', { b: <strong>{t('werkbank.uebersicht.die-datenbank-anbindung-ist')}</strong> })}</>, ziel: '/werkbank/anbindung', knopf: t('werkbank.uebersicht.zur-anbindung') });
