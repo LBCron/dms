@@ -4,6 +4,7 @@ import { AnbindungFormular, PruefungAnzeige } from '../einrichtung';
 import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
 import { t, tn } from '../sprache';
+import { sprachordner } from '../../../shared/src/hilfe';
 
 /**
  * Werkbank → Datenbank-Anbindung (#119): ansehen und ändern – erst testen, dann übernehmen.
@@ -60,6 +61,8 @@ export function AnbindungPanel({ z, nachAenderung, unten }: { z: AnbindungZustan
         <p className="leise">{tn('werkbank.anbindung.die-anbindung-steht-in', { span: <span className="mono">{s.datei}</span>, span2: <span className="mono">{t('werkbank.anbindung.database-url')}</span>, hilfe: <Hilfe ort="werkbank.anbindung" /> })}</p>
       </div>
       {s.umgebung === 'abweichend' && <div className="hinweis warn"><p>{tn('werkbank.anbindung.entferne-die-variable-aus', { b: <strong>{t('werkbank.anbindung.database-url-weicht-von')}</strong> })}</p></div>}
+      {/* dms-komplett ohne Volume für /data/postgres (#943): Anleitung im Installationshandbuch (offline unter /hilfe/installieren/). */}
+      {s.ohneVolume && <div className="hinweis schlecht"><p>{tn('werkbank.anbindung.ohne-volume.text', { b: <strong>{t('werkbank.uebersicht.datenbank-ohne-volume')}</strong>, link: <a href={`/hilfe/installieren/${sprachordner()}komplett/#datenbank-retten`} target="_blank" rel="noreferrer" className="verweis">{t('werkbank.anbindung.ohne-volume.link')}</a> })}</p></div>}
       {s.imContainer && <div className="hinweis info"><p>{tn('werkbank.anbindung.hier-ist-nichts-einzustellen', { b: <strong>{t('werkbank.anbindung.die-datenbank-laeuft-in')}</strong> })}</p></div>}
       {s.umgebung === 'gleich' && <div className="hinweis info"><p>{tn('werkbank.anbindung.die-anbindung-steht-in-2', { b: <strong>{t('werkbank.anbindung.database-url-ist-nicht')}</strong> })}</p></div>}
       {s.neustartNoetig && (

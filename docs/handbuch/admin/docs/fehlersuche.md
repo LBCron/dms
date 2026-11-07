@@ -94,6 +94,12 @@ Wie die Bausteine zusammenhängen, beschreibt [Technik](technik.md).
 ??? question "Nach dem Update startet der Container nicht."
     Im Container-Log steht der Grund, meist eine Migration oder eine fehlende Datenbankverbindung. Die Migrationen laufen in einer Transaktion – die Datenbank ist dabei unverändert geblieben. Notfalls auf die vorherige Version zurück (Image-Tag) und ein Issue mit dem Log anlegen.
 
+??? question "dms-komplett startet nicht, im Protokoll steht „kann nicht in /data/postgres/daten schreiben“."
+    Der Container richtet die Rechte des Datenbank-Ordners beim Start selbst, auch bei `000` auf dem NAS. Klappt das nicht (Netzwerkfreigabe, ACLs), bricht er mit dieser Meldung ab. Was zu tun ist, steht unter [Der Container startet nicht](https://help.ablago.app/installieren/aktuell/komplett/#container-startet-nicht) im Installationshandbuch – dort auch, warum `stop_grace_period: 60s` in der Compose-Datei nicht fehlen darf.
+
+??? question "Rote Meldung: „Die Datenbank liegt nur im Container …“"
+    Bei dms-komplett fehlt in der Compose-Datei die Zeile für `/data/postgres`. Erst die Daten retten (`docker compose stop`, nicht `down`, dann `docker cp`), dann die Zeile eintragen – Schritt für Schritt unter [Datenbank aus dem Container retten](https://help.ablago.app/installieren/aktuell/komplett/#datenbank-retten).
+
 ??? question "E-Mails kommen nicht an."
     Unter **Werkbank → E-Mail und Adresse** zuerst **Verbindung prüfen**, dann **Testmail senden** – darunter steht die Meldung des Mailservers. Typisch: falsches Passwort (bei vielen Anbietern braucht es ein App-Passwort), Verbindungsart passt nicht zum Port (STARTTLS ↔ 587, SSL/TLS ↔ 465), Port vom Netz gesperrt. Im Protokoll (Modul `mail`) steht jeder Versand mit Fehler. Auch im Spam-Ordner nachsehen.
 

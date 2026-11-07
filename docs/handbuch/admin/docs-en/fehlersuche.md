@@ -94,6 +94,12 @@ How the building blocks fit together is described under [Technology](technik.md)
 ??? question "After the update the container doesn't start."
     The container log says why, usually a migration or a missing database connection. The migrations run in a transaction – the database has stayed unchanged. If necessary, go back to the previous version (image tag) and create an issue with the log.
 
+??? question "dms-komplett doesn't start; the log says “kann nicht in /data/postgres/daten schreiben” (cannot write)."
+    The container fixes the permissions of the database folder itself on start, even with `000` on the NAS. If that doesn't work (network share, ACLs), it stops with this message. What to do is described under [The container doesn't start](https://help.ablago.app/installieren/aktuell/en/komplett/#container-startet-nicht) in the installation manual – including why `stop_grace_period: 60s` must not be missing from the Compose file.
+
+??? question "Red message: “The database is only stored inside the container …”"
+    With dms-komplett, the line for `/data/postgres` is missing from the Compose file. Rescue the data first (`docker compose stop`, not `down`, then `docker cp`), then add the line – step by step under [Rescue the database from the container](https://help.ablago.app/installieren/aktuell/en/komplett/#datenbank-retten).
+
 ??? question "Emails don't arrive."
     Under **Workbench → email and address**, first **Check connection**, then **Send test email** – the mail server's message is shown below. Typical: wrong password (many providers need an app password), connection type doesn't match the port (STARTTLS ↔ 587, SSL/TLS ↔ 465), port blocked by the network. The log (module `mail`) records every sending with an error. Also look in the spam folder.
 

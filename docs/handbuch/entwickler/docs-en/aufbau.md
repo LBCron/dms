@@ -61,6 +61,15 @@ The check **Abhängigkeiten** (`.github/workflows/abhaengigkeiten.yml`) reports 
 
 Only for build and tests (not in the image): `typescript`, `tsx`, `esbuild`, `vite` with `@vitejs/plugin-react` and the types under `@types/…`. Here too: rather built-in means – the tests run with Node.js's test runner (`node --test`), without a test framework of their own.
 
+## dms-komplett: database folder { #komplett-datenbankordner }
+
+`deploy/komplett/start.sh` starts PostgreSQL and Ablago in the `dms-komplett` image. For the folder `/data/postgres` (#943):
+
+- **Permissions:** the script hands `/data/postgres` and `/data/postgres/daten` to the user `postgres` (70) and sets both to `700`. The parent folder matters: without `x` on it, `postgres` can't reach `daten`, even though root can create everything there (NAS folders with `000`). `chown`/`chmod` don't abort the start, because they often fail on network shares. Afterwards the script creates a probe file in `daten` as `postgres` and deletes it again. If that fails, the start ends before `initdb` with a message including a link to the installation manual. This is checked in `deploy/komplett-probe.sh` (step 5b).
+- **Not mounted:** `datenbankOhneVolume()` (`server/src/anbindung.ts`) uses `aufVolume` (like the key file, backup and exports) to check whether `/data/postgres` is a mount point of its own. If not: an error in the log on start, a red message in the overview (`anbindung.ohneVolume`, can't be accepted) and under Database connection.
+- **Deliberately no `VOLUME /data/postgres` in the image.** An anonymous volume would look like protection, but it doesn't help in exactly the cases that matter: `docker run` and "recreate container" in a NAS interface create a new, empty anonymous volume each time. The old database then lingers under a hash name, and Ablago starts empty. Only Compose carries anonymous volumes over when recreating. On top of that the database silently ends up where Docker lives (on a NAS often the small system partition), and the check above could no longer tell it from a real folder – the warning would be lost. `/data/files`, `/data/geheim` and `/data/sicherung` have no `VOLUME` either (#115), and a `VOLUME` can't be undone in derived images. Hence: no `VOLUME`, but a loud warning and instructions for rescuing the data.
+- **Stopping:** the template `deploy/komplett/docker-compose.yml` sets `stop_grace_period: 60s` so that Ablago and PostgreSQL shut down cleanly. The two-container templates don't need it: the `postgres` image stops with `SIGINT` ("fast shutdown") within the usual 10 seconds.
+
 ## PDF place { #pdf-stelle }
 
 All work on PDFs with **pdf-lib** is in one folder: `server/src/pdf/` (#541). Only there is pdf-lib included; the check `server/test/pdf-stelle.test.ts` (runs with `npm test` in CI) fails as soon as server, interface or `shared` import pdf-lib elsewhere – also via `import()` or `require()`. Tests may still use pdf-lib to examine generated PDFs.

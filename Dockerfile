@@ -95,7 +95,9 @@ RUN chmod 755 /usr/local/bin/dms-komplett
 ENV DMS_VARIANTE=komplett
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
   CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/api/gesundheit" >/dev/null && pg_isready -q -h 127.0.0.1 -U dms -d dms || exit 1
-# Zusätzlich zu /data/files, /data/geheim, /data/sicherung: /data/postgres.
+# Zusätzlich zu /data/files, /data/geheim, /data/sicherung: /data/postgres. Bewusst kein VOLUME (#943): Ein anonymes
+# Volume ginge beim Neuanlegen mit docker run bzw. in NAS-Oberflächen trotzdem verloren und verdeckte die Warnung in der
+# Werkbank – Begründung im Entwicklerhandbuch (Aufbau, „dms-komplett: Datenbank-Ordner“).
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/dms-komplett"]
 

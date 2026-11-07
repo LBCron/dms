@@ -5,6 +5,7 @@ import postgres from 'postgres';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { t } from './sprache';
+import { aufVolume } from './tresor';
 
 /**
  * Anbindung an die Datenbank (#119): eine Datei unter /data/geheim, führend vor DATABASE_URL.
@@ -43,6 +44,20 @@ export function ausUrl(url: string | undefined): Anbindung | null {
  */
 export function datenbankVomImage(env: Record<string, string | undefined>): boolean {
   return env.DMS_VARIANTE === 'komplett' && env.DMS_DATENBANK_VOM_IMAGE === '1';
+}
+
+/** Ordner der Datenbank in dms-komplett (deploy/komplett/start.sh). */
+export const DATENBANK_ORDNER = '/data/postgres';
+/** Anleitung: Daten aus dem Container retten, bevor man ihn neu anlegt (Handbuch Installation, dms-komplett). */
+export const DATENBANK_RETTEN = 'https://help.ablago.app/installieren/aktuell/komplett/#datenbank-retten';
+
+/**
+ * dms-komplett ohne eigenes Volume für /data/postgres (#943): Die Datenbank liegt dann nur im Container. Ein Neustart
+ * schadet nicht, aber beim Neuanlegen des Containers (docker compose down, Update) ist sie weg. Geprüft wie bei der
+ * Schlüsseldatei, der Sicherung und den Exporten (`aufVolume`); nicht feststellbar (kein Container) = keine Warnung.
+ */
+export function datenbankOhneVolume(env: Record<string, string | undefined>, volume: (p: string) => boolean | null = aufVolume): boolean {
+  return env.DMS_VARIANTE === 'komplett' && volume(DATENBANK_ORDNER) === false;
 }
 
 /** Die Anbindung aus Umgebungsvariablen, soweit sie aus der Compose-Datei stammt; null, wenn das Image sie setzt. */
@@ -174,12 +189,14 @@ export interface AnbindungStand {
   neustartNoetig: boolean;
   /** dms-komplett (#208): PostgreSQL läuft im Container, das Start-Skript setzt DATABASE_URL. */
   imContainer: boolean;
+  /** dms-komplett (#943): /data/postgres liegt nicht auf einem eigenen Volume – die Datenbank ginge beim Update verloren. */
+  ohneVolume: boolean;
 }
 
 export class AnbindungVerwaltung {
   private gespeichert: Anbindung;
   constructor(readonly ordner: string, private laufend: Anbindung, private umgebung: Anbindung | null, private neustartFn: () => void,
-    private pruefer: (a: Anbindung) => Promise<Pruefung> = (a) => pruefeAnbindung(a)) {
+    private pruefer: (a: Anbindung) => Promise<Pruefung> = (a) => pruefeAnbindung(a), private ohneVolume = datenbankOhneVolume(process.env)) {
     this.gespeichert = laufend;
   }
 
@@ -189,6 +206,7 @@ export class AnbindungVerwaltung {
       umgebung: !this.umgebung ? 'fehlt' : gleicheVerbindung(this.umgebung, this.laufend) ? 'gleich' : 'abweichend',
       neustartNoetig: !gleicheVerbindung(this.gespeichert, this.laufend),
       imContainer: process.env.DMS_VARIANTE === 'komplett',
+      ohneVolume: this.ohneVolume,
     };
   }
 

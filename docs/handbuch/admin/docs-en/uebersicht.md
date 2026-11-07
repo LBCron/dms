@@ -104,6 +104,7 @@ Two notices you close with a button of their own instead – they don't come bac
 | Off-site backup more than 2 days behind | yellow | `sicherung.extern-alt` |
 | The [export folder](export.md#export-ordner) is inside the backup folder | red | `export.im-sicherungsordner` |
 | Exports moved out of the backup folder on the update | notice (red if something was left behind) | `export.umzug` |
+| dms-komplett: the database is only stored inside the container (`/data/postgres` without a volume) and would be lost with the next update – [rescue the data](https://help.ablago.app/installieren/aktuell/en/komplett/#datenbank-retten) | red | `datenbank.ohne-volume` |
 | DATABASE_URL differs from the database connection | yellow | `anbindung.abweichend` |
 | Database connection changed, restart needed | yellow | `anbindung.neustart` |
 | DMS_LASTTEST in a real installation | yellow | `lasttest` |
