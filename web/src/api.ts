@@ -748,7 +748,9 @@ export const api = {
   folgetermin: (id: string) => anfrage<Mappe & { hinweis?: string }>('POST', `/api/aufgaben/${id}/folgetermin`),
   /* Fristen und Erinnerungen (#129–#132) */
   /** Startseite (#334): zuletzt geöffnete Mappen und ob es schon eigene Mappen gibt. */
-  startseite: () => anfrage<{ zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean }>('GET', '/api/startseite'),
+  startseite: () => anfrage<{ zuletzt: ZuletztGeoeffnet[]; leer: boolean }>('GET', '/api/startseite'),
+  /** „Zuletzt geöffnet“ als Liste (#940): die letzten 25 lesbaren Mappen, neueste oben. */
+  zuletztGeoeffnet: () => anfrage<ZuletztGeoeffnet[]>('GET', '/api/startseite/zuletzt'),
   /** „Zu erledigen“ → Monat und Jahr (#528, #725): ein Zeitraum in einer Anfrage, mit Folgeterminen und Feiertagen. */
   termine: (von: string, bis: string, favoriten = false) => anfrage<TermineAntwort>('GET', `/api/termine?von=${von}&bis=${bis}${favoriten ? '&favoriten=1' : ''}`),
   /** Startseite (#725): Kachel „Nächster Termin“. */
@@ -943,6 +945,8 @@ export const api = {
   postfachOAuthAbmelden: (id: string) => anfrage<PostfachAnsicht[]>('POST', `/api/werkbank/postfaecher/${id}/oauth/abmelden`),
   eingangsordnerSetzen: (e: Partial<EingangEinstellung>) => anfrage<EingangStand>('PUT', '/api/werkbank/eingangsordner', e),
   eingangsordnerPruefen: () => anfrage<{ uebernommen: number; stand: EingangStand }>('POST', '/api/werkbank/eingangsordner/pruefen'),
+  /** „Ordner für alle Benutzer anlegen“ (#915). */
+  eingangsordnerPersonen: () => anfrage<{ angelegt: string[]; stand: EingangStand }>('POST', '/api/werkbank/eingangsordner/personen'),
   speicherplatzSetzen: (e: SpeicherplatzEinstellung) => anfrage<SpeicherplatzStand>('PUT', '/api/werkbank/speicherplatz', e),
   versionsabgleich: (browser: Record<string, string>) => anfrage<Vergleich[]>('POST', '/api/werkbank/system/abgleich', { browser }),
   datenbankEinstellen: (e: MessEinstellungen) => anfrage<MessEinstellungen>('PUT', '/api/werkbank/datenbank', e),
@@ -1236,6 +1240,9 @@ export interface DatenbankStand {
   /** Mehrere Prozesse (#745): je Prozess; fehlt mit einem. */
   prozesse?: import('../../shared/src/systemlast').ProzessZeile[];
 }
+/** Eine Mappe unter „Zuletzt geöffnet“ (#334, #940); `am` fehlt bei Einträgen von früher (nur die Id gemerkt). */
+export interface ZuletztGeoeffnet { id: string; typId: string; titel: string; am: string | null }
+
 export interface WerkbankUebersicht {
   tresor: { zustand: string; eingebunden: boolean | null; betroffen: number } | null;
   mail: boolean; adresse: boolean;
@@ -1290,6 +1297,8 @@ export interface WerkbankUebersicht {
   zahlen?: { nummernkreise: number | null; pakete: number | null; benutzer: number | null; postfaecher: number | null; darfWeg: number | null };
   /** Postfächer mit abgelaufener oder fehlender OAuth-Anmeldung (#358). */
   postfachAnmeldung?: Array<{ id: string; name: string; zustand: 'abgelaufen' | 'abgemeldet' }>;
+  /** Eingangsordner (#915): Warnungen, Ordner ohne Person, nicht umbenannte Personenordner. */
+  eingangsordner?: EingangMeldungen | null;
   /** Bewusst akzeptierte Meldungen (#816) je Schlüssel: Schwere beim Akzeptieren, wer, wann, Begründung. */
   akzeptiert?: Akzeptiert;
 }
@@ -1359,11 +1368,25 @@ export interface TresorStatus {
 export interface Probe { ok: boolean; meldung: string; /** Antwort des Servers (#813). */ technisch?: string }
 
 /** Eingangsordner (#195). */
-export interface EingangEinstellung { aktiv: boolean; abstand: number; nachher: 'erledigt' | 'loeschen'; /** #333 */ doppelteUeberspringen?: boolean }
+export interface EingangEinstellung {
+  aktiv: boolean; abstand: number; nachher: 'erledigt' | 'loeschen'; /** #333 */ doppelteUeberspringen?: boolean;
+  /** #915: Ordner je Person für neue Benutzer von selbst anlegen. */ ordnerAutomatisch?: boolean;
+  /** #915: Grenzen der Warnungen; 0 = aus. */ warnTage?: number; warnGb?: number; warnDateien?: number;
+}
 export interface EingangEreignis { datei: string; zeit: string; mappeId?: string; grund?: string }
+/** Überwachung (#915): ein Ordner mit Zahlen für alles darunter. */
+export interface EingangKnoten { pfad: string; name: string; dateien: number; bytes: number; aeltester: string | null; zuTief: number; kinder: EingangKnoten[] }
+export interface EingangUeberblick { berechnet: string; dateien: number; bytes: number; aeltester: string | null; fehler: number; zuTief: number; baum: EingangKnoten; gekuerzt?: boolean }
+export type EingangWarnung = 'alt' | 'groesse' | 'fehler' | 'anzahl';
 export interface EingangStand {
   vorhanden: boolean; pfad?: string; einstellung?: EingangEinstellung; letztePruefung?: string | null; wartend?: number;
   pausiert?: string | null; uebernommen?: EingangEreignis[]; fehler?: EingangEreignis[]; andereInstanz?: boolean;
+  /** #915 */ ueberblick?: EingangUeberblick | null; warnungen?: EingangWarnung[]; ohnePerson?: string[]; umbenennen?: Array<{ alt: string; neu: string }>; ohneOrdner?: number;
+}
+/** Eingangsordner in der Werkbank-Übersicht (#915). */
+export interface EingangMeldungen {
+  warnungen: EingangWarnung[]; dateien: number; bytes: number; aeltester: string | null; fehler: number;
+  grenzen: { tage: number; gb: number; dateien: number }; ohnePerson: string[]; umbenennen: Array<{ alt: string; neu: string }>;
 }
 
 /** WebDAV-Laufwerk (#346). */

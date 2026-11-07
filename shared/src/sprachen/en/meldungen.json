@@ -626,6 +626,7 @@
   "eingangsordner.doppelt-liegt-schon-in": "duplicate – already in Ablago, skipped",
   "eingangsordner.aus-dem-eingangsordner-uebernommen": "taken over from the intake folder ({anzeige})",
   "eingangsordner.die-datei-bleibt-im": "{message} – the file stays in the intake folder.",
+  "eingangsordner.grenze-ungueltig": "Limits for warnings: 0 (off) to {max}.",
   "einrichtung.die-einrichtung-ist-bereits": "Setup is already complete.",
   "einrichtung.bitte-einen-namen-angeben": "Please enter a name, e.g. “The Smith family”.",
   "einrichtung.der-name-darf-hoechstens": "The name may have at most {MANDANT_MAX} characters.",

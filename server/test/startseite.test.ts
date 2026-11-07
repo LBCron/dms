@@ -18,6 +18,8 @@ async function aufbau() {
   const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
+  // Wie in ablago.ts (#940): Anlegen und Ändern zählen wie Öffnen.
+  d.beiEigenerAenderung = (benutzerId, mappeId) => konten.merkeGeoeffnet({ id: benutzerId }, mappeId);
   const tabelle = routen(d, konten, {});
   // Wie nach der Antwort über HTTP (#741): erst danach „zuletzt geöffnet“ merken.
   const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => {
@@ -53,10 +55,55 @@ describe('Startseite (#334)', () => {
   });
 
   it('über einen API-Schlüssel wird nichts gemerkt', async () => {
-    const { d, anna, rufe } = await aufbau();
+    const { d, admin, anna, rufe } = await aufbau();
     const typ = await d.legeTypAn({ name: 'Vertrag', titelVorlage: '{nr}', felder: [{ key: 'nr', label: 'Nr', typ: 'text' }] });
-    const x = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'A' } }, anna.id);
+    const x = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'A' } }, admin.id);
     await rufe(anna, 'GET', '/api/mappen/:id', { params: { id: x.id }, apiSchluessel: { id: 'k', name: 'Skript' } as never });
     assert.deepEqual(((await rufe(anna, 'GET', '/api/startseite')).body as Start).zuletzt, []);
+  });
+});
+
+type Zuletzt = Array<{ id: string; typId: string; titel: string; am: string | null }>;
+describe('Liste „Zuletzt geöffnet“ (#940)', () => {
+  it('die letzten 25, neueste oben, mit Mappentyp und Zeitpunkt; Papierkorb und Unlesbares fehlen', async () => {
+    const { d, konten, admin, anna, rufe } = await aufbau();
+    const typ = await d.legeTypAn({ name: 'Vertrag', titelVorlage: '{nr}', felder: [{ key: 'nr', label: 'Nr', typ: 'text' }] });
+    // Admin legt an – zählt für Admin, nicht für Anna.
+    const m = [];
+    for (let i = 1; i <= 30; i++) m.push(await d.legeMappeAn({ typId: typ.id, werte: { nr: `V-${i}` } }, admin.id));
+    for (const x of m) await rufe(anna, 'GET', '/api/mappen/:id', { params: { id: x.id } });
+    const liste = (await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt;
+    assert.equal(liste.length, 25, 'höchstens 25');
+    assert.equal(liste[0].titel, 'V-30', 'neueste oben');
+    assert.equal(liste[24].titel, 'V-6');
+    assert.equal(liste[0].typId, typ.id);
+    assert.ok(liste[0].am && Math.abs(Date.parse(liste[0].am) - Date.now()) < 60_000, 'mit Zeitpunkt');
+    // Je Person: Annas Öffnen steht nicht bei Admin – dort stehen seine angelegten Mappen.
+    const beimAdmin = (await rufe(admin, 'GET', '/api/startseite/zuletzt')).body as Zuletzt;
+    assert.equal(beimAdmin[0].titel, 'V-30', 'Anlegen zählt als geöffnet');
+    // Papierkorb fehlt.
+    await d.loescheMappe(m[29].id, admin.id);
+    assert.equal(((await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt)[0].titel, 'V-29');
+    // Frühere Einträge ohne Zeitpunkt bleiben lesbar.
+    await konten.setzeEinstellung(await (async () => (await konten.listeBenutzer()).find((b) => b.id === anna.id)!)(), 'zuletzt_geoeffnet', [m[0].id]);
+    assert.deepEqual(((await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt).map((x) => [x.titel, x.am]), [['V-1', null]]);
+  });
+
+  it('Anlegen und Ändern zählen als geöffnet – nur für die Person, die es tut', async () => {
+    const { d, admin, anna, rufe } = await aufbau();
+    const typ = await d.legeTypAn({ name: 'Vertrag', titelVorlage: '{nr}', felder: [{ key: 'nr', label: 'Nr', typ: 'text' }] });
+    const a = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'A' } }, anna.id);
+    const b = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'B' } }, anna.id);
+    assert.deepEqual(((await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt).map((x) => x.titel), ['B', 'A'], 'Anlegen');
+    await d.aendereMappe(a.id, { werte: { nr: 'A2' } }, anna.id);
+    assert.deepEqual(((await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt).map((x) => x.titel), ['A2', 'B'], 'Ändern');
+    // Ändert jemand anderes, rückt die Mappe bei Anna nicht nach oben.
+    await d.aendereMappe(b.id, { werte: { nr: 'B2' } }, admin.id);
+    assert.deepEqual(((await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt).map((x) => x.titel), ['A2', 'B2']);
+    // Ohne Benutzer (System, Eingangsordner) zählt nichts.
+    await d.legeMappeAn({ typId: typ.id, werte: { nr: 'S' } }, null);
+    assert.equal(((await rufe(anna, 'GET', '/api/startseite/zuletzt')).body as Zuletzt).length, 2);
+    // Die Startseite zeigt davon die ersten fünf, ebenfalls mit Zeitpunkt.
+    assert.ok(((await rufe(anna, 'GET', '/api/startseite')).body as { zuletzt: Zuletzt }).zuletzt[0].am);
   });
 });

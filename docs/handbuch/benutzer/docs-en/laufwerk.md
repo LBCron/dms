@@ -41,12 +41,25 @@ The drive appears on the left in the sidebar under **Locations**. With the **+**
 
 ## iPhone and iPad (Files app) {#iphone-und-ipad-dateien-app}
 
-1. Open the app **Files** and tap **Browse** at the bottom.
-2. Tap **…** (More) at the top right and then **Connect to Server**.
-3. Enter the address: `https://dms.example.org/webdav/` and tap **Connect**.
-4. Choose **Registered User**, enter your email address and the API key and tap **Next**.
+!!! warning "The Files app cannot do WebDAV"
+    Under **Browse → … → Connect to Server** the Files app only connects to **SMB** shares, not to WebDAV. The address with `/webdav/` does not work there. There are two ways:
 
-The drive is then listed in the Files app under **Shared**. From any app you can file directly into "New post" with **Share → Save to Files**.
+**Just filing post – on your home network via SMB to the intake folder.** If your administrator has set up the [intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/), there is a folder named after your e-mail address, e.g. `eingang/lena@example.org/`. Connect to it via SMB:
+
+1. Open the app **Files**, tap **Browse** at the bottom, **…** at the top right and then **Connect to Server**.
+2. Enter your NAS's address, e.g. `smb://nas.example.org`, tap **Connect** and sign in with your account **on the NAS** (not with the Ablago key).
+3. Open the share with the intake folder and your folder in it.
+
+From any app you now save into this folder with **Share → Save to Files** – Ablago turns it into new post with you under **For**. This only works on your home network (or via a VPN to it).
+
+**The whole drive – with a WebDAV app.** For views, folders and documents you need an app from the App Store that can do WebDAV and plugs into the Files app (as a "location"). Which one is up to you.
+
+1. Install such a WebDAV app and add a WebDAV connection in it.
+2. Enter the address: `https://dms.example.org/webdav/`.
+3. The user name is your e-mail address, the password the API key.
+4. Turn the app on in the Files app under **Browse → … → Edit** if it does not appear by itself.
+
+The drive is then listed in the Files app under **Locations**. With **Share → Save to Files** you then file directly into "New post".
 
 ## What you see in the drive {#was-du-im-laufwerk-siehst}
 

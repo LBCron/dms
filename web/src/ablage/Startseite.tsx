@@ -22,7 +22,8 @@ import { sichtName } from '../../../shared/src/beschriftung';
 /**
  * Startseite der Ablage (#334): wenige Kacheln mit je einer Zahl und einer Handlung.
  * Zu erledigen, Neue Post, Nächster Termin (#725, öffnet den Monat), eine wählbare Kachel (Favoriten oder eine Ansicht) und
- * „Zuletzt geöffnet“. In einer leeren Installation stattdessen drei Einstiege.
+ * „Zuletzt geöffnet“ (Überschrift und „Alle … anzeigen“ öffnen die Liste der letzten 25, #940). In einer leeren
+ * Installation stattdessen drei Einstiege.
  * Abschalten und Kachel wählen: im Profil (Einstellungen „startseite“, „startseite_kachel“).
  *
  * Ohne geöffnete Mappe nutzt sie Mitte und rechten Bereich zusammen (#429, `breit`): ein Raster,
@@ -30,7 +31,7 @@ import { sichtName } from '../../../shared/src/beschriftung';
  * frei anzuordnen (#421). Mit geöffneter Mappe steht sie wie jede Liste in der Mitte.
  */
 const zahl = (n: number) => n.toLocaleString(gebietsschema());
-type Startdaten = { zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean };
+type Startdaten = { zuletzt: Array<{ id: string; typId: string; titel: string; am: string | null }>; leer: boolean };
 
 function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol, anker }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null; anker?: string }) {
   const nichts = anzahl === 0;
@@ -149,7 +150,8 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
         {daten && daten.zuletzt.length > 0 && (
           <section className="zuletzt" data-kachel="zuletzt" ref={zuletzt} onPointerLeave={loslassen}
             onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) loslassen(); }}>
-            <h2 className="h3">{t('ablage.startseite.zuletzt-geoeffnet')}</h2>
+            {/* #940: Überschrift und Zeile darunter öffnen die Liste der letzten 25 – der einzige Weg dorthin. */}
+            <h2 className="h3"><Link to="/ablage/zuletzt" className="zl-kopf" anker="startseite.zuletzt">{t('ablage.startseite.zuletzt-geoeffnet-mehr')}</Link></h2>
             <ul className="mappenliste">
               {daten.zuletzt.map((m) => (
                 <li key={m.id}>
@@ -160,6 +162,7 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
                 </li>
               ))}
             </ul>
+            <Link to="/ablage/zuletzt" className="verweis klein zl-alle">{t('ablage.startseite.zuletzt-alle')}</Link>
           </section>
         )}
         </>} />

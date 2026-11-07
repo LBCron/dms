@@ -99,6 +99,11 @@
   beschreibung: Kachel „Nächster Termin“
   handy: true
   clients: true
+- anker: startseite.zuletzt
+  seite: /ablage/start
+  beschreibung: Überschrift „Zuletzt geöffnet ›“ – öffnet die Liste der letzten 25 Mappen
+  handy: true
+  clients: false
 
 # ---------- Zu erledigen ----------
 - anker: zu-erledigen.ansicht

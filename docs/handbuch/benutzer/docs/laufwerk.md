@@ -41,12 +41,25 @@ Das Laufwerk erscheint links in der Seitenleiste unter **Orte**. Mit dem **+** i
 
 ## iPhone und iPad (Dateien-App)
 
-1. Öffne die App **Dateien** und tippe unten auf **Durchsuchen**.
-2. Tippe oben rechts auf **…** (Mehr) und dann auf **Mit Server verbinden**.
-3. Trage die Adresse ein: `https://dms.example.org/webdav/` und tippe auf **Verbinden**.
-4. Wähle **Registrierter Benutzer**, trage deine E-Mail-Adresse und den API-Schlüssel ein und tippe auf **Weiter**.
+!!! warning "Die Dateien-App kann kein WebDAV"
+    Unter **Durchsuchen → … → Mit Server verbinden** verbindet sich die Dateien-App nur mit **SMB**-Freigaben, nicht mit WebDAV. Die Adresse mit `/webdav/` funktioniert dort nicht. Es gibt zwei Wege:
 
-Das Laufwerk steht danach in der Dateien-App unter **Geteilt**. Aus jeder App kannst du mit **Teilen → In Dateien sichern** direkt in „Neue Post“ ablegen.
+**Nur Post ablegen – im Heimnetz per SMB auf den Eingangsordner.** Hat dein Administrator den [Eingangsordner](https://help.ablago.app/admin/aktuell/eingangsordner/) eingerichtet, gibt es dort einen Ordner mit deiner E-Mail-Adresse, z. B. `eingang/lena@example.org/`. Diesen verbindest du per SMB:
+
+1. Öffne die App **Dateien**, tippe unten auf **Durchsuchen**, oben rechts auf **…** und dann auf **Mit Server verbinden**.
+2. Trage die Adresse deines NAS ein, z. B. `smb://nas.example.org`, tippe auf **Verbinden** und melde dich mit deinem Konto **am NAS** an (nicht mit dem Ablago-Schlüssel).
+3. Öffne die Freigabe mit dem Eingangsordner und darin deinen Ordner.
+
+Aus jeder App legst du jetzt mit **Teilen → In Dateien sichern** in diesen Ordner – Ablago macht daraus eine neue Post mit dir bei **Für**. Das geht nur im Heimnetz (oder über ein VPN dorthin).
+
+**Das ganze Laufwerk – mit einer WebDAV-App.** Für Ansichten, Mappen und Dokumente brauchst du eine App aus dem App Store, die WebDAV kann und sich in die Dateien-App einklinkt (als „Ort“). Welche, ist dir überlassen.
+
+1. Installiere eine solche WebDAV-App und lege darin eine WebDAV-Verbindung an.
+2. Trage die Adresse ein: `https://dms.example.org/webdav/`.
+3. Benutzername ist deine E-Mail-Adresse, Passwort der API-Schlüssel.
+4. Schalte die App in der Dateien-App unter **Durchsuchen → … → Bearbeiten** ein, falls sie nicht von selbst erscheint.
+
+Das Laufwerk steht danach in der Dateien-App unter **Orte**. Mit **Teilen → In Dateien sichern** legst du dann direkt in „Neue Post“ ab.
 
 ## Was du im Laufwerk siehst
 

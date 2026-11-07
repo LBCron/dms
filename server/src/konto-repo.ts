@@ -7,6 +7,23 @@ import { staendeAusZeile, standSpalten } from './lesespeicher';
 
 /** Adresse eines Dienstkontos: nie zustellbar (.invalid, RFC 2606). */
 /** Adresse eines Dienstkontos – mit Haushalt, weil die Adresse über alle Haushalte eindeutig ist (benutzer_email_uq). */
+/** „Zuletzt geöffnet“ (#940): Einträge `{ id, am }`; frühere Listen hatten nur die Id. */
+export interface ZuletztEintrag { id: string; am: string | null }
+export function zuletztListe(roh: unknown): ZuletztEintrag[] {
+  if (!Array.isArray(roh)) return [];
+  const aus: ZuletztEintrag[] = [];
+  for (const x of roh) {
+    if (typeof x === 'string') aus.push({ id: x, am: null });
+    else if (x && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string') {
+      const am = (x as { am?: unknown }).am;
+      aus.push({ id: (x as { id: string }).id, am: typeof am === 'string' ? am : null });
+    }
+  }
+  return aus;
+}
+/** Wer dieselbe Mappe gleich wieder öffnet oder ändert, schreibt höchstens einmal je Minute (#615). */
+export const ZULETZT_RUHE_MS = 60_000;
+
 export const dienstEmail = (paketId: string, haushaltId: string) => `paket-${paketId}.${haushaltId}@dienst.invalid`;
 /** Adresse eines Systemkontos (#673), ebenso nie zustellbar. */
 export const systemEmail = (kennung: string, haushaltId: string) => `${kennung}.${haushaltId}@system.invalid`;
@@ -105,8 +122,10 @@ export interface KontoRepo {
   /** wert null löscht die Einstellung. */
   setzeEinstellung(benutzerId: string, schluessel: string, wert: unknown): Promise<void>;
   /**
-   * „Zuletzt geöffnet“ (#334): die Mappe vorn in die Liste unter `schluessel` (Texte, höchstens `max`, ohne
-   * Doppelte); steht sie schon vorn, bleibt alles. In einem Zugriff (#615) und ohne auf die Platte zu warten.
+   * „Zuletzt geöffnet“ (#334): die Mappe vorn in die Liste unter `schluessel` (höchstens `max`, ohne Doppelte).
+   * Seit #940 je Eintrag `{ id, am }` (Zeitpunkt für die Liste der letzten 25); ältere Einträge sind nur die Id.
+   * Steht sie schon vorn und ist der Zeitpunkt jünger als eine Minute, bleibt alles. In einem Zugriff (#615) und ohne
+   * auf die Platte zu warten.
    */
   merkeVorn(benutzerId: string, schluessel: string, mappeId: string, max: number): Promise<void>;
 
@@ -246,9 +265,9 @@ export function speicherKontoRepo(): KontoRepo {
     },
     async merkeVorn(id, k, mappeId, max) {
       const e = einstellungen.get(id) ?? {};
-      const liste = Array.isArray(e[k]) ? (e[k] as unknown[]).filter((x): x is string => typeof x === 'string') : [];
-      if (liste[0] === mappeId) return;
-      e[k] = [mappeId, ...liste.filter((x) => x !== mappeId)].slice(0, max);
+      const liste = zuletztListe(e[k]);
+      if (liste[0]?.id === mappeId && liste[0].am && Date.now() - Date.parse(liste[0].am) < ZULETZT_RUHE_MS) return;
+      e[k] = [{ id: mappeId, am: new Date().toISOString() }, ...liste.filter((x) => x.id !== mappeId).map((x) => (x.am ? x : x.id))].slice(0, max);
       einstellungen.set(id, e);
     },
     async loescheSitzungenVon(id) { for (const [k, s] of sitzungen) if (s.benutzerId === id) sitzungen.delete(k); },
@@ -515,16 +534,21 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
       // Ein Merkposten: Geht er bei einem Absturz verloren, fehlt nur ein Eintrag unter „Zuletzt geöffnet“. Ohne
       // Warten auf die Platte (ohneWarten) hält das Schreiben die Zeile kürzer – unter Last (#615) warteten sonst alle
       // Anfragen desselben Benutzers auf die Sperre.
+      // Einträge: `{ id, am }` (#940) oder – von früher – nur die Id als Text.
+      const am = new Date().toISOString();
       await sql`
         INSERT INTO benutzer_einstellungen AS b (benutzer_id, schluessel, wert)
-        SELECT ${id}::uuid, ${k}::text, jsonb_build_array(${mappeId}::text) FROM ${ohneWarten(sql)}
+        SELECT ${id}::uuid, ${k}::text, jsonb_build_array(jsonb_build_object('id', ${mappeId}::text, 'am', ${am}::text)) FROM ${ohneWarten(sql)}
         ON CONFLICT (benutzer_id, schluessel) DO UPDATE SET wert = (
           SELECT jsonb_agg(x.e ORDER BY x.n) FROM (
-            SELECT to_jsonb(${mappeId}::text) AS e, 0::bigint AS n
+            SELECT jsonb_build_object('id', ${mappeId}::text, 'am', ${am}::text) AS e, 0::bigint AS n
             UNION ALL
             (SELECT e, n FROM jsonb_array_elements(CASE WHEN jsonb_typeof(b.wert) = 'array' THEN b.wert ELSE '[]'::jsonb END) WITH ORDINALITY AS t(e, n)
-              WHERE jsonb_typeof(e) = 'string' AND e <> to_jsonb(${mappeId}::text) ORDER BY n LIMIT ${max - 1})) x)
-        WHERE b.wert -> 0 IS DISTINCT FROM to_jsonb(${mappeId}::text)`;
+              WHERE (jsonb_typeof(e) = 'string' AND e #>> '{}' <> ${mappeId}::text)
+                 OR (jsonb_typeof(e) = 'object' AND jsonb_typeof(e -> 'id') = 'string' AND e ->> 'id' <> ${mappeId}::text)
+              ORDER BY n LIMIT ${max - 1})) x)
+        WHERE NOT (jsonb_typeof(b.wert -> 0) = 'object' AND b.wert -> 0 ->> 'id' = ${mappeId}::text
+          AND jsonb_typeof(b.wert -> 0 -> 'am') = 'string' AND (b.wert -> 0 ->> 'am')::timestamptz > ${am}::timestamptz - make_interval(secs => ${ZULETZT_RUHE_MS / 1000}))`;
     },
     async loescheSitzungenVon(id) { await sql`DELETE FROM sitzungen WHERE benutzer_id = ${id}`; },
 

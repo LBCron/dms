@@ -697,6 +697,9 @@ const ABRUF_PRUEFUNG_MS = 60_000;
 const FEHLENDE_DATEIEN = 'dateien_fehlen';
 const FEHLENDE_DATEIEN_MAX = 1000;
 
+/** Ereignisse, nach denen eine Mappe unter „Zuletzt geöffnet“ nach oben rückt (#940: Anlegen und Ändern zählen). */
+const ZULETZT_ARTEN = new Set<KatalogArt>(['mappe.angelegt', 'mappe.geaendert', 'dokument.hochgeladen', 'mappe.notiz']);
+
 export class Dienst {
   /**
    * Zustand zwischen Anfragen (#744) – in PostgreSQL für alle Prozesse, sonst im Arbeitsspeicher: u. a. Abruf-Links,
@@ -4542,6 +4545,8 @@ export class Dienst {
   readonly ereignisse = new Ereignisverteiler({ repo: () => this.grundRepo, ruht: () => this.ereignisseRuhen?.() ?? false });
   /** Wartung, Wiederherstellung (vom Start gesetzt): dann verteilt der Katalog nichts. */
   ereignisseRuhen?: () => boolean | Promise<boolean>;
+  /** Startseite „Zuletzt geöffnet“ (#940): Anlegen und Ändern durch eine Person (vom Start gesetzt: Konten merken es). */
+  beiEigenerAenderung?: (benutzerId: string, mappeId: string) => Promise<void>;
 
   /** `f` im Namen eines bestimmten Auslösers ausführen (#674: eine Automatisierung handelt; Ketten zählen mit). */
   mitAusloeser<T>(a: EreignisAusloeser, f: () => Promise<T>): Promise<T> { return ereignisKontext.run({ ...ereignisKontext.getStore(), ausloeser: a }, f); }
@@ -4567,10 +4572,17 @@ export class Dienst {
     const still = !!ereignisKontext.getStore()?.still;
     if (still && (!k.paket || k.mappentyp)) return;
     const inTx = transaktionen.getStore()?.dienst === this;
+    const ausloeser = this.ausloeser(von);
+    const mappe = typeof daten.mappe === 'string' ? daten.mappe : null;
+    // „Zuletzt geöffnet“ (#940): Was eine Person selbst anlegt oder ändert, zählt wie geöffnet – nach der Antwort.
+    const merken = this.beiEigenerAenderung;
+    if (merken && mappe && !still && ausloeser.art === 'benutzer' && ausloeser.id && ZULETZT_ARTEN.has(art)) {
+      const benutzerId = ausloeser.id;
+      await this.nachDerAntwort(() => merken(benutzerId, mappe).catch((e) => protokoll.modul('ereignisse').warn('„Zuletzt geöffnet“ nicht gemerkt', { fehler: (e as Error).message })));
+    }
     try {
-      const mappe = typeof daten.mappe === 'string' ? daten.mappe : null;
       await this.repo.legeKatalogEreignisAn({
-        id: randomUUID(), art, daten, ausloeser: { ...this.ausloeser(von), ...(still ? { still: true } : {}) },
+        id: randomUUID(), art, daten, ausloeser: { ...ausloeser, ...(still ? { still: true } : {}) },
         ...(k.buendelS && mappe ? { buendel: `${art}|${mappe}`, buendelS: k.buendelS } : {}),
       }, k.buendelS ? (alt) => mischeFelder(alt, daten) : undefined);
       // #928: Der Verteiler (Automatisierungen, Pakete, Webhooks) teilte sich sonst Datenbank und Rechenzeit mit der

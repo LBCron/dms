@@ -626,6 +626,7 @@
   "eingangsordner.doppelt-liegt-schon-in": "doppelt – liegt schon in Ablago, übersprungen",
   "eingangsordner.aus-dem-eingangsordner-uebernommen": "aus dem Eingangsordner übernommen ({anzeige})",
   "eingangsordner.die-datei-bleibt-im": "{message} – die Datei bleibt im Eingangsordner.",
+  "eingangsordner.grenze-ungueltig": "Grenzen für Warnungen: 0 (aus) bis {max}.",
   "einrichtung.die-einrichtung-ist-bereits": "Die Einrichtung ist bereits abgeschlossen.",
   "einrichtung.bitte-einen-namen-angeben": "Bitte einen Namen angeben, z. B. „Familie Mustermann“.",
   "einrichtung.der-name-darf-hoechstens": "Der Name darf höchstens {MANDANT_MAX} Zeichen haben.",

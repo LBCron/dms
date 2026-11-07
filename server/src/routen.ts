@@ -9,8 +9,8 @@ import { taugtAlsAufgabenEmpfaenger, type Dienst } from './dienst';
 import { VOLLTEXT_KOERPER_MAX } from '../../shared/src/paketvolltext';
 import { ARCHIVFASSUNG_MAX_BYTES, archivfassungName, pdfaName } from '../../shared/src/archivfassung';
 import { Fachfehler } from './fehler';
-import { SITZUNG_TAGE, type Konten } from './konten';
-import type { SitzungIntern } from './konto-repo';
+import { SITZUNG_TAGE, ZULETZT_LISTE, type Konten } from './konten';
+import { zuletztListe, type SitzungIntern } from './konto-repo';
 import { pflichtRolle, type Zweifaktor } from './zweifaktor';
 import { openapi, v1Routen } from './api-v1';
 import { wunschAus } from '../../shared/src/stempel';
@@ -586,6 +586,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const leseHinweis = async (empfaengerId: string | null, mappeId: string) =>
     (empfaengerId && !(await dienst.kannLesen(empfaengerId, mappeId)) ? { hinweis: t('meldungen.routen.gespeichert-der-empfaenger-darf') } : {});
   const darf = async (a: Anfrage, mappeId: string, recht: Recht) => dienst.pruefeRecht(await zg(a), mappeId, recht);
+  /** „Zuletzt geöffnet“ (#334, #940): nur lesbare Mappen außerhalb des Papierkorbs, neueste oben, je mit Zeitpunkt. */
+  const zuletztGeoeffnet = async (a: Anfrage, anzahl: number) => {
+    const liste = zuletztListe((await konten.einstellungen(ich(a))).zuletzt_geoeffnet);
+    const ids = liste.map((x) => x.id);
+    const lesbar = await dienst.lesbare(await zg(a), ids);
+    const bezuege = await dienst.bezuegeVon(ids.filter((id) => lesbar.has(id)));
+    return liste.filter((x) => bezuege.has(x.id)).slice(0, anzahl).map((x) => ({ id: x.id, typId: bezuege.get(x.id)!.typId, titel: bezuege.get(x.id)!.titel, am: x.am }));
+  };
   /** Klartext von Passwörtern nur für Mappen mit Recht P; die anderen bleiben verdeckt. */
   const entschluessele = async <T extends Mappe>(a: Anfrage, mappen: T[], klartext: string): Promise<T[]> => {
     const { mit } = await dienst.mitPasswortRecht(await zg(a), mappen);
@@ -1787,6 +1795,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         aufgaben: { offen: aufgaben.length, ohneEmpfaenger: aufgaben.filter((y) => !y.empfaengerId).length },
         // #798: Aufgaben bei Personen ohne Leserecht (offene Fälle, abgeglichen alle fünf Minuten und beim Öffnen).
         ohneLeserecht: (await sicher(async () => (await dienst.offeneFaelle()).length)) ?? 0,
+        // Eingangsordner (#915): Warnungen (zu alt, zu groß, fehler/, zu viele), Ordner ohne Person, nicht umbenannte Ordner.
+        eingangsordner: x.eingangsordner?.vorhanden ? await sicher(() => x.eingangsordner!.meldungen()) : null,
         // #877: Dokumentdateien, die beim Lesen fehlten (und noch fehlen) – Volume vergessen, Datei gelöscht, Platte defekt.
         dateienFehlen: (await sicher(() => dienst.fehlendeDateien())) ?? 0,
         // #719: Wer im Alltag die Aufgaben ohne Empfänger bekommt; `moeglich` = aktive Benutzer ohne Admin-Rechte.
@@ -2020,6 +2030,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, t('meldungen.routen.es-ist-kein-eingangsordner'));
       return ok(await x.eingangsordner.speichere(a.body, ich(a).email));
     } },
+    // „Ordner für alle Benutzer anlegen“ (#915): je aktive Person eingang/<e-mail>/.
+    { methode: 'POST', pfad: '/api/werkbank/eingangsordner/personen', zugang: 'admin', handler: async (a) => {
+      if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, t('meldungen.routen.es-ist-kein-eingangsordner'));
+      return ok(await x.eingangsordner.ordnerFuerAlle(ich(a).email));
+    } },
     { methode: 'POST', pfad: '/api/werkbank/eingangsordner/pruefen', zugang: 'admin', handler: async () => {
       if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, t('meldungen.routen.es-ist-kein-eingangsordner'));
       const n = await x.eingangsordner.pruefe(true);
@@ -2181,14 +2196,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return { ...ok(klartext ? { ...antwort, mappe: (await dienst.entschluesselePasswoerter([d.mappe], klartext, ich(a).id))[0] } : antwort), danach };
     } },
     // Startseite (#334): zuletzt geöffnete Mappen (nur lesbare, höchstens 5) und ob es schon eigene Mappen gibt.
-    { methode: 'GET', pfad: '/api/startseite', zugang: 'angemeldet', handler: async (a) => {
-      const roh = (await konten.einstellungen(ich(a))).zuletzt_geoeffnet;
-      const ids = Array.isArray(roh) ? roh.filter((x): x is string => typeof x === 'string') : [];
-      const lesbar = await dienst.lesbare(await zg(a), ids);
-      const bezuege = await dienst.bezuegeVon(ids.filter((id) => lesbar.has(id)));
-      const zuletzt = ids.filter((id) => bezuege.has(id)).slice(0, 5).map((id) => ({ id, typId: bezuege.get(id)!.typId, titel: bezuege.get(id)!.titel }));
-      return ok({ zuletzt, leer: await dienst.ohneEigeneMappen() });
-    } },
+    { methode: 'GET', pfad: '/api/startseite', zugang: 'angemeldet', handler: async (a) => ok({ zuletzt: await zuletztGeoeffnet(a, 5), leer: await dienst.ohneEigeneMappen() }) },
+    // „Zuletzt geöffnet“ als Liste (#940): die letzten 25 lesbaren Mappen der Person, neueste oben, mit Zeitpunkt.
+    { methode: 'GET', pfad: '/api/startseite/zuletzt', zugang: 'angemeldet', handler: async (a) => ok(await zuletztGeoeffnet(a, ZULETZT_LISTE)) },
     // Aufgaben (#54, #56)
     { methode: 'GET', pfad: '/api/aufgaben', zugang: 'angemeldet', handler: async (a) => ok(await dienst.meineAufgaben(ich(a), await zg(a))) },
     { methode: 'GET', pfad: '/api/mappen/:id/aufgaben', zugang: 'angemeldet', handler: async (a) => { await darf(a, a.params.id, 'R'); return ok(await dienst.aufgabenVon(a.params.id)); } },
@@ -2917,6 +2927,7 @@ const UEBERSICHT_BEREICHE: Record<string, { bereich: string; leer: unknown }> = 
   bestand: { bereich: 'systemzustand', leer: null }, lasttestAbbruch: { bereich: 'systemzustand', leer: null }, anbindung: { bereich: 'anbindung', leer: null },
   einrichtung: { bereich: NUR_GESAMT, leer: null }, automatisierungen: { bereich: 'automatisierungen', leer: null },
   paketeEinstellungen: { bereich: 'pakete', leer: [] }, postfachAnmeldung: { bereich: 'postfaecher', leer: [] },
+  eingangsordner: { bereich: 'eingangsordner', leer: null },
 };
 export function nurEigeneBereiche<T extends Record<string, unknown>>(b: Benutzer, daten: T): T {
   if (hatGesamt(b)) return daten;

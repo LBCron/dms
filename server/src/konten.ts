@@ -67,6 +67,10 @@ export interface Ergebnis { benutzer: Benutzer; mailVerschickt: boolean; link?: 
  * Anmeldung, Sitzungen, Benutzerverwaltung und Passwort-Links.
  * Schlüssel für Sitzungen und Links werden nur als Hash gespeichert.
  */
+/** „Zuletzt geöffnet“ (#940): so viele zeigt die Liste, so viele merkt sich Ablago je Person. */
+export const ZULETZT_LISTE = 25;
+const ZULETZT_MERKEN = 40;
+
 export class Konten {
   /** Anmeldeschutz (#240); ohne Verbindung mit Standardwerten im Arbeitsspeicher. */
   sperre = new Anmeldesperre();
@@ -562,9 +566,13 @@ export class Konten {
 
   einstellungen(ich: Benutzer) { return this.repo.einstellungen(ich.id); }
 
-  /** Startseite (#334): zuletzt geöffnete Mappen merken – höchstens 10, neueste zuerst. */
-  async merkeGeoeffnet(ich: Benutzer, mappeId: string) {
-    await this.repo.merkeVorn(ich.id, 'zuletzt_geoeffnet', mappeId, 10);
+  /**
+   * Startseite (#334): zuletzt geöffnete Mappen merken, neueste zuerst, mit Zeitpunkt (#940). Die Liste „Zuletzt
+   * geöffnet“ zeigt bis zu {@link ZULETZT_LISTE} lesbare; gemerkt werden mehr, weil Mappen in den Papierkorb wandern
+   * oder unlesbar werden können.
+   */
+  async merkeGeoeffnet(ich: Pick<Benutzer, 'id'>, mappeId: string) {
+    await this.repo.merkeVorn(ich.id, 'zuletzt_geoeffnet', mappeId, ZULETZT_MERKEN);
   }
 
   async setzeEinstellung(ich: Benutzer, schluessel: string, wert: unknown) {
