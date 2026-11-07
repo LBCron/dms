@@ -20,7 +20,7 @@ const FELD = ['typ', 'pflicht', 'eindeutig', 'hilfe', 'standard', 'minLen', 'max
 const NAMEN: Record<string, string> = {
   typ: 'Art', pflicht: 'Pflicht', eindeutig: 'eindeutig', hilfe: t('gemeinsam.typvergleich.hilfetext'), standard: 'Vorgabe', minLen: 'Mindestlänge', maxLen: 'Höchstlänge', muster: 'Muster',
   min: 'Untergrenze', max: 'Obergrenze', nachkomma: 'Nachkommastellen', waehrung: 'Währung', optionen: 'Auswahlwerte', mehrfach: 'Mehrfachauswahl', zielTyp: 'Ziel',
-  verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Erkennung', format: 'Format', landFeld: t('gemeinsam.typvergleich.land-feld'), beschriftungen: t('gemeinsam.typvergleich.beschriftungen'),
+  verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Aus Dokument füllen', format: 'Format', landFeld: t('gemeinsam.typvergleich.land-feld'), beschriftungen: t('gemeinsam.typvergleich.beschriftungen'),
   name: 'Name', art: 'Art', felder: 'Felder', quellen: 'Quellen',
 };
 /** Leere Werte (undefined, null, false, '', []) gelten als „nicht gesetzt“ – Speichern ohne Änderung zählt nicht. */

@@ -23,10 +23,21 @@ The editor is built in the order in which you create a folder type: **Basics →
 - **Name** – this is what the view in the Library is called, e.g. "Contract". It can be changed at any time.
 - **Key** – a fixed, technical name, e.g. `vertrag`. It is suggested from the name, can be changed when creating and is **fixed** after the first save. [Links via folder type and field values](direktlinks.md) and scripts via the [interface](api.md) can use it – so they stay valid even if the folder type is renamed. The system types are called `benutzer`, `rolle` and `post` (up to 0.40, *Post* was still *E-Mail* with the key `email`).
 - **Description** – is shown above the list and helps with classification.
+- **Can be created from post** – then the folder type can be chosen when someone takes over a document from the post and is asked: *Where does this belong?* More under [Taking over documents](#dokument-ubernehmen).
+- **How to recognise it** – a short sentence, at most 300 characters. More under [Taking over documents](#dokument-ubernehmen).
 
 When **creating** there is additionally **Create its own view in the Library** (on by default): then the new folder type appears in the Library as a view of its own. Deselect it if its folders should only appear in an existing [view](sichten.md).
 
 Who may create or delete folders is governed by the [permissions](berechtigungen.md) (permissions C and D). The former ticks *Allow new folders* and *Allow deleting* no longer exist since version 0.32; they were taken over into the permissions on the update.
+
+### Taking over documents {#dokument-ubernehmen}
+
+Post first lands under *Post*. From there, a document is taken over into a folder. Two entries in the basics tell Ablago which folder types are possible for this:
+
+- **Can be created from post** – only folder types with this tick can be chosen under *Where does this belong?*, and only for people who may create folders there ([permissions](berechtigungen.md), permission C). Default: on for folder types with a documents tab, otherwise off. Remove the tick if post never belongs to this type, e.g. for *Storage location*.
+- **How to recognise it** – a short sentence that helps to assign a document to the right folder type, e.g. for *Invoice*: "Contains invoice number, amount and payment deadline; the sender is a contract partner". The description is meant for people; this sentence is for recognition and may be brief. Like name and description, it can be given in [further languages](#beschriftungen-je-sprache).
+
+The **system folder types** User, Role and Post can never be chosen; they don't have either entry. Packages can set both. On an update, Ablago only takes over the entries if you haven't set them yet.
 
 **Used in** (for saved folder types) shows where the folder type is used, each with a link: views that show it, link fields of other folder types that link to it, and links tabs of other folder types that use its fields as a source. That way you see before a change what it affects. If it says "Not used anywhere", nothing depends on it.
 
@@ -83,17 +94,38 @@ The error messages say what to do, e.g. "A phone number only contains digits, + 
 
 Recognition uses the format: a field with format Phone counts as a phone number even if it is called something else, and it only suggests values that fit.
 
-### Use for recognition {#fur-die-erkennung-nutzen}
+### Fill from document {#aus-dokument-fullen}
 
-With the tick **Use for recognition** on a field, you tell Ablago's recognition that the value is suitable for recognising things again, or that it may fill the field. Recognition runs in Ablago itself, without AI and without internet:
+With the tick **Fill from document** on a field, the button [Fill in from document](#erkennung) in a folder may fill this field from a photo or document as a suggestion. Up to version 0.216, the tick was called **Use for recognition**; the settings have stayed the same. Recognition runs in Ablago itself, without AI and without internet.
 
-- **Suggestions when assigning post:** if the value of a marked field – e.g. customer number, IBAN, VAT id, email address, website (also as the domain of an email address), phone or name – is in a letter's text, Ablago suggests this folder as the **sender**, with a reason ("found: customer number 100-4711"). A type with a marked name or contact details counts as a possible sender (organisation, branch, person); a type that only marks numbers (e.g. contract number) as a possible **target folder**. Spaces, dots and hyphens in numbers don't count, so `100-4711` also finds `100 4711`. It is computed once, as soon as a post's full text is ready – no matter whether from the built-in text recognition or a package.
-
-- **Fill in from document:** in a folder, recognition fills the marked fields from a photo or document as a suggestion (see [Recognition](#erkennung)). If a folder type has no marked fields at all, it takes all whose kind it recognises from the label. Link fields suggest an existing folder of the target type that is in the text – by its marked fields, otherwise by its title.
+If a folder type has no field with this tick at all, it fills all fields whose kind it recognises from the label. Link fields suggest an existing folder of the target type that is in the text – by its fields with [Use to find existing folders](#zum-wiederfinden-nutzen), otherwise by its title.
 
 Suitable are text, long text, number, amount, date, choice list and link – password fields never. If the tick is on, you optionally choose **What is in the field?** (name or company, number, IBAN, email address, phone, street, postcode, town …). Without an entry, Ablago infers it from field kind, key and label ("Kundennummer" → number, "E-Mail" → email address); what it recognised is shown in the selection after *automatic*. The **recognition hint** is a free text, e.g. "Customer number at the top right, pattern 100-####" – a pattern after the word *pattern* (`#` = digit, `A` = capital letter) is searched for specifically by recognition.
 
-The registry's packages (e.g. *Basis*) mark their fields themselves. On an update, Ablago only takes over the marking on fields where you haven't set anything yet; the preview names them under "for recognition".
+The registry's packages (e.g. *Basis*) set the tick themselves. On an update, Ablago only takes it over on fields where you haven't set anything yet; the preview names them under "Fill from document".
+
+### Use to find existing folders {#zum-wiederfinden-nutzen}
+
+With the tick **Use to find existing folders** you tell Ablago which values it uses to find **existing folders** again in a document. Typical fields:
+
+| Folder type | Field |
+| --- | --- |
+| Contract partner | Customer number, IBAN, email, name |
+| Contract | Contract number, contract partner (link) |
+| Invoice | Invoice number |
+| Vehicle | Registration number |
+
+Suitable are text (also with format IBAN, email or phone), number and link. The tick is independent of **Unique**: a customer number doesn't have to be unique to help find a folder again.
+
+This is how Ablago uses it, without AI and only with the folders the person may read:
+
+- **How Ablago recognises it:** if the value of such a field is in the document, that is a piece of **evidence** – with field and place in the text, e.g. "Contract number WV-1043, found: … contract WV-1043 of …". Spaces, dots and hyphens in numbers don't count, so `100-4711` also finds `100 4711`.
+- **Via links:** if a **link field** has the tick, the evidence for the folder it points to also counts for this folder. That way Ablago also finds the contract via its contract partner if the partner's customer number is in the letter.
+- **Several pieces of evidence** make a suggestion certain. A single weak piece – for instance just the name – counts as **uncertain**.
+- **Already there:** if all values for finding an existing folder are in the document, for instance the same invoice number, Ablago warns before a second folder is created.
+- **Suggestions when assigning post:** a type with the tick on name or contact details counts as a possible **sender** (organisation, branch, person); a type with it only on numbers (e.g. contract number) as a possible **target folder**.
+
+With the update that brought the tick, Ablago set it on the fields it used to find folders again before: fields with *Use for recognition* that contain numbers, IBAN, VAT id, email, website, phone or a name. Ablago treats packages without this entry the same way.
 
 ### The key { #die-kennung }
 
@@ -306,7 +338,7 @@ Under **Recognition** (not for system folder types) you set up the button **Fill
 - **Recognition** – only if a package with the permission [Suggest fields from documents](pakete.md#recht-erkennen) is installed: **Default from the Workbench** (default), **built in (without AI)** or a **package**, for instance an AI assistant. A package that may go to the network is listed with "sends text over the network"; if you choose it, Ablago asks, and you confirm the data outflow. More under [Recognition by a package](pakete.md#erkennung-durch-ein-paket).
 - **Assign post automatically if recognition is certain** (default: off) – for folder types that post belongs to, e.g. *Contract*. Certain means: sender recognised unambiguously by a strong feature (customer number, IBAN, VAT id, email, website, phone) **and** exactly one fitting folder of this type (it links to the sender, earlier post went there or its number is in the letter; if exactly one number is in the letter, this folder wins). Ablago never creates new folders in the process, never assigns if the recipient may not read the folder, and never for folder types in [archive mode](archiv.md) (the tick is locked there). The recipient (*For*, otherwise whoever brought the post) gets the task **Assigned automatically – please check** with **Fits** and **Undo**; the reason is in the history of post and folder. At most once per post, and only after new full text – existing post stays as it is.
 
-Below it, it says which fields are marked for recognition; any field can be marked under [Use for recognition](#fur-die-erkennung-nutzen). Recognition is built in and works without AI: patterns for email, phone, website, IBAN, date, amount, postcode/town, letterhead and business card as well as vCards (`.vcf`); photos and PDFs are read immediately by [text recognition](texterkennung.md) (at most 5 pages, with the languages of its settings). Every value is checked against the field kind before it appears; it is only saved with *Save folder*. It can't read QR codes yet (e.g. vCard QR on business cards). Instead of the built-in recognition, a package can recognise, for instance with AI on your own computer – see [Recognition by a package](pakete.md#erkennung-durch-ein-paket).
+Below it, it says which fields *Fill in from document* fills and which fields Ablago uses to find existing folders of this type again; you set this on each field under [Fill from document](#aus-dokument-fullen) and [Use to find existing folders](#zum-wiederfinden-nutzen). Recognition is built in and works without AI: patterns for email, phone, website, IBAN, date, amount, postcode/town, letterhead and business card as well as vCards (`.vcf`); photos and PDFs are read immediately by [text recognition](texterkennung.md) (at most 5 pages, with the languages of its settings). Every value is checked against the field kind before it appears; it is only saved with *Save folder*. It can't read QR codes yet (e.g. vCard QR on business cards). Instead of the built-in recognition, a package can recognise, for instance with AI on your own computer – see [Recognition by a package](pakete.md#erkennung-durch-ein-paket).
 
 ## Archive mode { #archivmodus }
 

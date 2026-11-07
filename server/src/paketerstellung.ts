@@ -28,6 +28,7 @@ import { LIZENZTEXTE } from './lizenztexte';
 import { ARCHIV_MAX, BASIS_ABLAGEORT_AB, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, liesZip, type FremderTyp, type Handelnder } from './pakete';
 import { protokoll } from './protokoll';
 import { typBild, typUnterschiede, type TypUnterschiede } from '../../shared/src/typvergleich';
+import { wiederfindenVorgabe } from '../../shared/src/erkennung';
 import { zipPuffer } from './zip';
 import { gebietsschema } from '../../shared/src/sprache';
 
@@ -312,6 +313,9 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
         else x.auswahlFilter = auswahlFilter;
       }
       if (x.ziel === undefined) delete x.ziel;
+      // Zum Wiederfinden (#938): Ohne die Angabe leitet Ablago sie bei Feldern mit „Aus Dokument füllen“ ab – ein
+      // ausdrückliches false hält fest, dass der Haken hier aus ist.
+      if (f.erkennung && !f.wiederfinden && wiederfindenVorgabe(f)) x.wiederfinden = false;
       return x;
     });
     const register = mappentyp.register.map((r: Register) => {
@@ -330,6 +334,9 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
       ...ohneLeere({ titelVorlage: mappentyp.titelVorlage || undefined }), felder, register, ...ohneLeere({ trefferliste: liste.spalten.length ? liste.spalten : undefined }),
       // Beschriftungen je Sprache (#728) – an Feldern stecken sie schon in den Feldangaben.
       ...ohneLeere({ beschriftungen: mappentyp.beschriftungen }),
+      // Dokument übernehmen (#937): nur, was eingestellt ist; ältere Ablago ignorieren es.
+      ...(typeof mappentyp.ausPost === 'boolean' ? { ausPost: mappentyp.ausPost } : {}),
+      ...ohneLeere({ erkennbarAn: mappentyp.erkennbarAn || undefined }),
     };
   });
 

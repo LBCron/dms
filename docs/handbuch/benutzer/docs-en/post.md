@@ -98,7 +98,7 @@ As soon as a post's text is available (from text recognition, a PDF's text layer
 
 Under **Assign …**, the **suggestions** for the target folder are at the top, the best one already selected and marked as *Suggestion*: a contract whose contract number appears in the letter; folders that link to the sender (e.g. their electricity contract); folders that earlier post from this sender went to; the sender themselves. Below each suggestion it says why. A click chooses another; the search below works as always – nothing happens until you click **Assign to "…"**.
 
-What Ablago uses to recognise senders is set by the folder type: fields an administrator has marked "for recognition" (the packages *Basis* & co. come with this). If you have just created an organisation or added a customer number, click **Recognise again** in the box. Only folders you may see are suggested.
+What Ablago uses to recognise senders is set by the folder type: fields where an administrator has set "Use to find existing folders" (the packages *Basis* & co. come with this). If you have just created an organisation or added a customer number, click **Recognise again** in the box. Only folders you may see are suggested.
 
 ### Assigned automatically {#automatisch-zugeordnet}
 

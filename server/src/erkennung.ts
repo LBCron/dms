@@ -8,7 +8,7 @@
  */
 
 import type { Fund, Nummernfund, Briefkopf, Treffer } from '../../shared/src/erkennung';
-import { eindeutigerTreffer, ENGINE_EINGEBAUT, ERKENNEN_HINWEIS, findeAngaben, findeMappen, fuellfelder, istAbsenderTyp, merkmalsfelder, pruefeVorschlaege, schemaFuer, vorschlaegeAus, type Angaben, type AusDokument, type Vergleichsmappe, type Vorschlaege } from '../../shared/src/erkennung';
+import { eindeutigerTreffer, ENGINE_EINGEBAUT, ERKENNEN_HINWEIS, findeAngaben, findeMappen, fuellfelder, gleicheAb, istAbsenderTyp, merkmalsfelder, type Abgleich, pruefeVorschlaege, schemaFuer, vorschlaegeAus, type Angaben, type AusDokument, type Vergleichsmappe, type Vorschlaege } from '../../shared/src/erkennung';
 import { hatNetz, hatSchnittstelle } from '../../shared/src/pakete';
 import type { Einstellungen } from './einstellungen';
 import { auswahlText, geschuetzteFelder, type Betrag, type Feld, type Mappe, type Mappentyp, type MappenBezug } from '../../shared/src/model';
@@ -429,9 +429,9 @@ export class Erkennung {
     const alle = await this.repo().listeMappen(ziel.id);
     const lesbar = await this.d.lesbare(z, alle.map((m) => m.id));
     const mappen = alle.filter((m) => lesbar.has(m.id));
-    // Ohne markierte Felder zählt der Titel als Name.
+    // Ohne Felder zum Wiederfinden (#938) zählt der Titel als Name.
     const markiert = merkmalsfelder(ziel).length > 0;
-    const vergleich = markiert ? ziel : { id: ziel.id, felder: [{ key: '_titel', label: t('meldungen.erkennung.name'), typ: 'text' as const, erkennung: { art: 'name' as const } }] };
+    const vergleich = markiert ? ziel : { id: ziel.id, felder: [{ key: '_titel', label: t('meldungen.erkennung.name'), typ: 'text' as const, erkennung: { art: 'name' as const }, wiederfinden: true }] };
     const treffer = findeMappen(text, [vergleich], mappen.map((m) => ({ id: m.id, typId: m.typId, werte: markiert ? m.werte : { _titel: m.titel ?? '' } })));
     const best = eindeutigerTreffer(treffer) ?? (treffer.length === 1 ? treffer[0] : null);
     if (best) return { mappe: mappen.find((m) => m.id === best.mappeId), sicherheit: best.stark ? 'hoch' : 'mittel', fundstelle: `gefunden: ${best.gruende.join(', ')}` };
@@ -443,6 +443,30 @@ export class Erkennung {
       .filter(([k, v]) => typeof v.wert === 'string' && ziel.felder.some((x) => x.key === k && x.typ !== 'referenz')).map(([k, v]) => [k, v.wert as string]));
     if (!Object.keys(werte).length) { const n = ziel.felder.find((x) => x.typ === 'text'); if (n) werte[n.key] = firma; }
     return { sicherheit: 'mittel', fundstelle: a.briefkopf?.fundstelle ?? a.person?.fundstelle ?? '', neu: { typId: ziel.id, werte, fundstelle: a.briefkopf?.fundstelle ?? a.person?.fundstelle ?? firma } };
+  }
+
+  /**
+   * Abgleich im Kern, ohne KI (#938): vorhandene Mappen, die sich im Text über ihre Felder mit „Zum Wiederfinden
+   * nutzen“ wiederfinden – mit Belegen (Feld, Wert, Fundstelle). Mit `zielTyp` dazu Vorschläge für dessen Verweisfelder
+   * und die Warnung, wenn es die Mappe schon gibt. Nur Mappen, die die Person lesen darf; nichts wird gespeichert.
+   * Grundlage für „Dokument übernehmen“ (#934); die KI-Klassifizierung (#939) sieht die Ablage nie.
+   */
+  async abgleich(text: string, zielTyp?: string, z?: Zugriff): Promise<Abgleich & { bezuege: Record<string, MappenBezug> }> {
+    const ziel = zielTyp ? (z ? z.typen.get(zielTyp) : await this.repo().holeTyp(zielTyp)) : undefined;
+    if (zielTyp && !ziel) throw new Fachfehler(404, t('meldungen.erkennung.diesen-mappentyp-gibt-es'));
+    const sichtbar = (await this.repo().listeTypen()).filter((x) => x.system !== 'post' && (!z || z.typen.has(x.id)));
+    const typen = sichtbar.filter((x) => x.felder.some((f) => f.wiederfinden));
+    const alle: Vergleichsmappe[] = [];
+    for (const x of typen) {
+      for (const m of await this.repo().listeMappen(x.id)) { alle.push({ id: m.id, typId: m.typId, werte: m.werte }); if (alle.length >= MAX_MAPPEN) break; }
+      if (alle.length >= MAX_MAPPEN) break;
+    }
+    const lesbar = await this.d.lesbare(z, alle.map((m) => m.id));
+    const mappen = alle.filter((m) => lesbar.has(m.id));
+    const erg = gleicheAb(text.slice(0, TEXT_MAX), typen, mappen, ziel);
+    const bezuege = Object.fromEntries(await this.repo().bezuege(erg.treffer.map((x) => x.mappeId)));
+    log.info('Abgleich mit vorhandenen Mappen', { zeichen: text.length, mappen: mappen.length, treffer: erg.treffer.length, doppelt: erg.doppelt.length, ...(ziel ? { typ: ziel.name } : {}) });
+    return { ...erg, bezuege };
   }
 
   /** „Neue Organisation anlegen“: der erste Absender-Typ mit Namensfeld, den der Benutzer sieht und anlegen darf. */

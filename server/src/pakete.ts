@@ -10,7 +10,7 @@
  * - Ein Update ergänzt nur (neue Typen, Felder, Register, Sichten); es löscht und überschreibt nichts.
  */
 import { ansichtSymbol } from '../../shared/src/ansichtsymbole';
-import { liesFeldErkennung, type FeldErkennung } from '../../shared/src/erkennung';
+import { liesFeldErkennung, liesWiederfinden, wiederfindenVorgabe, type FeldErkennung } from '../../shared/src/erkennung';
 import { istDatumsgrenze, istFeldformat } from '../../shared/src/feldformate';
 import { createHash, randomUUID } from 'node:crypto';
 import { liesWortgruppe } from '../../shared/src/suche';
@@ -119,7 +119,13 @@ export interface PaketRegister { key: string; name: string; art: Register['art']
  * Feldern (label, hilfe, optionen: fester Wert → Text) und an Registern (name). Ältere Pakete ohne sie gelten unverändert:
  * Ihre Optionen sind ihr eigener fester Wert.
  */
-export interface PaketTyp { schluessel: string; name: string; beschreibung: string; titelVorlage?: string; felder: PaketFeld[]; register: PaketRegister[]; trefferliste?: string[]; beschriftungen?: Beschriftungen<TypTeile> }
+export interface PaketTyp {
+  schluessel: string; name: string; beschreibung: string; titelVorlage?: string; felder: PaketFeld[]; register: PaketRegister[]; trefferliste?: string[]; beschriftungen?: Beschriftungen<TypTeile>;
+  /** „Kann aus Post angelegt werden“ (#937); fehlt = Vorgabe (an mit Dokumentenregister). Ältere Ablago ignorieren es. */
+  ausPost?: boolean;
+  /** „Woran man ihn erkennt“ (#937), Übersetzungen unter beschriftungen.<sprache>.erkennbarAn. */
+  erkennbarAn?: string;
+}
 /**
  * Mappentyp, den das Paket nicht mitbringt (#656): Das Zielsystem ordnet ihn über seine Kennung zu, wenn es ihn dort gibt –
  * sonst wird die Ansicht ohne ihn angelegt bzw. ganz übersprungen.
@@ -298,8 +304,11 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
     // Beschriftungen (#728): ein Objekt Sprache → Texte; was nicht passt, bereinigt das DMS beim Anlegen.
     if (t.beschriftungen !== undefined && !istObjekt(t.beschriftungen)) fehler.push(`${wo}: beschriftungen muss ein Objekt „Sprache → Texte“ sein.`);
     for (const x of [...felder, ...register] as unknown as Array<Record<string, unknown>>) if (x.beschriftungen !== undefined && !istObjekt(x.beschriftungen)) fehler.push(`${wo}: „${str(x.key)}“: beschriftungen muss ein Objekt „Sprache → Texte“ sein.`);
+    // Dokument übernehmen (#937): Angaben mit falschem Typ übergeht Ablago (wie unbekannte Felder), statt abzulehnen.
     return { schluessel: str(t.schluessel), name: str(t.name).trim(), beschreibung: str(t.beschreibung), titelVorlage: t.titelVorlage ? str(t.titelVorlage) : undefined, felder, register, trefferliste: Array.isArray(t.trefferliste) ? t.trefferliste.map(str) : undefined,
-      ...(istObjekt(t.beschriftungen) ? { beschriftungen: t.beschriftungen as Beschriftungen<TypTeile> } : {}) };
+      ...(istObjekt(t.beschriftungen) ? { beschriftungen: t.beschriftungen as Beschriftungen<TypTeile> } : {}),
+      ...(typeof t.ausPost === 'boolean' ? { ausPost: t.ausPost } : {}),
+      ...(typeof t.erkennbarAn === 'string' && t.erkennbarAn.trim() ? { erkennbarAn: t.erkennbarAn.trim() } : {}) };
   });
   const sichten = liste('sichten').map((s, i): PaketSicht => {
     if (!SCHLUESSEL.test(str(s.schluessel))) fehler.push(t('meldungen.pakete.sichten-ungueltige-kennung', { wert: i + 1 }));
@@ -417,6 +426,26 @@ function erkennungNeu(t: PaketTyp, vorhanden: Pick<Mappentyp, 'felder'>): Array<
 }
 
 /**
+ * „Zum Wiederfinden nutzen“ (#938) für ein neues Feld: die Angabe des Pakets – fehlt sie (Paket kennt den Haken noch
+ * nicht), wie bisher bei Feldern „für die Erkennung“ mit Merkmalsart (wiederfindenVorgabe).
+ */
+const wiederfindenAus = (f: PaketFeld): boolean => ('wiederfinden' in f ? liesWiederfinden(f.wiederfinden, f.typ) : wiederfindenVorgabe(f));
+/** Felder, die das Paket ausdrücklich „zum Wiederfinden“ markiert und die im DMS (gleiche Kennung und Feldart) den Haken noch nicht haben (#938). */
+function wiederfindenNeu(t: PaketTyp, vorhanden: Pick<Mappentyp, 'felder'>): Array<{ key: string; label: string }> {
+  return t.felder.flatMap((f) => {
+    const g = vorhanden.felder.find((x) => x.key === f.key && x.typ === f.typ);
+    return g && liesWiederfinden(f.wiederfinden, f.typ) && !g.wiederfinden ? [{ key: g.key, label: g.label }] : [];
+  });
+}
+/** Angaben am Typ (#937), die das Paket vorgibt und die der Administrator noch nicht eingestellt hat. */
+function typAngabenNeu(t: PaketTyp, vorhanden: Pick<Mappentyp, 'ausPost' | 'erkennbarAn'>): { ausPost?: boolean; erkennbarAn?: string } {
+  return {
+    ...(typeof t.ausPost === 'boolean' && (vorhanden.ausPost ?? null) === null ? { ausPost: t.ausPost } : {}),
+    ...(t.erkennbarAn && !vorhanden.erkennbarAn ? { erkennbarAn: t.erkennbarAn } : {}),
+  };
+}
+
+/**
  * Formate und Datumsgrenzen (#535), die das Paket an Feldern vorgibt und die im DMS (gleiche Kennung, gleiche Feldart)
  * noch fehlen – nur, wo der Administrator weder Format noch Grenzen eingestellt hat. Gespeicherte Werte bleiben gültig.
  */
@@ -475,6 +504,10 @@ export interface TypPlan {
   vorhanden: boolean; neueFelder: string[]; neueRegister: string[];
   /** Bei Update (#336): vorhandene Felder, die das Paket jetzt „für die Erkennung“ markiert (nur wo noch nichts eingestellt ist). */
   erkennung?: string[];
+  /** Bei Update (#938): vorhandene Felder, die das Paket jetzt „zum Wiederfinden“ markiert (nur wo der Haken noch fehlt). */
+  wiederfinden?: string[];
+  /** Bei Update (#937): Das Paket gibt „Kann aus Post angelegt werden“ bzw. „Woran man ihn erkennt“ vor, wo noch nichts eingestellt ist. */
+  typAngaben?: boolean;
   /** Bei Update (#534): Verweisfelder mit aus_text und wie viele Angaben im alten Textfeld danach umgewandelt werden können. */
   umwandeln?: Array<{ feld: string; aus: string; anzahl: number }>;
   /** Bei Update (#535): vorhandene Felder, die das Paket jetzt mit Format bzw. Datumsgrenzen prüft (nur wo noch nichts eingestellt ist). */
@@ -1281,6 +1314,8 @@ export class Paketverwaltung {
           neueFelder: paketTyp.felder.filter((f) => !vorhanden.felder.some((g) => g.key === f.key)).map((f) => f.label),
           neueRegister: paketTyp.register.filter((r) => !vorhanden.register.some((g) => g.key === r.key)).map((r) => r.name),
           erkennung: erkennungNeu(paketTyp, vorhanden).map((f) => f.label),
+          wiederfinden: wiederfindenNeu(paketTyp, vorhanden).map((f) => f.label),
+          typAngaben: Object.keys(typAngabenNeu(paketTyp, vorhanden)).length > 0,
           umwandeln: await umwandelbar(paketTyp),
           formate: formatNeu(paketTyp, vorhanden).map((f) => f.label),
           beschriftungen: beschriftungenNeu(paketTyp, vorhanden).anzahl,
@@ -1431,11 +1466,11 @@ export class Paketverwaltung {
     const eingabe = (t: PaketTyp, nurAngelegt: boolean) => {
       const eigen = (vw: string) => !vw.includes(':') || vw.startsWith(`${m.id}:`);
       const offen = new Set(t.felder.filter((f) => f.ziel && !(eigen(f.ziel) && f.ziel.split(':').pop() === t.schluessel) && ziel(f.ziel, nurAngelegt) === null).map((f) => f.key));
-      const felder = t.felder.filter((f) => !offen.has(f.key)).map(({ ziel: z, ...f }) => (z ? { ...f, zielTyp: ziel(z, false) } : f));
+      const felder = t.felder.filter((f) => !offen.has(f.key)).map(({ ziel: z, ...f }) => ({ ...f, wiederfinden: wiederfindenAus(f as PaketFeld), ...(z ? { zielTyp: ziel(z, false) } : {}) }));
       const register = t.register.map((r) => ({ ...r, ...(r.quellen ? { quellen: r.quellen.map((q) => ({ typId: ziel(q.typ, nurAngelegt), feldKey: q.feld })).filter((q) => q.typId) } : {}) }));
       const unvollstaendig = offen.size > 0 || t.register.some((r) => (r.quellen ?? []).some((q) => ziel(q.typ, nurAngelegt) === null));
       const name = plan.typen.find((x) => x.schluessel === t.schluessel)!.name;
-      return { unvollstaendig, daten: { id: ids.get(t.schluessel), name, schluessel: `${m.id}_${t.schluessel}`, beschreibung: t.beschreibung, titelVorlage: t.titelVorlage ?? '', felder, register, ...(t.trefferliste ? { trefferliste: t.trefferliste.filter((k) => !offen.has(k)) } : {}), ...(t.beschriftungen ? { beschriftungen: t.beschriftungen } : {}), sichtAnlegen: false } };
+      return { unvollstaendig, daten: { id: ids.get(t.schluessel), name, schluessel: `${m.id}_${t.schluessel}`, beschreibung: t.beschreibung, titelVorlage: t.titelVorlage ?? '', felder, register, ...(t.trefferliste ? { trefferliste: t.trefferliste.filter((k) => !offen.has(k)) } : {}), ...(t.beschriftungen ? { beschriftungen: t.beschriftungen } : {}), ...(t.ausPost !== undefined ? { ausPost: t.ausPost } : {}), ...(t.erkennbarAn ? { erkennbarAn: t.erkennbarAn } : {}), sichtAnlegen: false } };
     };
     // Zurückrollen: angelegte Mappen, Sichten, Typen; geänderte Typen auf den alten Stand.
     const mappen: string[] = [];
@@ -1479,16 +1514,18 @@ export class Paketverwaltung {
       // 2. Update: vorhandene Typen um neue Felder und Register ergänzen – sonst nichts ändern.
       for (const paketTyp of paket.typen) {
         const p = plan.typen.find((x) => x.schluessel === paketTyp.schluessel)!;
-        if (!p.vorhanden || (!p.neueFelder.length && !p.neueRegister.length && !p.erkennung?.length && !p.formate?.length && !p.beschriftungen)) continue;
+        if (!p.vorhanden || (!p.neueFelder.length && !p.neueRegister.length && !p.erkennung?.length && !p.wiederfinden?.length && !p.typAngaben && !p.formate?.length && !p.beschriftungen)) continue;
         const aktuell = vorher.get(ids.get(paketTyp.schluessel)!)!;
         const neu = eingabe(paketTyp, false).daten;
         // Erkennung (#336): Markierung des Pakets an vorhandene Felder, an denen der Administrator nichts eingestellt hat.
         const markiert = new Map(erkennungNeu(paketTyp, aktuell).map((f) => [f.key, f.erkennung]));
+        // Zum Wiederfinden (#938) und die Angaben am Typ (#937) genauso: nur, wo noch nichts eingestellt ist.
+        const wiederfinden = new Set(wiederfindenNeu(paketTyp, aktuell).map((f) => f.key));
         // Formate und Datumsgrenzen (#535) genauso: nur an Feldern ohne eigene Einstellung.
         const vorgaben = new Map(formatNeu(paketTyp, aktuell).map((f) => [f.key, f.vorgaben]));
         // Beschriftungen (#728) genauso: ergänzt, was der Administrator noch nicht beschriftet hat.
         const besch = beschriftungenNeu(paketTyp, aktuell);
-        const felder = [...besch.typ.felder.map((f) => ({ ...f, ...(markiert.has(f.key) ? { erkennung: markiert.get(f.key) } : {}), ...vorgaben.get(f.key) })), ...neu.felder.filter((f) => !aktuell.felder.some((g) => g.key === f.key))];
+        const felder = [...besch.typ.felder.map((f) => ({ ...f, ...(markiert.has(f.key) ? { erkennung: markiert.get(f.key) } : {}), ...(wiederfinden.has(f.key) ? { wiederfinden: true } : {}), ...vorgaben.get(f.key) })), ...neu.felder.filter((f) => !aktuell.felder.some((g) => g.key === f.key))];
         const register = besch.typ.register.map((r) => {
           const pr = paketTyp.register.find((x) => x.key === r.key);
           const dazu = (pr?.felder ?? []).filter((k) => !aktuell.felder.some((g) => g.key === k) && r.art === 'felder');
@@ -1496,7 +1533,7 @@ export class Paketverwaltung {
         });
         for (const r of neu.register) if (!register.some((g) => g.key === r.key)) register.push(r as Register);
         geaendert.push(aktuell);
-        try { await this.d.aendereTyp(aktuell.id, { ...aktuell, felder, register, beschriftungen: besch.typ.beschriftungen ?? null }); } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.mappentyp', { name: aktuell.name, meldungen: meldungen(f) })); }
+        try { await this.d.aendereTyp(aktuell.id, { ...aktuell, ...typAngabenNeu(paketTyp, aktuell), felder, register, beschriftungen: besch.typ.beschriftungen ?? null }); } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.mappentyp', { name: aktuell.name, meldungen: meldungen(f) })); }
       }
       // 3. Neue Sichten, Elternsichten zuerst, am Ende ihrer Ebene.
       for (const s of nachEltern(paket.sichten)) {

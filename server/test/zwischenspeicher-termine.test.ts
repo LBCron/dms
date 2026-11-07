@@ -431,10 +431,10 @@ describe('PostgreSQL: Vorfilter, Pflege und Migration (#918)', { skip: url ? fal
     await haupt.unsafe(`CREATE DATABASE ${EIGENE_DB}`);
     const u = new URL(url!); u.pathname = `/${EIGENE_DB}`;
     sql = verbinde(u.toString());
-    // Migration füllt den Bestand: erst alle Migrationen vor 086, Mappen anlegen, dann der Rest.
+    // Migration füllt den Bestand: erst alle Migrationen außer 086 (spätere ändern Tabellen, die legeTypAn braucht), Mappen anlegen, dann der Rest.
     const alle = fileURLToPath(new URL('../migrations', import.meta.url));
     ordner = await mkdtemp(join(tmpdir(), 'dms-918-'));
-    for (const f of (await readdir(alle)).filter((x) => x.endsWith('.sql') && x < '086')) await copyFile(join(alle, f), join(ordner, f));
+    for (const f of (await readdir(alle)).filter((x) => x.endsWith('.sql') && !x.startsWith('086'))) await copyFile(join(alle, f), join(ordner, f));
     await migriere(sql, ordner, () => {});
     const repo = mod.pgRepo(sql, HAUSHALT) as Repo;
     const typ = await repo.legeTypAn(crypto.randomUUID(), { name: 'Bestand', beschreibung: '', titelVorlage: '', felder: FELDER, register: [] } as never);

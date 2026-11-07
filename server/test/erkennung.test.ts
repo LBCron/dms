@@ -93,9 +93,9 @@ describe('Erkennung: Muster (#336)', () => {
 
   it('findet Mappen an markierten Feldern: stark (Kundennummer, IBAN, Domain), schwach (Name); eindeutig nur mit genau einem starken', () => {
     const org = { id: 't-org', felder: [
-      { key: 'name', label: 'Name', typ: 'text' as const, erkennung: {} },
-      { key: 'kundennummer', label: 'Kundennummer', typ: 'text' as const, erkennung: {} },
-      { key: 'internet', label: 'Internetseite', typ: 'text' as const, erkennung: {} },
+      { key: 'name', label: 'Name', typ: 'text' as const, erkennung: {}, wiederfinden: true },
+      { key: 'kundennummer', label: 'Kundennummer', typ: 'text' as const, erkennung: {}, wiederfinden: true },
+      { key: 'internet', label: 'Internetseite', typ: 'text' as const, erkennung: {}, wiederfinden: true },
       { key: 'notiz', label: 'Notiz', typ: 'text' as const },
     ] };
     const mappen = [
@@ -110,7 +110,7 @@ describe('Erkennung: Muster (#336)', () => {
     assert.equal(eindeutigerTreffer(t)?.mappeId, 'sw');
     assert.equal(findeMappen('Ihre Beispielbank, info@beispielbank.example', [org], mappen)[0].mappeId, 'bank');
     assert.ok(istAbsenderTyp({ felder: org.felder }));
-    assert.ok(!istAbsenderTyp({ felder: [{ key: 'nr', label: 'Vertragsnummer', typ: 'text', erkennung: {} }] }));
+    assert.ok(!istAbsenderTyp({ felder: [{ key: 'nr', label: 'Vertragsnummer', typ: 'text', erkennung: {}, wiederfinden: true }] }));
   });
 
   it('Vorschläge für die Felder einer Zielmappe: Datum, Betrag und Nummer passend zur Bezeichnung', () => {
@@ -132,9 +132,9 @@ async function aufbau() {
   const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' }, anna.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const organisation = await d.legeTypAn({ name: 'Organisation', schluessel: 'organisation', felder: [
-    { key: 'name', label: 'Name', typ: 'text', pflicht: true, erkennung: {} },
-    { key: 'kundennummer', label: 'Kundennummer', typ: 'text', erkennung: { art: 'nummer' } },
-    { key: 'iban', label: 'IBAN', typ: 'text', erkennung: {} },
+    { key: 'name', label: 'Name', typ: 'text', pflicht: true, erkennung: {}, wiederfinden: true },
+    { key: 'kundennummer', label: 'Kundennummer', typ: 'text', erkennung: { art: 'nummer' }, wiederfinden: true },
+    { key: 'iban', label: 'IBAN', typ: 'text', erkennung: {}, wiederfinden: true },
     { key: 'strasse', label: 'Straße', typ: 'text', erkennung: {} },
     { key: 'hausnummer', label: 'Hausnummer', typ: 'text', erkennung: {} },
     { key: 'plz', label: 'PLZ', typ: 'text', erkennung: {} },
@@ -143,7 +143,7 @@ async function aufbau() {
   const vertrag = await d.legeTypAn({ name: 'Vertrag', felder: [
     { key: 'titel', label: 'Titel', typ: 'text', pflicht: true },
     { key: 'partner', label: 'Vertragspartner', typ: 'referenz', zielTyp: organisation.id },
-    { key: 'vertragsnummer', label: 'Vertragsnummer', typ: 'text', erkennung: {} },
+    { key: 'vertragsnummer', label: 'Vertragsnummer', typ: 'text', erkennung: {}, wiederfinden: true },
   ], register: [{ key: 'allgemein', name: 'Allgemein', art: 'felder' }, { key: 'dokumente', name: 'Dokumente', art: 'dokumente' }] });
   const sw = await d.legeMappeAn({ typId: organisation.id, werte: { name: 'Stadtwerke Musterstadt', kundennummer: '100-4711' } }, anna.id);
   const bank = await d.legeMappeAn({ typId: organisation.id, werte: { name: 'Beispielbank', iban: 'DE02 1203 0000 0000 2020 51' } }, anna.id);
@@ -269,9 +269,9 @@ describe('Aus Dokument ausfüllen (#391, Stufe 1)', () => {
       { key: 'nachname', label: 'Nachname', typ: 'text', pflicht: true, erkennung: {} },
       { key: 'funktion', label: 'Funktion', typ: 'text', erkennung: {} },
       { key: 'organisation', label: 'Organisation', typ: 'referenz', zielTyp: x.organisation.id, erkennung: {} },
-      { key: 'telefon', label: 'Telefon', typ: 'text', erkennung: {} },
-      { key: 'mobil', label: 'Mobil', typ: 'text', erkennung: {} },
-      { key: 'email', label: 'E-Mail', typ: 'text', muster: '[^@\\s]+@[^@\\s]+\\.[^@\\s]+', erkennung: {} },
+      { key: 'telefon', label: 'Telefon', typ: 'text', erkennung: {}, wiederfinden: true },
+      { key: 'mobil', label: 'Mobil', typ: 'text', erkennung: {}, wiederfinden: true },
+      { key: 'email', label: 'E-Mail', typ: 'text', muster: '[^@\\s]+@[^@\\s]+\\.[^@\\s]+', erkennung: {}, wiederfinden: true },
       { key: 'plz', label: 'PLZ', typ: 'text', erkennung: {} },
       { key: 'ort', label: 'Ort', typ: 'text', erkennung: {} },
       { key: 'geheim', label: 'Kennwort', typ: 'passwort' },
