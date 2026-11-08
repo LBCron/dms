@@ -16,12 +16,13 @@ export interface TypBild {
 }
 
 /** Eigenschaften eines Felds, die eine inhaltliche Änderung sind (Name extra, damit „umbenannt“ lesbar wird). */
-const FELD = ['typ', 'pflicht', 'eindeutig', 'hilfe', 'standard', 'minLen', 'maxLen', 'muster', 'min', 'max', 'nachkomma', 'waehrung', 'optionen', 'mehrfach', 'zielTyp', 'verweisart', 'frist', 'auswahlFilter', 'erkennung', 'format', 'landFeld', 'beschriftungen'] as const;
+const FELD = ['typ', 'pflicht', 'eindeutig', 'hilfe', 'standard', 'minLen', 'maxLen', 'muster', 'min', 'max', 'nachkomma', 'waehrung', 'optionen', 'mehrfach', 'zielTyp', 'verweisart', 'frist', 'auswahlFilter', 'erkennung', 'format', 'landFeld', 'beschriftungen', 'ausgeblendet'] as const;
 const NAMEN: Record<string, string> = {
   typ: 'Art', pflicht: 'Pflicht', eindeutig: 'eindeutig', hilfe: t('gemeinsam.typvergleich.hilfetext'), standard: 'Vorgabe', minLen: 'Mindestlänge', maxLen: 'Höchstlänge', muster: 'Muster',
   min: 'Untergrenze', max: 'Obergrenze', nachkomma: 'Nachkommastellen', waehrung: 'Währung', optionen: 'Auswahlwerte', mehrfach: 'Mehrfachauswahl', zielTyp: 'Ziel',
   verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Aus Dokument füllen', format: 'Format', landFeld: t('gemeinsam.typvergleich.land-feld'), beschriftungen: t('gemeinsam.typvergleich.beschriftungen'),
   name: 'Name', art: 'Art', felder: 'Felder', quellen: 'Quellen',
+  ausgeblendet: t('gemeinsam.typvergleich.ausgeblendet'), abschnitte: t('gemeinsam.typvergleich.abschnitte'),
 };
 /** Leere Werte (undefined, null, false, '', []) gelten als „nicht gesetzt“ – Speichern ohne Änderung zählt nicht. */
 const leer = (v: unknown) => v === undefined || v === null || v === false || v === '' || (Array.isArray(v) && !v.length);
@@ -34,7 +35,7 @@ export function typBild(t: Mappentyp): TypBild {
     name: t.name, beschreibung: t.beschreibung ?? '', titelVorlage: t.titelVorlage ?? '',
     ...(t.beschriftungen ? { beschriftungen: t.beschriftungen } : {}),
     felder: t.felder.filter((f) => !f.system).map(feld),
-    register: t.register.map((r) => ({ key: r.key, name: r.name, werte: sauber({ art: r.art, felder: r.felder, quellen: r.quellen, beschriftungen: r.beschriftungen }) })),
+    register: t.register.map((r) => ({ key: r.key, name: r.name, werte: sauber({ art: r.art, felder: r.felder, quellen: r.quellen, beschriftungen: r.beschriftungen, abschnitte: r.abschnitte, ausgeblendet: r.ausgeblendet }) })),
   };
 }
 

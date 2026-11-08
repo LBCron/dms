@@ -3092,5 +3092,6 @@
   "uebersetzen.gespeichert": "Saved.",
   "uebersetzen.abfluss.titel": "Send texts to a service?",
   "uebersetzen.abfluss.text": "“{paket}” doesn’t translate on the device: every text someone has translated is sent to {ziele}. Whoever translates sees this on the result.",
-  "uebersetzen.abfluss.ja": "Confirm and choose"
+  "uebersetzen.abfluss.ja": "Confirm and choose",
+  "pakete.abschnitte": "Sections in {map}"
 }

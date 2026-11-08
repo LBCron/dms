@@ -914,5 +914,17 @@
   "sprachpaket.beschriftung-schluessel": "{wo}: ungültige Kennung.",
   "uebersetzung.kennzeichnung": "Maschinell übersetzt – nicht verbindlich",
   "uebersetzung.kennzeichnung-aus": "Maschinell übersetzt (Original auf {sprache}) – nicht verbindlich",
-  "pakete.inhalte-uebersetzen": "Inhalte übersetzen – auf Knopfdruck bekommt das Paket einen einzelnen Text (Feld, Notiz oder Volltext), den die Person lesen darf, und gibt die Übersetzung zurück; ändern oder speichern kann es nichts"
+  "pakete.inhalte-uebersetzen": "Inhalte übersetzen – auf Knopfdruck bekommt das Paket einen einzelnen Text (Feld, Notiz oder Volltext), den die Person lesen darf, und gibt die Übersetzung zurück; ändern oder speichern kann es nichts",
+  "model.ein-register-muss-sichtbar": "Mindestens ein Register muss sichtbar bleiben.",
+  "typvergleich.ausgeblendet": "ausgeblendet",
+  "typvergleich.abschnitte": "Abschnitte",
+  "darstellung.verwendung.titel": "Titel der Mappe",
+  "darstellung.verwendung.trefferliste": "Trefferliste „{name}“",
+  "darstellung.verwendung.ansicht": "Ansicht „{name}“",
+  "darstellung.verwendung.erkennung": "Aus Dokument füllen",
+  "darstellung.verwendung.wiederfinden": "Zum Wiederfinden",
+  "darstellung.verwendung.frist": "Frist",
+  "darstellung.verwendung.frist-empfaenger": "Empfänger der Frist bei „{feld}“",
+  "darstellung.verwendung.archiv": "Stichtag im Archivmodus",
+  "darstellung.verwendung.berechtigung": "Berechtigung „{name}“"
 }

@@ -3092,5 +3092,6 @@
   "uebersetzen.gespeichert": "Gespeichert.",
   "uebersetzen.abfluss.titel": "Texte an einen Dienst schicken?",
   "uebersetzen.abfluss.text": "„{paket}“ übersetzt nicht auf dem Gerät: Jeder Text, den jemand übersetzen lässt, geht an {ziele}. Wer übersetzt, sieht das am Ergebnis.",
-  "uebersetzen.abfluss.ja": "Bestätigen und wählen"
+  "uebersetzen.abfluss.ja": "Bestätigen und wählen",
+  "pakete.abschnitte": "Abschnitte in {map}"
 }

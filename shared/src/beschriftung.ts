@@ -12,13 +12,15 @@
  *   „strom“ mit „Strom“ und „Electricity“ beschriften.
  */
 import { AUSGANGSSPRACHE, EINGEBAUTE_SPRACHEN, sprache } from './sprache';
-import type { Feld, MappentypDaten, Register, Trefferliste } from './model';
+import type { Abschnitt, Feld, MappentypDaten, Register, Trefferliste } from './model';
 import type { SichtDaten } from './sichten';
 
 /** Beschriftungen je Sprache: Sprache → Teile. */
 export type Beschriftungen<T> = Partial<Record<string, T>>;
 /** Name eines Registers, einer Trefferliste. */
 export interface NamensTeile { name?: string }
+/** Überschrift eines Abschnitts im Feldregister (#890). */
+export interface AbschnittTeile { titel?: string }
 /** Name und Beschreibung eines Mappentyps bzw. einer Ansicht; beim Mappentyp auch „Woran man ihn erkennt“ (#937). */
 export interface TypTeile { name?: string; beschreibung?: string; erkennbarAn?: string }
 /** Bezeichnung, Hilfetext und Beschriftung der Optionen (fester Wert → Text) eines Felds. */
@@ -65,6 +67,8 @@ export const typBeschreibung = (t: Pick<MappentypDaten, 'beschreibung' | 'beschr
 /** „Woran man ihn erkennt“ (#937) in einer Sprache. */
 export const typErkennbarAn = (t: Pick<MappentypDaten, 'erkennbarAn' | 'beschriftungen'>, spr = sprache()) => (t.erkennbarAn ? inSprache(t.erkennbarAn, t.beschriftungen, 'erkennbarAn', spr) : '');
 export const registerName = (r: Pick<Register, 'name' | 'key' | 'beschriftungen'>, spr = sprache()) => inSprache(r.name || r.key, r.beschriftungen, 'name', spr);
+/** Überschrift eines Abschnitts (#890) in einer Sprache; ohne Überschrift leer. */
+export const abschnittTitel = (a: Pick<Abschnitt, 'titel' | 'beschriftungen'>, spr = sprache()) => (a.titel ? inSprache(a.titel, a.beschriftungen, 'titel', spr) : '');
 export const listenName = (l: Pick<Trefferliste, 'name' | 'beschriftungen'>, spr = sprache()) => inSprache(l.name, l.beschriftungen, 'name', spr);
 export const sichtName = (s: Pick<SichtDaten, 'name' | 'beschriftungen'>, spr = sprache()) => inSprache(s.name, s.beschriftungen, 'name', spr);
 export const sichtBeschreibung = (s: Pick<SichtDaten, 'beschreibung' | 'beschriftungen'>, spr = sprache()) => (s.beschreibung ? inSprache(s.beschreibung, s.beschriftungen, 'beschreibung', spr) : '');
@@ -121,7 +125,10 @@ export function beschriftungsstand(t: Pick<MappentypDaten, 'name' | 'beschreibun
     zaehle(f.hilfe, !!teil(f.beschriftungen, spr, 'hilfe'));
     if (f.typ === 'auswahl') for (const o of f.optionen ?? []) zaehle(o, !!f.beschriftungen?.[spr]?.optionen?.[o]?.trim());
   }
-  for (const r of t.register ?? []) zaehle(r.name, !!teil(r.beschriftungen, spr, 'name'));
+  for (const r of t.register ?? []) {
+    zaehle(r.name, !!teil(r.beschriftungen, spr, 'name'));
+    for (const a of r.abschnitte ?? []) zaehle(a.titel, !!teil(a.beschriftungen, spr, 'titel'));
+  }
   for (const l of t.trefferlisten ?? []) zaehle(l.name, !!teil(l.beschriftungen, spr, 'name'));
   return { vorhanden, gesamt };
 }

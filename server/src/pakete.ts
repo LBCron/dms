@@ -16,9 +16,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
-import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
+import { istLeer, type Abschnitt, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
+import { bereinigeAbschnitte } from '../../shared/src/darstellung';
 import { typBild, type TypBild } from '../../shared/src/typvergleich';
-import { ergaenzeBeschriftungen, type Beschriftungen, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
+import { ergaenzeBeschriftungen, type AbschnittTeile, type Beschriftungen, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
 import { ALLE_TYPEN, BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, DMS_ALIAS, veralteteVerweise, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
@@ -113,7 +114,13 @@ export interface Manifest {
   ergaenzt?: Ergaenzung;
 }
 export interface PaketFeld extends Partial<Feld> { key: string; label: string; typ: Feld['typ']; ziel?: string }
-export interface PaketRegister { key: string; name: string; art: Register['art']; felder?: string[]; quellen?: Array<{ typ: string; feld: string }>; volltext?: boolean; beschriftungen?: Beschriftungen<NamensTeile> }
+export interface PaketRegister {
+  key: string; name: string; art: Register['art']; felder?: string[]; quellen?: Array<{ typ: string; feld: string }>; volltext?: boolean; beschriftungen?: Beschriftungen<NamensTeile>;
+  /** Abschnitte im Feldregister (#890): `{ vor, titel?, eingeklappt?, beschriftungen? }`; ältere Ablago ignorieren sie. */
+  abschnitte?: unknown;
+  /** Ausgeblendet (#655), nur beim ersten Installieren; ältere Ablago ignorieren es. */
+  ausgeblendet?: boolean;
+}
 /**
  * Mappentyp im Paket. Beschriftungen je Sprache (#728) stehen unter `beschriftungen` – am Typ (name, beschreibung), an
  * Feldern (label, hilfe, optionen: fester Wert → Text) und an Registern (name). Ältere Pakete ohne sie gelten unverändert:
@@ -492,10 +499,37 @@ export function beschriftungenNeu(t: PaketTyp, vorhanden: Pick<Mappentyp, 'besch
     return b ? { ...f, beschriftungen: b } : f;
   });
   const register = vorhanden.register.map((r) => {
-    const b = misch(r.beschriftungen, t.register.find((x) => x.key === r.key)?.beschriftungen);
-    return b ? { ...r, beschriftungen: b } : r;
+    const pr = t.register.find((x) => x.key === r.key);
+    const b = misch(r.beschriftungen, pr?.beschriftungen);
+    // Abschnitte (#890): Überschriften in weiteren Sprachen, solange die deutsche noch die des Pakets ist.
+    const pa = Array.isArray(pr?.abschnitte) ? (pr.abschnitte as unknown[]).filter(istObjekt) : [];
+    const abschnitte = r.abschnitte?.map((a) => {
+      const q = pa.find((x) => x.vor === a.vor && typeof x.titel === 'string' && x.titel.trim() === a.titel);
+      const ab = q ? misch<AbschnittTeile>(a.beschriftungen, q.beschriftungen) : a.beschriftungen;
+      return ab ? { ...a, beschriftungen: ab } : a;
+    });
+    return { ...r, ...(b ? { beschriftungen: b } : {}), ...(abschnitte ? { abschnitte } : {}) };
   });
   return { typ: { ...(beschriftungen ? { beschriftungen } : {}), felder, register }, anzahl };
+}
+
+/**
+ * Abschnitte (#890), die ein Update an vorhandenen Feldregistern ergänzt: nur, wo das Register noch keine hat (wie bei
+ * Erkennung und Formaten, „Updates ändern nichts heimlich“). `felder` = die Felder des Registers nach dem Update.
+ */
+function abschnitteNeu(t: PaketTyp, vorhanden: Pick<Mappentyp, 'register'>, felderNach: (r: Register) => string[] = (r) => r.felder ?? []): Array<{ key: string; name: string; abschnitte: Abschnitt[] }> {
+  return vorhanden.register.flatMap((r) => {
+    if (r.art !== 'felder' || r.abschnitte?.length) return [];
+    const pr = t.register.find((x) => x.key === r.key && x.art === 'felder');
+    const a = bereinigeAbschnitte(pr?.abschnitte, felderNach(r));
+    return a?.length ? [{ key: r.key, name: r.name, abschnitte: a }] : [];
+  });
+}
+
+/** Felder, die ein Update einem vorhandenen Feldregister hinzufügt (neu im Typ, laut Paket auf diesem Register). */
+function neueFelderAuf(t: PaketTyp, vorhanden: Pick<Mappentyp, 'felder'>, r: Pick<Register, 'key' | 'art'>): string[] {
+  if (r.art !== 'felder') return [];
+  return (t.register.find((x) => x.key === r.key)?.felder ?? []).filter((k) => !vorhanden.felder.some((g) => g.key === k) && t.felder.some((f) => f.key === k));
 }
 
 export interface TypPlan {
@@ -514,6 +548,8 @@ export interface TypPlan {
   formate?: string[];
   /** Bei Update (#728): Wie viele Beschriftungen das Paket ergänzt (nur, wo der Administrator nichts beschriftet hat). */
   beschriftungen?: number;
+  /** Bei Update (#890): Feldregister, die Abschnitte bekommen (nur, wo noch keine sind). */
+  abschnitte?: string[];
   /** Name schon vergeben (von einem anderen Typ) – mit Vorschlag. */
   konflikt: string | null; vorschlag: string | null;
   /** Fehlt im DMS, obwohl das Paket ihn installiert hatte (gelöscht) – wird nicht neu angelegt. */
@@ -1319,6 +1355,7 @@ export class Paketverwaltung {
           umwandeln: await umwandelbar(paketTyp),
           formate: formatNeu(paketTyp, vorhanden).map((f) => f.label),
           beschriftungen: beschriftungenNeu(paketTyp, vorhanden).anzahl,
+          abschnitte: abschnitteNeu(paketTyp, vorhanden, (r) => [...(r.felder ?? []), ...neueFelderAuf(paketTyp, vorhanden, r)]).map((r) => r.name),
           konflikt: null, vorschlag: null,
         };
       }
@@ -1476,6 +1513,8 @@ export class Paketverwaltung {
     const mappen: string[] = [];
     const neueSichten: string[] = [];
     const geaendert: Mappentyp[] = [];
+    // Abschnitte aus dem Update (#890) je Typ: gehören zum Paketstand (#653), nicht zu den eigenen Änderungen.
+    const abschnittRegister = new Map<string, Set<string>>();
     const zurueck = async () => {
       await this.d.entferneMappenEndgueltig(mappen).catch(() => {});
       for (const s of [...neueSichten].reverse()) await this.d.loescheSicht(s).catch(() => {});
@@ -1514,7 +1553,7 @@ export class Paketverwaltung {
       // 2. Update: vorhandene Typen um neue Felder und Register ergänzen – sonst nichts ändern.
       for (const paketTyp of paket.typen) {
         const p = plan.typen.find((x) => x.schluessel === paketTyp.schluessel)!;
-        if (!p.vorhanden || (!p.neueFelder.length && !p.neueRegister.length && !p.erkennung?.length && !p.wiederfinden?.length && !p.typAngaben && !p.formate?.length && !p.beschriftungen)) continue;
+        if (!p.vorhanden || (!p.neueFelder.length && !p.neueRegister.length && !p.erkennung?.length && !p.wiederfinden?.length && !p.typAngaben && !p.formate?.length && !p.beschriftungen && !p.abschnitte?.length)) continue;
         const aktuell = vorher.get(ids.get(paketTyp.schluessel)!)!;
         const neu = eingabe(paketTyp, false).daten;
         // Erkennung (#336): Markierung des Pakets an vorhandene Felder, an denen der Administrator nichts eingestellt hat.
@@ -1525,13 +1564,17 @@ export class Paketverwaltung {
         const vorgaben = new Map(formatNeu(paketTyp, aktuell).map((f) => [f.key, f.vorgaben]));
         // Beschriftungen (#728) genauso: ergänzt, was der Administrator noch nicht beschriftet hat.
         const besch = beschriftungenNeu(paketTyp, aktuell);
-        const felder = [...besch.typ.felder.map((f) => ({ ...f, ...(markiert.has(f.key) ? { erkennung: markiert.get(f.key) } : {}), ...(wiederfinden.has(f.key) ? { wiederfinden: true } : {}), ...vorgaben.get(f.key) })), ...neu.felder.filter((f) => !aktuell.felder.some((g) => g.key === f.key))];
+        // Ausblenden (#655): Was der Administrator ausgeblendet hat, bleibt so; was das Update neu bringt, ist sichtbar.
+        const felder = [...besch.typ.felder.map((f) => ({ ...f, ...(markiert.has(f.key) ? { erkennung: markiert.get(f.key) } : {}), ...(wiederfinden.has(f.key) ? { wiederfinden: true } : {}), ...vorgaben.get(f.key) })), ...neu.felder.filter((f) => !aktuell.felder.some((g) => g.key === f.key)).map(({ ausgeblendet: _a, ...f }) => f)];
+        // Abschnitte (#890) nur an Feldregistern, die noch keine haben.
+        const abschnitte = new Map(abschnitteNeu(paketTyp, aktuell, (r) => [...(r.felder ?? []), ...neueFelderAuf(paketTyp, aktuell, r)]).map((r) => [r.key, r.abschnitte] as const));
+        if (abschnitte.size) abschnittRegister.set(aktuell.id, new Set(abschnitte.keys()));
         const register = besch.typ.register.map((r) => {
-          const pr = paketTyp.register.find((x) => x.key === r.key);
-          const dazu = (pr?.felder ?? []).filter((k) => !aktuell.felder.some((g) => g.key === k) && r.art === 'felder');
-          return dazu.length ? { ...r, felder: [...(r.felder ?? []), ...dazu] } : r;
+          const dazu = neueFelderAuf(paketTyp, aktuell, r);
+          const mit = dazu.length ? { ...r, felder: [...(r.felder ?? []), ...dazu] } : r;
+          return abschnitte.has(r.key) ? { ...mit, abschnitte: abschnitte.get(r.key) } : mit;
         });
-        for (const r of neu.register) if (!register.some((g) => g.key === r.key)) register.push(r as Register);
+        for (const r of neu.register) if (!register.some((g) => g.key === r.key)) { const { ausgeblendet: _a, ...ohne } = r as Register; register.push(ohne); }
         geaendert.push(aktuell);
         try { await this.d.aendereTyp(aktuell.id, { ...aktuell, ...typAngabenNeu(paketTyp, aktuell), felder, register, beschriftungen: besch.typ.beschriftungen ?? null }); } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.mappentyp', { name: aktuell.name, meldungen: meldungen(f) })); }
       }
@@ -1607,7 +1650,11 @@ export class Paketverwaltung {
         typStand[tid] = !vorBild ? jetztBild : {
           ...vorBild,
           felder: [...vorBild.felder, ...jetztBild.felder.filter((f) => !vorBild.felder.some((g) => g.key === f.key) && !(vorher.get(tid)?.felder.some((g) => g.key === f.key)))],
-          register: [...vorBild.register, ...jetztBild.register.filter((r) => !vorBild.register.some((g) => g.key === r.key) && !(vorher.get(tid)?.register.some((g) => g.key === r.key)))],
+          register: [...vorBild.register.map((r) => {
+            if (!abschnittRegister.get(tid)?.has(r.key)) return r;
+            const jetzt = jetztBild.register.find((g) => g.key === r.key);
+            return jetzt?.werte.abschnitte ? { ...r, werte: { ...r.werte, abschnitte: jetzt.werte.abschnitte } } : r;
+          }), ...jetztBild.register.filter((r) => !vorBild.register.some((g) => g.key === r.key) && !(vorher.get(tid)?.register.some((g) => g.key === r.key)))],
         };
       }
       const datensatz: InstalliertesPaket = {

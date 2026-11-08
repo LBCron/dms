@@ -914,5 +914,17 @@
   "sprachpaket.beschriftung-schluessel": "{wo}: invalid key.",
   "uebersetzung.kennzeichnung": "Machine-translated – not binding",
   "uebersetzung.kennzeichnung-aus": "Machine-translated (original in {sprache}) – not binding",
-  "pakete.inhalte-uebersetzen": "Translate content – at the press of a button the package gets a single text (field, note or full text) the person may read and returns the translation; it can’t change or store anything"
+  "pakete.inhalte-uebersetzen": "Translate content – at the press of a button the package gets a single text (field, note or full text) the person may read and returns the translation; it can’t change or store anything",
+  "model.ein-register-muss-sichtbar": "At least one tab must stay visible.",
+  "typvergleich.ausgeblendet": "hidden",
+  "typvergleich.abschnitte": "sections",
+  "darstellung.verwendung.titel": "Folder title",
+  "darstellung.verwendung.trefferliste": "Result list “{name}”",
+  "darstellung.verwendung.ansicht": "View “{name}”",
+  "darstellung.verwendung.erkennung": "Fill from document",
+  "darstellung.verwendung.wiederfinden": "Find existing folders",
+  "darstellung.verwendung.frist": "Deadline",
+  "darstellung.verwendung.frist-empfaenger": "Recipient of the deadline on “{feld}”",
+  "darstellung.verwendung.archiv": "Reference date in archive mode",
+  "darstellung.verwendung.berechtigung": "Permission “{name}”"
 }

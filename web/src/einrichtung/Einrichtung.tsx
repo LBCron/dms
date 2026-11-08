@@ -1,11 +1,12 @@
 import { AuswahlFilter } from '../werkbank/Sichten';
 import { kreisImStandard } from '../../../shared/src/nummernkreis';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Ansage, umgestellt, useZiehen, ziehTasten } from '../ziehen';
 import {
-  ERKENNBAR_AN_MAX, FELDTYPEN, freierSchluessel, INDEXPLATZHALTER, istIndexplatzhalter, REGISTERARTEN, HISTORIENGRUPPEN, historiengruppeName, historiengruppenVon, type Historiengruppe, SYSTEMSPALTEN, type Systemspalte, schluesselAus, standardRegister, titelAus, trefferlistenVon, VERWEISARTEN, vorlageFelder, wirksameVorlage, pruefeTitelFilter,
-  type Feld, type Mappe, type Mappentyp, type Register, type Registerart, type Trefferliste, type Werte,
+  ABSCHNITT_TITEL_MAX, ERKENNBAR_AN_MAX, FELDTYPEN, freierSchluessel, INDEXPLATZHALTER, istIndexplatzhalter, REGISTERARTEN, HISTORIENGRUPPEN, historiengruppeName, historiengruppenVon, type Historiengruppe, SYSTEMSPALTEN, type Systemspalte, schluesselAus, standardRegister, titelAus, trefferlistenVon, VERWEISARTEN, vorlageFelder, wirksameVorlage, pruefeTitelFilter,
+  type Abschnitt, type Feld, type Mappe, type Mappentyp, type Register, type Registerart, type Trefferliste, type Werte,
 } from '../../../shared/src/model';
+import { feldVerwendung, registerAusblendbar } from '../../../shared/src/darstellung';
 import { FILTER } from '../../../shared/src/titelfilter';
 import { wirksameTypen } from '../../../shared/src/sichten';
 import { OFFENES_REGELWERK, regelProblem, regelwerkVon, type Regelwerk } from '../../../shared/src/rechte';
@@ -40,9 +41,13 @@ const ZAHLEN = ['minLen', 'maxLen', 'min', 'max', 'nachkomma'] as const;
 type Zahlprop = (typeof ZAHLEN)[number];
 
 /** Feld im Bearbeitungszustand: Zahlen als getippter Text, Merker für neue Felder. */
-type EntwurfFeld = Omit<Feld, Zahlprop> & Record<Zahlprop, string> & { _uid: string; _neu?: boolean; _schluesselGetippt?: boolean; _register: string };
+type EntwurfFeld = Omit<Feld, Zahlprop> & Record<Zahlprop, string> & { _uid: string; _neu?: boolean; _schluesselGetippt?: boolean; _register: string;
+  /** Ausblenden (#655) hat „Pflicht“ aufgehoben – Hinweis am Feld, bis gespeichert ist. */
+  _pflichtWeg?: boolean };
+/** Abschnitt im Entwurf (#890): `vor` ist die _uid des Felds, damit ein neuer Schlüssel nichts kaputt macht. */
+interface EntwurfAbschnitt { _uid: string; vor: string; titel: string; eingeklappt?: boolean; beschriftungen?: Abschnitt['beschriftungen'] }
 /** Register im Bearbeitungszustand; welche Felder darauf liegen, steht am Feld (_register). */
-type EntwurfRegister = Omit<Register, 'felder'> & { _uid: string; _neu?: boolean; _schluesselGetippt?: boolean };
+type EntwurfRegister = Omit<Register, 'felder' | 'abschnitte'> & { _uid: string; _neu?: boolean; _schluesselGetippt?: boolean; abschnitte?: EntwurfAbschnitt[] };
 /** Trefferliste im Entwurf (#75): Spalten als _titel usw. bzw. feld:<_uid> – damit ein umbenannter Schlüssel nichts kaputt macht. */
 interface EntwurfListe { _uid: string; _neu?: boolean; key: string; name: string; spalten: string[]; standard: boolean; beschriftungen?: Trefferliste['beschriftungen'] }
 interface Entwurf {
@@ -76,7 +81,24 @@ function neueId(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-const alsEntwurfRegister = ({ felder: _f, ...r }: Register): EntwurfRegister => ({ ...r, _uid: neueId() });
+const alsEntwurfRegister = ({ felder: _f, abschnitte: _a, ...r }: Register): EntwurfRegister => ({ ...r, _uid: neueId() });
+/** Abschnitte eines gespeicherten Registers für den Entwurf (#890): `vor` über die _uid der Felder. */
+const entwurfAbschnitte = (r: Register, felder: EntwurfFeld[]): EntwurfAbschnitt[] | undefined => (r.art !== 'felder' ? undefined
+  : (r.abschnitte ?? []).flatMap((a) => { const f = felder.find((x) => x.key === a.vor); return f ? [{ _uid: neueId(), vor: f._uid, titel: a.titel ?? '', ...(a.eingeklappt ? { eingeklappt: true } : {}), ...(a.beschriftungen ? { beschriftungen: a.beschriftungen } : {}) }] : []; }));
+
+/**
+ * Ein Feld verlässt sein Register (entfernt oder umgezogen, #890): Ein Abschnitt, der mit ihm begann, beginnt jetzt mit
+ * dem nächsten Feld des Registers – fehlt das oder hat es schon einen, fällt er weg.
+ */
+function ohneAnker(x: Entwurf, uid: string): Entwurf {
+  const f = x.felder.find((g) => g._uid === uid);
+  if (!f) return x;
+  const reihe = x.felder.filter((g) => g._register === f._register);
+  const naechstes = reihe[reihe.indexOf(f) + 1];
+  return { ...x, register: x.register.map((r) => (r.key !== f._register || !r.abschnitte?.some((a) => a.vor === uid) ? r : {
+    ...r, abschnitte: r.abschnitte.flatMap((a) => (a.vor !== uid ? [a] : naechstes && !r.abschnitte!.some((b) => b.vor === naechstes._uid) ? [{ ...a, vor: naechstes._uid }] : [])),
+  })) };
+}
 
 function entwurfAus(eintrag?: Mappentyp): Entwurf {
   if (!eintrag) return { id: neueId(), name: '', schluessel: '', beschreibung: '', titelVorlage: '', felder: [], register: standardRegister([]).map(alsEntwurfRegister), trefferlisten: [{ _uid: neueId(), key: 'standard', name: t('mappentypen.editor.standard'), spalten: [], standard: true }], berechtigungen: structuredClone(OFFENES_REGELWERK), archiv: null, stempel: null, ausDokument: null, autoZuordnen: false, ausPost: null, erkennbarAn: '' };
@@ -91,7 +113,7 @@ function entwurfAus(eintrag?: Mappentyp): Entwurf {
     ausPost: eintrag.ausPost ?? null,
     erkennbarAn: eintrag.erkennbarAn ?? '',
     beschriftungen: eintrag.beschriftungen,
-    register: eintrag.register.map(alsEntwurfRegister),
+    register: [],
     felder: eintrag.felder.map((f) => ({
       ...f, _uid: neueId(),
       _register: eintrag.register.find((r) => r.art === 'felder' && r.felder?.includes(f.key))?.key ?? erstes,
@@ -99,6 +121,7 @@ function entwurfAus(eintrag?: Mappentyp): Entwurf {
     }) as unknown as EntwurfFeld),
     trefferlisten: [],
   };
+  e.register = eintrag.register.map((r) => ({ ...alsEntwurfRegister(r), ...(r.art === 'felder' ? { abschnitte: entwurfAbschnitte(r, e.felder) } : {}) }));
   e.trefferlisten = trefferlistenVon(eintrag).map((l) => ({
     _uid: neueId(), key: l.key, name: l.name, standard: !!l.standard, beschriftungen: l.beschriftungen,
     spalten: l.spalten.flatMap((k) => {
@@ -177,7 +200,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
     fertig: (quelle, ziel, ort) => {
       if (ziel.startsWith('reg:')) {
         const key = ziel.slice(4);
-        setE((x) => ({ ...x, felder: x.felder.map((f) => (f._uid === quelle ? { ...f, _register: key } : f)) }));
+        setE((x) => { const y = x.felder.find((f) => f._uid === quelle)?._register === key ? x : ohneAnker(x, quelle); return { ...y, felder: y.felder.map((f) => (f._uid === quelle ? { ...f, _register: key } : f)) }; });
         const f = e.felder.find((x) => x._uid === quelle);
         setAnsage(t('mappentypen.editor.liegt-jetzt-auf-register', { wert: f?.label || t('mappentypen.editor.feld'), wert2: e.register.find((r) => r.key === key)?.name ?? key }));
         return;
@@ -259,8 +282,29 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       ? t('mappentypen.editor.mappen-haben-in-einen', { anzahl: n, label: f.label, ERST_BEIM_SPEICHERN })
       : ERST_BEIM_SPEICHERN.trim();
     if (!(await rueckfrage({ titel: t('mappentypen.editor.feld-entfernen', { label: f.label }), text, ja: t('mappentypen.editor.entfernen'), gefahr: n > 0 }))) return;
-    setE((x) => ({ ...x, titelVorlage: x.titelVorlage.replace(new RegExp(`\\{${f.key}(\\|[^{}]*)?\\}`, 'g'), '').trim(), felder: x.felder.filter((_, j) => j !== i) }));
+    setE((x) => { const y = ohneAnker(x, f._uid); return { ...y, titelVorlage: y.titelVorlage.replace(new RegExp(`\\{${f.key}(\\|[^{}]*)?\\}`, 'g'), '').trim(), felder: y.felder.filter((g) => g._uid !== f._uid) }; });
     setOffen(null); setFehler(null);
+  }
+
+  /** Wo das Feld noch genutzt wird (#655) – Entwurf mit Spalten als Feldschlüssel. */
+  const verwendung = (key: string) => feldVerwendung({
+    ...entwurfTyp, titelVorlage: e.titelVorlage, archiv: e.archiv, berechtigungen: e.berechtigungen,
+    trefferlisten: e.trefferlisten.map((l) => ({ key: l.key, name: l.name, beschriftungen: l.beschriftungen, spalten: l.spalten.map((k) => (k.startsWith('feld:') ? e.felder.find((f) => `feld:${f._uid}` === k)?.key ?? k : k)) })),
+  }, key, d.sichten);
+  /**
+   * Felder ausblenden (#655): Wird eines noch genutzt, fragt der Editor vorher; Pflicht hebt er mit Hinweis auf.
+   * `uids` sind die betroffenen Felder (ein Feld oder alle eines Registers); `dann` setzt das Ausblenden selbst.
+   */
+  async function ausblendenFragen(uids: string[], titel: string, dann: (x: Entwurf) => Entwurf) {
+    const felder = e.felder.filter((f) => uids.includes(f._uid));
+    const genutzt = felder.flatMap((f) => verwendung(f.key).map((v) => (felder.length > 1 ? `${f.label || f.key}: ${v}` : v)));
+    if (genutzt.length && !(await rueckfrage({ titel, text: t('mappentypen.darstellung.noch-genutzt', { liste: genutzt.join(' · ') }), ja: t('mappentypen.darstellung.trotzdem-ausblenden') }))) return;
+    setE((x) => {
+      const y = dann(x);
+      return { ...y, felder: y.felder.map((f) => (uids.includes(f._uid) && f.pflicht ? { ...f, pflicht: false, _pflichtWeg: true } : f)) };
+    });
+    const weg = felder.filter((f) => f.pflicht).map((f) => f.label || f.key);
+    if (weg.length) setAnsage(t('mappentypen.darstellung.pflicht-aufgehoben-ansage', { felder: weg.join(', ') }));
   }
 
   async function speichern(bestaetigt = false) {
@@ -269,9 +313,18 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
     // Beschriftungen (#728) immer mitschicken, leer als null – ohne die Angabe behielte der Server die bisherigen.
     const daten = {
       ...ohneListen, beschriftungen: e.beschriftungen ?? null,
-      felder: e.felder.map(({ _uid, _neu, _schluesselGetippt, _register, ...rest }) => ({ ...rest, beschriftungen: rest.beschriftungen ?? null })),
-      register: e.register.map(({ _uid, _neu, _schluesselGetippt, ...r }) =>
-        ({ ...(r.art === 'felder' ? { ...r, felder: e.felder.filter((f) => f._register === r.key).map((f) => f.key) } : r), beschriftungen: r.beschriftungen ?? null })),
+      // Ausgeblendet (#655) immer mitschicken – ohne die Angabe behielte der Server den bisherigen Wert.
+      felder: e.felder.map(({ _uid, _neu, _schluesselGetippt, _register, _pflichtWeg, ...rest }) => ({ ...rest, beschriftungen: rest.beschriftungen ?? null, ausgeblendet: !!rest.ausgeblendet })),
+      register: e.register.map(({ _uid, _neu, _schluesselGetippt, abschnitte, ...r }) => {
+        const felder = e.felder.filter((f) => f._register === r.key);
+        // Abschnitte (#890) als Feldschlüssel; nur vor Feldern dieses Registers, Reihenfolge der Felder.
+        const ab = (abschnitte ?? []).flatMap((a) => {
+          const f = felder.find((x) => x._uid === a.vor);
+          const titel = a.titel.trim();
+          return f ? [{ vor: f.key, ...(titel ? { titel, ...(a.eingeklappt ? { eingeklappt: true } : {}), beschriftungen: a.beschriftungen ?? null } : {}) }] : [];
+        });
+        return { ...(r.art === 'felder' ? { ...r, felder: felder.map((f) => f.key), abschnitte: ab } : r), beschriftungen: r.beschriftungen ?? null, ausgeblendet: !!r.ausgeblendet };
+      }),
       trefferlisten: listen.map(({ _uid, _neu, ...l }) => ({
         ...l, beschriftungen: l.beschriftungen ?? null, spalten: l.spalten.flatMap((k) => (k.startsWith('feld:') ? e.felder.filter((f) => `feld:${f._uid}` === k && f.typ !== 'passwort').map((f) => f.key) : [k])),
       })),
@@ -393,11 +446,17 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
               benutzerFelder={e.felder.filter((x) => x.typ === 'referenz' && !x.mehrfach && x.zielTyp && x.zielTyp === d.typen.find((mappentyp) => mappentyp.system === 'benutzer')?.id).map((x) => ({ key: x.key, label: x.label || x.key }))}
               umschalten={() => setOffen(offen === i ? null : i)}
               verschiebe={(r) => verschiebe(i, r)} entferne={() => void entferne(i)}
+              ausblenden={(an) => (an
+                ? void ausblendenFragen([f._uid], t('mappentypen.darstellung.feld-ausblenden', { label: f.label || f.key }), (x) => ({ ...x, felder: x.felder.map((g) => (g._uid === f._uid ? { ...g, ausgeblendet: true } : g)) }))
+                : setE((x) => ({ ...x, felder: x.felder.map((g) => (g._uid === f._uid ? { ...g, ausgeblendet: undefined, _pflichtWeg: undefined } : g)) })))}
+              registerAusgeblendet={!!e.register.find((r) => r.key === f._register)?.ausgeblendet}
               setze={(patch) => {
                 const p = { ...patch };
                 if ('label' in p && f._neu && !f._schluesselGetippt) p.key = eindeutigerSchluessel(schluesselAus(p.label ?? ''), i);
                 if ('key' in p) p._schluesselGetippt = true;
                 if ('typ' in p) p.standard = p.typ === 'janein' ? false : '';
+                // Ein Abschnitt, der mit dem Feld begann, bleibt im alten Register (#890).
+                if ('_register' in p && p._register !== f._register) setE((x) => ohneAnker(x, f._uid));
                 setzeFeld(i, p);
               }} />
           ))}
@@ -410,7 +469,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
 
       <TrefferlisteEditor e={e} setE={setE} klappe={klappe('trefferlisten')} />
 
-      <RegisterEditor e={e} setE={setE} feldAblage={(key) => zf.ablage(`reg:${key}`)} klappe={klappe('register')} />
+      <RegisterEditor e={e} setE={setE} feldAblage={(key) => zf.ablage(`reg:${key}`)} klappe={klappe('register')} ausblendenFragen={ausblendenFragen} />
       <Bereich id="archiv" titel={t('mappentypen.editor.archivmodus')} hilfe={<Hilfe ort="mappentyp.archiv" />} klappe={klappe('archiv')}
         kurz={e.archiv ? <>{t('mappentypen.editor.an-jahre-ab', { jahre: e.archiv.jahre })}{' '}{e.archiv.stichtag ? e.felder.find((f) => f.key === e.archiv!.stichtag)?.label ?? e.archiv.stichtag : t('mappentypen.editor.anlagedatum')}</> : t('mappentypen.editor.aus')}>
         <ArchivEinstellung archiv={e.archiv} setze={(archiv) => setE({ ...e, archiv })} datumsfelder={e.felder.filter((f) => f.typ === 'datum' && f.key).map((f) => ({ key: f.key, label: f.label || f.key }))} typId={gespeichert?.id} />
@@ -450,7 +509,9 @@ function feldKurz(felder: EntwurfFeld[]): string {
   if (!felder.length) return t('mappentypen.editor.noch-keine-felder');
   const pflicht = felder.filter((f) => f.pflicht).length;
   const frist = felder.filter((f) => f.typ === 'datum' && f.frist).length;
-  return [t('mappentypen.editor.felder-2', { anzahl: felder.length }), pflicht && t('mappentypen.editor.pflicht', { pflicht }), frist && t('mappentypen.editor.fristen', { anzahl: frist })].filter(Boolean).join(', ');
+  // Ausgeblendete Felder (#655) zählen mit – sie sind ja noch da.
+  const aus = felder.filter((f) => f.ausgeblendet).length;
+  return [t('mappentypen.editor.felder-2', { anzahl: felder.length }), pflicht && t('mappentypen.editor.pflicht', { pflicht }), frist && t('mappentypen.editor.fristen', { anzahl: frist }), aus && t('mappentypen.darstellung.ausgeblendete-felder', { anzahl: aus })].filter(Boolean).join(', ');
 }
 
 /** „Verwendet in“ (#147): Sichten, Referenzfelder und Verknüpfungsregister, die diesen Typ nutzen. */
@@ -483,6 +544,10 @@ function FeldZeile(p: {
   /** Auswahlfilter (#173): die Felder dieses Typs, deren Werte der Filter nutzen kann. */
   alleFelder: Feld[];
   umschalten(): void; verschiebe(r: number): void; entferne(): void; setze(patch: Partial<EntwurfFeld>): void;
+  /** Ausblenden (#655): an mit Rückfrage, wenn das Feld noch genutzt wird; aus sofort. */
+  ausblenden(an: boolean): void;
+  /** Das Register des Felds ist ausgeblendet – dann ist es das Feld auch. */
+  registerAusgeblendet: boolean;
   zieh: { className: string }; griff: React.ReactNode;
 }) {
   const { f, i, offen, fehler, setze } = p;
@@ -491,6 +556,7 @@ function FeldZeile(p: {
 
   const chips: string[] = [];
   if (f.system) chips.push(t('mappentypen.editor.system'));
+  if (f.ausgeblendet || p.registerAusgeblendet) chips.push(t('mappentypen.darstellung.chip.ausgeblendet'));
   if (f.eindeutig && (f.typ === 'text' || f.typ === 'zahl')) chips.push('eindeutig');
   if (f.typ === 'referenz') chips.push(`→ ${zielName}`, VERWEISARTEN[f.verweisart ?? 'bezug']);
   if (f.typ === 'auswahl') chips.push(t('mappentypen.editor.werte', { zahl: (f.optionen ?? []).length }));
@@ -566,7 +632,7 @@ function FeldZeile(p: {
       <option value="">{t('mappentypen.editor.keiner')}</option>{(f.optionen ?? []).map((o) => <option key={o} value={o}>{optionText(f, o)}</option>)}</select></label>;
 
   return (
-    <div {...p.zieh} className={`feldzeile ${offen ? 'offen' : ''} ${fehler ? 'fehlerhaft' : ''} ${p.zieh.className}`}>
+    <div {...p.zieh} className={`feldzeile ${offen ? 'offen' : ''} ${fehler ? 'fehlerhaft' : ''} ${f.ausgeblendet || p.registerAusgeblendet ? 'ausgeblendet' : ''} ${p.zieh.className}`}>
       <div className="feldsumme">
         {p.griff}
         <button type="button" className="feldkopfknopf" aria-expanded={offen} onClick={p.umschalten}>
@@ -611,7 +677,12 @@ function FeldZeile(p: {
               </select></label>
           </div>
           <div className="raster">
-            <div className="eigenschaft unten">{haken('pflicht', t('mappentypen.editor.pflichtfeld'), t('mappentypen.editor.mappe-laesst-sich-ohne'))}</div>
+            {/* Ausgeblendete Felder (#655) können nicht Pflicht sein – sonst ließe sich keine Mappe speichern. */}
+            <div className="eigenschaft unten">{f.ausgeblendet || p.registerAusgeblendet
+              ? <label className="haken"><input type="checkbox" checked={false} disabled /><span><span className="haken-titel">{t('mappentypen.editor.pflichtfeld')}</span><small className="hilfe">{f._pflichtWeg ? t('mappentypen.darstellung.pflicht-aufgehoben') : t('mappentypen.darstellung.nie-pflicht')}</small></span></label>
+              : haken('pflicht', t('mappentypen.editor.pflichtfeld'), t('mappentypen.editor.mappe-laesst-sich-ohne'))}</div>
+            <div className="eigenschaft unten"><label className="haken"><input type="checkbox" checked={!!f.ausgeblendet} onChange={(ev) => p.ausblenden(ev.target.checked)} />
+              <span><span className="haken-titel">{t('mappentypen.darstellung.ausblenden')}</span><small className="hilfe">{p.registerAusgeblendet && !f.ausgeblendet ? t('mappentypen.darstellung.register-ausgeblendet') : t('mappentypen.darstellung.ausblenden-hilfe')}</small></span></label></div>
             {(f.typ === 'text' || f.typ === 'zahl') && <div className="eigenschaft unten">{haken('eindeutig', t('mappentypen.editor.eindeutig'), t('mappentypen.editor.wert-darf-je-mappentyp'))}</div>}
             {standard}
           </div>
@@ -815,7 +886,10 @@ function TitelEditor({ e, setze, klappe }: { e: Entwurf; setze: (v: string) => v
   );
 }
 
-function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f: (x: Entwurf) => Entwurf) => void; feldAblage: (key: string) => { className: string }; klappe: Klappe }) {
+function RegisterEditor({ e, setE, feldAblage, klappe, ausblendenFragen }: {
+  e: Entwurf; setE: (f: (x: Entwurf) => Entwurf) => void; feldAblage: (key: string) => { className: string }; klappe: Klappe;
+  ausblendenFragen: (uids: string[], titel: string, dann: (x: Entwurf) => Entwurf) => Promise<void>;
+}) {
   const d = useDaten();
   const [ansage, setAnsage] = useState('');
   const zr = useZiehen({
@@ -857,6 +931,14 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
     setE((x) => ({ ...x, register: x.register.filter((_, j) => j !== i) }));
   }
 
+  /** Register ausblenden (#655): Felder darauf gelten als ausgeblendet – wie beim Feld mit Rückfrage und ohne Pflicht. */
+  function registerAusblenden(i: number, an: boolean) {
+    const r = e.register[i];
+    if (!an) { setzeReg(i, { ausgeblendet: undefined }); return; }
+    const setzen = (x: Entwurf): Entwurf => ({ ...x, register: x.register.map((y) => (y._uid === r._uid ? { ...y, ausgeblendet: true } : y)) });
+    void ausblendenFragen(e.felder.filter((f) => f._register === r.key && !f.ausgeblendet).map((f) => f._uid), t('mappentypen.darstellung.register-ausblenden', { name: r.name || r.key }), setzen);
+  }
+
   // Mögliche Quellen: jedes Referenzfeld, das auf diesen Mappentyp zeigt (auch aus ihm selbst).
   const quellen = [
     ...d.typen.filter((mappentyp) => mappentyp.id !== e.id).flatMap((mappentyp) => mappentyp.felder.filter((f) => f.typ === 'referenz' && (f.zielTyp === e.id || f.zielTyp === '*')).map((f) => ({ typId: mappentyp.id, feldKey: f.key, text: `${mappentyp.name} › ${f.label}` }))),
@@ -865,7 +947,7 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
 
   return (
     <Bereich id="register" titel={t('mappentypen.editor.register-2')} hilfe={<Hilfe ort="mappentyp.register" />} klappe={klappe}
-      kurz={e.register.map((r) => r.name || r.key).join(' · ') || t('mappentypen.editor.keine')}
+      kurz={e.register.map((r) => (r.ausgeblendet ? t('mappentypen.darstellung.register-kurz-ausgeblendet', { name: r.name || r.key }) : r.name || r.key)).join(' · ') || t('mappentypen.editor.keine')}
       beschreibung={t('mappentypen.editor.die-trennblaetter-einer-mappe')}>
       <div className="registerliste">
         {e.register.map((r, i) => {
@@ -873,12 +955,12 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
           const gewaehlt = r.quellen ?? [];
           return (
             <div key={r._uid} {...zr.eintrag(r._uid)}>
-              <div {...(r.art === 'felder' ? feldAblage(r.key) : {})} className={`registerzeile art-${r.art} ${r.art === 'felder' ? feldAblage(r.key).className : ''}`}>
+              <div {...(r.art === 'felder' ? feldAblage(r.key) : {})} className={`registerzeile art-${r.art} ${r.ausgeblendet ? 'ausgeblendet' : ''} ${r.art === 'felder' ? feldAblage(r.key).className : ''}`}>
               <div className="registerkopf">
                 <span className="registerchip"><button {...zr.griff(r._uid, r.name || t('mappentypen.editor.register-2'))} onKeyDown={(ev) => ziehTasten(ev, {
                   hoch: i > 0 ? () => { verschiebe(i, -1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-3', { name: r.name, i })); } : undefined,
                   runter: i < e.register.length - 1 ? () => { verschiebe(i, 1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-4', { name: r.name, wert: i + 2 })); } : undefined,
-                })}><span aria-hidden="true">⠿</span></button><span className="chip">{REGISTERARTEN[r.art]}</span></span>
+                })}><span aria-hidden="true">⠿</span></button><span className="chip">{REGISTERARTEN[r.art]}</span>{r.ausgeblendet && <span className="chip warn">{t('mappentypen.darstellung.chip.ausgeblendet')}</span>}</span>
                 <SprachText ariaLabel={t('mappentypen.editor.name-des-registers')} wert={r.name} teil="name" beschriftungen={r.beschriftungen}
                   setzeBeschriftungen={(b) => setzeReg(i, { beschriftungen: b as Register['beschriftungen'] })} setzeWert={(name) => {
                   if (!r._neu) { setzeReg(i, { name }); return; }
@@ -897,7 +979,14 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
                   <button type="button" className="symbol" onClick={() => entferne(i)} aria-label={t('mappentypen.editor.register-entfernen-2', { name: r.name })} title={t('mappentypen.editor.register-entfernen-3', { ERST_BEIM_SPEICHERN })}>×</button>
                 </div>
               </div>
-              {r.art === 'felder' && <p className="leise klein">{anzahl ? t('mappentypen.editor.felder-3', { anzahl, map: e.felder.filter((f) => f._register === r.key).map((f) => f.label).join(', ') }) : t('mappentypen.editor.noch-keine-felder-2')}</p>}
+              {r.art === 'felder' && (anzahl ? <Feldaufteilung r={r} felder={e.felder.filter((f) => f._register === r.key)} setze={(abschnitte) => setzeReg(i, { abschnitte })} ansage={setAnsage} />
+                : <p className="leise klein">{t('mappentypen.editor.noch-keine-felder-2')}</p>)}
+              {/* Ausblenden (#655): nicht bei Dokumentenregistern und Registern mit Systemfeldern. */}
+              {(() => {
+                const geht = registerAusblendbar({ art: r.art, felder: e.felder.filter((f) => f._register === r.key).map((f) => f.key) }, e.felder);
+                return (geht || r.ausgeblendet) && <label className="haken"><input type="checkbox" checked={!!r.ausgeblendet} onChange={(ev) => registerAusblenden(i, ev.target.checked)} />
+                  <span>{tn('mappentypen.darstellung.register-ausblenden-haken', { klein: <small className="hilfe">{r.art === 'felder' ? t('mappentypen.darstellung.register-ausblenden-hilfe') : t('mappentypen.darstellung.register-ausblenden-hilfe-2')}</small> })}</span></label>;
+              })()}
               {r.art === 'dokumente' && <>
                 <p className="leise klein">{t('mappentypen.editor.hier-werden-dateien-hochgeladen')}</p>
                 <label className="haken"><input type="checkbox" checked={r.volltext !== false} onChange={(ev) => setzeReg(i, { volltext: ev.target.checked ? undefined : false })} />
@@ -963,6 +1052,88 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
         <button type="button" className="knopf klein" onClick={() => hinzufuegen('protokoll')}>{t('mappentypen.editor.historie-2')}</button>
       </div>
     </Bereich>
+  );
+}
+
+/**
+ * Felder eines Feldregisters mit Abschnitten (#890): Ab einem Abschnitt beginnt eine neue Zeile – mit Überschrift als
+ * dünne Linie mit Titel (auf Wunsch eingeklappt), ohne Überschrift nur als Umbruch. Abschnitte lassen sich hinzufügen,
+ * verschieben (Pfeile, Alt+Pfeiltasten am Griff, Ziehen) und entfernen; die Reihenfolge der Felder bestimmt „Felder“.
+ */
+function Feldaufteilung({ r, felder, setze, ansage }: { r: EntwurfRegister; felder: EntwurfFeld[]; setze: (a: EntwurfAbschnitt[]) => void; ansage: (text: string) => void }) {
+  const abschnitte = (r.abschnitte ?? []).filter((a) => felder.some((f) => f._uid === a.vor));
+  const frei = (uid: string, ausser?: string) => !abschnitte.some((a) => a.vor === uid && a._uid !== ausser);
+  const name = (a: EntwurfAbschnitt) => a.titel.trim() || t('mappentypen.darstellung.umbruch');
+  const feldName = (f: EntwurfFeld) => f.label || f.key;
+  /** Nächstes Feld ohne Abschnitt nach oben (−1) bzw. unten (+1). */
+  const ziel = (a: EntwurfAbschnitt, richtung: number) => {
+    for (let j = felder.findIndex((f) => f._uid === a.vor) + richtung; j >= 0 && j < felder.length; j += richtung) if (frei(felder[j]._uid)) return felder[j];
+    return undefined;
+  };
+  const setzeA = (uid: string, patch: Partial<EntwurfAbschnitt>) => setze(abschnitte.map((a) => (a._uid === uid ? { ...a, ...patch } : a)));
+  const schiebe = (a: EntwurfAbschnitt, richtung: number) => {
+    const f = ziel(a, richtung);
+    if (!f) return;
+    setzeA(a._uid, { vor: f._uid });
+    ansage(t('mappentypen.darstellung.beginnt-jetzt-vor', { name: name(a), feld: feldName(f) }));
+  };
+  function hinzufuegen() {
+    // Vor dem letzten Feld ohne Abschnitt; von dort schiebt man ihn an seinen Platz.
+    const f = [...felder].reverse().find((x) => frei(x._uid));
+    if (!f) return;
+    setze([...abschnitte, { _uid: neueId(), vor: f._uid, titel: '' }]);
+    ansage(t('mappentypen.darstellung.hinzugefuegt-vor', { feld: feldName(f) }));
+  }
+  /** Ablegen auf einem Feld: davor – oder danach, also vor dem nächsten Feld. */
+  const ankerBei = (ziel: string, ort: string, quelle: string) => {
+    const i = felder.findIndex((f) => `f:${f._uid}` === ziel);
+    const f = i < 0 ? undefined : ort === 'nach' ? felder[i + 1] : felder[i];
+    return f && frei(f._uid, quelle) ? f : undefined;
+  };
+  const zs = useZiehen({
+    erlaubt: (quelle, ziel, ort) => ziel.startsWith('f:') && !!ankerBei(ziel, ort, quelle),
+    fertig: (quelle, ziel, ort) => {
+      const f = ankerBei(ziel, ort, quelle);
+      const a = abschnitte.find((x) => x._uid === quelle);
+      if (!f || !a) return;
+      setzeA(quelle, { vor: f._uid });
+      ansage(t('mappentypen.darstellung.beginnt-jetzt-vor', { name: name(a), feld: feldName(f) }));
+    },
+  });
+  return (
+    <div className="feldaufteilung">
+      <p className="leise klein">{t('mappentypen.darstellung.aufteilung-hilfe')}</p>
+      <ol className="aufteilung">
+        {felder.map((f) => {
+          const a = abschnitte.find((x) => x.vor === f._uid);
+          const ze = zs.eintrag(`f:${f._uid}`);
+          const ae = a ? zs.eintrag(a._uid) : null;
+          return (
+            <Fragment key={f._uid}>
+              {a && ae && (
+                <li {...ae} className={`abschnittzeile ${a.titel.trim() ? 'mit-titel' : ''} ${ae.className}`}>
+                  <button {...zs.griff(a._uid, name(a))} onKeyDown={(ev) => ziehTasten(ev, { hoch: ziel(a, -1) ? () => schiebe(a, -1) : undefined, runter: ziel(a, 1) ? () => schiebe(a, 1) : undefined })}><span aria-hidden="true">⠿</span></button>
+                  <SprachText ariaLabel={t('mappentypen.darstellung.ueberschrift')} wert={a.titel} placeholder={t('mappentypen.darstellung.ohne-ueberschrift')} teil="titel" beschriftungen={a.beschriftungen}
+                    setzeWert={(titel) => setzeA(a._uid, { titel: titel.slice(0, ABSCHNITT_TITEL_MAX) })} setzeBeschriftungen={(b) => setzeA(a._uid, { beschriftungen: b as Abschnitt['beschriftungen'] })} />
+                  <label className="haken klein" title={a.titel.trim() ? undefined : t('mappentypen.darstellung.eingeklappt-nur-mit-titel')}>
+                    <input type="checkbox" checked={!!a.eingeklappt && !!a.titel.trim()} disabled={!a.titel.trim()} onChange={(ev) => setzeA(a._uid, { eingeklappt: ev.target.checked || undefined })} />
+                    <span>{t('mappentypen.darstellung.eingeklappt')}</span></label>
+                  <div className="feldaktionen">
+                    <button type="button" className="symbol" disabled={!ziel(a, -1)} onClick={() => schiebe(a, -1)} aria-label={t('mappentypen.darstellung.nach-oben', { name: name(a) })}>↑</button>
+                    <button type="button" className="symbol" disabled={!ziel(a, 1)} onClick={() => schiebe(a, 1)} aria-label={t('mappentypen.darstellung.nach-unten', { name: name(a) })}>↓</button>
+                    <button type="button" className="symbol" onClick={() => { setze(abschnitte.filter((x) => x._uid !== a._uid)); ansage(t('mappentypen.darstellung.entfernt', { name: name(a) })); }} aria-label={t('mappentypen.darstellung.entfernen', { name: name(a) })}>×</button>
+                  </div>
+                </li>
+              )}
+              <li {...ze} className={`aufteilungsfeld ${f.ausgeblendet ? 'ausgeblendet' : ''} ${ze.className}`}>
+                {feldName(f)}{f.ausgeblendet && <span className="chip">{t('mappentypen.darstellung.chip.ausgeblendet')}</span>}
+              </li>
+            </Fragment>
+          );
+        })}
+      </ol>
+      <button type="button" className="knopf klein" disabled={!felder.some((f) => frei(f._uid))} onClick={hinzufuegen}>{t('mappentypen.darstellung.abschnitt-hinzufuegen')}</button>
+    </div>
   );
 }
 
@@ -1040,7 +1211,8 @@ function Spaltenwahl({ e, spalten, name, setze }: { e: Entwurf; spalten: string[
   // Spalten gelöschter Felder und Passwortfelder (#46) fallen weg.
   const liste = spalten.filter((k) => !k.startsWith('feld:') || e.felder.some((f) => `feld:${f._uid}` === k && f.typ !== 'passwort'));
   const verfuegbar = [
-    ...e.felder.filter((f) => f.typ !== 'passwort').map((f) => ({ k: `feld:${f._uid}`, n: f.label || f.key })),
+    // Ausgeblendete Felder (#655) nicht als neue Spalte; schon gewählte bleiben.
+    ...e.felder.filter((f) => f.typ !== 'passwort' && !f.ausgeblendet && !e.register.some((r) => r.ausgeblendet && r.key === f._register)).map((f) => ({ k: `feld:${f._uid}`, n: f.label || f.key })),
     ...(Object.keys(SYSTEMSPALTEN) as Systemspalte[]).filter((k) => k !== '_typ').map((k) => ({ k, n: SYSTEMSPALTEN[k] })),
   ].filter((x) => !liste.includes(x.k));
   const [ansage, setAnsage] = useState('');

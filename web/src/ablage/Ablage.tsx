@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { beschreibeBedingung, kinderVon, mitNachkommen, spaltenDerSicht, wirksameTypen, type Sicht } from '../../../shared/src/sichten';
 import { liesDirektlink, type Direktlink } from '../../../shared/src/direktlink';
 import { auswahlText, darfErstellen, POST_RICHTUNG, darfPostAnlegen, formatiere, GEMISCHTE_SPALTEN, sortierbar, standardliste, TREFFER_ANFANG, TREFFER_ENDE, vorlageFelder, wirksameVorlage, type Ausschnitt, type Mappe, type Mappentyp, type Sortierung, type Wert } from '../../../shared/src/model';
+import { ausgeblendeteFelder } from '../../../shared/src/darstellung';
 import { api, verborgeneAufgaben, type Bezuege, type MappeDetails } from '../api';
 import type { Aufgabe } from '../../../shared/src/model';
 import { AufgabenHinweis } from './Aufgaben';
@@ -233,7 +234,8 @@ function MappeLader({ id, sicht, anhang = '' }: { id: string; sicht: string; anh
 /** Nebenzeile eines Listeneintrags: zwei Felder, die nicht schon im Titel stehen. */
 function unterzeile(typ: Mappentyp, m: Mappe, bezuege: Bezuege) {
   const imTitel = new Set(vorlageFelder(wirksameVorlage(typ)));
-  const neben = typ.felder.filter((f) => !imTitel.has(f.key) && f.typ !== 'langtext' && f.typ !== 'formatiert' && f.typ !== 'passwort').slice(0, 2);
+  const aus = ausgeblendeteFelder(typ);
+  const neben = typ.felder.filter((f) => !imTitel.has(f.key) && !aus.has(f.key) && f.typ !== 'langtext' && f.typ !== 'formatiert' && f.typ !== 'passwort').slice(0, 2);
   return neben.map((f) => formatiere(f, m.werte[f.key], (id) => titelOder(bezuege[id]?.titel))).filter(Boolean).join(' · ');
 }
 

@@ -649,9 +649,14 @@ export interface Vorschlag {
 }
 export type Vorschlaege = Record<string, Vorschlag>;
 
-/** Felder, die „Aus Dokument ausfüllen“ füllen darf: markiert – oder, hat der Typ gar keine markierten, alle mit erkennbarer Art. */
-export function fuellfelder(t: Pick<Mappentyp, 'felder'>): Array<{ feld: Feld; art: Erkennungsart }> {
-  const geeignet = t.felder.filter((f) => f.typ !== 'passwort' && ERKENNUNG_FELDTYPEN.includes(f.typ));
+/**
+ * Felder, die „Aus Dokument ausfüllen“ füllen darf: markiert – oder, hat der Typ gar keine markierten, alle mit
+ * erkennbarer Art. Ausgeblendete Felder (#655) nie – in der Mappe sähe niemand den Vorschlag.
+ */
+export function fuellfelder(t: Pick<Mappentyp, 'felder'> & { register?: Mappentyp['register'] }): Array<{ feld: Feld; art: Erkennungsart }> {
+  // Wie ausgeblendeteFelder (darstellung.ts) – hier ohne den Import, der einen Kreis über model.ts schlösse.
+  const aus = new Set([...t.felder.filter((f) => f.ausgeblendet).map((f) => f.key), ...(t.register ?? []).filter((r) => r.ausgeblendet && r.art === 'felder').flatMap((r) => r.felder ?? [])]);
+  const geeignet = t.felder.filter((f) => f.typ !== 'passwort' && ERKENNUNG_FELDTYPEN.includes(f.typ) && !aus.has(f.key));
   const markiert = geeignet.filter((f) => f.erkennung);
   return (markiert.length ? markiert : geeignet).map((f) => ({ feld: f, art: artVon(f) })).filter((x): x is { feld: Feld; art: Erkennungsart } => !!x.art);
 }

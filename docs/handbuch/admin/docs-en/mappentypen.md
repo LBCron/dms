@@ -64,6 +64,21 @@ For all of them: **Required field** and a **help text** that is shown below the 
 
 If the default value of a text field contains `{nummernkreis:<key>}`, every new folder gets a consecutive number from this [number sequence](nummernkreise.md); the field is then read-only.
 
+### Hiding fields instead of deleting them { #felder-ausblenden }
+
+If you don't need a field – say *Commercial register* on the *Organisation* from the *Basis* package – tick **Hide** on the field instead of removing it. A hidden field
+
+- isn't shown in the form or in the folder, nor when printing the folder;
+- isn't offered when you choose a new column, a new condition of a [view](sichten.md) or a field in the advanced search – whatever already uses it stays as it is;
+- keeps all its **values**: they stay in the [backup](sicherung.md), in the [full export](export.md), in exported PDFs with the details and in the API (where the field is marked `ausgeblendet: true`);
+- is **never required** – otherwise no folder could be saved any more. When you hide it, Ablago removes “required” and tells you; showing it again doesn’t bring “required” back on its own.
+
+If the field is still used – in the **title**, in a **result list** or **view**, by **Fill from document** or **Use to find existing folders**, for a **deadline**, as the reference date in **archive mode** or in a **permission** – Ablago lists that before hiding and asks. Hidden, it keeps working there; you just don’t see it in the folder any more. You can show it again at any time: untick and save. The summary above the fields counts the hidden ones (“11 fields, 2 hidden”), and they are marked *hidden* in the list.
+
+For folder types from a **package**, an update doesn’t change what you hid – “updates don’t change anything behind your back”. If an update brings a new field, it is visible. System fields (for example on *User* or *Post*) can’t be hidden.
+
+If a hidden field holds a value that no longer fits after a later change to the field, it doesn’t stop the folder from being saved – it can’t be changed in the folder after all. Anyone changing it through the API has to follow the field’s rules.
+
 ### Labels per language { #beschriftungen-je-sprache }
 
 Name and description of the folder type, label and help text of every field, and the names of tabs and result lists can be maintained in several languages. Next to each of these texts is a small language switch (**DE · EN**). Under **DE** you edit the source text, under another language the label for it. If it stays empty, the German text is shown there. A dot on the switch shows that a label is still missing. Below the name it says, for example, "12 of 14 labels in English" – that is only a notice; saving still works.
@@ -207,6 +222,7 @@ This is how deadlines behave:
 
 You can change folder types at any time, even if folders already exist:
 
+- **Hiding fields** instead of removing them: the field disappears from the folder, everything else stays (see [Hiding fields](#felder-ausblenden)).
 - **Removing fields** deletes no values. They stay on the folder and appear there as "values without a field definition". If you add the field again with the same key, they are back.
 - **Formats and date limits** don't make saved entries invalid (see [above](#formate-und-datumsgrenzen)).
 - **New required fields, stricter rules, removed choice values:** folders that no longer fit are marked and get a [task](aufgaben.md) "Doesn't fit" for their creator; that way they land under [To do](https://help.ablago.app/benutzer/aktuell/en/eingang/) for them. The task completes itself as soon as the folder fits again. Nothing is changed silently. Above the folder type it says how many folders are affected.
@@ -284,11 +300,25 @@ A **retrieval** is a real retrieval of a file's content: downloading in the inte
 
 Tabs have fixed keys so that documents keep their tab when it is renamed. A documents tab that already contains documents can't be removed.
 
+**Hiding tabs** (#655): with **Hide** ticked on a tab, the folder no longer shows it. The fields on it count as hidden – with everything described under [Hiding fields](#felder-ausblenden): values stay, never required, a question if they are still used. Documents tabs can’t be hidden (uploaded files and assigned post go there), nor can tabs with system fields; one tab has to stay visible. A package update doesn’t show anything again.
+
+### Sections in a field tab { #abschnitte }
+
+Without sections the folder puts the fields of a tab into a grid – as many side by side as fit. With **+ Section** on a field tab you decide where a new row starts and which fields belong together. Below the tab you see its fields in their order, with the sections in between:
+
+- **With a heading**: the folder shows a thin line and the heading, and the next field starts on a new row. For a person, for example, *Salutation, Title, First name, Last name* sit on one row, with *Contact* and *Address* below – in **one** tab instead of several. If you prefer to keep the tabs, keep them.
+- **Without a heading**: just the line break, no line – for example so that the *Birthday* starts below the name.
+- **collapsed** (only with a heading): the section is closed when a folder is opened – good for things rarely needed, such as *Bank details*. The heading shows what is inside (“Bank details · 2 of 3 filled in”); a click or **Enter** opens it. Whatever someone opens or closes, Ablago remembers **per person** in their personal settings, on every device; the setting on the folder type is only the default. A section opens on its own if a **required field** in it is **empty** or the **search** or a **link to a field** points into it (both when opening), if saving finds an **error** in it or **Fill in from document** makes suggestions there.
+
+Move a section with the arrows, with **Alt+↑/↓** on the handle **⠿** or by dragging it onto a field – it then starts before that field. A section is tied to its first field: if you move the field under **Fields**, the section moves with it; if you drag the field to another tab, the section starts at the next field. The heading can be translated like names ([labels per language](#beschriftungen-je-sprache)).
+
+Sections are **display only**: the list of fields stays; export, the PDF with the details, printing and the API always show everything, including what is in collapsed sections. In a narrow view (phone) there is one field per row; sections only show their heading there, and a break without a heading has no effect. The API returns the sections on the tab (`abschnitte: [{ vor, titel, eingeklappt }]`) so apps can show them as a grouped list. Packages bring them along; an update only adds sections to tabs that have none yet.
+
 **Links tab as a table:** if you tick a source, you can choose a [result list](#trefferlisten) of the source type next to it. The tab then shows the linking folders as a table with its columns (e.g. for the contract partner the invoices with amount, date and *paid*). Without a choice – or if the list no longer exists – it stays a simple list of titles.
 
 ## Dragging instead of clicking { #ziehen-statt-klicken }
 
-Fields, tabs and the columns of every result list have a **handle ⠿**. By it you drag an entry to another place; a line shows where it lands. You can also drag a **field** onto a **field tab** – it is then on this tab.
+Fields, tabs, [sections](#abschnitte) and the columns of every result list have a **handle ⠿**. By it you drag an entry to another place; a line shows where it lands. You can also drag a **field** onto a **field tab** – it is then on this tab.
 
 This only changes the draft; it is taken over like everything else with **Save folder type**. By keyboard: reach the handle and **Alt+↑/↓**. On a smartphone, long-press the handle, then drag. The arrow buttons still exist.
 

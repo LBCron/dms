@@ -64,6 +64,21 @@ Für alle gilt: **Pflichtfeld** und ein **Hilfetext**, der beim Ausfüllen unter
 
 Steht im Standardwert eines Textfelds `{nummernkreis:<kennung>}`, bekommt jede neue Mappe eine fortlaufende Nummer aus diesem [Nummernkreis](nummernkreise.md); das Feld ist dann schreibgeschützt.
 
+### Felder ausblenden statt löschen { #felder-ausblenden }
+
+Brauchst du ein Feld nicht – etwa *Handelsregister* an der *Organisation* aus dem Paket *Basis* –, hakst du am Feld **Ausblenden** an, statt es zu entfernen. Ein ausgeblendetes Feld
+
+- steht nicht im Formular und nicht in der Mappe, auch nicht im Druck der Mappe;
+- steht nicht zur Auswahl, wenn du eine neue Spalte, eine neue Bedingung einer [Ansicht](sichten.md) oder ein Feld der erweiterten Suche wählst – was es schon nutzt, bleibt, wie es ist;
+- behält alle **Werte**: Sie stehen weiter in der [Sicherung](sicherung.md), im [Vollexport](export.md), in exportierten PDFs mit den Angaben und in der Schnittstelle (dort ist das Feld mit `ausgeblendet: true` gekennzeichnet);
+- ist **nie Pflicht** – sonst ließe sich keine Mappe mehr speichern. Beim Ausblenden hebt Ablago „Pflicht“ auf und sagt es dir; beim Einblenden kommt „Pflicht“ nicht von selbst zurück.
+
+Wird das Feld noch genutzt – im **Titel**, in einer **Trefferliste** oder **Ansicht**, bei **Aus Dokument füllen** oder **Zum Wiederfinden**, für eine **Frist**, als Stichtag im **Archivmodus** oder in einer **Berechtigung** –, nennt Ablago das vor dem Ausblenden und fragt nach. Ausgeblendet bleibt es dort wirksam; nur in der Mappe sieht man es nicht mehr. Einblenden geht jederzeit: Haken wieder weg und speichern. Die Kurzinfo über den Feldern zählt die ausgeblendeten mit („11 Felder, 2 ausgeblendet“), in der Liste tragen sie die Markierung *ausgeblendet*.
+
+Bei Mappentypen aus einem **Paket** ändert ein Update das Ausblenden nicht – „Updates ändern nichts heimlich“. Bringt ein Update ein neues Feld mit, ist es sichtbar. Systemfelder (etwa an *Benutzer* oder *Post*) lassen sich nicht ausblenden.
+
+Steht in einem ausgeblendeten Feld ein Wert, der nach einer späteren Änderung am Feld nicht mehr passt, hält er das Speichern der Mappe nicht auf – ändern lässt er sich in der Mappe ja nicht. Wer ihn über die Schnittstelle ändert, muss die Regeln des Felds einhalten.
+
 ### Beschriftungen je Sprache { #beschriftungen-je-sprache }
 
 Name und Beschreibung des Mappentyps, Bezeichnung und Hilfetext jedes Felds sowie die Namen von Registern und Trefferlisten kannst du in mehreren Sprachen pflegen. Neben jedem dieser Texte steht ein kleiner Sprachumschalter (**DE · EN**). Unter **DE** bearbeitest du den Ausgangstext, unter einer anderen Sprache die Beschriftung dafür. Bleibt sie leer, sieht man dort den deutschen Text. Ein Punkt am Umschalter zeigt, dass eine Beschriftung noch fehlt. Unter dem Namen steht zum Beispiel „12 von 14 Beschriftungen auf Englisch“ – das ist nur ein Hinweis, gespeichert wird trotzdem.
@@ -207,6 +222,7 @@ So verhalten sich Fristen:
 
 Du kannst Mappentypen jederzeit ändern, auch wenn es schon Mappen gibt:
 
+- **Felder ausblenden** statt entfernen: Das Feld verschwindet aus der Mappe, alles andere bleibt (siehe [Felder ausblenden](#felder-ausblenden)).
 - **Felder entfernen** löscht keine Werte. Sie bleiben an der Mappe und erscheinen dort als „Werte ohne Felddefinition“. Fügst du das Feld mit derselben Kennung wieder hinzu, sind sie wieder da.
 - **Formate und Datumsgrenzen** machen gespeicherte Angaben nicht ungültig (siehe [oben](#formate-und-datumsgrenzen)).
 - **Neue Pflichtfelder, strengere Regeln, entfernte Auswahlwerte:** Mappen, die nicht mehr passen, werden markiert und bekommen eine [Aufgabe](aufgaben.md) „Passt nicht“ für ihren Ersteller; so landen sie bei ihm unter [Zu erledigen](https://help.ablago.app/benutzer/eingang/). Die Aufgabe erledigt sich, sobald die Mappe wieder passt. Nichts wird stillschweigend geändert. Über dem Mappentyp steht, wie viele Mappen betroffen sind.
@@ -284,11 +300,25 @@ Ein **Abruf** ist ein echter Inhaltsabruf einer Datei: Herunterladen in der Ober
 
 Register haben feste Kennungen, damit Dokumente ihr Register behalten, wenn es umbenannt wird. Ein Dokumentenregister, in dem schon Dokumente liegen, lässt sich nicht entfernen.
 
+**Register ausblenden** (#655): Mit dem Haken **Ausblenden** am Register zeigt die Mappe es nicht mehr. Die Felder darauf gelten als ausgeblendet – mit allem, was unter [Felder ausblenden](#felder-ausblenden) steht: Werte bleiben, nie Pflicht, Nachfrage, wenn sie noch genutzt werden. Dokumentenregister lassen sich nicht ausblenden (dorthin gehen hochgeladene Dateien und zugeordnete Post), ebenso wenig Register mit Systemfeldern; ein Register muss sichtbar bleiben. Ein Paket-Update blendet nichts wieder ein.
+
+### Abschnitte im Feldregister { #abschnitte }
+
+Ohne Abschnitte legt die Mappe die Felder eines Registers in ein Raster – so viele nebeneinander, wie passen. Mit **+ Abschnitt** am Feldregister bestimmst du, wo eine neue Zeile beginnt und welche Felder zusammengehören. Unter dem Register stehen dazu seine Felder in ihrer Reihenfolge, die Abschnitte dazwischen:
+
+- **Mit Überschrift**: Die Mappe zeigt eine dünne Linie und die Überschrift, das nächste Feld beginnt in einer neuen Zeile. So stehen etwa bei einer Person *Anrede, Titel, Vorname, Nachname* in einer Zeile, darunter *Kontakt* und *Anschrift* – in **einem** Register statt in mehreren. Wer die Register lieber behält, behält sie.
+- **Ohne Überschrift**: nur der Zeilenumbruch, keine Linie – zum Beispiel, damit der *Geburtstag* unter dem Namen beginnt.
+- **eingeklappt** (nur mit Überschrift): Der Abschnitt ist beim Öffnen einer Mappe zu – gut für Seltenes wie eine *Bankverbindung*. Die Kopfzeile zeigt, was drinsteckt („Bankverbindung · 2 von 3 ausgefüllt“), ein Klick oder **Enter** klappt auf. Was jemand auf- oder zuklappt, merkt sich Ablago **je Person** in den persönlichen Einstellungen, auf jedem Gerät; die Einstellung am Mappentyp ist nur die Vorgabe. Von selbst auf klappt ein Abschnitt, wenn darin ein **Pflichtfeld leer** ist oder die **Suche** bzw. ein **Link auf ein Feld** darin zeigt (beides beim Öffnen), wenn beim Speichern ein **Fehler** darin steckt oder **Aus Dokument ausfüllen** dort Vorschläge macht.
+
+Einen Abschnitt verschiebst du mit den Pfeilen, per **Alt+↑/↓** am Griff **⠿** oder durch Ziehen auf ein Feld – er beginnt dann vor diesem Feld. Ein Abschnitt hängt an seinem ersten Feld: Verschiebst du das Feld unter **Felder**, wandert er mit; ziehst du das Feld auf ein anderes Register, beginnt der Abschnitt beim nächsten Feld. Die Überschrift lässt sich wie Namen übersetzen ([Beschriftungen je Sprache](#beschriftungen-je-sprache)).
+
+Abschnitte sind **nur Darstellung**: Die Feldliste bleibt; Export, PDF der Angaben, Druck und Schnittstelle zeigen immer alles, auch was in eingeklappten Abschnitten steht. In schmaler Ansicht (Handy) steht ein Feld je Zeile; Abschnitte zeigen dort nur ihre Überschrift, ein Umbruch ohne Überschrift wirkt nicht. Die Schnittstelle liefert die Abschnitte am Register (`abschnitte: [{ vor, titel, eingeklappt }]`), damit Apps sie als gruppierte Liste zeigen können. Pakete bringen sie mit; ein Update ergänzt Abschnitte nur an Registern, die noch keine haben.
+
 **Verknüpfungsregister als Tabelle:** Hakst du eine Quelle an, kannst du daneben eine [Trefferliste](#trefferlisten) des Quelltyps wählen. Das Register zeigt die verweisenden Mappen dann als Tabelle mit deren Spalten (z. B. beim Vertragspartner die Rechnungen mit Betrag, Datum und *bezahlt*). Ohne Auswahl – oder wenn es die Liste nicht mehr gibt – bleibt es bei der einfachen Liste der Titel.
 
 ## Ziehen statt klicken
 
-Felder, Register und die Spalten jeder Trefferliste haben einen **Griff ⠿**. Daran ziehst du einen Eintrag an eine andere Stelle; eine Linie zeigt, wo er landet. Ein **Feld** kannst du außerdem auf ein **Feldregister** ziehen – es liegt dann auf diesem Register.
+Felder, Register, [Abschnitte](#abschnitte) und die Spalten jeder Trefferliste haben einen **Griff ⠿**. Daran ziehst du einen Eintrag an eine andere Stelle; eine Linie zeigt, wo er landet. Ein **Feld** kannst du außerdem auf ein **Feldregister** ziehen – es liegt dann auf diesem Register.
 
 Das ändert nur den Entwurf; übernommen wird es wie alles andere mit **Mappentyp speichern**. Per Tastatur: Griff ansteuern und **Alt+↑/↓**. Am Smartphone den Griff lange antippen, dann ziehen. Die Pfeil-Knöpfe gibt es weiterhin.
 
