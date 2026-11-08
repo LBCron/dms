@@ -77,6 +77,9 @@ export function sammelText(meldungen: Meldung[]): { betreff: string; text: strin
   return { betreff: t('meldungen.anmeldesperre.ablago-anmeldeschutz-gesperrt', { teile: teile.join(' und ') }), text: zeilen.join('\n') };
 }
 
+/** Ein vorab gezählter Anmeldeversuch (#956), siehe `Anmeldesperre.versuch`. */
+export interface Versuch { konto: number; ip: number; ausgenommen: boolean }
+
 export interface IpSperre { ip: string; seit: string; bis: string | null; grund: string }
 
 const log = protokoll.modul('konto');
@@ -216,6 +219,25 @@ export class Anmeldesperre {
     }
   }
 
+  /**
+   * Vor der Prüfung von Passwort oder Code (#956): den Versuch vorab als Fehlversuch zählen – atomar, bevor scrypt
+   * oder der Code läuft. Vorher wurde erst nach der Prüfung gezählt; viele gleichzeitige Anfragen kamen so alle an der
+   * Grenze vorbei. Wirft 429 wie `pruefe`. Stimmt alles, nimmt `erfolg` den Versuch zurück, sonst
+   * `fehlschlag(…, versuch)` (zählt dann nicht noch einmal, sperrt aber wie bisher).
+   */
+  async versuch(email: string, ip: string): Promise<Versuch> {
+    await this.pruefe(email, ip);
+    const a = norm(ip);
+    if (this.ausgenommen(a)) return { konto: 0, ip: 0, ausgenommen: true };
+    const { anzahl: n, bis } = await this.zustand.zaehle(KONTO, `${a}|${email}`, this.e.konto.minuten * MIN, { gleitend: true });
+    const { anzahl: m } = await this.zustand.zaehle(IP_ZAEHLER, a, (this.e.ip.minuten || 60) * MIN);
+    if (n > this.e.konto.versuche || m > this.e.ip.versuche) {
+      const min = Math.max(1, Math.ceil(((bis ?? this.jetzt()) - this.jetzt()) / MIN));
+      throw new Fachfehler(429, t('meldungen.anmeldesperre.zu-viele-fehlversuche-bitte', { anzahl: n > this.e.konto.versuche ? min : this.e.ip.minuten || 60 }));
+    }
+    return { konto: n, ip: m, ausgenommen: false };
+  }
+
   private heute() { return heuteIn(new Date(this.jetzt())); }
 
   /** Sperre für die tägliche Sammelmeldung vormerken – immer; ob gemeldet wird, entscheidet die Automatisierung (#678). */
@@ -254,20 +276,21 @@ export class Anmeldesperre {
    * Nach einem falschen Passwort: zählen und gegebenenfalls sperren. `bekannt`: Die E-Mail-Adresse
    * gehört zu einem bestehenden Benutzerkonto (nur dann kommt die Sofortmeldung, #368).
    */
-  async fehlschlag(email: string, ip: string, bekannt = false) {
+  async fehlschlag(email: string, ip: string, bekannt = false, v?: Versuch) {
     await this.lade();
     const a = norm(ip);
-    if (this.ausgenommen(a)) return;
+    if (v?.ausgenommen || this.ausgenommen(a)) return;
     const zahl = this.jetzt();
-    // Atomar gezählt (#744): Jeder Fehlversuch schiebt das Ende der Kontosperre hinaus (wie bisher).
-    const { anzahl: n } = await this.zustand.zaehle(KONTO, `${a}|${email}`, this.e.konto.minuten * MIN, { gleitend: true });
+    // Atomar gezählt (#744): Jeder Fehlversuch schiebt das Ende der Kontosperre hinaus (wie bisher). Mit `versuch`
+    // (#956) ist er schon gezählt.
+    const n = v ? v.konto : (await this.zustand.zaehle(KONTO, `${a}|${email}`, this.e.konto.minuten * MIN, { gleitend: true })).anzahl;
     if (n === this.e.konto.versuche) {
       log.warn('Anmeldung gesperrt (Konto und IP)', { email, ip: a, versuche: n, minuten: this.e.konto.minuten });
       if (bekannt) await this.kontoGesperrt(email, a, n);
     }
     // Je IP über alle Adressen; das Zählfenster ist die Sperrdauer (bei „dauerhaft“ eine Stunde), festes Fenster.
     const fenster = (this.e.ip.minuten || 60) * MIN;
-    const { anzahl: m } = await this.zustand.zaehle(IP_ZAEHLER, a, fenster);
+    const m = v ? v.ip : (await this.zustand.zaehle(IP_ZAEHLER, a, fenster)).anzahl;
     if (m < this.e.ip.versuche) return;
     const grund = t('meldungen.anmeldesperre.fehlgeschlagene-anmeldungen-zuletzt', { m, wert: email || t('meldungen.anmeldesperre.ohne-e-mail-adresse') });
     // Nur einer legt die Sperre an (auch bei gleichzeitigen Anfragen in mehreren Prozessen).

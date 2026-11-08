@@ -133,11 +133,12 @@ export class Konten {
   async anmelden(e: { email?: unknown; passwort?: unknown }, ip: string, geraet = '') {
     const email = text(e.email).toLowerCase();
     const passwort = typeof e.passwort === 'string' ? e.passwort : '';
-    await this.sperre.pruefe(email, ip);
+    // Vorab gezählt (#956): Auch gleichzeitige Anfragen kommen nicht an der Grenze vorbei.
+    const v = await this.sperre.versuch(email, ip);
     const treffer = email ? await this.repo.holeHash(email) : undefined;
     const ok = await pruefePasswort(passwort, treffer?.hash);
     if (!ok || !treffer || !treffer.benutzer.aktiv) {
-      await this.sperre.fehlschlag(email, ip, !!treffer?.benutzer.aktiv);
+      await this.sperre.fehlschlag(email, ip, !!treffer?.benutzer.aktiv, v);
       throw new Fachfehler(401, t('anmeldung.fehler.falsch'));
     }
     await this.sperre.erfolg(email, ip);
@@ -216,15 +217,21 @@ export class Konten {
     const x = schluessel ? await this.zustand.lies(ZWEITER_SCHRITT, schluessel) : null;
     const k = x?.wert as ZweiterSchritt | undefined;
     if (!x || !k || k.ip !== ip) throw new Fachfehler(401, t('anmeldung.fehler.abgelaufen'));
-    await this.sperre.pruefe(k.email, ip);
+    const v = await this.sperre.versuch(k.email, ip);
+    // Höchstens 5 Codes je Kennung, vorab und atomar gezählt (#744, #956) – auch gleichzeitige Anfragen und mehrere
+    // Prozesse kommen nicht darüber hinaus.
+    const n = await this.zustand.erhoehe(ZWEITER_SCHRITT, schluessel);
+    if (n === null || n > 5) {
+      await this.zustand.loesche(ZWEITER_SCHRITT, schluessel);
+      throw new Fachfehler(401, t('anmeldung.fehler.abgelaufen'));
+    }
     const art = await this.zweifaktor?.pruefe(k.benutzerId, e.code);
     if (!art) {
-      await this.sperre.fehlschlag(k.email, ip, true);
-      // Atomar gezählt (#744): Nach 5 falschen Codes gilt die Kennung nicht mehr – auch über mehrere Prozesse.
-      const n = await this.zustand.erhoehe(ZWEITER_SCHRITT, schluessel);
-      if (n !== null && n >= 5) await this.zustand.loesche(ZWEITER_SCHRITT, schluessel);
+      await this.sperre.fehlschlag(k.email, ip, true, v);
+      if (n >= 5) await this.zustand.loesche(ZWEITER_SCHRITT, schluessel);
       throw new Fachfehler(401, t('anmeldung.fehler.code'));
     }
+    await this.sperre.erfolg(k.email, ip);
     // Einmal einlösbar: Von zwei gleichzeitigen Anfragen mit derselben Kennung bekommt nur eine die Sitzung.
     if (!(await this.zustand.nimm(ZWEITER_SCHRITT, schluessel))) throw new Fachfehler(401, t('anmeldung.fehler.abgelaufen'));
     const benutzer = await this.repo.holeBenutzer(k.benutzerId);
@@ -308,13 +315,13 @@ export class Konten {
   private async bestaetigeErneut(b: Benutzer, e: { passwort?: unknown; code?: unknown }, ip: string, wofuer: string): Promise<void> {
     if (!b.hatPasswort) throw new Fachfehler(409, t('konten.verwaltung.fehler.anbieter'), { anbieter: true });
     const email = b.email.toLowerCase();
-    await this.sperre.pruefe(email, ip);
+    const v = await this.sperre.versuch(email, ip);
     const treffer = await this.repo.holeHash(email);
     const ok = await pruefePasswort(typeof e.passwort === 'string' ? e.passwort : '', treffer?.hash);
     const mitCode = !!this.zweifaktor && (await this.zweifaktor.aktiv(b.id));
     const codeOk = !ok || !mitCode ? true : !!(await this.zweifaktor!.pruefe(b.id, e.code));
     if (!ok || !codeOk) {
-      await this.sperre.fehlschlag(email, ip, true);
+      await this.sperre.fehlschlag(email, ip, true, v);
       log.warn('Erneute Anmeldung fehlgeschlagen', { person: b.email, wofuer, ip, grund: ok ? 'Code' : 'Passwort' });
       throw new Fachfehler(401, t(ok ? 'anmeldung.fehler.code' : 'konten.verwaltung.fehler.passwort'), { bestaetigen: true, code: mitCode });
     }
