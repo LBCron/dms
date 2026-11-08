@@ -131,6 +131,17 @@ describe('Verwaltungsrecht an der Person (#818)', () => {
     assert.equal((await x.rufe(c, 'PUT', `/api/benutzer/${x.lena.id}`, { aktiv: false })).statusCode, 403);
     assert.equal((await x.rufe(c, 'POST', `/api/benutzer/${x.lena.id}/vertreten`)).statusCode, 403);
     assert.equal((await x.rufe(c, 'POST', `/api/benutzer/${x.lena.id}/zweifaktor/zuruecksetzen`)).statusCode, 403);
+    // #957: Sitzungen (Geräte, Adressen, Abmelden) und Abwesenheit Verwaltender ebenso nicht.
+    assert.equal((await x.rufe(c, 'GET', `/api/benutzer/${x.lena.id}/sitzungen`)).statusCode, 403);
+    assert.equal((await x.rufe(c, 'DELETE', `/api/benutzer/${x.lena.id}/sitzungen`)).statusCode, 403);
+    assert.equal((await x.rufe(c, 'DELETE', `/api/benutzer/${x.lena.id}/sitzungen/egal`)).statusCode, 403);
+    assert.equal((await x.rufe(c, 'PUT', `/api/benutzer/${x.lena.id}/abwesenheit`, { an: true, vertreterId: x.jonas.id })).statusCode, 403);
+    assert.equal((await x.rufe(c, 'POST', `/api/benutzer/${x.lena.id}/aufgaben-uebergeben`)).statusCode, 403);
+    assert.equal(((await x.konten.listeBenutzer()).find((b) => b.id === x.lena.id) as { abwesenheit?: { an?: boolean } }).abwesenheit?.an ?? false, false);
+    // Bei Personen ohne Verwaltungsrecht geht es weiter.
+    assert.equal((await x.rufe(c, 'GET', `/api/benutzer/${x.petra.id}/sitzungen`)).statusCode, 200);
+    assert.equal((await x.rufe(c, 'DELETE', `/api/benutzer/${x.petra.id}/sitzungen`)).statusCode, 200);
+    assert.equal((await x.rufe(c, 'PUT', `/api/benutzer/${x.petra.id}/abwesenheit`, { an: true, vertreterId: x.jonas.id })).statusCode, 200);
     // Mit „Benutzer“: Personen anlegen und Passwörter anderer zurücksetzen geht.
     assert.equal((await x.rufe(c, 'POST', `/api/benutzer/${x.petra.id}/link`)).statusCode, 200);
     assert.equal((await x.rufe(c, 'POST', '/api/benutzer', { email: 'katrin@example.org', name: 'Katrin', verwaltung: ['*'] })).json().benutzer.verwaltung.length, 0, 'beim Anlegen kein Verwaltungsrecht');

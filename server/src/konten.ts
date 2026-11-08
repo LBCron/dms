@@ -687,6 +687,8 @@ export class Konten {
     const b = await this.person(id);
     if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
     if (id !== ich.id && ich.rolle !== 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.modus'));
+    // Abwesenheit und Vertretung Verwaltender setzt nur „Gesamte Verwaltung“ (#957).
+    if (id !== ich.id) this.pruefeKontoVonVerwaltenden(ich, b);
     const datum = (v: unknown, was: string): string | null => {
       const text2 = text(v);
       if (!text2) return null;
@@ -713,6 +715,7 @@ export class Konten {
     if (id !== ich.id && ich.rolle !== 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.modus'));
     const b = await this.person(id);
     if (!b) throw new Fachfehler(404, t('meldungen.konten.diesen-benutzer-gibt-es'));
+    if (id !== ich.id) this.pruefeKontoVonVerwaltenden(ich, b);
     const v = b.abwesenheit?.vertreterId;
     if (!v) throw new Fachfehler(409, t('meldungen.konten.es-ist-kein-vertreter'));
     return { uebergeben: (await this.spiegel?.aufgabenUebergeben?.(id, v, ich.id)) ?? 0 };

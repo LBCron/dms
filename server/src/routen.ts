@@ -1126,13 +1126,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       L.konto.info('Andere eigene Sitzungen beendet', { anzahl: r.beendet });
       return ok(r);
     } },
-    { methode: 'GET', pfad: '/api/benutzer/:id/sitzungen', zugang: 'admin', handler: async (a) => ok(await konten.sitzungenVon(a.params.id, a.sitzungsDaten?.id)) },
+    // Sitzungen Verwaltender (Geräte, Adressen, Abmelden) nur mit „Gesamte Verwaltung“ (#957).
+    { methode: 'GET', pfad: '/api/benutzer/:id/sitzungen', zugang: 'admin', handler: async (a) => {
+      await konten.pruefeKontoVon(ich(a), a.params.id);
+      return ok(await konten.sitzungenVon(a.params.id, a.sitzungsDaten?.id));
+    } },
     { methode: 'DELETE', pfad: '/api/benutzer/:id/sitzungen', zugang: 'admin', handler: async (a) => {
+      await konten.pruefeKontoVon(ich(a), a.params.id);
       const r = await konten.beendeAlleSitzungen(a.params.id);
       L.konto.info('Alle Sitzungen eines Benutzers beendet', { id: a.params.id, anzahl: r.beendet });
       return ok(r);
     } },
     { methode: 'DELETE', pfad: '/api/benutzer/:id/sitzungen/:sitzung', zugang: 'admin', handler: async (a) => {
+      await konten.pruefeKontoVon(ich(a), a.params.id);
       await konten.beendeSitzung(a.params.id, a.params.sitzung);
       L.konto.info('Sitzung beendet', { id: a.params.id, sitzung: a.params.sitzung });
       return leer;
