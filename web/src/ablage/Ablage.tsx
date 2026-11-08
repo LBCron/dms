@@ -15,6 +15,7 @@ import { titelOder, useSeiten } from '../seiten';
 import { MappeAnsicht, NeueMappe } from './MappeFormular';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from './Papierkorb';
 import { Startseite } from './Startseite';
+import { ZuletztListe } from './Zuletzt';
 import { t, tn } from '../sprache';
 import { AnsichtSymbol, Symbol, type SymbolName } from '../Symbol';
 import { AnsichtFilter, AnsichtWahl } from './AnsichtWahl';
@@ -39,6 +40,7 @@ import { gebietsschema } from '../../../shared/src/sprache';
  * Ablage in drei Spalten, von groß nach klein:
  *   Sichten  →  Mappen der Sicht  →  eine Mappe
  *
+ * /ablage/zuletzt                   „Zuletzt geöffnet“ (#940): die letzten 25, nur über die Startseite erreichbar
  * /ablage/:sicht                    „eingang“ (Zu erledigen mit Liste · Monat · Jahr, #725; /ablage/anstehend leitet dorthin), „favoriten“ (#62), „papierkorb“ (#43), eine verwaltete Sicht (#38) oder die Id eines Mappentyps
  * /ablage/:sicht/:mappeId           Mappe rechts geöffnet
  * /ablage/:typId/neu?verweis=k:id   neue Mappe, optional mit vorbelegtem Verweis
@@ -117,7 +119,8 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   // `anker` (#831): fester Ankerpunkt für Rundgänge und Tipps.
   const feste: Array<{ pfad: string; name: string; symbol: SymbolName; titel?: string; zahl?: number; warte?: boolean; hervor?: boolean; an: boolean; anker?: string }> = [
     { pfad: '/ablage/suche', name: t('ablage.ablage.erweiterte-suche'), symbol: 'suche', titel: t('ablage.ablage.mappentypen-waehlen-in-feldern'), an: istSuche, anker: 'navigation.erweiterte-suche' },
-    ...(mitStart ? [{ pfad: '/ablage/start', name: t('ablage.ablage.start'), symbol: 'haus' as const, an: sicht === 'start' }] : []),
+    // „Zuletzt geöffnet“ (#940) gehört zur Startseite: dort bleibt „Start“ markiert.
+    ...(mitStart ? [{ pfad: '/ablage/start', name: t('ablage.ablage.start'), symbol: 'haus' as const, an: sicht === 'start' || sicht === 'zuletzt' }] : []),
     { pfad: '/ablage/eingang', name: t('ablage.ablage.zu-erledigen'), symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang', anker: 'navigation.zu-erledigen' },
     ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: sichtName(neuePost), symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id, anker: 'navigation.neue-post' }] : []),
     // Favoriten (#725): die mitgelieferte Ansicht oben wie „Neue Post“; die feste Liste nur, wenn der Administrator sie gelöscht hat.
@@ -134,7 +137,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche || kalender) && !dritt)}>
       <aside className="spalte sichten" aria-label={t('ablage.ablage.ansichten')} data-anker="navigation.ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
-        <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? t('ablage.ablage.start') : istSuche ? t('ablage.ablage.erweiterte-suche') : sicht === 'eingang' ? t('ablage.ablage.zu-erledigen') : sicht === 'favoriten' ? t('ablage.ablage.favoriten') : sicht === 'papierkorb' ? t('ablage.ablage.papierkorb') : verwaltet?.name ?? typ?.name ?? t('ablage.ablage.ansicht-waehlen')}
+        <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? t('ablage.ablage.start') : istSuche ? t('ablage.ablage.erweiterte-suche') : sicht === 'eingang' ? t('ablage.ablage.zu-erledigen') : sicht === 'favoriten' ? t('ablage.ablage.favoriten') : sicht === 'papierkorb' ? t('ablage.ablage.papierkorb') : sicht === 'zuletzt' ? t('ablage.startseite.zuletzt-geoeffnet') : verwaltet?.name ?? typ?.name ?? t('ablage.ablage.ansicht-waehlen')}
           feste={feste.map((f) => ({ pfad: f.pfad, name: <><Symbol name={f.symbol} /> {f.name}</>, text: f.name, zahl: f.zahl, warte: f.warte, hervor: f.hervor, an: f.an }))} ohne={[neuePost?.id, favSicht?.id].filter((x): x is string => !!x)} />
         <h2 className="ueber aw-breit">{t('ablage.ablage.ansichten')}</h2>
         <nav className="sichtliste">
@@ -166,6 +169,8 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
               </>
           : sicht === 'start'
           ? <Startseite offen={dritt} breit={!dritt} />
+          : sicht === 'zuletzt'
+          ? <ZuletztListe offen={dritt} />
           : sicht === 'papierkorb'
           ? <PapierkorbListe z={papierkorb} werkbank={false} offen={dritt} />
           : sicht === 'eingang' && kalender

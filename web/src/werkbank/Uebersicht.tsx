@@ -73,6 +73,18 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   for (const p of u.postfachAnmeldung ?? []) h.push(p.zustand === 'abgelaufen'
     ? { schluessel: `postfach.abgelaufen:${p.id}`, art: 'schlecht', text: <>{tn('werkbank.uebersicht.bis-zur-neuen-anmeldung', { b: <strong>{t('werkbank.uebersicht.postfach-die-anmeldung-ist', { name: p.name })}</strong> })}</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: t('werkbank.uebersicht.neu-anmelden') }
     : { schluessel: `postfach.anmelden:${p.id}`, art: 'warn', text: <>{tn('werkbank.uebersicht.mit-oauth-2-0', { b: <strong>{t('werkbank.uebersicht.postfach-ist-noch-nicht', { name: p.name })}</strong> })}</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: t('werkbank.uebersicht.anmelden') });
+  // Eingangsordner (#915): gelbe Warnungen (zu alt, zu groß, fehler/, zu viele); der Knopf zeigt den Baum je Ordner.
+  const eo = u.eingangsordner;
+  if (eo) {
+    const werte = { tage: eo.grenzen.tage, datum: eo.aeltester ? datum(eo.aeltester) : '–', groesse: bytes(eo.bytes), gb: eo.grenzen.gb.toLocaleString(gebietsschema()), grenze: zahl(eo.grenzen.dateien) };
+    for (const w of eo.warnungen) {
+      const anzahl = w === 'fehler' ? eo.fehler : eo.dateien;
+      h.push({ schluessel: `eingangsordner.${w}`, art: 'warn', text: <><strong>{t.frei(`werkbank.uebersicht.eingangsordner.${w}`, { ...werte, anzahl, zahl: zahl(anzahl) })}</strong> {t.frei(`werkbank.uebersicht.eingangsordner.${w}.text`, werte)}</>, ziel: '/werkbank/eingangsordner#ueberwachung', knopf: t('werkbank.uebersicht.eingangsordner.knopf') });
+    }
+    // Post ohne „Für“ aus einem Ordner, der zu keinem Benutzer gehört (bisher galten auch Vornamen).
+    for (const o of eo.ohnePerson) h.push({ schluessel: `eingangsordner.ohne-person:${o}`, art: 'warn', text: <><strong>{t('werkbank.eingangsordner.ohne-person', { ordner: o })}</strong> {t('werkbank.eingangsordner.ohne-person.text')}</>, ziel: '/werkbank/eingangsordner#personen', knopf: t('werkbank.uebersicht.eingangsordner.zum-ordner') });
+    for (const x of eo.umbenennen) h.push({ schluessel: `eingangsordner.umbenennen:${x.neu}`, art: 'warn', text: <><strong>{t('werkbank.eingangsordner.umbenennen', { alt: x.alt, neu: x.neu })}</strong> {t('werkbank.eingangsordner.umbenennen.text')}</>, ziel: '/werkbank/eingangsordner#personen', knopf: t('werkbank.uebersicht.eingangsordner.zum-ordner') });
+  }
   // Sicherung (#105): fehlgeschlagen, zu alt, Notfallblatt, Speicherort.
   if (u.sicherung) for (const x of sicherungsHinweise(u.sicherung)) h.push({ ...x, ziel: '/werkbank/sicherung', knopf: t('werkbank.uebersicht.zur-sicherung') });
   // Export-Ordner (#797): im Sicherungsordner, oder Exporte beim Update von dort verschoben.

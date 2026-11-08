@@ -114,6 +114,12 @@ Two notices you close with a button of their own instead – they don't come bac
 | Environment variables that are no longer needed (each with a reason) | notice | `variablen` |
 | Email sending is not set up | yellow | `mail` |
 | Open reported errors | yellow | `fehlermeldungen` |
+| Intake folder: files older than the limit (default 180 days) | yellow | `eingangsordner.alt` |
+| Intake folder: all files together above the limit (default 2 GB) | yellow | `eingangsordner.groesse` |
+| Intake folder: files in `fehler/` | yellow | `eingangsordner.fehler` |
+| Intake folder: more files than the limit (default 100) | yellow | `eingangsordner.anzahl` |
+| Intake folder: folder belongs to no user (post without “For”) | yellow | `eingangsordner.ohne-person` |
+| Intake folder: a person’s folder could not be renamed after the e-mail address changed | yellow | `eingangsordner.umbenennen` |
 | Text recognition is now a package | notice (yellow as soon as scans are waiting) | `texterkennung.paket` |
 | Documents with an error in text recognition | yellow | `texterkennung.fehler` |
 | Document files are missing from the storage folder (e.g. `/data/files` without a volume) – details in the log, module *Documents* | red | `dateien.fehlen` |
@@ -122,7 +128,7 @@ Two notices you close with a button of their own instead – they don't come bac
 | Tasks without a recipient | notice | `aufgaben.ohne-empfaenger` |
 | Folders that don't fit the definition | notice | `mappen.unpassend` |
 
-For messages that exist per mailbox, package, emergency access, used emergency code or skipped step, the identifier in the log is followed by a colon and the id, e.g. `postfach.anmelden:…`.
+For messages that exist per mailbox, package, emergency access, used emergency code, intake folder subfolder or skipped step, the identifier in the log is followed by a colon and the id, e.g. `postfach.anmelden:…`.
 
 ## Customising the workbench { #werkbank-anpassen }
 

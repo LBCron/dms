@@ -1452,6 +1452,13 @@ a.knopf.breit { display: flex; justify-content: center; text-decoration: none; }
 .einstiege { display: flex; flex-direction: column; gap: 10px; }
 .einstiege .kachel { min-height: 0; }
 .zuletzt .mappenliste { margin-top: 6px; }
+.zuletzt h2 .zl-kopf { color: inherit; text-decoration: none; }
+.zuletzt h2 .zl-kopf:hover, .zuletzt h2 .zl-kopf:focus-visible { text-decoration: underline; }
+.zuletzt .zl-alle { display: inline-block; margin-top: 6px; }
+.zl-zurueck { display: inline-block; margin: 0 0 4px; }
+/* Eingangsordner → Überwachung (#915): Ursache einer Warnung im Baum hervorheben. */
+.eo-baum .eo-hervor td { background: var(--warn-zart); color: var(--warn); }
+.eo-baum .eo-hervor-text { color: var(--warn); font-weight: 600; }
 /* Startseite über Mitte und rechts (#429): Raster aus Kacheln mit festem Schlüssel (data-kachel), Grundlage für #421. */
 .start-feld { display: grid; }
 @media (min-width: 821px) {

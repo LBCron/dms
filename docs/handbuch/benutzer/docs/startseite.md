@@ -50,6 +50,14 @@ Darunter stehen die **zuletzt geöffneten** Mappen – die letzten fünf, die du
 
 ![Startseite mit geöffneter Mappe](bilder/startseite-mappe.png)
 
+## Zuletzt geöffnet { #zuletzt-geoeffnet }
+
+Ein Klick auf die Überschrift **Zuletzt geöffnet ›** oder auf **Alle zuletzt geöffneten anzeigen ›** darunter öffnet die Liste der **letzten 25** Mappen – die neueste oben, je mit Mappentyp und Zeitpunkt, z. B. „Vertrag · geöffnet heute, 10:30“. Ein Klick öffnet die Mappe rechts; **← Start** führt zurück zur Startseite.
+
+- **Anlegen und Ändern zählen wie Öffnen.** Eine Mappe, die du gerade angelegt oder geändert hast – auch über „Zuordnen“ oder ein neues Dokument –, steht danach oben, auch wenn du sie nicht eigens geöffnet hast. Was andere ändern, verschiebt deine Liste nicht.
+- **Die Liste gehört dir allein.** Sie zeigt nur Mappen, die du noch lesen darfst; Mappen im Papierkorb fehlen.
+- Einen eigenen Eintrag links unter den Ansichten gibt es dafür nicht – der Weg führt über die Startseite.
+
 ## Wenn die Ablage noch leer ist
 
 In einem neuen Ablago gibt es noch nichts zu zählen. Dann zeigt die Startseite drei Einstiege:

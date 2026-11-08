@@ -50,6 +50,14 @@ Below them are the **recently opened** folders – the last five you opened and 
 
 ![Home page with an open folder](bilder/startseite-mappe.png)
 
+## Recently opened { #zuletzt-geoeffnet }
+
+A click on the heading **Recently opened ›** or on **Show all recently opened ›** below it opens the list of the **last 25** folders – the newest at the top, each with folder type and time, e.g. “Contract · opened today, 10:30”. A click opens the folder on the right; **← Start** takes you back to the home page.
+
+- **Creating and changing count as opening.** A folder you have just created or changed – also via “Assign” or a new document – is at the top afterwards, even if you did not open it yourself. Changes by others do not move your list.
+- **The list is yours alone.** It only shows folders you may still read; folders in the Bin are left out.
+- There is no entry of its own on the left under the views – the way there is via the home page.
+
 ## When the Library is still empty {#wenn-die-ablage-noch-leer-ist}
 
 In a new Ablago there is nothing to count yet. Then the home page shows three starting points:

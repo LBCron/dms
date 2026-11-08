@@ -9,7 +9,7 @@ import type postgres from 'postgres';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
-import { speicherKontoRepo, type KontoRepo } from '../src/konto-repo';
+import { speicherKontoRepo, zuletztListe, type KontoRepo } from '../src/konto-repo';
 import { speicherRepo } from '../src/repo-speicher';
 
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
@@ -116,24 +116,37 @@ describe('Suchtext der Mappen (#615) – PostgreSQL', { skip: !process.env.TEST_
   });
 });
 
-/** „Zuletzt geöffnet“ (#334) in einem Zugriff (#615): vorn, ohne Doppelte, höchstens 10, Fremdes in der Liste fällt weg. */
+/**
+ * „Zuletzt geöffnet“ (#334) in einem Zugriff (#615): vorn, ohne Doppelte, höchstens 10, Fremdes in der Liste fällt weg.
+ * Seit #940 je Eintrag mit Zeitpunkt; frühere Einträge (nur die Id) bleiben lesbar.
+ */
 async function pruefeMerkeVorn(k: KontoRepo, id: string) {
-  const liste = async () => (await k.einstellungen(id)).zuletzt_geoeffnet;
+  const roh = async () => (await k.einstellungen(id)).zuletzt_geoeffnet;
+  const liste = async () => zuletztListe(await roh()).map((x) => x.id);
   const m = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
   await k.merkeVorn(id, 'zuletzt_geoeffnet', m(1), 10);
   assert.deepEqual(await liste(), [m(1)]);
+  assert.match(zuletztListe(await roh())[0].am ?? '', /^\d{4}-\d\d-\d\dT/, 'mit Zeitpunkt (#940)');
   for (let i = 2; i <= 12; i++) await k.merkeVorn(id, 'zuletzt_geoeffnet', m(i), 10);
   assert.deepEqual(await liste(), [12, 11, 10, 9, 8, 7, 6, 5, 4, 3].map(m));
   await k.merkeVorn(id, 'zuletzt_geoeffnet', m(5), 10);
   assert.deepEqual(await liste(), [5, 12, 11, 10, 9, 8, 7, 6, 4, 3].map(m));
+  const vorher = await roh();
   await k.merkeVorn(id, 'zuletzt_geoeffnet', m(5), 10);
-  assert.deepEqual(await liste(), [5, 12, 11, 10, 9, 8, 7, 6, 4, 3].map(m), 'schon vorn: bleibt');
+  assert.deepEqual(await roh(), vorher, 'schon vorn und gerade eben: bleibt, auch der Zeitpunkt');
   await k.setzeEinstellung(id, 'zuletzt_geoeffnet', [m(1), 7, null, m(2)]);
   await k.merkeVorn(id, 'zuletzt_geoeffnet', m(2), 10);
   assert.deepEqual(await liste(), [m(2), m(1)], 'nur Texte');
+  assert.equal((await roh() as unknown[])[1], m(1), 'frühere Einträge bleiben, wie sie waren');
   await k.setzeEinstellung(id, 'zuletzt_geoeffnet', 'kaputt');
   await k.merkeVorn(id, 'zuletzt_geoeffnet', m(3), 10);
   assert.deepEqual(await liste(), [m(3)]);
+  // Vorn, aber vor mehr als einer Minute: neuer Zeitpunkt.
+  await k.setzeEinstellung(id, 'zuletzt_geoeffnet', [{ id: m(3), am: '2026-01-01T10:00:00.000Z' }, m(4)]);
+  await k.merkeVorn(id, 'zuletzt_geoeffnet', m(3), 10);
+  const neu = zuletztListe(await roh());
+  assert.deepEqual(neu.map((x) => x.id), [m(3), m(4)]);
+  assert.notEqual(neu[0].am, '2026-01-01T10:00:00.000Z');
 }
 
 describe('Zuletzt geöffnet in einem Zugriff (#615)', () => {

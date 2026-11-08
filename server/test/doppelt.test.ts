@@ -89,7 +89,7 @@ describe('Doppelte Dateien (#333)', () => {
     assert.equal(JSON.stringify(eintrag.daten).includes('Stromvertrag'), false, 'kein Titel einer anderen Mappe');
 
     assert.equal(pruefeEingangEinstellung({}, EINGANG_STANDARD).doppelteUeberspringen, false);
-    await einstellungen.schreibe('eingangsordner', pruefeEingangEinstellung({ doppelteUeberspringen: true }, EINGANG_STANDARD));
+    await einstellungen.schreibe('eingangsordner', pruefeEingangEinstellung({ doppelteUeberspringen: true, nachher: 'erledigt' }, EINGANG_STANDARD));
     await writeFile(join(ordner, 'Nochmal.pdf'), SCAN);
     await writeFile(join(ordner, 'Neu.pdf'), '%PDF-1.4 etwas Neues');
     await e.pruefe(); await e.pruefe();

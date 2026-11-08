@@ -309,6 +309,19 @@ rauchtest('Mappe öffnen, ändern und speichern', { als: LENA }, async (s) => {
   assert.equal(await mappe.getByRole('textbox', { name: 'Vertragsnummer' }).inputValue(), 'WV-2027-1');
 });
 
+// #940: „Zuletzt geöffnet ›“ öffnet die Liste der letzten 25; Ändern zählt wie Öffnen (der Vertrag aus dem Test davor).
+rauchtest('Startseite: Liste „Zuletzt geöffnet“', { als: LENA }, async (s) => {
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('link', { name: 'Zuletzt geöffnet ›' }).click();
+  await s.waitForURL(/\/ablage\/zuletzt$/);
+  const liste = s.getByRole('region', { name: 'Mappen' });
+  await liste.getByRole('heading', { name: /^Zuletzt geöffnet/, level: 1 }).waitFor();
+  await liste.getByRole('link', { name: /Wartungsvertrag Heizung.*Vertrag · geöffnet/ }).first().click();
+  await s.getByRole('region', { name: 'Mappe' }).getByRole('heading', { name: 'Wartungsvertrag Heizung', level: 1 }).waitFor();
+  await liste.getByRole('link', { name: '← Start' }).click();
+  await s.waitForURL(/\/ablage\/start$/);
+});
+
 rauchtest('Suche auf der Startseite', { als: LENA }, async (s) => {
   await s.goto(BASIS + '/ablage/start');
   const schnell = s.getByRole('region', { name: 'Schnell finden' });

@@ -114,6 +114,12 @@ Zwei Hinweise schließt du stattdessen mit einem eigenen Knopf ab – sie kommen
 | Umgebungsvariablen, die nicht mehr nötig sind (je mit Grund) | Hinweis | `variablen` |
 | Der E-Mail-Versand ist nicht eingerichtet | gelb | `mail` |
 | Offene gemeldete Fehler | gelb | `fehlermeldungen` |
+| Eingangsordner: Dateien älter als die Grenze (Vorgabe 180 Tage) | gelb | `eingangsordner.alt` |
+| Eingangsordner: alle Dateien zusammen über der Grenze (Vorgabe 2 GB) | gelb | `eingangsordner.groesse` |
+| Eingangsordner: Dateien in `fehler/` | gelb | `eingangsordner.fehler` |
+| Eingangsordner: mehr Dateien als die Grenze (Vorgabe 100) | gelb | `eingangsordner.anzahl` |
+| Eingangsordner: Ordner gehört zu keinem Benutzer (Post ohne „Für“) | gelb | `eingangsordner.ohne-person` |
+| Eingangsordner: Personenordner ließ sich nach geänderter E-Mail-Adresse nicht umbenennen | gelb | `eingangsordner.umbenennen` |
 | Texterkennung ist jetzt ein Paket | Hinweis (gelb, sobald Scans warten) | `texterkennung.paket` |
 | Dokumente mit Fehler in der Texterkennung | gelb | `texterkennung.fehler` |
 | Dateien zu Dokumenten fehlen im Ablageordner (z. B. `/data/files` ohne Volume) – Einzelheiten im Protokoll, Modul *Dokumente* | rot | `dateien.fehlen` |
@@ -122,7 +128,7 @@ Zwei Hinweise schließt du stattdessen mit einem eigenen Knopf ab – sie kommen
 | Aufgaben ohne Empfänger | Hinweis | `aufgaben.ohne-empfaenger` |
 | Mappen, die nicht zur Definition passen | Hinweis | `mappen.unpassend` |
 
-Bei Meldungen, die es je Postfach, Paket, Notfallzugang, benutztem Notfallcode oder übersprungenem Schritt gibt, folgt im Protokoll hinter der Kennung ein Doppelpunkt und die Id, z. B. `postfach.anmelden:…`.
+Bei Meldungen, die es je Postfach, Paket, Notfallzugang, benutztem Notfallcode, Ordner im Eingangsordner oder übersprungenem Schritt gibt, folgt im Protokoll hinter der Kennung ein Doppelpunkt und die Id, z. B. `postfach.anmelden:…`.
 
 ## Werkbank anpassen
 

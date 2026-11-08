@@ -310,6 +310,8 @@ beiFehlenderDatei((f) => { void dienst.merkeFehlendeDatei(f).catch((e) => log.wa
 // Benutzer erscheinen als Mappen (#26); die Konten halten sie auf dem neuesten Stand.
 const konten = new Konten(messung.umhuelle(pgKontoRepo(sql, cfg.haushalt), 'konto'), () => betrieb.mailer(), () => betrieb.adresseFuerLinks(), dienst.benutzerspiegel());
 dienst.verbindeKonten(konten.papierkorbHaken());
+// Startseite „Zuletzt geöffnet“ (#940): Anlegen und Ändern zählen wie Öffnen.
+dienst.beiEigenerAenderung = (benutzerId, mappeId) => konten.merkeGeoeffnet({ id: benutzerId }, mappeId);
 konten.verbindeZustand(zustandDb);
 // Sprachpakete (#731): ihre Sprachen kommen dazu, sobald die Pakete lesbar sind; danach lädt der SprachDienst sie mit.
 const personenMitSprache = async (k: string) => (await konten.listeBenutzer()).filter((b) => b.aktiv !== false && b.sprache === k).length;
