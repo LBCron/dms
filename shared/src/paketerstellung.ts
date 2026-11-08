@@ -50,7 +50,8 @@ export const GITHUB = /^[A-Za-z0-9-]+$/;
 
 /** Was ins Paket soll: Ids aus diesem DMS. Beispiele nur aus ausdrücklich gewählten Mappen. */
 /** Wortlisten (#661): Ids eigener Gruppen gleichbedeutender Wörter (Werkbank → Suche). */
-export interface PaketAuswahl { typen: string[]; sichten: string[]; beispiele: string[]; wortlisten?: string[] }
+/** Beispiel-Dokumente (#878): Dokumente (PDF, PNG, JPEG) der gewählten Beispiel-Mappen kommen mit – nur auf ausdrücklichen Wunsch. */
+export interface PaketAuswahl { typen: string[]; sichten: string[]; beispiele: string[]; wortlisten?: string[]; beispielDokumente?: boolean }
 
 /** Angaben für das Manifest. */
 export interface PaketAngaben {
@@ -156,7 +157,7 @@ export interface PaketPruefung {
   hinweise: string[];
   abhaengigkeiten: Record<string, string>;
   /** Was ins Paket kommt (Kennung im Paket und Name). */
-  inhalt: { typen: Array<{ schluessel: string; name: string }>; sichten: Array<{ schluessel: string; name: string; eltern: string | null }>; beispiele: number; wortlisten?: number };
+  inhalt: { typen: Array<{ schluessel: string; name: string }>; sichten: Array<{ schluessel: string; name: string; eltern: string | null }>; beispiele: number; wortlisten?: number; /** Beispiel-Dokumente (#878). */ beispielDokumente?: number };
   /** Mappen der gewählten eigenen Typen, aus denen man Beispiele wählen kann (je Typ höchstens 200). */
   beispielMappen: Array<{ typId: string; typ: string; mappen: Array<{ id: string; titel: string; demo: boolean }>; mehr: boolean }>;
   /** Dieselbe Prüfung wie beim Hochladen ist gelaufen: Das Paket ließe sich so wieder einspielen. */

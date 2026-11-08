@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { ergaenzungenVon, hatSchnittstelle, istKiPaket, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type AblaufErgebnis, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
-import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
+import { ergaenzungenVon, hatSchnittstelle, inMB, istKiPaket, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type AblaufErgebnis, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { api, ApiFehler, type BeispielBehalten, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
@@ -202,6 +202,9 @@ const fingerabdruckAus = (e: unknown): string | null => {
   const d = e instanceof ApiFehler && e.status === 409 ? e.details as { schluessel?: boolean; fingerabdruck?: string } | undefined : undefined;
   return d?.schluessel && d.fingerabdruck ? d.fingerabdruck : null;
 };
+
+/** Beispiel-Mappen, die beim Entfernen blieben (#878), als Satz hinter der Meldung. */
+const behaltenText = (l?: BeispielBehalten[]) => (l?.length ? ` ${t('werkbank.pakete.beispiele-behalten', { anzahl: l.length, titel: l.map((b) => `„${b.titel}“`).join(', ') })}` : '');
 
 /**
  * Weitere Katalogadressen (#189): hinzufügen, abschalten, entfernen. Hat ein Katalog einen eigenen Schlüssel
@@ -457,17 +460,23 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
     if (!(await rueckfrage({ titel: t('werkbank.pakete.entfernen-2', { name: inst.name }), text: t('werkbank.pakete.seine-mappentypen-und-ansichten'), ja: t('werkbank.pakete.entfernen'), gefahr: true }))) return;
     void tu(async () => {
       let bestaetigt = false;
-      try { await api.paketEntfernen(id); } catch (e) {
+      let r: { beispieleBehalten: BeispielBehalten[] } | null = null;
+      try { r = await api.paketEntfernen(id); } catch (e) {
         // Sprachpaket in Gebrauch (#731): sagen, wen es betrifft, und nur auf ausdrücklichen Wunsch entfernen.
         const s = e instanceof ApiFehler && e.status === 409 ? (e.details as { sprache?: unknown } | undefined)?.sprache : undefined;
         if (!s || !(await rueckfrage({ titel: (e as Error).message, text: (e as ApiFehler).gruende.join(' '), ja: t('werkbank.pakete.sprache.entfernen'), gefahr: true }))) throw e;
         bestaetigt = true;
       }
-      if (bestaetigt) await api.paketEntfernen(id, false, true);
-      geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt', { name: inst.name });
+      if (bestaetigt) r = await api.paketEntfernen(id, false, true);
+      geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt', { name: inst.name }) + behaltenText(r?.beispieleBehalten);
     });
   };
-  const entfernenBestaetigt = () => void tu(async () => { await api.paketEntfernen(id, behalten); setEntfernenOffen(false); geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt-2', { name: inst!.name, wert: behalten ? t('werkbank.pakete.die-einstellungen-bleiben-fuer') : '' }); });
+  const entfernenBestaetigt = () => void tu(async () => { const r = await api.paketEntfernen(id, behalten); setEntfernenOffen(false); geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt-2', { name: inst!.name, wert: behalten ? t('werkbank.pakete.die-einstellungen-bleiben-fuer') : '' }) + behaltenText(r.beispieleBehalten); });
+  // Beispiele entfernen (#878): unveränderte Beispiel-Mappen samt Dokumenten; geänderte bleiben und werden genannt.
+  const beispieleEntfernen = async () => {
+    if (!inst || !(await rueckfrage({ titel: t('werkbank.pakete.beispiele-entfernen.frage', { name: inst.name }), text: t('werkbank.pakete.beispiele-entfernen.text'), ja: t('werkbank.pakete.beispiele-entfernen'), gefahr: true }))) return;
+    void tu(async () => { const r = await api.paketBeispieleEntfernen(id); return t('werkbank.pakete.beispiele-entfernt', { anzahl: r.entfernt }) + behaltenText(r.behalten); });
+  };
 
   if (!inst && !kp) return (
     <div className="leer">
@@ -534,6 +543,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           )}
           {!inst && kp && <button type="button" className="knopf primaer" disabled={laeuft || ablauf || !katalog} onClick={() => setAblauf(true)}>{t('werkbank.pakete.installieren')}</button>}
           {inst && neuer && <button type="button" className="knopf primaer" disabled={laeuft} onClick={() => void zeigeVorschau(neuer)}>{t('werkbank.pakete.auf-aktualisieren', { neuer })}</button>}
+          {inst && (inst.beispielMappen?.length ?? 0) > 0 && <button type="button" className="knopf" disabled={laeuft} onClick={() => void beispieleEntfernen()}>{t('werkbank.pakete.beispiele-entfernen')}</button>}
           {inst && <button type="button" className="knopf gefahr-rand" disabled={laeuft} onClick={entfernen}>{t('werkbank.pakete.entfernen')}</button>}
           {inst?.herkunft.art === 'hochgeladen' && <span className="leise klein">{t('werkbank.pakete.ein-hochgeladenes-paket')}</span>}
         </div>
@@ -773,7 +783,7 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
           {!v.update && fehlend.length > 0 && <label className="haken"><input type="checkbox" checked={mit} onChange={(e) => setMit(e.target.checked)} /><span>{t('werkbank.pakete.fehlende-pakete-mitinstallieren')}</span></label>}
         </>
       )}
-      {!v.update && v.beispiele > 0 && <label className="haken"><input type="checkbox" checked={beispiele} onChange={(e) => setBeispiele(e.target.checked)} /><span>{t('werkbank.pakete.beispiel-mappen-anlegen', { beispiele: v.beispiele })}</span></label>}
+      {!v.update && v.beispiele > 0 && <label className="haken"><input type="checkbox" checked={beispiele} onChange={(e) => setBeispiele(e.target.checked)} /><span>{t('werkbank.pakete.beispiel-mappen-anlegen', { beispiele: v.beispiele })}{v.beispielDokumente?.anzahl ? ` ${t('werkbank.pakete.mit-beispiel-dokumenten', { anzahl: v.beispielDokumente.anzahl, mb: inMB(v.beispielDokumente.bytes) })}` : ''}</span></label>}
       {neueAutos.length > 0 && (
         <fieldset className="stapel">
           <legend><strong>{tx('pakete.ablauf.automatisierungen')}</strong></legend>

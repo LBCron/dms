@@ -63,7 +63,7 @@ import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestl
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { dokumentsprachen, MAX_SEITENSPRACHEN, seitentexte, seitenZusammensetzen, SEITENVORSCHUB, SPRACHEN_JE_SEITE, zeichenzahl, type Seitensprache } from '../../shared/src/seitensprachen';
-import { ALLE_TYPEN, INHALT_EREIGNISSE, MAPPEN_EREIGNISSE, hatSchnittstelle, istKiPaket, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type KiUebersicht, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { ALLE_TYPEN, INHALT_EREIGNISSE, MAPPEN_EREIGNISSE, hatSchnittstelle, istKiPaket, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type KiUebersicht, type PaketCode, type Schnittstelle, type BeispielStand } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
@@ -631,6 +631,12 @@ function dateiname(v: unknown): string {
   // eslint-disable-next-line no-control-regex
   const s = text(v).split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f]/g, '').trim();
   return (s || 'Dokument').slice(0, 200);
+}
+
+/** Prüfwert von Feldwerten (#878): JSON mit sortierten Schlüsseln, damit die Reihenfolge aus der Datenbank nicht zählt. */
+function pruefwertVon(werte: unknown): string {
+  const sortiert = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortiert) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, x]) => [k, sortiert(x)])) : v);
+  return createHash('sha256').update(JSON.stringify(sortiert(werte ?? {}))).digest('hex');
 }
 
 /** Nur PDF und gängige Bilder werden im Browser angezeigt – erkannt am Inhalt, nicht am Namen. */
@@ -4939,13 +4945,16 @@ export class Dienst {
   entschluessele(wert: string): string | null { return this.tresor?.entschluessele(wert) ?? null; }
 
   /** Warum Mappentypen nicht weg dürfen: Mappen oder Papierkorb-Einträge. Leer = frei. */
-  async belegteTypen(ids: string[]): Promise<string[]> {
+  async belegteTypen(ids: string[], ohne: string[] = []): Promise<string[]> {
     const gruende: string[] = [];
     const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    // Mappen, die ohnehin mitgehen (#878: unveränderte Beispiele), zählen nicht.
+    const mitgehend = new Map<string, number>();
+    for (const m of await this.repo.holeMappen(ohne)) mitgehend.set(m.typId, (mitgehend.get(m.typId) ?? 0) + 1);
     for (const id of ids) {
       const eintrag = typen.get(id);
       if (!eintrag) continue;
-      const n = await this.repo.zaehleMappen(id);
+      const n = await this.repo.zaehleMappen(id) - (mitgehend.get(id) ?? 0);
       if (n) gruende.push(`${eintrag.name}: ${n} ${t('meldungen.dienst.mappen', { anzahl: n })}.`);
       const korb = (await this.repo.papierkorb({ typId: id })).length;
       if (korb) gruende.push(`${eintrag.name}: ${korb} im Papierkorb.`);
@@ -4953,11 +4962,69 @@ export class Dienst {
     return gruende;
   }
 
-  /** Nur für das Zurückrollen einer fehlgeschlagenen Paketinstallation: Mappen ohne Papierkorb entfernen. */
+  /** Nur für das Zurückrollen einer fehlgeschlagenen Paketinstallation: Mappen ohne Papierkorb entfernen (mit Dateien, #878). */
   async entferneMappenEndgueltig(ids: string[]) {
     const vorher = await this.lebendInhalt(await this.repo.holeMappen(ids));
-    for (const id of ids) await this.repo.loescheMappe(id);
+    const dateien = new Set((await Promise.all(ids.map((id) => this.repo.listeDokumente(id)))).flat().map((d) => d.sha256));
+    for (const id of await this.loeschReihenfolge(ids)) await this.repo.loescheMappe(id);
     await this.protokolliere(this.mappenEintraege(vorher, { schritt: 'endgueltig', weg: 'zurueckgerollt' }), await this.loeschKontext(null, { ausloeser: 'automatisch' }));
+    for (const sha of dateien) await this.raeumeAuf(sha);
+  }
+
+  /**
+   * Reihenfolge zum endgültigen Löschen mehrerer Mappen (#878): Mappen, auf die andere aus der Liste verweisen, zuletzt –
+   * sonst scheitert das Löschen am Fremdschlüssel der Verweise. Bei einem Kreis bleibt der Rest in der alten Reihenfolge.
+   */
+  private async loeschReihenfolge(ids: string[]): Promise<string[]> {
+    const offen = new Set(ids);
+    const quellen = new Map<string, string[]>();
+    for (const id of ids) quellen.set(id, (await this.repo.rueckverweise(id)).map((r) => r.quelleId).filter((q) => q !== id && offen.has(q)));
+    const erg: string[] = [];
+    while (offen.size) {
+      const frei = [...offen].filter((id) => !quellen.get(id)!.some((q) => offen.has(q)));
+      for (const id of frei.length ? frei : [...offen]) { offen.delete(id); erg.push(id); }
+    }
+    return erg;
+  }
+
+  /* ---------- Beispiel-Mappen aus Paketen (#878) ---------- */
+
+  /** Stand von Beispiel-Mappen direkt nach dem Anlegen: Prüfwert der Feldwerte und Dokumente (Id und Inhalt). */
+  async beispielStand(ids: string[]): Promise<BeispielStand[]> {
+    const mappen = await this.repo.holeMappen(ids);
+    return Promise.all(mappen.map(async (m) => ({ id: m.id, werte: pruefwertVon(m.werte), dokumente: (await this.repo.listeDokumente(m.id)).map((d) => `${d.id}:${d.sha256}`).sort() })));
+  }
+
+  /**
+   * Welche Beispiel-Mappen sind noch unverändert (#878)? Unverändert heißt: gleiche Feldwerte, dieselben Dokumente, keine
+   * Notizen und kein Verweis aus einer Mappe, die kein Beispiel dieser Liste ist. Gelöschte (auch im Papierkorb) fehlen.
+   */
+  async pruefeBeispiele(staende: BeispielStand[]): Promise<{ unveraendert: string[]; geaendert: Array<{ id: string; typId: string; titel: string; grund: 'geaendert' | 'verwiesen' }> }> {
+    const mappen = new Map((await this.repo.holeMappen(staende.map((s) => s.id))).map((m) => [m.id, m] as const));
+    const alle = new Set(mappen.keys());
+    const unveraendert: string[] = [];
+    const geaendert: Array<{ id: string; typId: string; titel: string; grund: 'geaendert' | 'verwiesen' }> = [];
+    for (const s of staende) {
+      const m = mappen.get(s.id);
+      if (!m) continue;
+      const dok = (await this.repo.listeDokumente(m.id)).map((d) => `${d.id}:${d.sha256}`).sort();
+      const gleich = pruefwertVon(m.werte) === s.werte && dok.join('|') === [...s.dokumente].sort().join('|') && !(await this.repo.notizen(m.id)).length;
+      const fremd = gleich && (await this.repo.rueckverweise(m.id)).some((r) => !alle.has(r.quelleId));
+      if (gleich && !fremd) unveraendert.push(m.id);
+      else geaendert.push({ id: m.id, typId: m.typId, titel: m.titel || m.id, grund: gleich ? 'verwiesen' : 'geaendert' });
+    }
+    return { unveraendert, geaendert };
+  }
+
+  /** Beispiel-Mappen samt Dokumenten endgültig entfernen (#878): ohne Papierkorb und Ereignisse, im Löschprotokoll. */
+  async entferneBeispielMappen(ids: string[], von: string | null) {
+    const mappen = await this.repo.holeMappen(ids);
+    const vorher = await this.lebendInhalt(mappen);
+    const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    const typVon = new Map(mappen.map((m) => [m.id, m.typId] as const));
+    await this.ohneEreignisse(async () => { for (const id of await this.loeschReihenfolge([...typVon.keys()])) await this.loescheMappeIntern(id, typen.get(typVon.get(id)!), von); });
+    await this.protokolliere(this.mappenEintraege(vorher, { schritt: 'endgueltig', weg: 'beispiele' }), await this.loeschKontext(von));
+    if (mappen.length) await this.aktualisiereStatistik();
   }
 
   /* ---------- Nummernkreise (#171) ---------- */
@@ -7133,6 +7200,8 @@ export class Dienst {
   /** Historien-Eintrag eines Eingangskanals (#196), z. B. nicht übernommene Anhänge. */
   async notiereSystem(mappeId: string, system: string, text: string) { await this.notiere(mappeId, null, 'uebernommen', { system, text }); }
   async anzahlDokumente(mappeId: string) { return (await this.repo.listeDokumente(mappeId)).length; }
+  /** Dokumente einer Mappe ohne Rechteprüfung (#878: Paket erstellen mit Beispiel-Dokumenten, nur für Administratoren). */
+  listeDokumente(mappeId: string) { return this.repo.listeDokumente(mappeId); }
 
   /** Gibt es die Mappe (z. B. eine Post mit vorgegebener Id) schon? */
   async gibtMappe(id: string) { return !!(await this.repo.holeMappe(id)); }
@@ -7204,7 +7273,7 @@ export class Dienst {
    * „version“ (neue Version des vorhandenen, nur mit Versionierung) oder „ersetzen“ (vorhandenes löschen,
    * nur ohne Versionierung).
    */
-  async ladeHoch(mappeId: string, e: { register?: string; name?: string; typ?: string; gleicherName?: string; herkunft?: Herkunft; volltext?: Volltextuebernahme }, inhalt: unknown, benutzerId: string | null) {
+  async ladeHoch(mappeId: string, e: { register?: string; name?: string; typ?: string; gleicherName?: string; herkunft?: Herkunft; volltext?: Volltextuebernahme; /** Nur intern (#878: Beispiel-Dokumente mit Datum). */ erstellt?: string }, inhalt: unknown, benutzerId: string | null) {
     const m = await this.repo.holeMappe(mappeId);
     if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
     const typ = await this.repo.holeTyp(m.typId);
@@ -7256,6 +7325,7 @@ export class Dienst {
         id: randomUUID(), mappeId, registerKey: reg.key, name, mime: erkannt ?? angegeben,
         groesse, sha256, anzeigbar: !!erkannt, erstellt: new Date().toISOString(), erstelltVon: benutzerId, herkunft: e.herkunft ?? 'hochgeladen',
       });
+      if (e.erstellt) { await this.repo.setzeDokumentErstellt(dokument.id, e.erstellt); dokument.erstellt = e.erstellt; }
       this.danach(() => this.neueDateien([dokument]));
       // Volltext (#45): neues Dokument in die Warteschlange, wenn das Register das will.
       let neu = dokument;

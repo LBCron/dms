@@ -21,6 +21,7 @@ Dann ausfüllen:
 | `inhalt/mappentypen.yaml` | Mappentypen mit Feldern, Registern, Titel und Trefferliste |
 | `inhalt/sichten.yaml` | Ansichten mit Elternansicht, Mappentypen und Bedingungen |
 | `inhalt/beispiele.yaml` | optional: Beispiel-Mappen mit erfundenen Daten |
+| `inhalt/beispiele/…` | optional (ab Ablago 0.222.0): Beispiel-Dokumente zu den Beispiel-Mappen (PDF, PNG, JPEG), nur erfundene Inhalte |
 | `inhalt/wortlisten.yaml` | optional (ab Ablago 0.127.0): Gruppen gleichbedeutender Wörter für die Suche |
 | `inhalt/automatisierungen.yaml` | optional (ab Ablago 0.177.0): vorgefertigte Automatisierungen, nach der Installation aus |
 | `README.md`, `LICENSE`, `CHANGELOG.md` | Beschreibung, Lizenztext, Änderungen je Version |
@@ -30,7 +31,7 @@ Dann ausfüllen:
 
 Statt mit der Vorlage zu beginnen, kannst du Mappentypen und Ansichten, die du in einem DMS gebaut hast, unter **Werkbank → Pakete → Paket erstellen** exportieren (ab Ablago 0.86.0, siehe [Administratorhandbuch → Paket aus deinem Ablago erstellen](https://help.ablago.app/admin/aktuell/pakete/#paket-aus-deinem-dms-erstellen)). Das Ergebnis ist ein ZIP mit einem Ordner `<id>/` im Format der Registry – `manifest.yaml`, `inhalt/mappentypen.yaml`, `inhalt/sichten.yaml`, ggf. `inhalt/beispiele.yaml`, `README.md` aus der Beschreibung, `CHANGELOG.md`, `LICENSE` mit dem vollen Lizenztext und `tests/erwartung.yaml`. Es besteht `werkzeuge/pruefen.py`; entpackt unter `pakete/` ist es ein fertiger Paketordner für einen Pull Request (README und Beschreibung lohnt es sich noch auszubauen).
 
-**Mindestversion beim Erstellen (dms #651):** „Paket erstellen“ ermittelt die nötige Ablago-Version selbst – `mindestversion()` in `server/src/paketerstellung.ts`. Grundlage ist 0.86.0 (seit dem gibt es „Paket erstellen“); jede benutzte Funktion aus `MINDEST_FUNKTIONEN` kann sie anheben: Verweise auf Mappentypen von Ablago (0.75.0), Verweise zwischen Beispielen (0.79.0), `erkennung` an Feldern (0.113.0), `format`, `landFeld` und Datumsgrenzen `min`/`max` (0.121.0). Zur Auswahl stehen dann `>=X.Y.0` von der Mindestversion bis zur eigenen Version (`dmsOptionen()`; Minor-Versionen, die es nie gab, fehlen). **Bringt das Paketformat etwas Neues, das „Paket erstellen“ mitnimmt, gehört es in `MINDEST_FUNKTIONEN`** – mit Test in `server/test/paketerstellung.test.ts`. Die Lizenz ist eine freie aus der Positivliste, eine eigene (`LicenseRef-<Name>`, Text als `LICENSE`) oder keine (`NONE`); Ablago installiert alle drei, `pruefen.py` lässt in den Katalog nur die Positivliste.
+**Mindestversion beim Erstellen (dms #651):** „Paket erstellen“ ermittelt die nötige Ablago-Version selbst – `mindestversion()` in `server/src/paketerstellung.ts`. Grundlage ist 0.86.0 (seit dem gibt es „Paket erstellen“); jede benutzte Funktion aus `MINDEST_FUNKTIONEN` kann sie anheben: Verweise auf Mappentypen von Ablago (0.75.0), Verweise zwischen Beispielen (0.79.0), `erkennung` an Feldern (0.113.0), `format`, `landFeld` und Datumsgrenzen `min`/`max` (0.121.0), Beispiel-Dokumente (0.222.0). Zur Auswahl stehen dann `>=X.Y.0` von der Mindestversion bis zur eigenen Version (`dmsOptionen()`; Minor-Versionen, die es nie gab, fehlen). **Bringt das Paketformat etwas Neues, das „Paket erstellen“ mitnimmt, gehört es in `MINDEST_FUNKTIONEN`** – mit Test in `server/test/paketerstellung.test.ts`. Die Lizenz ist eine freie aus der Positivliste, eine eigene (`LicenseRef-<Name>`, Text als `LICENSE`) oder keine (`NONE`); Ablago installiert alle drei, `pruefen.py` lässt in den Katalog nur die Positivliste.
 
 So bildet der Export Ablago auf das Paketformat ab:
 
@@ -44,7 +45,8 @@ So bildet der Export Ablago auf das Paketformat ab:
 | Standard-Trefferliste | `trefferliste`; weitere Trefferlisten fehlen |
 | Symbol der Ansicht (#428) | `symbol` an der Ansicht |
 | Bedingung auf ein Feld | `{ feld, operator, wert }`, dynamische Werte (heute, ich …) als Objekt; Bedingungen auf Anzahlen, Favoriten, Fristen und auf feste Mappen fehlen |
-| gewählte Beispiel-Mappen | `beispiele.yaml` mit `schluessel` und `{ beispiel: … }` für Verweise untereinander; ohne Passwörter, Dokumente und Verweise auf nicht gewählte Mappen |
+| gewählte Beispiel-Mappen | `beispiele.yaml` mit `schluessel` und `{ beispiel: … }` für Verweise untereinander; ohne Passwörter und Verweise auf nicht gewählte Mappen |
+| ihre Dokumente (nur mit „Mit ihren Dokumenten“, #878) | PDF, PNG und JPEG unter `inhalt/beispiele/beispiel_<n>/`, im Beispiel unter `dokumente` mit `titel` (Name in Ablago), `datum` und `register`; andere Dateiarten bleiben mit Hinweis draußen; dann `dms` mindestens `>=0.222.0` |
 | Nummernkreis am Feld, Berechtigungen, Archivmodus | fehlen (das Format kennt sie nicht); die Prüfung nennt sie |
 
 ## Paketformat (verbindlich)
@@ -86,6 +88,24 @@ Das Format beschreiben die JSON-Schemas in der Registry: [`schema/manifest.schem
     - Ablago legt die Beispiele so an, dass Ziele vorher da sind; die Reihenfolge in der Datei ist egal. Kreise (A → B → A), unbekannte Schlüssel und Präfixe, die nicht unter `abhaengigkeiten` stehen, lehnt es beim Lesen ab.
     - Werden die Beispiele installiert, kommen auch die der Abhängigkeiten mit, die dabei neu installiert werden. Ist eine Abhängigkeit schon **ohne** Beispiele installiert, bleiben Verweise darauf leer; die Vorschau sagt das. Ablago merkt sich die Mappen der Beispiele mit Schlüssel am installierten Paket (`beispiele`).
     - Beim Update entstehen keine Beispiele – wie bisher.
+- **Beispiel-Dokumente** (dms #878, dms-registry #137, ab 0.222.0): Ein Beispiel darf unter `dokumente` Dateien nennen, die im Paket unter `inhalt/beispiele/` liegen:
+
+    ```yaml
+    - typ: vertrag
+      schluessel: heizung_wartung
+      werte: { bezeichnung: Wartungsvertrag Heizung, partner: { beispiel: heizungsbau } }
+      dokumente:
+        - { datei: beispiele/heizung/wartungsvertrag.pdf, titel: Wartungsvertrag, datum: "2023-04-01" }
+        - { datei: beispiele/heizung/rechnung-2026.png, register: rechnungen }
+    ```
+
+    - `datei` (Pflicht) ist relativ zu `inhalt/` und beginnt mit `beispiele/`; Ordner und Namen nur aus Buchstaben, Ziffern, `.`, `-` und `_`. Erlaubt sind **PDF, PNG und JPEG** – erkannt am Inhalt, die Endung muss passen (`.pdf`, `.png`, `.jpg`, `.jpeg`). Je Datei höchstens so groß wie ein hochgeladenes Dokument (100 MB); alle Dateien unter `inhalt/beispiele/` zusammen höchstens `PAKET_MAX` (128 MB). Sie zählen nicht zur Grenze von 20 MB für die übrigen Inhalte.
+    - `titel` (optional, bis 200 Zeichen) ist der Name des Dokuments in Ablago; fehlt die Endung, hängt Ablago die der Datei an. Ohne `titel` gilt der Dateiname.
+    - `datum` (optional, `JJJJ-MM-TT`) wird „hochgeladen am“. Ohne Datum gilt der Zeitpunkt der Installation.
+    - `register` (optional) ist die Kennung eines Dokumentenregisters des Mappentyps; ohne Angabe das erste. Bei eigenen Mappentypen prüft Ablago das schon beim Lesen, bei Typen anderer Pakete beim Anlegen.
+    - Ablago legt die Dokumente **wie beim Hochladen** an (`Dienst.ladeHoch`, Herkunft `paket`): Vorschau, Volltext und Archivfassung nach den Einstellungen der Ablage; PDFs liest nur der Arbeiter über `ladePdf()`. Mappen-Ereignisse und Automatisierungen bleiben still (`ohneEreignisse`, Frage 71); Pakete, die Dateien verarbeiten (`dokument.hochgeladen`, `volltext.fertig`), bekommen sie. Scheitert ein Dokument, ist das ganze Paket zurückgenommen – samt Dateien.
+    - Am installierten Paket steht `beispielMappen`: je Beispiel Id, Prüfwert der Feldwerte und die Dokumente (`Id:sha256`). **Unverändert** ist ein Beispiel mit gleichen Feldwerten, denselben Dokumenten, ohne Notizen und ohne Verweis aus einer Mappe, die kein Beispiel ist. Nur solche entfernen „Beispiele entfernen“ (`POST /api/werkbank/pakete/{id}/beispiele/entfernen`) und das Entfernen des Pakets endgültig samt Dateien; geänderte bleiben und stehen in der Antwort bzw. in den Gründen.
+    - Ältere Ablago übergehen `dokumente`; Pakete damit verlangen `dms: ">=0.222.0"`. Nur erfundene Inhalte – Persona-Namen, Beispiel-Domains (`example.org`), ungültige Beispielwerte für IBAN, Steuer- und Versichertennummern; `pruefen.py` prüft Pfade, Dateiarten und Größen (dms-registry #137).
     - Pakete, die das nutzen, verlangen im Manifest `dms: ">=0.79.0"`.
 - **Wortlisten** (dms #356, ab 0.127.0): `inhalt.wortlisten` nennt eine Datei mit Gruppen gleichbedeutender Wörter für die Suche – wer eines sucht, findet auch die anderen. Jede Gruppe ist `{ woerter: [Kfz, Auto, PKW] }` mit 2 bis 20 verschiedenen Wörtern (je 2 bis 60 Zeichen; Groß-/Kleinschreibung und Umlaute zählen beim Vergleich nicht); höchstens 1000 Gruppen je Paket. Ablago legt sie beim Installieren an, ersetzt sie beim Update durch die des Pakets und entfernt sie mit dem Paket; in der Werkbank unter **Suche** stehen sie zum Ansehen. Pakete mit Wortlisten verlangen `dms: ">=0.127.0"` – ältere Ablago übergehen den Abschnitt stillschweigend. Beispiel:
 

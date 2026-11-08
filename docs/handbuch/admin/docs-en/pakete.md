@@ -22,7 +22,7 @@ Ablago loads the catalogue from `https://catalog.ablago.app/katalog.json` and ch
 3. Click **Continue with … packages**. On **one page**, Ablago now asks everything that is necessary, and only that:
     - for packages with code **what the code may do** – per package as a list, events as a sub-list, with **?** for an explanation (see [A package's permissions](#rechte-eines-pakets)). Below it **one** tick for all, otherwise **Install** stays grey
     - **names** that already exist: if there is already a folder type or a view (at the top level) with the same name, Ablago suggests another, e.g. "Organisation (Basis)". Everything else gets the name from the package, without asking
-    - **sample folders** – only if you set the tick
+    - **sample folders** – only if you set the tick; if they bring **example documents**, their number and size are shown (see [Examples](#beispiele))
     - **settings** without which a package doesn't run – or **Fill in later** (see [Settings](#einstellungen))
 4. At the bottom is the **summary**: which packages in which order, how many folder types and views, examples, packages with code. Below that the package's notes, e.g. whether it brings **synonyms** for the search (word lists, see [Search](suche.md#gleichbedeutende-worter)) or uses folder types from Ablago.
 5. Click **Install**.
@@ -98,6 +98,18 @@ The Ablago project **signs** the official catalogue (from Ablago 0.141.0). Becau
 
 Per package Ablago remembers version, **origin** (the catalogue), when and by whom it was installed or updated and which folder types and views belong to it. These details are part of the [backup](sicherung.md) and of the [full export](export.md) (`struktur/pakete.json`). Installing, updating and removing are in the log.
 
+## Examples { #beispiele }
+
+Many packages bring **sample folders** with invented data so that you can see what belongs in a folder. Since Ablago 0.222.0 they can also bring **example documents** – for instance a maintenance contract and two invoices for the folder "Heating". Both are only created if you set the tick **Sample folders** when installing; an update creates no examples.
+
+- **As if uploaded:** the documents land in the tab the package names and get a preview, full text (text recognition) and – if you have switched it on – an archive version, exactly like a document you upload yourself. Origin: *from a package*; the date is the date from the package.
+- **Only safe file types:** PDF, PNG and JPEG, each at most as large as when uploading. All of them together count towards a package's size limit (128 MB).
+- **Quiet:** sample folders and their documents trigger no [automations](automatisierungen.md) and no folder events. Packages that process files (such as text recognition or *Local AI – similarity*) still get the documents – otherwise they would lack the text.
+- **Removing again:** under **Workbench → Packages → *package***, **Remove examples** permanently deletes all of the package's sample folders **together with their documents**, without the Bin – as long as they are **unchanged**. Examples you have changed (fields, documents, notes) or that one of your folders refers to **stay** as normal folders; Ablago names them. When you [remove](#entfernen) the package, the same happens automatically. The deletion log records the removed examples as "package examples removed".
+- **Backup:** example documents are normal documents – they are in the [backup](sicherung.md) and the export until you remove them.
+
+For packages installed before 0.222.0, Ablago doesn't know the examples as such; you delete them like other folders.
+
 ## Updating { #aktualisieren }
 
 **Check for new versions** queries the catalogue (at the push of a button) and marks packages for which there is something newer. In the package, **Update to … …** shows a preview of what is added and a link to the changes.
@@ -137,12 +149,12 @@ For package authors, the format (`aus_text`) is in the [registry's rules](https:
 
 ## Removing { #entfernen }
 
-**Remove** deletes the package's folder types, views and word lists and its entry. That only works
+**Remove** deletes the package's folder types, views and word lists and its entry – and **unchanged sample folders** together with their documents (see [Examples](#beispiele)). That only works
 
-- as long as there are **no folders** of these folder types (not in the bin either) and
+- as long as there are **no other folders** of these folder types (not in the bin either) and
 - **no other package** depends on it.
 
-Otherwise Ablago names the reasons. You delete sample folders beforehand like other folders.
+Otherwise Ablago names the reasons – including every example you have changed; delete it yourself beforehand if you no longer need it. Changed examples in folder types of other packages (such as an "Organisation" from *Basis*) stay; Ablago names them after removing.
 
 If the package supplies full text or converts files (e.g. **Office and email**, **Image formats**), no documents wait for it any more afterwards: without text, the document again says that there is no package for this file type; if it already had text, the text stays.
 
@@ -513,7 +525,7 @@ If you have built your own folder types and views – for instance for contracts
 
 If you have already created packages, the first step first asks: **New package** (without a selection, without details) or **New version of …** (takes over selection and details of an earlier package and suggests the next version; folder types and views that no longer exist drop out with a notice, your own types created since then you add yourself).
 
-1. **Choose** – folder types, views and **word lists** (your own groups of synonyms from Workbench → Search) with ticks, a search at the top. Word lists from installed packages are greyed out and don't come along; a package with only word lists works too (from Ablago 0.127.0 at the recipient, there under "from packages"). Optionally **sample folders**: without a choice the package contains not a single folder. If you choose folders of the chosen types, their field values come along as examples – only take folders with invented data, e.g. demo folders.
+1. **Choose** – folder types, views and **word lists** (your own groups of synonyms from Workbench → Search) with ticks, a search at the top. Word lists from installed packages are greyed out and don't come along; a package with only word lists works too (from Ablago 0.127.0 at the recipient, there under "from packages"). Optionally **sample folders**: without a choice the package contains not a single folder. If you choose folders of the chosen types, their field values come along as examples – only take folders with invented data, e.g. demo folders. With the tick **Include their documents**, these folders' documents come along too (only PDF, PNG and JPEG, under `inhalt/beispiele/`; the package then needs Ablago from 0.222.0) – only use documents with invented content for this, never real invoices, contracts or letters.
 2. **Check** – Ablago checks automatically and says what it makes of it:
     - **From a package:** a folder type or a view that an installed package brought (for instance "Organisation" from *Basis*) is **not copied** but entered as a **dependency**, e.g. `basis: ">=1.1.0"` with the version installed here. If you have changed such a type here afterwards, Ablago points this out: your changes don't belong to your package – create a type of your own for them. The type then shows **"changed"** with a summary (e.g. "+2 fields · 1 field changed"); expanded you see every field and tab that differs from the package's state. Saving without a change doesn't count. For packages installed before this version, Ablago only knows the details after the package's next update.
     - **User, role:** links to them become `dms:benutzer` and `dms:rolle` – every Ablago installation brings these.
@@ -541,7 +553,7 @@ There are no updates from a catalogue for self-made packages. If a catalogue has
 **Next version:** Ablago remembers id, version, author, licence, selection and the fields of every created package. With **New version of …** the assistant suggests the same id with a higher version (default according to the recognised kind of change). If the other Library uploads the higher version, its Ablago **updates** the package like every update: it adds new fields, tabs and views and deletes nothing.
 
 !!! note "No data in the package"
-    A package only contains the structure – folder types and views. Folders, documents, notes, users and passwords never come along; from explicitly chosen sample folders only field values without passwords. Only administrators may create packages; the log records every export.
+    A package only contains the structure – folder types and views. Notes, users and passwords never come along; from explicitly chosen sample folders only field values without passwords and – only with the tick **Include their documents** – their documents. Only administrators may create packages; the log records every export.
 
 ## Your own packages { #eigene-pakete }
 

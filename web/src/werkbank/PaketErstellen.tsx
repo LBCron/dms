@@ -131,7 +131,7 @@ export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {})
 
       {schritt === 0 && frage && <NeuOderVersion stand={stand} neu={neuesPaket} version={ausEntwurf} />}
       {schritt === 0 && !frage && weg && <div className="hinweis warn" role="status"><p>{weg}</p></div>}
-      {schritt === 0 && !frage && <Auswahl stand={stand} e={e} suche={suche} setSuche={setSuche} umschalten={umschalten} pruefung={p} />}
+      {schritt === 0 && !frage && <Auswahl stand={stand} e={e} suche={suche} setSuche={setSuche} umschalten={umschalten} mitDokumenten={(an) => setze({ beispielDokumente: an })} pruefung={p} />}
 
       {schritt === 1 && (
         <section className="blatt" aria-label={t('werkbank.paketerstellen.pruefung')}>
@@ -220,7 +220,7 @@ function alsNeueVersion(w: PaketEntwurf, stand: ErstellenStand): { e: PaketErste
   const fehlt = w.typen.length - typen.length + w.sichten.length - sichten.length + (w.wortlisten ?? []).length - wortlisten.length;
   return {
     e: {
-      typen, sichten, beispiele: w.beispiele, wortlisten, id: w.id, name: w.name, version: '', beschreibung: w.beschreibung, autor: w.autor,
+      typen, sichten, beispiele: w.beispiele, wortlisten, ...(w.beispielDokumente ? { beispielDokumente: true } : {}), id: w.id, name: w.name, version: '', beschreibung: w.beschreibung, autor: w.autor,
       lizenz: w.lizenz, lizenzArt: w.lizenzArt ?? 'frei', lizenzName: w.lizenzName, lizenzText: w.lizenzText, dms: '', aenderungen: '',
     },
     weg: fehlt ? t('pakete.erstellen.frage.weg', { anzahl: fehlt }) : undefined,
@@ -248,9 +248,11 @@ function NeuOderVersion({ stand, neu, version }: { stand: ErstellenStand; neu():
 }
 
 /** Schritt 1: Mappentypen, Ansichten und (optional) Beispiel-Mappen wählen. */
-function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
+function Auswahl({ stand, e, suche, setSuche, umschalten, mitDokumenten, pruefung }: {
   stand: ErstellenStand; e: PaketErstellenEingabe; suche: string; setSuche(s: string): void; pruefung: PaketPruefung | null;
   umschalten(liste: 'typen' | 'sichten' | 'beispiele' | 'wortlisten', id: string, an: boolean): void;
+  /** Beispiel-Dokumente (#878) mitnehmen. */
+  mitDokumenten(an: boolean): void;
 }) {
   const s = suche.trim().toLowerCase();
   const passt = (n: string) => !s || n.toLowerCase().includes(s);
@@ -317,6 +319,8 @@ function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
             </ul>
           </details>
         ))}
+        {/* Beispiel-Dokumente (#878): nur auf ausdrücklichen Wunsch – Dokumente sind oft echt. */}
+        {e.beispiele.length > 0 && <label className="haken"><input type="checkbox" checked={!!e.beispielDokumente} onChange={(x) => mitDokumenten(x.target.checked)} /><span>{t('werkbank.paketerstellen.mit-dokumenten')}</span></label>}
       </section>
     </>
   );
@@ -329,7 +333,7 @@ function Inhalt({ p }: { p: PaketPruefung }) {
     <dl className="eigenschaften">
       <dt>{t('werkbank.paketerstellen.mappentypen')}</dt><dd>{p.inhalt.typen.map((eintrag) => eintrag.name).join(', ') || '–'}</dd>
       <dt>{t('werkbank.paketerstellen.ansichten')}</dt><dd>{p.inhalt.sichten.map((s) => (s.eltern ? `${p.inhalt.sichten.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ') || '–'}</dd>
-      <dt>{t('werkbank.paketerstellen.beispiele')}</dt><dd>{p.inhalt.beispiele || t('werkbank.paketerstellen.keine')}</dd>
+      <dt>{t('werkbank.paketerstellen.beispiele')}</dt><dd>{p.inhalt.beispiele ? <>{p.inhalt.beispiele}{p.inhalt.beispielDokumente ? ` ${t('werkbank.paketerstellen.mit-dokumenten-anzahl', { anzahl: p.inhalt.beispielDokumente })}` : ''}</> : t('werkbank.paketerstellen.keine')}</dd>
       <dt>{t('werkbank.paketerstellen.wortlisten')}</dt><dd>{p.inhalt.wortlisten || t('werkbank.paketerstellen.keine')}</dd>
       <dt>{t('werkbank.paketerstellen.abhaengigkeiten')}</dt><dd>{abh.length ? abh.map(([k, v]) => `${k} ${v}`).join(', ') : t('werkbank.paketerstellen.keine')}</dd>
     </dl>

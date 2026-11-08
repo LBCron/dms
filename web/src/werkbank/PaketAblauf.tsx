@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { auswahlMitAbhaengigkeiten, dmsPasst, passt, vergleicheVersion, type AblaufEingabe, type AblaufErgebnis, type AblaufInstallation, type AblaufPlan, type Ergaenzung, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../../shared/src/pakete';
+import { auswahlMitAbhaengigkeiten, dmsPasst, inMB, passt, vergleicheVersion, type AblaufEingabe, type AblaufErgebnis, type AblaufInstallation, type AblaufPlan, type Ergaenzung, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../../shared/src/pakete';
 import type { EinstellungFeld } from '../../../shared/src/paketeinstellungen';
 import { api, ApiFehler, type PaketVorschau, type Sammeldatei, type SammelPaket } from '../api';
 import { Hilfe } from '../Hilfe';
@@ -443,6 +443,8 @@ export function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig, sammeln, vor
           <h2 className="h3">{t('pakete.ablauf.beispiele')}</h2>
           <label className="haken"><input type="checkbox" checked={beispiele} onChange={(e) => setBeispiele(e.target.checked)} />
             <span>{mitBeispielen.length === 1 ? t('pakete.ablauf.beispiele.eins', { anzahl: mitBeispielen[0].vorschau.beispiele, name: mitBeispielen[0].name }) : t('pakete.ablauf.beispiele.alle', { anzahl: mitBeispielen.length })}</span></label>
+          {/* Beispiel-Dokumente (#878): wie viele und wie groß, damit niemand von 100 MB überrascht wird. */}
+          {mitBeispielen.some((p) => p.vorschau.beispielDokumente?.anzahl) && <p className="leise klein">{t('pakete.ablauf.beispiele.dokumente', { anzahl: mitBeispielen.reduce((n, p) => n + (p.vorschau.beispielDokumente?.anzahl ?? 0), 0), mb: inMB(mitBeispielen.reduce((n, p) => n + (p.vorschau.beispielDokumente?.bytes ?? 0), 0)) })}</p>}
           {beispiele && mitBeispielen.length > 1 && (
             <details className="pa-je-paket">
               <summary className="klein">{t('pakete.ablauf.beispiele.je')}</summary>

@@ -182,6 +182,11 @@ export interface InstalliertesPaket {
   sichten: Record<string, string>;
   /** Schlüssel der Beispiel-Mappen → Id (#347), nur wenn Beispiele mit Schlüssel angelegt wurden. */
   beispiele?: Record<string, string>;
+  /**
+   * Alle Beispiel-Mappen dieser Installation (#878) mit ihrem Stand direkt nach dem Anlegen. Unveränderte gehen beim
+   * Entfernen des Pakets und mit „Beispiele entfernen“ samt ihren Dokumenten weg; fehlt bei älteren Installationen.
+   */
+  beispielMappen?: BeispielStand[];
   abhaengigkeiten: Record<string, string>;
   /** Einstellungen, wie das Paket sie beschreibt (#197); null = keine. */
   einstellungen?: import('./paketeinstellungen').Einstellungsbeschreibung | null;
@@ -574,6 +579,18 @@ const TYPVERWEIS_ODER_ALLE = /^(\*|([a-z][a-z0-9_]{1,19}:)?[a-z][a-z0-9_]{0,39})
 export const PAKET_MAX = 128 * 1024 * 1024;
 /** Höchstens so groß sind alle Dateien unter code/ eines Pakets zusammen (#403) – dieselbe Grenze wie das Archiv (#644). */
 export const CODE_MAX = PAKET_MAX;
+/**
+ * Beispiel-Dokumente (#878): Dateien unter inhalt/beispiele/, die ein Beispiel unter `dokumente` nennt. Erlaubt sind
+ * PDF, PNG und JPEG (erkannt am Inhalt, passend zur Endung), je Datei höchstens so groß wie beim Hochladen; alle
+ * zusammen zählen zur Paketgrenze (PAKET_MAX). dms-registry prüft dasselbe (pruefen.py).
+ */
+export const BEISPIEL_ORDNER = 'inhalt/beispiele/';
+export const BEISPIEL_ENDUNGEN: Readonly<Record<string, string>> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+/** Ab dieser Version legt Ablago Beispiel-Dokumente an (#878); ältere übergehen `dokumente` an Beispielen. */
+export const BEISPIEL_DOKUMENTE_AB = '0.222.0';
+/** Stand einer Beispiel-Mappe nach dem Anlegen (#878): Prüfwert der Feldwerte und Dokumente als „Id:sha256“. */
+export interface BeispielStand { id: string; werte: string; dokumente: string[] }
+
 /** Größe in MB für Meldungen, gerundet auf eine Stelle mit Komma. */
 export const inMB = (bytes: number): string => (Math.round(bytes / 104857.6) / 10).toString().replace('.', ',');
 

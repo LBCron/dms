@@ -16,11 +16,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
-import { istLeer, type Abschnitt, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
+import { istLeer, MAX_DATEIGROESSE, type Abschnitt, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
 import { bereinigeAbschnitte } from '../../shared/src/darstellung';
 import { typBild, type TypBild } from '../../shared/src/typvergleich';
 import { ergaenzeBeschriftungen, type AbschnittTeile, type Beschriftungen, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
-import { ALLE_TYPEN, BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, DMS_ALIAS, veralteteVerweise, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEISPIEL_ENDUNGEN, BEISPIEL_ORDNER, BEREICH, CODE_MAX, PAKET_MAX, type BeispielStand, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, DMS_ALIAS, veralteteVerweise, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
@@ -75,18 +75,23 @@ function zipEintraege(buf: Buffer, max: number) {
 /** Dateinamen eines ZIP-Archivs, ohne zu entpacken (z. B. um eine Sammeldatei zu erkennen, #461). */
 export const zipNamen = (buf: Buffer, max = DATEIEN_MAX): string[] => zipEintraege(buf, max).map((x) => x.name);
 
+/** Dateien der Beispiel-Dokumente (#878), auch mit einem Ordner davor (selbst gepacktes ZIP, Paket erstellen). */
+const BEISPIEL_PFAD = /^(?:[^/]+\/)?inhalt\/beispiele\//;
+
 /** Liest ein ZIP-Archiv (gespeichert oder Deflate) mit Obergrenzen gegen ZIP-Bomben. */
 export function liesZip(buf: Buffer, grenzen: ZipGrenzen = PAKET_GRENZEN): Map<string, Buffer> {
   const kaputt = () => new Fachfehler(422, t('meldungen.pakete.das-archiv-ist-kein'));
   const dateien = new Map<string, Buffer>();
-  let gesamt = 0, code = 0;
+  let gesamt = 0, code = 0, beispiele = 0;
   for (const { name, flags, methode, crc, csize, usize, lokal } of zipEintraege(buf, grenzen.dateien)) {
     if (name.endsWith('/')) continue;
     if (flags & 1) throw new Fachfehler(422, t('meldungen.pakete.verschluesselte-archive-gehen-nicht'));
     if (name.startsWith('/') || name.split('/').includes('..')) throw new Fachfehler(422, t('meldungen.pakete.ungueltiger-dateiname-im-archiv', { name }));
     if (dateien.has(name)) throw new Fachfehler(422, t('meldungen.pakete.die-datei-steht-zweimal', { name }));
-    if (name.startsWith('code/')) code += usize; else gesamt += usize;
+    // Beispiel-Dokumente (#878) zählen zur Paketgrenze, nicht zur Grenze für die Inhalte (YAML, README).
+    if (name.startsWith('code/')) code += usize; else if (BEISPIEL_PFAD.test(name)) beispiele += usize; else gesamt += usize;
     if (gesamt > grenzen.entpackt) throw new Fachfehler(422, t('meldungen.pakete.das-archiv-ist-entpackt'));
+    if (beispiele > PAKET_MAX) throw new Fachfehler(422, t('meldungen.pakete.beispiel-dokumente-zu-gross', { max: inMB(PAKET_MAX) }));
     // Grobe Obergrenze gegen ZIP-Bomben; die genaue Meldung zu code/ kommt aus liesCode.
     if (code > 2 * CODE_MAX) throw new Fachfehler(422, t('meldungen.pakete.die-dateien-unter-code', { wert: CODE_MAX / 1048576 }));
     if (grenzen.budget && (grenzen.budget.rest -= usize) < 0) throw new Fachfehler(422, t('meldungen.pakete.die-pakete-der-sammeldatei'));
@@ -142,7 +147,35 @@ export interface PaketSicht { schluessel: string; name: string; beschreibung?: s
 /** Ab dieser Version verstehen DMS Ansichten mit `fremde_typen` (#656). */
 export const FREMDE_TYPEN_AB = '0.178.0';
 /** Beispiel-Mappe (#347): optional mit Schlüssel; Verweisfelder dürfen { beispiel: schluessel } bzw. { beispiel: paket:schluessel } sein. */
-export interface PaketBeispiel { typ: string; werte: Record<string, unknown>; schluessel?: string }
+export interface PaketBeispiel { typ: string; werte: Record<string, unknown>; schluessel?: string; /** Beispiel-Dokumente (#878). */ dokumente?: PaketBeispielDokument[] }
+/**
+ * Beispiel-Dokument (#878): `datei` relativ zu inhalt/ (beispiele/…), Titel = Dateiname in Ablago, Datum = „hochgeladen
+ * am“, Register = Dokumentenregister des Mappentyps (ohne: das erste).
+ */
+export interface PaketBeispielDokument { datei: string; titel?: string; datum?: string; register?: string }
+/** Pfad eines Beispiel-Dokuments unter inhalt/: beispiele/, höchstens vier Ordner, einfache Namen mit Endung. */
+const BEISPIEL_DATEI = /^beispiele\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]{0,79}\/){0,4}[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$/;
+const DATUM = /^\d{4}-\d{2}-\d{2}$/;
+/** Art einer Beispiel-Datei am Inhalt (#878): nur PDF, PNG und JPEG – und nur, wenn die Endung dazu passt. */
+export function beispielDateiart(name: string, inhalt: Buffer): string | null {
+  const erwartet = BEISPIEL_ENDUNGEN[name.slice(name.lastIndexOf('.') + 1).toLowerCase()];
+  const kopf = inhalt.subarray(0, 8).toString('latin1');
+  const ist = kopf.startsWith('%PDF-') ? 'application/pdf' : inhalt[0] === 0x89 && kopf.slice(1, 4) === 'PNG' ? 'image/png' : inhalt[0] === 0xff && inhalt[1] === 0xd8 && inhalt[2] === 0xff ? 'image/jpeg' : null;
+  return erwartet && ist === erwartet ? ist : null;
+}
+/** Anzahl und Größe der Beispiel-Dokumente eines Pakets (#878). */
+export function beispielDokumenteVon(p: Pick<Paket, 'beispiele' | 'beispielDateien'>): { anzahl: number; bytes: number } {
+  const liste = p.beispiele.flatMap((b) => b.dokumente ?? []);
+  return { anzahl: liste.length, bytes: liste.reduce((n, d) => n + (p.beispielDateien?.get(d.datei)?.length ?? 0), 0) };
+}
+/** Name des Dokuments in Ablago: der Titel (mit der Endung der Datei) oder der Dateiname. */
+export function beispielName(d: PaketBeispielDokument): string {
+  const datei = d.datei.slice(d.datei.lastIndexOf('/') + 1);
+  const endung = datei.slice(datei.lastIndexOf('.'));
+  const titel = d.titel?.trim();
+  if (!titel) return datei;
+  return titel.toLowerCase().endsWith(endung.toLowerCase()) ? titel : `${titel}${endung}`;
+}
 
 /** Verweis auf eine andere Beispiel-Mappe im Wert eines Felds (#347). */
 const istBeispielVerweis = (w: unknown): w is { beispiel: string } => istObjekt(w) && typeof w.beispiel === 'string' && Object.keys(w).length === 1;
@@ -179,6 +212,8 @@ export function ordneBeispiele(beispiele: PaketBeispiel[]): PaketBeispiel[] | nu
 /** Code eines Pakets (#338): Angaben aus dem Manifest und die Dateien unter code/ (modul.wasm, daten/…). */
 export interface PaketCodeTeil { info: PaketCode; dateien: Array<{ name: string; inhalt: Buffer }> }
 export interface Paket { manifest: Manifest; typen: PaketTyp[]; sichten: PaketSicht[]; beispiele: PaketBeispiel[]; /** Gleichbedeutende Wörter für die Suche (#356). */ wortlisten: string[][];
+  /** Inhalt der Beispiel-Dokumente (#878) je `datei` (relativ zu inhalt/). */
+  beispielDateien?: Map<string, Buffer>;
   /** Mitgelieferte Automatisierungen (#712, dms-registry #108), roh aus inhalt/automatisierungen.yaml; Typen als Paket-Schlüssel. */
   automatisierungen: PaketAutomatisierung[]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null;
   /** Sprachpaket (#731): Angaben, Texte und Beschriftungen der Standardpakete; null bei allen anderen Paketen. */
@@ -334,10 +369,23 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       bedingungen: Array.isArray(s.bedingungen) ? s.bedingungen.filter(istObjekt).map((b) => ({ feld: str(b.feld), operator: str(b.operator), wert: b.wert })) : [],
     };
   });
+  const beispielDateien = new Map<string, Buffer>();
   const beispiele = liste('beispiele').map((b, i): PaketBeispiel => {
     if (b.schluessel !== undefined && !SCHLUESSEL.test(str(b.schluessel))) fehler.push(t('meldungen.pakete.beispiele-ungueltiger-schluessel', { wert: i + 1, str: str(b.schluessel) }));
-    return { typ: str(b.typ), werte: istObjekt(b.werte) ? b.werte : {}, ...(b.schluessel !== undefined ? { schluessel: str(b.schluessel) } : {}) };
+    const dokumente = b.dokumente === undefined ? undefined : liesBeispielDokumente(b.dokumente, i + 1, dateien, beispielDateien, fehler);
+    return { typ: str(b.typ), werte: istObjekt(b.werte) ? b.werte : {}, ...(b.schluessel !== undefined ? { schluessel: str(b.schluessel) } : {}), ...(dokumente?.length ? { dokumente } : {}) };
   });
+  // Beispiel-Dokumente (#878) an eigenen Mappentypen: Das Register gibt es und ist ein Dokumentenregister.
+  for (const [i, b] of beispiele.entries()) {
+    if (!b.dokumente?.length) continue;
+    const eigen = !b.typ.includes(':') || b.typ.startsWith(`${str(m.id)}:`);
+    const typ = eigen ? typen.find((x) => x.schluessel === b.typ.split(':').pop()) : undefined;
+    if (!typ) continue;
+    for (const d of b.dokumente) {
+      const ok = d.register ? typ.register.some((r) => r.key === d.register && r.art === 'dokumente') : typ.register.some((r) => r.art === 'dokumente');
+      if (!ok) fehler.push(t('meldungen.pakete.beispiel-dokument-ohne-register', { wert: i + 1, datei: d.datei, register: d.register ?? '–' }));
+    }
+  }
   // Verweise zwischen Beispielen (#347): Schlüssel eindeutig, Ziele vorhanden bzw. aus einer Abhängigkeit, keine Kreise.
   {
     const eigene = new Set(beispiele.map((b) => b.schluessel).filter((s): s is string => !!s));
@@ -411,8 +459,36 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       ...(erg.ergaenzt ? { ergaenzt: erg.ergaenzt } : {}),
     },
     typen, sichten, beispiele, wortlisten, automatisierungen, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
-    sprache,
+    sprache, ...(beispielDateien.size ? { beispielDateien } : {}),
   };
+}
+
+/**
+ * Beispiel-Dokumente eines Beispiels (#878) lesen und prüfen wie beim Hochladen: Datei liegt unter inhalt/beispiele/,
+ * ist PDF, PNG oder JPEG (am Inhalt erkannt, passend zur Endung), nicht leer und nicht größer als beim Hochladen.
+ * PDFs liest Ablago hier nicht – das tun Vorschau und Texterkennung im Arbeiter (ladePdf), wie bei jedem Dokument.
+ */
+function liesBeispielDokumente(roh: unknown, nr: number, dateien: Map<string, Buffer>, inhalt: Map<string, Buffer>, fehler: string[]): PaketBeispielDokument[] {
+  if (!Array.isArray(roh)) { fehler.push(t('meldungen.pakete.beispiel-dokumente-liste', { wert: nr })); return []; }
+  return roh.flatMap((d, j): PaketBeispielDokument[] => {
+    const wo = { wert: nr, nr: j + 1 };
+    if (!istObjekt(d)) { fehler.push(t('meldungen.pakete.beispiel-dokumente-liste', { wert: nr })); return []; }
+    const datei = str(d.datei).replace(/^\.\//, '');
+    if (!BEISPIEL_DATEI.test(datei) || datei.split('/').includes('..')) { fehler.push(t('meldungen.pakete.beispiel-dokument-pfad', { ...wo, datei })); return []; }
+    const daten = dateien.get(`inhalt/${datei}`);
+    if (!daten) { fehler.push(t('meldungen.pakete.beispiel-dokument-fehlt', { ...wo, datei })); return []; }
+    if (!daten.length) { fehler.push(t('meldungen.pakete.beispiel-dokument-leer', { ...wo, datei })); return []; }
+    if (daten.length > MAX_DATEIGROESSE) { fehler.push(t('meldungen.pakete.beispiel-dokument-gross', { ...wo, datei, max: inMB(MAX_DATEIGROESSE) })); return []; }
+    if (!beispielDateiart(datei, daten)) { fehler.push(t('meldungen.pakete.beispiel-dokument-art', { ...wo, datei })); return []; }
+    const titel = d.titel === undefined ? undefined : str(d.titel).replace(/[\u0000-\u001f\u007f]/g, '').trim();
+    if (titel !== undefined && (!titel || titel.length > 200 || /[\\/]/.test(titel))) { fehler.push(t('meldungen.pakete.beispiel-dokument-titel', wo)); return []; }
+    const datum = d.datum === undefined ? undefined : d.datum instanceof Date ? d.datum.toISOString().slice(0, 10) : str(d.datum);
+    if (datum !== undefined && (!DATUM.test(datum) || new Date(`${datum}T12:00:00Z`).toISOString().slice(0, 10) !== datum)) { fehler.push(t('meldungen.pakete.beispiel-dokument-datum', { ...wo, datum })); return []; }
+    const register = d.register === undefined ? undefined : str(d.register);
+    if (register !== undefined && !SCHLUESSEL.test(register)) { fehler.push(t('meldungen.pakete.beispiel-dokument-register', { ...wo, register })); return []; }
+    inhalt.set(datei, daten);
+    return [{ datei, ...(titel ? { titel } : {}), ...(datum ? { datum } : {}), ...(register ? { register } : {}) }];
+  });
 }
 
 /** Liste von Schlüsseln aus einer Eingabe (#712: anzuschaltende Automatisierungen); alles andere → leer. */
@@ -567,6 +643,8 @@ export interface Vorschau {
   pruefung: HerkunftPruefung | null;
   abhaengigkeiten: AbhaengigkeitPlan[];
   typen: TypPlan[]; sichten: SichtPlan[]; beispiele: number;
+  /** Beispiel-Dokumente zu den Beispielen (#878): Anzahl und Größe zusammen in Bytes. */
+  beispielDokumente: { anzahl: number; bytes: number };
   /** Was die Installation verhindert. */
   probleme: string[];
   /** Feste Kennungen zu `probleme` für die Oberfläche (#729: nicht am Text erkennen), z. B. „schon-installiert“. */
@@ -1397,7 +1475,7 @@ export class Paketverwaltung {
       dmsVersion, dmsOk, installiert: ich?.version ?? null, update: !!ich,
       herkunft: ich?.herkunft ?? null,
       pruefung: null,
-      abhaengigkeiten, typen: typPlaene, sichten: sichtPlaene, beispiele: paket.beispiele.length, probleme, fehlercodes, hinweise,
+      abhaengigkeiten, typen: typPlaene, sichten: sichtPlaene, beispiele: paket.beispiele.length, beispielDokumente: beispielDokumenteVon(paket), probleme, fehlercodes, hinweise,
       automatisierungen: paket.automatisierungen.map((a) => ({ schluessel: a.schluessel, name: a.name, beschreibung: a.beschreibung, neu: !ich?.automatisierungen?.includes(a.schluessel) })),
       einstellungen: paket.einstellungen || ich?.einstellungen ? einstellungsAenderung(ich?.einstellungen ?? null, paket.einstellungen) : null,
       laeufer: paket.code ? { rechte: rechtePunkte(paket.code.info, (vw) => this.typName(vw, paket, installierte, typen)), bestaetigen: !ich || !gleicheRechte(ich.laeufer, paket.code.info) } : null,
@@ -1511,6 +1589,7 @@ export class Paketverwaltung {
     };
     // Zurückrollen: angelegte Mappen, Sichten, Typen; geänderte Typen auf den alten Stand.
     const mappen: string[] = [];
+    let beispielStaende: BeispielStand[] = [];
     const neueSichten: string[] = [];
     const geaendert: Mappentyp[] = [];
     // Abschnitte aus dem Update (#890) je Typ: gehören zum Paketstand (#653), nicht zu den eigenen Änderungen.
@@ -1626,8 +1705,24 @@ export class Paketverwaltung {
           try { mappeId = (await this.d.ohneEreignisse(() => this.d.legeMappeAn({ typId, werte }, von.id))).id; } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.beispiel', { meldungen: meldungen(f) })); }
           mappen.push(mappeId);
           if (b.schluessel) beispielIds.set(b.schluessel, mappeId);
+          // Beispiel-Dokumente (#878): wie beim Hochladen (Größe, Art, Vorschau, Volltext, Archivfassung), ohne
+          // Mappen-Ereignisse (Frage 71) – Pakete, die Dateien verarbeiten, bekommen sie trotzdem.
+          if (b.dokumente?.length) {
+            const register = (await this.d.listeTypen()).find((t) => t.id === typId)?.register.filter((r) => r.art === 'dokumente') ?? [];
+            for (const dok of b.dokumente) {
+              const reg = dok.register ? register.find((r) => r.key === dok.register) : register[0];
+              const inhalt = paket.beispielDateien?.get(dok.datei);
+              if (!reg || !inhalt) throw new Fachfehler(422, t('meldungen.pakete.beispiel', { meldungen: t('meldungen.pakete.beispiel-dokument-ohne-register', { wert: paket.beispiele.indexOf(b) + 1, datei: dok.datei, register: dok.register ?? '–' }) }));
+              const name = beispielName(dok);
+              try {
+                await this.d.ohneEreignisse(() => this.d.ladeHoch(mappeId, { register: reg.key, name, typ: beispielDateiart(dok.datei, inhalt) ?? undefined, herkunft: 'paket', ...(dok.datum ? { erstellt: `${dok.datum}T12:00:00.000Z` } : {}) }, inhalt, von.id));
+              } catch (f) { throw new Fachfehler(422, t('meldungen.pakete.beispiel', { meldungen: `${name}: ${meldungen(f)}` })); }
+            }
+          }
         }
         if (ohneZiel.size) log.info('Paket: Verweise in Beispielen ohne Ziel bleiben leer', { paket: m.id, ziele: [...ohneZiel] });
+        // Stand direkt nach dem Anlegen (#878): Unveränderte Beispiele lassen sich später samt Dokumenten entfernen.
+        beispielStaende = await this.d.beispielStand(mappen);
       }
       // Einstellungen (#197): Vorgaben setzen bzw. überführen; nach dem Entfernen behaltene Werte zählen.
       if (paket.einstellungen) {
@@ -1667,6 +1762,7 @@ export class Paketverwaltung {
         typen: typMap, sichten: sichtMap, abhaengigkeiten: m.abhaengigkeiten,
         // Beispiel-Mappen mit Schlüssel (#347), damit spätere Pakete auf sie verweisen können.
         ...(beispielIds.size ? { beispiele: Object.fromEntries(beispielIds) } : alt?.beispiele ? { beispiele: alt.beispiele } : {}),
+        ...(beispielStaende.length ? { beispielMappen: beispielStaende } : alt?.beispielMappen?.length ? { beispielMappen: alt.beispielMappen } : {}),
         einstellungen: paket.einstellungen, code: m.code !== undefined,
         ...(paket.automatisierungen.length ? { automatisierungen: paket.automatisierungen.map((a) => a.schluessel) } : {}),
         ...(paket.code ? { laeufer: { ...paket.code.info, modul: modulInfo(paket.code), daten: paket.code.dateien.filter((d) => d.name !== 'modul.wasm').map((d) => d.name) } } : {}),
@@ -2161,7 +2257,29 @@ export class Paketverwaltung {
    * nutzt vielleicht jemand: dann nur mit `spracheBestaetigt` – die Betroffenen sehen danach die Sprache der
    * Installation (Deutsch, wenn es deren Sprache war), ihre Wahl bleibt gespeichert und Mein Konto sagt es ihnen.
    */
-  async entferne(id: string, von: Handelnder, behalten = false, spracheBestaetigt = false): Promise<void> {
+  /**
+   * „Beispiele entfernen“ (#878): unveränderte Beispiel-Mappen des Pakets samt Dokumenten endgültig weg; geänderte (oder
+   * solche, auf die andere Mappen verweisen) bleiben als normale Mappen und werden genannt. Danach merkt sich das Paket
+   * keine Beispiele mehr.
+   */
+  async beispieleEntfernen(id: string, von: Handelnder): Promise<{ entfernt: number; behalten: Array<{ id: string; titel: string; grund: 'geaendert' | 'verwiesen' }> }> {
+    const p = (await this.d.listePakete()).find((x) => x.id === id);
+    if (!p) throw new Fachfehler(404, t('meldungen.pakete.ist-nicht-installiert', { id }));
+    const b = await this.d.pruefeBeispiele(p.beispielMappen ?? []);
+    if (b.unveraendert.length) await this.d.entferneBeispielMappen(b.unveraendert, von.id);
+    const weg = new Set(b.unveraendert);
+    const { beispielMappen: _bm, beispiele: alteSchluessel, ...rest } = p;
+    const schluessel = Object.fromEntries(Object.entries(alteSchluessel ?? {}).filter(([, mid]) => !weg.has(mid)));
+    await this.d.speicherePaket({ ...rest, ...(Object.keys(schluessel).length ? { beispiele: schluessel } : {}) });
+    log.info('Beispiele eines Pakets entfernt', { von: von.email, paket: id, entfernt: b.unveraendert.length, behalten: b.geaendert.length });
+    return { entfernt: b.unveraendert.length, behalten: b.geaendert.map(({ typId: _t, ...g }) => g) };
+  }
+
+  /**
+   * Paket entfernen. Unveränderte Beispiel-Mappen (#878) gehen samt Dokumenten mit; geänderte bleiben – in eigenen
+   * Mappentypen verhindern sie das Entfernen und stehen in den Gründen, in fremden bleiben sie und stehen im Ergebnis.
+   */
+  async entferne(id: string, von: Handelnder, behalten = false, spracheBestaetigt = false): Promise<{ beispieleBehalten: Array<{ id: string; titel: string; grund: 'geaendert' | 'verwiesen' }> }> {
     const alle = await this.d.listePakete();
     const p = alle.find((x) => x.id === id);
     if (!p) throw new Fachfehler(404, t('meldungen.pakete.ist-nicht-installiert', { id }));
@@ -2177,8 +2295,13 @@ export class Paketverwaltung {
     }
     const gruende: string[] = alle.filter((x) => x.id !== id && id in x.abhaengigkeiten).map((x) => t('meldungen.pakete.das-paket-braucht', { name: x.name, name2: p.name }));
     const typIds = Object.values(p.typen);
-    gruende.push(...await this.d.belegteTypen(typIds));
+    // Beispiel-Mappen (#878): unveränderte gehen mit, geänderte in eigenen Mappentypen werden als Grund genannt.
+    const bsp = await this.d.pruefeBeispiele(p.beispielMappen ?? []);
+    const eigeneTypen = new Set(typIds);
+    gruende.push(...bsp.geaendert.filter((g) => eigeneTypen.has(g.typId)).map((g) => (g.grund === 'verwiesen' ? t('meldungen.pakete.beispiel-behalten.verwiesen', { titel: g.titel }) : t('meldungen.pakete.beispiel-behalten.geaendert', { titel: g.titel }))));
+    gruende.push(...await this.d.belegteTypen(typIds, bsp.unveraendert));
     if (gruende.length) throw new Fachfehler(409, t('meldungen.pakete.laesst-sich-noch-nicht', { name: p.name }), { gruende });
+    if (bsp.unveraendert.length) await this.d.entferneBeispielMappen(bsp.unveraendert, von.id);
     // Untersichten zuerst, dann die Typen (Verweise untereinander: mehrere Runden).
     const sichten: Sicht[] = await this.d.listeSichten();
     const tiefe = (sid: string): number => { const s = sichten.find((x) => x.id === sid); return s?.elternId ? 1 + tiefe(s.elternId) : 0; };
@@ -2221,6 +2344,7 @@ export class Paketverwaltung {
     if (wartetAuf.length) await this.d.paketWegFuerDateien(p, wartetAuf).catch((e: Error) => log.warn('Wartende Dokumente nach dem Entfernen nicht zurückgesetzt', { paket: id, fehler: e.message }));
     // Einstellungen (#197): nur auf ausdrücklichen Wunsch für eine spätere Neuinstallation behalten.
     if (!behalten) await this.d.setzePaketEinstellungen(id, null);
-    log.info('Paket entfernt', { von: von.email, paket: id, version: p.version, einstellungenBehalten: behalten });
+    log.info('Paket entfernt', { von: von.email, paket: id, version: p.version, einstellungenBehalten: behalten, beispieleEntfernt: bsp.unveraendert.length });
+    return { beispieleBehalten: bsp.geaendert.filter((g) => !eigeneTypen.has(g.typId)).map(({ typId: _t, ...g }) => g) };
   }
 }

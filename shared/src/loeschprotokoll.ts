@@ -37,6 +37,7 @@ export const LOESCHWEGE = {
   zurueckgerollt: t('gemeinsam.loeschprotokoll.paketinstallation-zurueckgenommen'),
   /** #936: Aus der Post wurde eine neue Mappe; Dokumente und Historie liegen dort, die leere Post kommt weg. */
   aufgeloest: t('gemeinsam.loeschprotokoll.post-aufgeloest'),
+  beispiele: t('gemeinsam.loeschprotokoll.beispiele-eines-pakets'),
 } as const;
 export type Loeschweg = keyof typeof LOESCHWEGE;
 

@@ -22,7 +22,7 @@ Ablago lädt den Katalog von `https://catalog.ablago.app/katalog.json` und prüf
 3. Klicke **Weiter mit … Paketen**. Auf **einer Seite** fragt Ablago jetzt alles, was nötig ist, und nur das:
     - bei Paketen mit Code **was der Code darf** – je Paket als Liste, Ereignisse als Unterliste, mit **?** zur Erklärung (siehe [Rechte eines Pakets](#rechte-eines-pakets)). Darunter **ein** Haken für alle, sonst bleibt **Installieren** grau
     - **Namen**, die es schon gibt: Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, schlägt Ablago einen anderen vor, z. B. „Organisation (Basis)“. Alles andere bekommt den Namen aus dem Paket, ohne Rückfrage
-    - **Beispiel-Mappen** – nur, wenn du den Haken setzt
+    - **Beispiel-Mappen** – nur, wenn du den Haken setzt; bringen sie **Beispiel-Dokumente** mit, stehen Anzahl und Größe dabei (siehe [Beispiele](#beispiele))
     - **Einstellungen**, ohne die ein Paket nicht läuft – oder **Später ausfüllen** (siehe [Einstellungen](#einstellungen))
 4. Unten steht die **Zusammenfassung**: welche Pakete in welcher Reihenfolge, wie viele Mappentypen und Ansichten, Beispiele, Pakete mit Code. Darunter die Hinweise des Pakets, z. B. ob es **gleichbedeutende Wörter** für die Suche mitbringt (Wortlisten, siehe [Suche](suche.md#gleichbedeutende-worter)) oder Mappentypen aus Ablago nutzt.
 5. Klicke **Installieren**.
@@ -98,6 +98,18 @@ Das Ablago-Projekt **signiert** den offiziellen Katalog (ab Ablago 0.141.0). Wei
 
 Je Paket merkt sich Ablago Version, **Herkunft** (der Katalog), wann und von wem es installiert bzw. aktualisiert wurde und welche Mappentypen und Ansichten dazugehören. Diese Angaben sind Teil der [Sicherung](sicherung.md) und des [Vollexports](export.md) (`struktur/pakete.json`). Installieren, Aktualisieren und Entfernen stehen im Protokoll.
 
+## Beispiele { #beispiele }
+
+Viele Pakete bringen **Beispiel-Mappen** mit erfundenen Daten mit, damit du siehst, was in eine Mappe gehört. Seit Ablago 0.222.0 können sie auch **Beispiel-Dokumente** mitbringen – etwa einen Wartungsvertrag und zwei Rechnungen zur Mappe „Heizung“. Angelegt wird beides nur, wenn du beim Installieren den Haken **Beispiel-Mappen** setzt; bei einem Update entstehen keine Beispiele.
+
+- **Wie hochgeladen:** Die Dokumente landen im Register, das das Paket nennt, und bekommen Vorschau, Volltext (Texterkennung) und – wenn du sie eingeschaltet hast – eine Archivfassung, genau wie ein Dokument, das du selbst hochlädst. Herkunft: *von einem Paket*; als Datum steht das Datum aus dem Paket.
+- **Nur sichere Dateiarten:** PDF, PNG und JPEG, jede höchstens so groß wie beim Hochladen. Alle zusammen zählen zur Größengrenze eines Pakets (128 MB).
+- **Still:** Beispiel-Mappen und ihre Dokumente lösen keine [Automatisierungen](automatisierungen.md) und keine Mappen-Ereignisse aus. Pakete, die Dateien verarbeiten (etwa Texterkennung oder *KI lokal – Ähnlichkeit*), bekommen die Dokumente trotzdem – sonst fehlte ihnen der Text.
+- **Wieder entfernen:** Unter **Werkbank → Pakete → *Paket*** entfernt **Beispiele entfernen** alle Beispiel-Mappen des Pakets **samt ihren Dokumenten** endgültig, ohne Papierkorb – solange sie **unverändert** sind. Beispiele, an denen du etwas geändert hast (Felder, Dokumente, Notizen) oder auf die eine deiner Mappen verweist, **bleiben** als normale Mappen; Ablago nennt sie. Beim [Entfernen](#entfernen) des Pakets geschieht dasselbe von selbst. Das Löschprotokoll vermerkt die entfernten Beispiele als „Beispiele eines Pakets entfernt“.
+- **Sicherung:** Beispiel-Dokumente sind normale Dokumente – sie sind in der [Sicherung](sicherung.md) und im Export, bis du sie entfernst.
+
+Bei Paketen, die vor 0.222.0 installiert wurden, kennt Ablago die Beispiele nicht als solche; die löschst du wie andere Mappen.
+
 ## Aktualisieren
 
 **Auf neue Versionen prüfen** fragt den Katalog ab (auf Knopfdruck) und markiert Pakete, für die es Neueres gibt. Im Paket zeigt **Auf … aktualisieren …** eine Vorschau mit dem, was dazukommt, und einem Link zu den Änderungen.
@@ -137,12 +149,12 @@ Für Paket-Autoren steht das Format (`aus_text`) in den [Regeln der Registry](ht
 
 ## Entfernen
 
-**Entfernen** löscht die Mappentypen, Ansichten und Wortlisten des Pakets und seinen Eintrag. Das geht nur,
+**Entfernen** löscht die Mappentypen, Ansichten und Wortlisten des Pakets und seinen Eintrag – und **unveränderte Beispiel-Mappen** samt ihren Dokumenten (siehe [Beispiele](#beispiele)). Das geht nur,
 
-- solange es **keine Mappen** dieser Mappentypen gibt (auch nicht im Papierkorb) und
+- solange es **sonst keine Mappen** dieser Mappentypen gibt (auch nicht im Papierkorb) und
 - **kein anderes Paket** davon abhängt.
 
-Sonst nennt Ablago die Gründe. Beispiel-Mappen löschst du vorher wie andere Mappen.
+Sonst nennt Ablago die Gründe – auch jedes Beispiel, das du geändert hast; das löschst du vorher selbst, wenn du es nicht mehr brauchst. Geänderte Beispiele in Mappentypen anderer Pakete (etwa eine „Organisation“ aus *Basis*) bleiben stehen; Ablago nennt sie nach dem Entfernen.
 
 Ein **Sprachpaket** hat keine Mappentypen. Hat jemand seine Sprache gewählt oder ist sie die Sprache der Installation, fragt Ablago nach, bevor es entfernt – siehe [Sprachen → Sprachpakete](sprachen.md#sprachpakete).
 
@@ -515,7 +527,7 @@ Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit 
 
 Hast du schon Pakete erstellt, fragt der erste Schritt zuerst: **Neues Paket** (ohne Auswahl, ohne Angaben) oder **Neue Version von …** (übernimmt Auswahl und Angaben eines früheren Pakets und schlägt die nächste Version vor; Mappentypen und Ansichten, die es nicht mehr gibt, fallen mit Hinweis weg, eigene Typen, die du seitdem angelegt hast, nimmst du selbst dazu).
 
-1. **Auswählen** – Mappentypen, Ansichten und **Wortlisten** (deine eigenen Gruppen gleichbedeutender Wörter aus Werkbank → Suche) mit Haken, oben eine Suche. Wortlisten aus installierten Paketen stehen ausgegraut da und kommen nicht mit; ein Paket nur mit Wortlisten geht auch (ab Ablago 0.127.0 beim Empfänger, dort unter „aus Paketen“). Optional **Beispiel-Mappen**: Ohne Auswahl enthält das Paket keine einzige Mappe. Wählst du Mappen der gewählten Typen aus, kommen ihre Feldwerte als Beispiele mit – nimm nur Mappen mit erfundenen Daten, z. B. Demo-Mappen.
+1. **Auswählen** – Mappentypen, Ansichten und **Wortlisten** (deine eigenen Gruppen gleichbedeutender Wörter aus Werkbank → Suche) mit Haken, oben eine Suche. Wortlisten aus installierten Paketen stehen ausgegraut da und kommen nicht mit; ein Paket nur mit Wortlisten geht auch (ab Ablago 0.127.0 beim Empfänger, dort unter „aus Paketen“). Optional **Beispiel-Mappen**: Ohne Auswahl enthält das Paket keine einzige Mappe. Wählst du Mappen der gewählten Typen aus, kommen ihre Feldwerte als Beispiele mit – nimm nur Mappen mit erfundenen Daten, z. B. Demo-Mappen. Mit dem Haken **Mit ihren Dokumenten** kommen auch die Dokumente dieser Mappen mit (nur PDF, PNG und JPEG, unter `inhalt/beispiele/`; das Paket braucht dann Ablago ab 0.222.0) – nimm dafür nur Dokumente mit erfundenen Inhalten, nie echte Rechnungen, Verträge oder Briefe.
 2. **Prüfen** – Ablago prüft automatisch und sagt, was es daraus macht:
     - **Aus einem Paket:** Ein Mappentyp oder eine Ansicht, die ein installiertes Paket mitgebracht hat (etwa „Organisation“ aus *Basis*), wird **nicht kopiert**, sondern als **Abhängigkeit** eingetragen, z. B. `basis: ">=1.1.0"` mit der hier installierten Version. Hast du so einen Typ hier nachträglich geändert, weist Ablago darauf hin: Deine Änderungen gehören nicht zu deinem Paket – lege dafür einen eigenen Typ an. Am Typ steht dann **„geändert“** mit einer Kurzfassung (z. B. „+2 Felder · 1 Feld geändert“); aufgeklappt siehst du jedes Feld und Register, das vom Stand des Pakets abweicht. Speichern ohne Änderung zählt nicht. Bei Paketen, die vor dieser Version installiert wurden, kennt Ablago die Einzelheiten erst nach dem nächsten Update des Pakets.
     - **Benutzer, Rolle:** Verweise darauf werden zu `dms:benutzer` und `dms:rolle` – die bringt jede Ablago-Installation mit.
@@ -543,7 +555,7 @@ Updates aus einem Katalog gibt es für selbst erstellte Pakete nicht. Hat ein Ka
 **Nächste Version:** Ablago merkt sich Id, Version, Autor, Lizenz, Auswahl und die Felder jedes erstellten Pakets. Mit **Neue Version von …** schlägt der Assistent dieselbe Id mit höherer Version vor (Vorgabe nach der erkannten Art der Änderung). Lädt die andere Ablage die höhere Version hoch, **aktualisiert** ihr Ablago das Paket wie jedes Update: Es ergänzt neue Felder, Register und Ansichten und löscht nichts.
 
 !!! note "Keine Daten im Paket"
-    Ein Paket enthält nur den Aufbau – Mappentypen und Ansichten. Mappen, Dokumente, Notizen, Benutzer und Passwörter kommen nie mit; aus ausdrücklich gewählten Beispiel-Mappen nur Feldwerte ohne Passwörter. Paket erstellen dürfen nur Administratoren; das Protokoll vermerkt jeden Export.
+    Ein Paket enthält nur den Aufbau – Mappentypen und Ansichten. Notizen, Benutzer und Passwörter kommen nie mit; aus ausdrücklich gewählten Beispiel-Mappen nur Feldwerte ohne Passwörter und – nur mit dem Haken **Mit ihren Dokumenten** – ihre Dokumente. Paket erstellen dürfen nur Administratoren; das Protokoll vermerkt jeden Export.
 
 ## Eigene Pakete
 
