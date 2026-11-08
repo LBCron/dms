@@ -1409,6 +1409,9 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
         FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND d.id = ${id}`;
       return r ? alsDokument(r) : undefined;
     },
+    async setzeDokumentErstellt(id, erstellt) {
+      if (istUuid(id)) await sql`UPDATE dokumente SET erstellt = ${erstellt} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+    },
     async legeDokumentAn(d) {
       const [r] = await sql`
         INSERT INTO dokumente (id, haushalt_id, mappe_id, register_key, name, mime, groesse, sha256, anzeigbar, erstellt_von, herkunft)

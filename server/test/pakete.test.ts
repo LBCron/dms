@@ -231,10 +231,12 @@ function faelle(pg: boolean) {
       assert.ok((await d.listeSichten()).some((s) => s.id === neu.sichten.vereine && s.elternId === oben.id));
       await assert.rejects(p.aktualisiere('basis', {}, ICH), /schon installiert/);
 
-      // Entfernen geht erst ohne Mappen.
-      await assert.rejects(p.entferne('basis', ICH), (e) => e instanceof Fachfehler && e.status === 409 && JSON.stringify(e.details).includes('2 Mappen'));
-      const ids = (await d.seite(ADMIN, { sicht: oben.id })).mappen.map((m) => m.id);
-      await d.entferneMappenEndgueltig(ids);
+      // Entfernen geht erst ohne eigene Mappen; unveränderte Beispiel-Mappen gehen mit (#878), geänderte werden genannt.
+      const praxis = (await d.seite(ADMIN, { sicht: oben.id })).mappen.find((m) => m.titel === 'Praxis Dr. Beispiel')!;
+      await d.aendereMappe(praxis.id, { werte: { ...praxis.werte, beschreibung: 'Neue Sprechzeiten.' } }, ICH.id);
+      await assert.rejects(p.entferne('basis', ICH), (e) => e instanceof Fachfehler && e.status === 409 && JSON.stringify(e.details).includes('1 Mappe') && JSON.stringify(e.details).includes('„Praxis Dr. Beispiel“ wurde geändert'));
+      assert.equal((await d.seite(ADMIN, { sicht: oben.id })).gesamt, 2, 'beim Scheitern bleiben beide Beispiele');
+      await d.entferneMappenEndgueltig([praxis.id]);
       await p.entferne('basis', ICH);
       assert.ok(!(await d.listeTypen()).some((t) => t.id === typ.id));
       assert.ok(!(await d.listeSichten()).some((s) => Object.values(neu.sichten).includes(s.id)));

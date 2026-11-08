@@ -240,6 +240,8 @@
   "ablauf.beispiele.je": "Je Paket abwählen",
   "ablauf.beispiele.paket_one": "{name} ({anzahl} Beispiel-Mappe)",
   "ablauf.beispiele.paket_other": "{name} ({anzahl} Beispiel-Mappen)",
+  "ablauf.beispiele.dokumente_one": "Dazu kommt ein Beispiel-Dokument ({mb} MB), abgelegt wie ein hochgeladenes.",
+  "ablauf.beispiele.dokumente_other": "Dazu kommen {anzahl} Beispiel-Dokumente ({mb} MB), abgelegt wie hochgeladene.",
   "ablauf.automatisierungen": "Vorgefertigte Automatisierungen",
   "ablauf.automatisierungen.text": "In diesen Paketen stecken vorgefertigte Automatisierungen. Sollen sie gleich eingeschaltet werden? Was du abwählst, bleibt aus – du kannst es später unter Werkbank → Ablage aufbauen → Automatisierungen einschalten.",
   "ablauf.automatisierungen.paket": "aus „{name}“",

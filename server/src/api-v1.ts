@@ -599,7 +599,7 @@ const SCHEMAS: Record<string, Schema> = {
     adresse: { type: 'string', description: 'Adresse von Ablago für Links' }, oeffentlich: { type: 'boolean', description: 'Adresse sieht nach Internet aus (nicht localhost, kein privates Netz) – Vorschlag: Abruf-Link' }, mail: { type: 'boolean', description: 'E-Mail-Versand eingerichtet' } } },
   LoeschEintrag: { type: 'object', description: 'Ein Schritt einer Löschung (#470) – ohne Titel, Feldwerte und Dateinamen', properties: {
     id: uuid, zeit, art: { type: 'string', enum: ['mappe', 'dokument'] }, schritt: { type: 'string', enum: ['papierkorb', 'endgueltig', 'wiederhergestellt'] },
-    weg: { type: 'string', description: 'einzeln, mehrere, verknuepft, dokument, ersetzt, version, papierkorb, leeren, abmelden, ablauf, ausgeschaltet, zurueckgerollt, aufgeloest (Post in eine neue Mappe aufgelöst, #936)' },
+    weg: { type: 'string', description: 'einzeln, mehrere, verknuepft, dokument, ersetzt, version, papierkorb, leeren, abmelden, ablauf, ausgeschaltet, zurueckgerollt, beispiele (Beispiele eines Pakets entfernt), aufgeloest (Post in eine neue Mappe aufgelöst, #936)' },
     mappeId: uuid, typId: { ...uuid, nullable: true }, typ: { type: 'string', description: 'Name des Mappentyps beim Löschen' }, nummer: { type: 'string', nullable: true, description: 'Nummer aus dem Nummernkreis der Mappe' },
     archivnummer: { type: 'string', nullable: true }, dokumentId: { ...uuid, nullable: true }, version: { type: 'integer', nullable: true }, sha256: { type: 'string', nullable: true },
     groesse: { type: 'integer', nullable: true }, mime: { type: 'string', nullable: true }, seiten: { type: 'integer', nullable: true },

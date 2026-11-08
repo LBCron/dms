@@ -13,10 +13,11 @@
  *
  * `baue` ist eine reine Funktion (testbar ohne DMS); die Klasse holt den Stand aus dem Dienst.
  */
+import { buffer as alsPuffer } from 'node:stream/consumers';
 import { stringify } from 'yaml';
 import { istLeer, standardliste, trefferlistenVon, type Feld, type Mappe, type Mappentyp, type Register } from '../../shared/src/model';
 import { kreisImStandard } from '../../shared/src/nummernkreis';
-import { ALLE_TYPEN, BEREICH, DMS_ALIAS, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEISPIEL_DOKUMENTE_AB, BEISPIEL_ENDUNGEN, BEREICH, DMS_ALIAS, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
 import { liesWortgruppe } from '../../shared/src/suche';
 import type { Synonymgruppe } from './repo';
 import { BESCHREIBUNG_LAENGE, EIGENE_LIZENZ, GITHUB, istFreieLizenz, KEINE_LIZENZ, LIZENZ_VORGABE, LIZENZEN, LIZENZNAME_LAENGE, LIZENZTEXT_MAX, lizenzVerweis, NAME_LAENGE, naechsteVersion, naechsteVersionen, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type SelbstErstellt, type SelbstErstelltDetail, type VersionsArt, type VersionsLage } from '../../shared/src/paketerstellung';
@@ -25,7 +26,7 @@ import type { Dienst } from './dienst';
 import { t } from './sprache';
 import { Fachfehler } from './fehler';
 import { LIZENZTEXTE } from './lizenztexte';
-import { ARCHIV_MAX, BASIS_ABLAGEORT_AB, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, liesZip, type FremderTyp, type Handelnder } from './pakete';
+import { ARCHIV_MAX, BASIS_ABLAGEORT_AB, beispielDateiart, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, liesZip, type FremderTyp, type Handelnder } from './pakete';
 import { protokoll } from './protokoll';
 import { typBild, typUnterschiede, type TypUnterschiede } from '../../shared/src/typvergleich';
 import { wiederfindenVorgabe } from '../../shared/src/erkennung';
@@ -48,6 +49,7 @@ export const MINDEST_FUNKTIONEN = {
   feldformate: { ab: '0.121.0', grund: t('meldungen.paketerstellung.feldformate-und-datumsgrenzen') },
   wortlisten: { ab: DMS_WORTLISTEN_AB, grund: t('meldungen.paketerstellung.wortlisten') },
   fremdeTypen: { ab: FREMDE_TYPEN_AB, grund: t('meldungen.paketerstellung.ansichten-mit-mappentypen-die') },
+  beispielDokumente: { ab: BEISPIEL_DOKUMENTE_AB, grund: t('meldungen.paketerstellung.beispiel-dokumente') },
 } as const;
 export type MindestFunktion = keyof typeof MINDEST_FUNKTIONEN;
 /** Minor-Versionen, die es nie gab (übersprungen); erscheinen nicht in der Auswahl. */
@@ -125,6 +127,14 @@ export interface ErstellenDaten {
   dmsTypen: Map<string, string>;
   /** Gewählte Beispiel-Mappen (nur aus gewählten eigenen Typen). */
   mappen: Mappe[];
+  /**
+   * Beispiel-Dokumente (#878) je gewählter Mappe, wenn „mit Dokumenten“ gewählt ist: nur PDF, PNG und JPEG.
+   * `ausgelassen`: Dokumente anderer Art, die nicht mitkommen.
+   */
+  dokumente?: Map<string, Array<{ name: string; registerKey: string; erstellt: string; inhalt: Buffer }>>;
+  dokumenteAusgelassen?: number;
+  /** Alle Beispiel-Dokumente zusammen in Bytes, wenn sie nicht ins Archiv passen (dann ist keines geladen, das zu viel wäre). */
+  dokumenteZuGross?: number;
   /** Alle Gruppen gleichbedeutender Wörter (#661); eigene haben die Quelle „werkbank“. */
   wortlisten?: Synonymgruppe[];
   dmsVersion: string;
@@ -433,8 +443,31 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     }
     return { typ: schluessel[t.id], schluessel: bspKey.get(m.id)!, werte };
   });
+  // Beispiel-Dokumente (#878): unter inhalt/beispiele/<beispiel>/; der Name in Ablago wird zum Titel.
+  const dokDateien: Array<{ name: string; daten: Buffer }> = [];
+  if (e.beispielDokumente) {
+    for (const [i, m] of bsp.entries()) {
+      const liste = d.dokumente?.get(m.id) ?? [];
+      if (!liste.length) continue;
+      const belegt = new Set<string>();
+      const ordner = `beispiele/${beispiele[i].schluessel}`;
+      (beispiele[i] as Record<string, unknown>).dokumente = liste.map((x) => {
+        const endung = x.name.slice(x.name.lastIndexOf('.') + 1).toLowerCase();
+        const art = beispielDateiart(`a.${endung}`, x.inhalt) ? endung : Object.entries(BEISPIEL_ENDUNGEN).find(([k]) => beispielDateiart(`a.${k}`, x.inhalt))![0];
+        const stamm = x.name.slice(0, x.name.lastIndexOf('.') > 0 ? x.name.lastIndexOf('.') : undefined).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^[-.]+|-+$/g, '').slice(0, 80) || 'dokument';
+        let datei = `${stamm}.${art}`;
+        for (let n = 2; belegt.has(datei.toLowerCase()); n++) datei = `${stamm}-${n}.${art}`;
+        belegt.add(datei.toLowerCase());
+        dokDateien.push({ name: `inhalt/${ordner}/${datei}`, daten: x.inhalt });
+        return { datei: `${ordner}/${datei}`, titel: x.name, datum: x.erstellt.slice(0, 10), register: x.registerKey };
+      });
+    }
+    if (d.dokumenteZuGross) probleme.push(t('pakete.groesse.erstellenZuGross', { groesse: inMB(d.dokumenteZuGross), max: inMB(ARCHIV_MAX) }));
+    if (dokDateien.length) hinweis(t('meldungen.paketerstellung.beispiel-dokumente-kommen-mit', { anzahl: dokDateien.length }));
+    if (d.dokumenteAusgelassen) hinweis(t('meldungen.paketerstellung.beispiel-dokumente-ausgelassen', { anzahl: d.dokumenteAusgelassen }));
+  }
   if (ohneZiel) hinweis(t('meldungen.paketerstellung.beispiel-mappen-verweise-zeigen', { anzahl: ohneZiel }));
-  if (bsp.length) hinweis(t('meldungen.paketerstellung.beispiel-mappen-aus-deiner', { bsp: bsp.length }));
+  if (bsp.length) hinweis(e.beispielDokumente ? t('meldungen.paketerstellung.beispiel-mappen-aus-deiner-mit-dokumenten', { bsp: bsp.length }) : t('meldungen.paketerstellung.beispiel-mappen-aus-deiner', { bsp: bsp.length }));
 
   // 6. Wortlisten (#661): nur eigene Gruppen; aus Paketen nicht kopiert. Doppelte Wörter in einer Gruppe zusammengefasst.
   const wortlisten: Array<{ woerter: string[] }> = [];
@@ -458,6 +491,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   const genutzt: MindestFunktion[] = [];
   if (dmsVerweise) genutzt.push('dmsVerweise');
   if (beispielVerweise) genutzt.push('beispielVerweise');
+  if (dokDateien.length) genutzt.push('beispielDokumente');
   if (fremdeTypen) genutzt.push('fremdeTypen');
   if (wortlisten.length) genutzt.push('wortlisten');
   if (paketTypen.some((t) => (t.felder as Array<Record<string, unknown>>).some((f) => 'erkennung' in f))) genutzt.push('erkennung');
@@ -482,6 +516,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     sichten: sortiert.map((s) => ({ schluessel: String(s.schluessel), name: String(s.name), eltern: (s.eltern as string | undefined) ?? null })),
     beispiele: beispiele.length,
     ...(wortlisten.length ? { wortlisten: wortlisten.length } : {}),
+    ...(dokDateien.length ? { beispielDokumente: dokDateien.length } : {}),
   };
   if (probleme.length) return { probleme, fehlend, hinweise, abhaengigkeiten: abh, inhalt, schluessel, dateien: [], version: versionLage, felder: felderJetzt, lizenz };
 
@@ -503,7 +538,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     ...(paketTypen.length ? ['| Mappentyp | Felder |', '| --- | --- |', ...paketTypen.map((t) => `| ${zelle(String(t.name))} | ${zelle((t.felder as Array<{ label: string }>).map((f) => f.label).join(', ') || '–')} |`), ''] : []),
     ...(sortiert.length ? [`**Ansichten:** ${sortiert.map((s) => (s.eltern ? `${sortiert.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ')}`, ''] : []),
     ...(wortlisten.length ? [`**Wortlisten:** ${t('meldungen.paketerstellung.gruppen', { anzahl: wortlisten.length })} gleichbedeutender Wörter für die Suche`, ''] : []),
-    ...(beispiele.length ? [`**Beispiele:** ${beispiele.length} Beispiel-Mappen (${[...new Set(beispiele.map((b) => typName.get(b.typ)))].join(', ')}), auf Wunsch bei der Installation.`, ''] : []),
+    ...(beispiele.length ? [`**Beispiele:** ${beispiele.length} Beispiel-Mappen (${[...new Set(beispiele.map((b) => typName.get(b.typ)))].join(', ')})${dokDateien.length ? t('meldungen.paketerstellung.mit-beispiel-dokumenten', { anzahl: dokDateien.length }) : ''}, auf Wunsch bei der Installation.`, ''] : []),
     '## Voraussetzungen', '', `- Ablago ${dms}`,
     ...(Object.keys(abh).length ? Object.entries(abh).map(([k, v]) => `- Paket \`${k}\` ${v}`) : [t('meldungen.paketerstellung.keine-weiteren-pakete')]), '',
     '## Rechte und Netzwerkzugriff', '', t('meldungen.paketerstellung.dieses-paket-enthaelt-keinen'), '',
@@ -520,6 +555,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     { name: 'inhalt/mappentypen.yaml', daten: y(paketTypen) },
     { name: 'inhalt/sichten.yaml', daten: y(sortiert) },
     ...(beispiele.length ? [{ name: 'inhalt/beispiele.yaml', daten: y(beispiele) }] : []),
+    ...dokDateien,
     ...(wortlisten.length ? [{ name: 'inhalt/wortlisten.yaml', daten: y(wortlisten) }] : []),
     { name: 'README.md', daten: Buffer.from(readme) },
     { name: 'CHANGELOG.md', daten: Buffer.from(changelog) },
@@ -547,6 +583,7 @@ export function liesEingabe(x: unknown): PaketErstellenEingabe {
     ...(typeof o.lizenzText === 'string' ? { lizenzText: o.lizenzText.slice(0, LIZENZTEXT_MAX + 1) } : {}),
     ...(typeof o.bekannteVersion === 'string' && VERSION.test(o.bekannteVersion) ? { bekannteVersion: o.bekannteVersion } : {}),
     ...(o.vonHand === true ? { vonHand: true } : {}),
+    ...(o.beispielDokumente === true ? { beispielDokumente: true } : {}),
   };
 }
 
@@ -599,7 +636,7 @@ export class Paketerstellung {
   /** Angaben eines gemerkten Entwurfs mit höherer Version und aktueller DMS-Version. */
   ausEntwurf(e: PaketEntwurf): PaketErstellenEingabe {
     return {
-      typen: e.typen, sichten: e.sichten, beispiele: e.beispiele, wortlisten: e.wortlisten ?? [], id: e.id, name: e.name, version: naechsteVersion(e.version), beschreibung: e.beschreibung, autor: e.autor,
+      typen: e.typen, sichten: e.sichten, beispiele: e.beispiele, wortlisten: e.wortlisten ?? [], ...(e.beispielDokumente ? { beispielDokumente: true } : {}), id: e.id, name: e.name, version: naechsteVersion(e.version), beschreibung: e.beschreibung, autor: e.autor,
       lizenz: e.lizenz, lizenzArt: e.lizenzArt ?? 'frei', ...(e.lizenzName ? { lizenzName: e.lizenzName } : {}), ...(e.lizenzText ? { lizenzText: e.lizenzText } : {}), dms: '', aenderungen: '',
     };
   }
@@ -608,7 +645,24 @@ export class Paketerstellung {
     const typen = await this.d.listeTypen();
     const gewaehlt = new Set(e.beispiele);
     const mappen = gewaehlt.size ? (await Promise.all(e.typen.filter((t) => typen.some((x) => x.id === t)).map((t) => this.d.listeMappen(t)))).flat().filter((m) => gewaehlt.has(m.id)) : [];
+    // Beispiel-Dokumente (#878): nur PDF, PNG und JPEG; zusammen höchstens so viel, wie ins Archiv passt.
+    const dokumente = new Map<string, Array<{ name: string; registerKey: string; erstellt: string; inhalt: Buffer }>>();
+    let ausgelassen = 0, summe = 0;
+    if (e.beispielDokumente) {
+      for (const m of mappen) {
+        for (const x of await this.d.listeDokumente(m.id)) {
+          if (!['application/pdf', 'image/png', 'image/jpeg'].includes(x.mime)) { ausgelassen++; continue; }
+          summe += x.groesse;
+          if (summe > ARCHIV_MAX) continue;
+          const roh = (await this.d.dokumentInhalt(x.id)).inhalt;
+          const inhalt = Buffer.isBuffer(roh) ? roh : await alsPuffer(roh);
+          if (!beispielDateiart(x.mime === 'application/pdf' ? 'a.pdf' : x.mime === 'image/png' ? 'a.png' : 'a.jpg', inhalt)) { ausgelassen++; continue; }
+          dokumente.set(m.id, [...(dokumente.get(m.id) ?? []), { name: x.name, registerKey: x.registerKey, erstellt: x.erstellt, inhalt }]);
+        }
+      }
+    }
     return {
+      dokumente, dokumenteAusgelassen: ausgelassen, ...(summe > ARCHIV_MAX ? { dokumenteZuGross: summe } : {}),
       typen, sichten: await this.d.listeSichten(), pakete: await this.d.listePakete(), dmsTypen: await this.dmsTypen(), mappen, wortlisten: (await this.d.sucheStand()).synonyme,
       dmsVersion: this.o.version(), entwurf: (await this.d.paketEntwuerfe()).find((x) => x.id === e.id.trim()) ?? null, entwuerfe: await this.d.paketEntwuerfe(), jetzt: new Date(),
     };

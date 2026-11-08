@@ -21,6 +21,7 @@ Then fill in:
 | `inhalt/mappentypen.yaml` | folder types with fields, tabs, title and result list |
 | `inhalt/sichten.yaml` | views with parent view, folder types and conditions |
 | `inhalt/beispiele.yaml` | optional: sample folders with invented data |
+| `inhalt/beispiele/…` | optional (from Ablago 0.223.0): example documents for the sample folders (PDF, PNG, JPEG), invented content only |
 | `inhalt/wortlisten.yaml` | optional (from Ablago 0.127.0): groups of synonyms for the search |
 | `inhalt/automatisierungen.yaml` | optional (from Ablago 0.177.0): ready-made automations, off after installation |
 | `README.md`, `LICENSE`, `CHANGELOG.md` | description, licence text, changes per version |
@@ -32,7 +33,7 @@ The keys in these files are German (as in the registry's schemas), in every lang
 
 Instead of starting with the template, you can export folder types and views you have built in a DMS under **Workbench → Packages → Create package** (from Ablago 0.86.0, see [Administrator manual → Creating a package from your Ablago](https://help.ablago.app/admin/aktuell/en/pakete/#paket-aus-deinem-dms-erstellen)). The result is a ZIP with a folder `<id>/` in the registry's format – `manifest.yaml`, `inhalt/mappentypen.yaml`, `inhalt/sichten.yaml`, if applicable `inhalt/beispiele.yaml`, `README.md` from the description, `CHANGELOG.md`, `LICENSE` with the full licence text and `tests/erwartung.yaml`. It passes `werkzeuge/pruefen.py`; unpacked under `pakete/` it is a finished package folder for a pull request (README and description are still worth expanding).
 
-**Minimum version when creating (dms #651):** "Create package" determines the required Ablago version itself – `mindestversion()` in `server/src/paketerstellung.ts`. The basis is 0.86.0 (since then "Create package" has existed); every function used from `MINDEST_FUNKTIONEN` can raise it: links to Ablago's folder types (0.75.0), links between examples (0.79.0), `erkennung` on fields (0.113.0), `format`, `landFeld` and date limits `min`/`max` (0.121.0). You can then choose `>=X.Y.0` from the minimum version up to your own version (`dmsOptionen()`; minor versions that never existed are missing). **If the package format brings something new that "Create package" takes along, it belongs in `MINDEST_FUNKTIONEN`** – with a test in `server/test/paketerstellung.test.ts`. The licence is a free one from the positive list, a custom one (`LicenseRef-<name>`, text as `LICENSE`) or none (`NONE`); Ablago installs all three, `pruefen.py` only lets the positive list into the catalogue.
+**Minimum version when creating (dms #651):** "Create package" determines the required Ablago version itself – `mindestversion()` in `server/src/paketerstellung.ts`. The basis is 0.86.0 (since then "Create package" has existed); every function used from `MINDEST_FUNKTIONEN` can raise it: links to Ablago's folder types (0.75.0), links between examples (0.79.0), `erkennung` on fields (0.113.0), `format`, `landFeld` and date limits `min`/`max` (0.121.0), example documents (0.223.0). You can then choose `>=X.Y.0` from the minimum version up to your own version (`dmsOptionen()`; minor versions that never existed are missing). **If the package format brings something new that "Create package" takes along, it belongs in `MINDEST_FUNKTIONEN`** – with a test in `server/test/paketerstellung.test.ts`. The licence is a free one from the positive list, a custom one (`LicenseRef-<name>`, text as `LICENSE`) or none (`NONE`); Ablago installs all three, `pruefen.py` only lets the positive list into the catalogue.
 
 This is how the export maps Ablago to the package format:
 
@@ -46,7 +47,8 @@ This is how the export maps Ablago to the package format:
 | default result list | `trefferliste`; further result lists are missing |
 | the view's icon (#428) | `symbol` on the view |
 | condition on a field | `{ feld, operator, wert }`, dynamic values (today, me …) as an object; conditions on counts, favourites, deadlines and on fixed folders are missing |
-| chosen sample folders | `beispiele.yaml` with `schluessel` and `{ beispiel: … }` for links among each other; without passwords, documents and links to folders not chosen |
+| chosen sample folders | `beispiele.yaml` with `schluessel` and `{ beispiel: … }` for links among each other; without passwords and links to folders not chosen |
+| their documents (only with "Include their documents", #878) | PDF, PNG and JPEG under `inhalt/beispiele/beispiel_<n>/`, in the example under `dokumente` with `titel` (name in Ablago), `datum` and `register`; other file types stay out with a notice; then `dms` at least `>=0.223.0` |
 | number sequence on the field, permissions, archive mode | missing (the format doesn't know them); the check names them |
 
 ## Package format (binding) { #paketformat-verbindlich }
@@ -88,6 +90,24 @@ The format is described by the JSON schemas in the registry: [`schema/manifest.s
     - Ablago creates the examples so that targets exist beforehand; the order in the file doesn't matter. Circles (A → B → A), unknown keys and prefixes that aren't under `abhaengigkeiten` it rejects when reading.
     - If the examples are installed, those of the dependencies newly installed at the same time come along too. If a dependency is already installed **without** examples, links to it stay empty; the preview says so. Ablago remembers the examples' folders with keys on the installed package (`beispiele`).
     - On an update no examples arise – as before.
+- **Example documents** (dms #878, dms-registry #137, from 0.223.0): an example may name files under `dokumente` that are in the package under `inhalt/beispiele/`:
+
+    ```yaml
+    - typ: vertrag
+      schluessel: heizung_wartung
+      werte: { bezeichnung: Wartungsvertrag Heizung, partner: { beispiel: heizungsbau } }
+      dokumente:
+        - { datei: beispiele/heizung/wartungsvertrag.pdf, titel: Wartungsvertrag, datum: "2023-04-01" }
+        - { datei: beispiele/heizung/rechnung-2026.png, register: rechnungen }
+    ```
+
+    - `datei` (required) is relative to `inhalt/` and starts with `beispiele/`; folders and names only of letters, digits, `.`, `-` and `_`. Allowed are **PDF, PNG and JPEG** – recognised by their content, the extension must match (`.pdf`, `.png`, `.jpg`, `.jpeg`). Each file at most as large as an uploaded document (100 MB); all files under `inhalt/beispiele/` together at most `PAKET_MAX` (128 MB). They don't count towards the 20 MB limit for the other contents.
+    - `titel` (optional, up to 200 characters) is the document's name in Ablago; if the extension is missing, Ablago appends the file's. Without `titel` the file name applies.
+    - `datum` (optional, `YYYY-MM-DD`) becomes "uploaded on". Without a date the time of installation applies.
+    - `register` (optional) is the key of a document tab of the folder type; without it, the first one. For the package's own folder types Ablago checks this when reading, for types of other packages when creating.
+    - Ablago creates the documents **as if uploaded** (`Dienst.ladeHoch`, origin `paket`): preview, full text and archive version according to the Library's settings; only the worker reads PDFs, via `ladePdf()`. Folder events and automations stay quiet (`ohneEreignisse`, question 71); packages that process files (`dokument.hochgeladen`, `volltext.fertig`) get them. If a document fails, the whole package is rolled back – files included.
+    - The installed package has `beispielMappen`: per example the id, a checksum of the field values and the documents (`id:sha256`). An example is **unchanged** with the same field values, the same documents, no notes and no link from a folder that isn't an example. Only those are permanently deleted, files included, by "Remove examples" (`POST /api/werkbank/pakete/{id}/beispiele/entfernen`) and by removing the package; changed ones stay and are listed in the response or in the reasons.
+    - Older Ablago versions skip `dokumente`; packages using it require `dms: ">=0.223.0"`. Invented content only – persona names, example domains (`example.org`), invalid sample values for IBAN, tax and insurance numbers; `pruefen.py` checks paths, file types and sizes (dms-registry #137).
     - Packages that use this require `dms: ">=0.79.0"` in the manifest.
 - **Word lists** (dms #356, from 0.127.0): `inhalt.wortlisten` names a file with groups of synonyms for the search – whoever searches for one also finds the others. Every group is `{ woerter: [Kfz, Auto, PKW] }` with 2 to 20 different words (each 2 to 60 characters; upper/lower case and umlauts don't count in the comparison); at most 1000 groups per package. Ablago creates them on installation, replaces them with the package's on an update and removes them with the package; in the Workbench under **Search** they can be viewed. Packages with word lists require `dms: ">=0.127.0"` – older Ablago silently skip the section. Example:
 

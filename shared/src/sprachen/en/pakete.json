@@ -240,6 +240,8 @@
   "ablauf.beispiele.je": "Untick per package",
   "ablauf.beispiele.paket_one": "{name} ({anzahl} example folder)",
   "ablauf.beispiele.paket_other": "{name} ({anzahl} example folders)",
+  "ablauf.beispiele.dokumente_one": "This includes one example document ({mb} MB), filed like an uploaded one.",
+  "ablauf.beispiele.dokumente_other": "This includes {anzahl} example documents ({mb} MB), filed like uploaded ones.",
   "ablauf.automatisierungen": "Ready-made automations",
   "ablauf.automatisierungen.text": "These packages contain ready-made automations. Should they be switched on right away? What you untick stays off – you can switch it on later under Workbench → Build the library → Automations.",
   "ablauf.automatisierungen.paket": "from “{name}”",

@@ -435,6 +435,8 @@ export interface Repo {
   zaehleDokumente(mappeIds: string[]): Promise<Map<string, number>>;
   holeDokument(id: string): Promise<Dokument | undefined>;
   legeDokumentAn(d: Dokument): Promise<Dokument>;
+  /** „Hochgeladen am“ eines Dokuments setzen (#878: Beispiel-Dokumente mit Datum aus dem Paket). */
+  setzeDokumentErstellt(id: string, erstellt: string): Promise<void>;
   /* ---------- Versionierung (#194) ---------- */
   /** Ältere Versionen, neueste zuerst. */
   versionenVon(dokumentId: string): Promise<DokumentVersion[]>;

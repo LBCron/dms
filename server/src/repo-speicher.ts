@@ -568,6 +568,7 @@ export function speicherRepo(): Repo {
       return [...dokumente.values()].filter((d) => ids.has(d.mappeId)).map((d) => ({ ...kopie(d), aeltere: versionen.get(d.id)?.length ?? 0 })).reverse();
     },
     async holeDokument(id) { const d = dokumente.get(id); return d && { ...kopie(d), aeltere: versionen.get(d.id)?.length ?? 0 }; },
+    async setzeDokumentErstellt(id, erstellt) { const d = dokumente.get(id); if (d) d.erstellt = erstellt; },
     async legeDokumentAn(d) { const n = { version: 1, herkunft: null, ...kopie(d), archivnummer: null, ocr: d.ocr ?? { stand: 'keiner' as const } }; dokumente.set(d.id, n); return kopie(n); },
     async loescheDokument(id) { dokumente.delete(id); versionen.delete(id); },
     async versionenVon(id) { return [...(versionen.get(id) ?? [])].reverse().map(({ volltext: _v, ...x }) => kopie(x)); },

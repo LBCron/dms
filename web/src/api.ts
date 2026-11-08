@@ -858,8 +858,10 @@ export const api = {
   aehnlicheZurMappe: (id: string) => anfrage<{ verfuegbar: boolean; berechnet: boolean; mappen: AehnlicheMappe[] }>('GET', `/api/mappen/${id}/aehnliche`),
   paketEntfernen: (id: string, einstellungenBehalten = false, spracheBestaetigt = false) => {
     const q = [einstellungenBehalten ? 'einstellungenBehalten=1' : '', spracheBestaetigt ? 'spracheBestaetigt=1' : ''].filter(Boolean).join('&');
-    return anfrage<void>('DELETE', `/api/werkbank/pakete/${encodeURIComponent(id)}${q ? `?${q}` : ''}`);
+    return anfrage<{ beispieleBehalten: BeispielBehalten[] }>('DELETE', `/api/werkbank/pakete/${encodeURIComponent(id)}${q ? `?${q}` : ''}`);
   },
+  /** Beispiele entfernen (#878): unveränderte Beispiel-Mappen samt Dokumenten; geänderte bleiben und stehen in `behalten`. */
+  paketBeispieleEntfernen: (id: string) => anfrage<{ entfernt: number; behalten: BeispielBehalten[] }>('POST', `/api/werkbank/pakete/${encodeURIComponent(id)}/beispiele/entfernen`),
   /** Texte eines Sprachpakets (#731), auch vor der Anmeldung. */
   sprachTexte: (kennung: string) => anfrage<{ kennung: string; gebietsschema: string; maschinell: boolean; texte: Record<string, Record<string, string>> }>('GET', `/api/sprache/texte/${encodeURIComponent(kennung)}`),
   paketEinstellungen: (id: string) => anfrage<PaketEinstellungenStand>('GET', `/api/werkbank/pakete/${encodeURIComponent(id)}/einstellungen`),
@@ -1100,6 +1102,9 @@ export interface PaketQuelle {
   /** Gesperrt nach einem Schlüsselwechsel, bis der neue bestätigt ist (#594). */
   gesperrt?: { fingerabdruck: string; seit: string } | null;
 }
+/** Beispiel-Mappe, die beim Entfernen blieb (#878): geändert oder andere Mappen verweisen auf sie. */
+export interface BeispielBehalten { id: string; titel: string; grund: 'geaendert' | 'verwiesen' }
+
 /** Vorschau einer Paketinstallation bzw. eines Updates (#188). */
 export interface PaketVorschau {
   paket: { id: string; name: string; version: string; beschreibung: string; lizenz: string; autor: { name: string; github: string }; dms: string; abhaengigkeiten: Record<string, string>; readme: string | null; changelog: string | null; quelle: string | null };
@@ -1110,6 +1115,8 @@ export interface PaketVorschau {
   typen: Array<{ schluessel: string; dmsSchluessel: string; name: string; felder: number; vorhanden: boolean; neueFelder: string[]; neueRegister: string[]; erkennung?: string[]; wiederfinden?: string[]; typAngaben?: boolean; formate?: string[]; beschriftungen?: number; abschnitte?: string[]; umwandeln?: Array<{ feld: string; aus: string; anzahl: number }>; konflikt: string | null; vorschlag: string | null; geloescht?: boolean }>;
   sichten: Array<{ schluessel: string; name: string; eltern: string | null; vorhanden: boolean; konflikt: string | null; vorschlag: string | null; ausgelassen?: string | null; ohne?: string[] }>;
   beispiele: number; probleme: string[]; fehlercodes?: string[]; hinweise: string[]; einstellungen: { neu: string[]; weg: string[] } | null;
+  /** Beispiel-Dokumente zu den Beispielen (#878). */
+  beispielDokumente?: { anzahl: number; bytes: number };
   /** Mitgelieferte Automatisierungen (#712); neu = steht beim Installieren zur Wahl. */
   automatisierungen?: Array<{ schluessel: string; name: string; beschreibung: string; neu: boolean }>;
   /** Paket mit Code (#338): Rechte, Netzwerkzugriff und Ereignisse (#449); bestaetigen = muss ausdrücklich erlaubt werden. */
