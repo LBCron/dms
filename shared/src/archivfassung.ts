@@ -5,6 +5,7 @@
  *
  * - Der Kern meldet ein Dokument erst, wenn sein **Volltext feststeht** (Ereignis `datei.archivfassung`) – beim
  *   Hochladen, bei einer neuen Version, bei „Volltext neu erzeugen“ und nach der Installation des Pakets (Bestand).
+ *   E-Mails (#946) auch ohne Volltext: Liefert kein Paket ihn, gilt er als feststehend (leer).
  * - Das Paket liest die Datei (bzw. bei TIFF und Co. die Lesefassung aus `dms:umwandeln`), den Volltext und die
  *   **Wortpositionen** (`GET /dokumente/{id}/wortpositionen`) und gibt das PDF/A zurück
  *   (`PUT /dokumente/{id}/archivfassung?sha256=…`). Der Kern nimmt nur ein PDF mit PDF/A-Kennung an.
@@ -16,6 +17,19 @@ import { t } from './texte';
 
 /** Ab dieser Version kennt das DMS `dms:archivfassung`, `code.archivfassung` und das Ereignis `datei.archivfassung`. */
 export const DMS_ARCHIVFASSUNG_AB = '0.149.0';
+/** Dateitypen einer E-Mail (#946): `.eml` und Outlook `.msg`. */
+export const MAIL_TYPEN: readonly string[] = ['message/rfc822', 'application/vnd.ms-outlook'];
+/**
+ * Ist das Dokument eine E-Mail (Art `emails`, #946)? Liefert ihren Dateityp – `message/rfc822` bzw.
+ * `application/vnd.ms-outlook`, bei `application/octet-stream` nach der Endung `.eml`/`.msg` – oder null.
+ */
+export function mailTyp(mime: string, name?: string | null): string | null {
+  const m = mime.toLowerCase();
+  if (MAIL_TYPEN.includes(m)) return m;
+  if (m !== 'application/octet-stream' || !name) return null;
+  const n = name.trim().toLowerCase();
+  return n.endsWith('.eml') ? 'message/rfc822' : n.endsWith('.msg') ? 'application/vnd.ms-outlook' : null;
+}
 /** Höchstens so viele Dateitypen nennt ein Paket in `code.archivfassung.typen`. */
 export const ARCHIV_TYPEN_MAX = 40;
 /** Größere Dateien meldet der Kern nicht (das Paket hält Datei und Ergebnis im Speicher von 256 MB). */

@@ -540,6 +540,8 @@ function AnsichtKopf({ x, art, umschalten }: { x: Dokument; art: Ansichtsart; um
     <p className="dokansicht-kopf klein">
       <strong>{t.frei(`volltext.archiv.ansicht.${art}`)}</strong>
       {mitArchiv && x.anzeigbar && <> · <button type="button" className="textknopf" onClick={umschalten}>{art === 'archiv' ? t('volltext.archiv.original-anzeigen') : t('volltext.archiv.archiv-anzeigen')}</button></>}
+      {/* Original, das der Browser nicht zeigt (#946, z. B. eine E-Mail): „Original anzeigen“ lädt die Datei herunter. */}
+      {mitArchiv && !x.anzeigbar && <> · <a className="textknopf" href={dokumentUrl(x.id, true)} title={t('volltext.archiv.original-laden-titel')}>{t('volltext.archiv.original-anzeigen')}</a></>}
       {!mitArchiv && a?.stand === 'wartet' && <span className="leise"> · {t('volltext.archiv.wird-erstellt')}</span>}
       <Hilfe ort="dokumente.archivfassung" />
     </p>

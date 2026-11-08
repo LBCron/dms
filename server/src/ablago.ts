@@ -523,6 +523,9 @@ const pakete: Paketverwaltung = new Paketverwaltung(dienst, {
 // Ereignis „Volltext fertig“ (#336, #458) nach dem Schritt des Kerns – auch ohne Text, damit ein Paket für die
 // Texterkennung übernehmen kann; nicht bei Fehler, ausgelassen oder abgebrochen.
 texterkennung.nachher = (d, e, k) => {
+  // Ausgelassen: E-Mails bekommen trotzdem ihre Archivfassung (#946) – ohne Paket, das ihren Text liefert, steht ihr
+  // Volltext damit fest (leer).
+  if (e.stand === 'ausgelassen') { void dienst.volltextAusgelassen(d.id); return; }
   if (e.stand !== 'fertig' && e.stand !== 'paket') return;
   // Umgewandelte Datei (#577): mime ist der Typ der Fassung, original der des Dokuments.
   void dienst.volltextFertig({ dokument: d.id, mappe: d.mappeId }, { quelle: 'kern', text: k.text, mime: k.mime ?? d.mime, ...(k.original ? { original: k.original } : {}), seiten: e.seiten ?? null, neu: k.neu, seitenOhneText: k.seitenOhneText });

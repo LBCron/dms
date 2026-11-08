@@ -58,7 +58,7 @@
   "name.datei.volltext": "Full text of a file",
   "text.datei.volltext": "Job for a package: a file needs its full text (file types Ablago doesn’t read itself).",
   "name.datei.archivfassung": "Archive version of a file",
-  "text.datei.archivfassung": "Job for a package: a document with finished full text needs its archive version (PDF/A).",
+  "text.datei.archivfassung": "Job for a package: a document with finished full text (emails also without) needs its archive version (PDF/A).",
   "gruppe.mappe": "Folders",
   "gruppe.zeit": "Time",
   "gruppe.person": "For people",

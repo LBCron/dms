@@ -70,7 +70,7 @@ import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './da
 import { PaketVolltext } from './paketvolltext';
 import type { ArchivAblage, ArchivAnbindung, Archivfassung } from './archivfassung';
 import type { EntsperrenAnbindung, PdfEntsperren } from './entsperren';
-import { archivfassungName, pruefeWoerter } from '../../shared/src/archivfassung';
+import { archivfassungName, MAIL_TYPEN, pruefeWoerter } from '../../shared/src/archivfassung';
 import { vorgaben } from '../../shared/src/paketeinstellungen';
 import { liesPdfA, textebeneWoerter } from './pdf';
 import { INFO_VOLLTEXT_DURCH, INFO_VOLLTEXT_PAKET, infoVolltextPaket, katalogVolltext, VOLLTEXT_ZEICHEN_MAX } from '../../shared/src/paketvolltext';
@@ -1517,19 +1517,30 @@ export class Dienst {
     };
   }
 
-  /** Der Volltext steht fest (#631): Dokument an das Paket für die Archivfassung melden – im Hintergrund. */
+  /**
+   * Der Volltext steht fest (#631): Dokument an das Paket für die Archivfassung melden – im Hintergrund. Ob es passt
+   * (Volltext fertig bzw. bei E-Mails auch ausgelassen, #946), entscheidet `anfordern`.
+   */
   private async archivNachVolltext(id: string, neu?: boolean) {
     if (!this.archiv) return;
     try {
       const d = await this.repo.holeDokument(id);
-      if (d?.ocr?.stand === 'fertig') await this.archiv.anfordern(d, { neu });
+      if (d) await this.archiv.anfordern(d, { neu });
     } catch (e) { protokoll.modul('archivfassung').warn('Dokument nicht zur Archivfassung gemeldet', { dokument: id, fehler: (e as Error).message }); }
   }
+
+  /**
+   * Der Kern hat den Volltext ausgelassen (#946), z. B. eine E-Mail ohne Paket, das ihren Text liefert: Für E-Mails
+   * steht er damit fest (leer) – sie gehen trotzdem an das Paket für die Archivfassung. Andere Dokumente nicht.
+   */
+  volltextAusgelassen(id: string) { return this.archivNachVolltext(id); }
 
   /** Paket für die Archivfassung installiert, neue Dateitypen oder eine Art nachträglich angekreuzt: Bestand melden (#631, #660). */
   async archivPaketDa(typen: string[]): Promise<number> {
     if (!this.archiv || !typen.length) return 0;
     const klein = new Set(typen.map((m) => m.toLowerCase()));
+    // E-Mails (#946) liegen oft als application/octet-stream mit Endung .eml/.msg da.
+    if ([...klein].some((m) => MAIL_TYPEN.includes(m))) klein.add('application/octet-stream');
     const vorhanden = Object.keys(await this.repo.dokumentTypen()).filter((m) => klein.has(m.toLowerCase()));
     return this.archiv.bestand(vorhanden);
   }
@@ -1650,7 +1661,8 @@ export class Dienst {
     const mitText = !!text && text.replace(/\s/g, '').length >= 20;
     const info = r.ok ? `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket}: ${grund || t('meldungen.dienst.kein-volltext-geliefert')}` : `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
     await this.repo.ocrSetze(d.id, { stand: !r.ok ? 'fehler' : mitText ? 'fertig' : 'ausgelassen', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
-    if (r.ok && mitText) void this.archivNachVolltext(d.id, e.daten.neu === true);
+    // Archivfassung (#631): mit Text; E-Mails (#946) auch ohne – ihr Volltext steht jetzt fest.
+    if (r.ok) void this.archivNachVolltext(d.id, e.daten.neu === true);
   }
 
   /* ---------- Volltext (#45) ---------- */
