@@ -60,7 +60,7 @@ const paket = (id: string, code: Record<string, unknown>, name = 'Bildformate'):
 const texterkennungPaket = (): InstalliertesPaket => paket('texterkennung', { sprache: 'c', ereignisse: ['volltext.fertig'], rechte: { lesen: ['*'], dokumente: 'schreiben', schnittstellen: ['dms:texterkennung'] } }, 'Texterkennung');
 
 /** Dienst mit Texterkennung (Ersatz-Engine), Vorschaubildern (Ersatz-Erzeuger) und Dateiumwandlung im Speicher. */
-async function aufbau(o: { mitPaket?: boolean; mitTexterkennung?: boolean; mitHoerer?: boolean } = {}) {
+async function aufbau(o: { mitPaket?: boolean; mitTexterkennung?: boolean; mitHoerer?: boolean; mitNetz?: boolean } = {}) {
   const repo = speicherRepo();
   const dateien = speicherDateien();
   const einstellungen = speicherEinstellungen();
@@ -81,8 +81,8 @@ async function aufbau(o: { mitPaket?: boolean; mitTexterkennung?: boolean; mitHo
   const u = new Dateiumwandlung(d.umwandlungAnbindung(ablage, vorschau));
   d.verbindeUmwandlung(u, vorschau);
   vorschau.fassung = (sha) => u.lies(sha);
-  t.umwandlung = { lies: (sha) => u.lies(sha), paketFuer: (m) => u.paketFuer(m), anfordern: (x) => u.anfordern(x) };
-  if (o.mitPaket !== false) await d.speicherePaket(paket('bildformate', MANIFEST_CODE));
+  t.umwandlung = { lies: (sha) => u.lies(sha), paketFuer: (m) => u.paketFuer(m), anfordern: (x) => u.anfordern(x), gesperrt: (sha) => u.gesperrt(sha) };
+  if (o.mitPaket !== false) await d.speicherePaket(paket('bildformate', o.mitNetz ? { ...MANIFEST_CODE, netz: ['https://umwandler.example.org/v1'] } : MANIFEST_CODE));
   if (o.mitTexterkennung) await d.speicherePaket(texterkennungPaket());
   // Ein Paket, das nur „Volltext fertig“ hört (z. B. für Vektoren) – damit das Ereignis im Ausgangskorb landet.
   if (o.mitHoerer) await d.speicherePaket(paket('hoerer', { sprache: 'c', ereignisse: ['volltext.fertig'], rechte: { lesen: ['*'], dokumente: 'lesen' } }, 'Hörer'));
@@ -99,7 +99,7 @@ async function aufbau(o: { mitPaket?: boolean; mitTexterkennung?: boolean; mitHo
   const ereignisse = async (art: string) => (await repo.faelligeEreignisse(1000)).filter((e) => e.art === art);
   const alsPaket = { paket: { id: 'bildformate', schreiben: new Set<string>(), dokumente: 'lesen' as const, schnittstellen: ['dms:umwandeln' as const] } } as unknown as Zugriff;
   const dok = async (id: string) => (await repo.holeDokument(id))!;
-  return { d, t, u, repo, m, hoch, ereignisse, ablage, bilder, vorschau, alsPaket, gelesen, dok };
+  return { d, t, u, repo, m, typ, hoch, ereignisse, ablage, bilder, vorschau, alsPaket, gelesen, dok, warte };
 }
 
 describe('Dateien umwandeln (#577): Manifest und Rechte', () => {
@@ -380,5 +380,46 @@ describe('Dateien umwandeln (#577): Ablage im Haushaltsordner (seit 0.140.1, in 
       assert.ok(!FASSUNG_PFAD.test(`aa/${a}`) && !FASSUNG_PFAD.test('designs/aa/x.json'));
       assert.equal(JSON.parse(await readFile(join(wurzel, haushalt, 'fassungen', 'aa', `${a}.json`), 'utf8')).sha256, 'alt-a');
     } finally { await rm(wurzel, { recursive: true, force: true }); }
+  });
+});
+
+describe('Dateien umwandeln (#796): KI-Sperre je Mappentyp', () => {
+  /** Paket mit Netz (KI-Paket); „Gesundheit“ ist neu und damit gesperrt, „Rechnung“ wird zugelassen. */
+  async function mitSperre() {
+    const x = await aufbau({ mitNetz: true });
+    const gesundheit = await x.d.legeTypAn({ name: 'Gesundheit', felder: [{ key: 'nr', label: 'Nr', typ: 'text' }], register: [{ key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['nr'] }, { key: 'dokumente', name: 'Dokumente', art: 'dokumente' }] });
+    const befund = await x.d.legeMappeAn({ typId: gesundheit.id, werte: { nr: 'B-1' } });
+    const hochGesperrt = async (name: string, inhalt: Buffer) => {
+      const id = (await x.d.ladeHoch(befund.id, { register: 'dokumente', name, typ: 'image/tiff' }, inhalt, null)).dokument.id;
+      await x.warte(async () => !['wartet', 'laeuft'].includes((await x.repo.holeDokument(id))!.ocr!.stand));
+      return id;
+    };
+    return { ...x, hochGesperrt };
+  }
+
+  it('nur gesperrte Dokumente mit dieser Datei: kein Auftrag, das Dokument ist gleich ausgelassen (ohne Zeitgeber)', async () => {
+    const x = await mitSperre();
+    const id = await x.hochGesperrt('befund.tif', TIFF);
+    assert.deepEqual(await x.ereignisse('datei.umwandeln'), []);
+    const o = (await x.dok(id)).ocr!;
+    assert.equal(o.stand, 'ausgelassen');
+    assert.match(o.info ?? '', /KI-Dienste/);
+    assert.equal(x.u.gesperrt((await x.dok(id)).sha256), true);
+  });
+
+  it('dieselbe Datei auch in einem zugelassenen Typ: Auftrag über das zugelassene Dokument; dessen Stand bleibt unberührt', async () => {
+    const x = await mitSperre();
+    await x.d.setzeKiTyp(x.typ.id, true, null);
+    const erlaubt = await x.hoch('rechnung.tif', TIFF, 'image/tiff');
+    const gesperrt = await x.hochGesperrt('befund.tif', TIFF);
+    let ev = await x.ereignisse('datei.umwandeln');
+    assert.deepEqual(ev.map((e) => e.daten.dokument), [erlaubt], 'nie das gesperrte Dokument');
+    // Erneut angefordert über das gesperrte Dokument: Der Auftrag geht über das zugelassene derselben Datei.
+    await x.u.anfordern([await x.dok(gesperrt)], { erneut: true });
+    ev = await x.ereignisse('datei.umwandeln');
+    assert.deepEqual(ev.map((e) => e.daten.dokument), [erlaubt, erlaubt]);
+    assert.ok(!JSON.stringify(ev.map((e) => e.daten)).includes('befund'), 'weder Name noch Mappe des gesperrten');
+    assert.equal((await x.dok(erlaubt)).ocr!.stand, 'paket', 'wartet weiter auf die Fassung – nicht ausgelassen');
+    assert.equal(x.u.gesperrt((await x.dok(erlaubt)).sha256), false);
   });
 });

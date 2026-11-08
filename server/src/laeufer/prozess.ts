@@ -49,13 +49,19 @@ export function netzHost(url: string): string {
   try { return new URL(url).host || '?'; } catch { return '?'; }
 }
 
+/** Methode eines Netzaufrufs (Standard GET): nur `^[A-Z]{1,10}$` nach Großschreibung, sonst null (abgelehnt). */
+export function netzMethode(m: unknown): string | null {
+  const x = m === undefined || m === null ? 'GET' : typeof m === 'string' ? m.toUpperCase() : '';
+  return /^[A-Z]{1,10}$/.test(x) ? x : null;
+}
+
 /** Netzaufrufe eines Aufrufs sammeln (#807): gleiche (Methode, Host, Status, abgelehnt) zählen in einen Eintrag. */
 export function netzSammler(): { log: NetzLog; liste(): NetzEintrag[] } {
   const m = new Map<string, NetzEintrag>();
   return {
     log: (x) => {
       const host = netzHost(x.url);
-      const methode = x.methode.toUpperCase().slice(0, 10);
+      const methode = /^[A-Z]{1,10}$/.test(x.methode) ? x.methode : '?';
       const k = `${methode}|${host}|${x.status}|${x.abgelehnt ? 1 : 0}`;
       const jetzt = new Date().toISOString();
       let e = m.get(k);
@@ -122,8 +128,10 @@ async function netz(g: Geladen, json: string, body: Uint8Array | undefined, stro
   let a: { methode?: string; url?: string; kopf?: Record<string, string> };
   try { a = JSON.parse(json); } catch { return fehlerAntwort(-1, t('meldungen.prozess.ungueltige-anfrage-json')); }
   const url = String(a.url ?? '');
-  const methode = String(a.methode ?? 'GET').toUpperCase();
+  // Methode nur als schlichtes Wort aus Großbuchstaben (#807, Sicherheit): sonst abgelehnt, im Protokoll als „?“.
+  const methode = netzMethode(a.methode);
   const hin = body?.length ?? 0;
+  if (!methode) { log({ methode: '?', url, status: null, hin: 0, zurueck: 0, abgelehnt: true }); return fehlerAntwort(-1, t('meldungen.prozess.ungueltige-methode')); }
   // Abgelehnt (#807): steht als Warnung im Protokoll des Pakets – nur der Host, nichts hinausgegangen.
   if (!netzErlaubt(url, g.info.netz, g.info.adressen)) { log({ methode, url, status: null, hin: 0, zurueck: 0, abgelehnt: true }); return fehlerAntwort(-2, t('meldungen.prozess.netz-gesperrt-steht-weder', { url })); }
   const kopf = Object.fromEntries(Object.entries(a.kopf ?? {}).filter(([k]) => !/^(host|cookie|authorization-dms)$/i.test(k)).map(([k, v]) => [k, String(v)]));

@@ -469,6 +469,14 @@ export const hatNetz = (c: PaketCode | undefined) => !!c && (c.netz.length > 0 |
  * Schnittstellen, über die ein Paket Inhalte bekommt (#796): Ausschnitte, Text, Dateien. `dms:sicherung-lesen` fehlt
  * bewusst – die Sicherung ist verschlüsselt und enthält immer alles.
  */
+/**
+ * Ereignisse ohne Inhalt der Ablage (#796): Nur sie zählen nicht. Die Liste ist bewusst die Gegenliste – eine neue
+ * Ereignisart gilt damit erst einmal als „mit Inhalt“ (Mappen-, Dokument-, Post-Ereignisse tragen Ids, Typen,
+ * Dateinamen oder „Für“).
+ */
+export const EREIGNISSE_OHNE_INHALT: readonly EreignisArt[] = ['sicherung.fertig', 'paket.einstellungen_geaendert'];
+/** Ereignisse, mit denen ein Paket etwas aus der Ablage erfährt (#796): alle außer {@link EREIGNISSE_OHNE_INHALT}. */
+export const INHALT_EREIGNISSE: readonly EreignisArt[] = (Object.keys(EREIGNISSE) as EreignisArt[]).filter((e) => !EREIGNISSE_OHNE_INHALT.includes(e));
 export const INHALT_SCHNITTSTELLEN: readonly Schnittstelle[] = ['dms:antworten', 'dms:erkennen', 'dms:uebersetzen', 'dms:vektoren', 'dms:texterkennung', 'dms:volltext', 'dms:umwandeln', 'dms:archivfassung'];
 /**
  * KI-Paket bzw. „KI-Dienst“ (#796): ein Paket, das Inhalte lesen oder bekommen kann (Mappen, Dokumente, Volltext,
@@ -477,7 +485,10 @@ export const INHALT_SCHNITTSTELLEN: readonly Schnittstelle[] = ['dms:antworten',
  * sind davon nicht betroffen.
  */
 export const istKiPaket = (c: PaketCode | undefined): boolean => !!c && hatNetz(c)
-  && (c.rechte.lesen.length > 0 || c.rechte.dokumente !== 'keine' || (c.rechte.schnittstellen ?? []).some((s) => INHALT_SCHNITTSTELLEN.includes(s)));/** Werkbank (#796): Mappentypen mit „für KI-Dienste zugelassen“, KI-Pakete und welche Mappentypen jedes bekommt. */
+  && (c.rechte.lesen.length > 0 || c.rechte.dokumente !== 'keine' || (c.rechte.schnittstellen ?? []).some((s) => INHALT_SCHNITTSTELLEN.includes(s))
+    || c.ereignisse.some((e) => INHALT_EREIGNISSE.includes(e)));
+
+/** Werkbank (#796): Mappentypen mit „für KI-Dienste zugelassen“, KI-Pakete und welche Mappentypen jedes bekommt. */
 export interface KiUebersicht {
   typen: Array<{ id: string; name: string; zugelassen: boolean; system?: string }>;
   pakete: Array<{ id: string; name: string; bekommt: string[] }>;

@@ -209,7 +209,8 @@ export interface UmwandlungsAnbindung {
   /** Installierte Pakete. */
   pakete(): Promise<InstalliertesPaket[]>;
   /** Ereignis `datei.umwandeln` an genau dieses Paket (Ausgangskorb des Läufers). */
-  melde(paket: string, daten: Record<string, unknown>): Promise<void>;
+  /** „gesperrt“ (#796): KI-Sperre für den Mappentyp dieses Dokuments – nichts ging an das Paket. */
+  melde(paket: string, daten: Record<string, unknown>): Promise<'gesperrt' | void>;
   /** Alle Dokumente mit dieser Datei (gleicher Prüfwert). */
   dokumenteMitSha(sha: string): Promise<Dokument[]>;
   /** Nach einer neuen Fassung: Vorschaubild, Volltext und Historie (Dienst). */
@@ -221,6 +222,8 @@ export interface UmwandlungsAnbindung {
 export class Dateiumwandlung {
   /** Prüfwert → Zeit der Meldung: Dieselbe Datei geht so lange nicht noch einmal an das Paket. */
   private angefordert = new Map<string, number>();
+  /** Prüfwerte, deren Dokumente alle in Mappentypen liegen, die nicht an das Paket dürfen (#796). */
+  private gesperrtSha = new Set<string>();
 
   constructor(private o: UmwandlungsAnbindung) {}
 
@@ -239,6 +242,8 @@ export class Dateiumwandlung {
   }
 
   info(sha: string) { return this.o.ablage.info(sha).catch(() => null); }
+  /** Ging die Datei beim letzten Versuch wegen der KI-Sperre nicht an das Paket (#796)? */
+  gesperrt(sha: string) { return this.gesperrtSha.has(sha); }
   lies(sha: string) { return this.o.ablage.lies(sha).catch(() => null); }
   belegung() { return this.o.ablage.belegung(); }
 
@@ -261,7 +266,15 @@ export class Dateiumwandlung {
       if (!p) continue;
       if (!o.erneut && (this.angefordert.has(d.sha256) || (await this.info(d.sha256)))) continue;
       this.angefordert.set(d.sha256, jetzt);
-      await this.o.melde(p.id, { dokument: d.id, mappe: d.mappeId, name: d.name, mime: d.mime, groesse: d.groesse, sha256: d.sha256 });
+      // KI-Sperre (#796): Die Fassung gilt für alle Dokumente mit dieser Datei. Ist der Typ dieses Dokuments gesperrt,
+      // geht der Auftrag über ein anderes Dokument derselben Datei in einem zugelassenen Typ; gibt es keins, nichts.
+      const kandidaten = [d, ...(await this.o.dokumenteMitSha(d.sha256).catch(() => [])).filter((x) => x.id !== d.id)];
+      let gemeldet = false;
+      for (const x of kandidaten) {
+        if ((await this.o.melde(p.id, { dokument: x.id, mappe: x.mappeId, name: x.name, mime: x.mime, groesse: x.groesse, sha256: x.sha256 })) !== 'gesperrt') { gemeldet = true; break; }
+      }
+      if (!gemeldet) { this.angefordert.delete(d.sha256); this.gesperrtSha.add(d.sha256); continue; }
+      this.gesperrtSha.delete(d.sha256);
       n++;
     }
     if (n) log.info('Dateien zum Umwandeln gemeldet', { dateien: n });

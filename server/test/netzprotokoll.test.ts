@@ -13,7 +13,7 @@ import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Konten } from '../src/konten';
 import { speicherKontoRepo } from '../src/konto-repo';
-import { netzHost, netzSammler, type NetzEintrag } from '../src/laeufer/prozess';
+import { netzHost, netzMethode, netzSammler, type NetzEintrag } from '../src/laeufer/prozess';
 import { bytesText, merkeNetz, NETZ_ZUSAMMEN_MS, netzText, Paketlaeufer } from '../src/laeufer/verwaltung';
 import { liesPaket } from '../src/pakete';
 import { protokoll } from '../src/protokoll';
@@ -25,9 +25,18 @@ describe('Netzaufrufe im Protokoll (#807): Sammeln und Zusammenfassen', () => {
     assert.equal(netzHost('kaputt'), '?');
   });
 
+  it('Methode nur ^[A-Z]{1,10}$ (klein wird groß, ohne Angabe GET); sonst abgelehnt und im Protokoll als „?“', () => {
+    assert.equal(netzMethode(undefined), 'GET');
+    assert.equal(netzMethode('post'), 'POST');
+    for (const m of ['GET /x HTTP/1.1', 'GET\r\nX-A: 1', 'PROPFINDXXX', '', 'M-SEARCH', 7]) assert.equal(netzMethode(m), null, String(m));
+    const s = netzSammler();
+    s.log({ methode: 'GET\r\nX', url: 'https://api.example.org/', status: null, hin: 0, zurueck: 0, abgelehnt: true });
+    assert.equal(s.liste()[0].methode, '?');
+  });
+
   it('je Aufruf: gleiche Anfragen zählen in einen Eintrag, verschiedene Status getrennt, abgelehnte eigens', () => {
     const s = netzSammler();
-    for (let i = 0; i < 12; i++) s.log({ methode: 'put', url: `https://cloud.example.org/remote.php/dav/teil-${i}`, status: 201, hin: 300_000, zurueck: 0 });
+    for (let i = 0; i < 12; i++) s.log({ methode: 'PUT', url: `https://cloud.example.org/remote.php/dav/teil-${i}`, status: 201, hin: 300_000, zurueck: 0 });
     s.log({ methode: 'PUT', url: 'https://cloud.example.org/x', status: 507, hin: 300_000, zurueck: 120 });
     s.log({ methode: 'GET', url: 'https://boese.example.net/raus?daten=geheim', status: null, hin: 0, zurueck: 0, abgelehnt: true });
     const l = s.liste();
@@ -105,7 +114,9 @@ describe('Netzaufrufe im Protokoll (#807): echter Paket-Läufer', () => {
 
   it('Eintrag je Netzaufruf (Host, Bytes, Status), abgelehnt als Warnung, Summe im Systemprotokoll – ohne Inhalte', async () => {
     const ANTWORT = 'Die Police läuft am 31.12.2026 aus.';
+    let anfragen = 0;
     const dienst = createServer((q, a) => {
+      anfragen++;
       if (!q.url?.startsWith('/v1/chat/completions?')) { a.writeHead(404).end(); return; }
       a.writeHead(200, { 'content-type': 'text/plain' });
       a.end(ANTWORT);
@@ -158,5 +169,20 @@ describe('Netzaufrufe im Protokoll (#807): echter Paket-Läufer', () => {
     assert.ok(zeilen.some((x) => x.daten?.anfragen === 1 && x.daten?.hosts === host && x.daten?.zurueck === Buffer.byteLength(ANTWORT)), JSON.stringify(zeilen.map((x) => x.daten)));
     assert.ok(zeilen.some((x) => x.daten?.abgelehnt === 1));
     assert.ok(!JSON.stringify(zeilen).includes('31.12.2026') && !JSON.stringify(zeilen).includes('/v1/chat'));
+
+    // Ungültige Methode (Sicherheit zu #807): nichts geht hinaus, im Protokoll abgelehnt mit „?“.
+    const vorher = anfragen;
+    const boese = stromModul(JSON.stringify({ methode: 'GET /v1/x HTTP/1.1\r\nX-Boese: 1', url: `${adresse}/chat/completions?x=1` }), '{"text":"ok"}');
+    const p2 = liesPaket(new Map([['manifest.yaml', Buffer.from(manifest.replace(/ki_probe/g, 'ki_boese').replace('KI Probe', 'KI Boese'))], ['code/modul.wasm', boese]]));
+    await d.speicherePaketCode('ki_boese', p2.code!.dateien);
+    await d.speicherePaket({ id: 'ki_boese', name: 'KI Boese', version: '1.0.0', beschreibung: '', lizenz: 'Apache-2.0', autor: { name: 'T', github: 't' }, herkunft: { art: 'hochgeladen', von: null, am: '' }, installiert: new Date().toISOString(), installiertVon: null, aktualisiert: null, aktualisiertVon: null, typen: {}, sichten: {}, abhaengigkeiten: {}, code: true, einstellungen: p2.einstellungen, laeufer: { ...p2.code!.info, modul: { sha256: 'y', groesse: boese.length } } });
+    await l.codeGeaendert();
+    let geladen = false;
+    await warte(() => { void l.uebersicht().then((u) => { geladen = !!u.pakete.find((x) => x.id === 'ki_boese')?.geladen; }); return geladen; });
+    await l.schnittstelle('ki_boese', 'dms:antworten', { frage: 'x' }, { bezeichnung: 'Test' });
+    assert.equal(anfragen, vorher, 'keine Anfrage beim Dienst');
+    const b = (await l.uebersicht()).pakete.find((x) => x.id === 'ki_boese')!;
+    const e = b.protokoll.find((x) => x.netz);
+    assert.ok(e?.netz?.abgelehnt && e.netz.methode === '?' && e.stufe === 2, JSON.stringify(b.protokoll));
   });
 });

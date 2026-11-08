@@ -274,7 +274,7 @@ A package such as **AI assistant** doesn't compute itself but asks a service tha
 
 ### AI services and folder types { #ki-dienste }
 
-An **AI package** – Ablago also says *AI service* – is a package with code that **may use the network** (a fixed address or a [service address](#dienst-adresse)) and **can receive content**: read folders or documents, or get excerpts, text and files from the core (e.g. *Ask your library*, *Fill in from document*, *Show translation*, vectors, full text). Packages that compute in the house **without network** – such as *KI lokal – Ähnlichkeit* or *Texterkennung* – are not AI packages. Neither is the *off-site copy*: it only gets the encrypted backup.
+An **AI package** – Ablago also says *AI service* – is a package with code that **may use the network** (a fixed address or a [service address](#dienst-adresse)) and **can receive content**: read folders or documents, get excerpts, text and files from the core (e.g. *Ask your library*, *Fill in from document*, *Show translation*, vectors, full text) **or subscribe to events about folders, documents or post** – even without further permissions, since an event alone names file names, ids or “For”. Only the events *Backup finished* and *Settings changed* carry no content. Packages that compute in the house **without network** – such as *KI lokal – Ähnlichkeit* or *Texterkennung* – are not AI packages. Neither is the *off-site copy*: it only gets the encrypted backup.
 
 An AI package **only receives content from folder types that are allowed for AI services**:
 
@@ -290,7 +290,7 @@ An AI package **only receives content from folder types that are allowed for AI 
 |---|---|
 | Reading via the API (folders, documents, full text, search, similar) | The package doesn't see the folder type – as with [Packages on the folder type](berechtigungen.md#pakete-am-mappentyp). |
 | Events (e.g. *Full text finished*, *Document uploaded*, folder events) | Don't go to the package, not even ids or file names; the log records "Ereignis nicht an Paket zugestellt". |
-| Jobs (full text, conversion, archive version) and recalculating vectors | Don't go to the package; waiting documents stop waiting. |
+| Jobs (full text, conversion, archive version) and recalculating vectors | Don't go to the package; the document doesn't wait but is skipped. If the same file is also in an allowed folder type, the job (conversion, archive version) goes via that document – the package learns nothing about the blocked one. |
 | Ask your library | No excerpts from this folder type, nor titles of linked folders from it. |
 | Fill in from document | If the target folder type or that of a source document is blocked, nothing goes to the package; the built-in recognition takes over with a notice. |
 | Show translation | Refused with a notice – nothing goes to the package. |
@@ -301,7 +301,7 @@ Not affected: search terms sent to a vector package for the similarity search do
 
 The package runner writes every call a package makes to the network into the **package's log** (Workbench → Packages → *package* → Package runner → **Log: output and network calls**): time, method, **host** (with port, without path, query and credentials), bytes **sent** and **received** and the status, e.g. "Network: 12 × PUT cloud.example.org – 201, 3.4 MB sent, 2 KB received". Identical calls in quick succession (within one minute) share one entry, so that e.g. chunked uploads of the off-site copy don't flood the log.
 
-- **Blocked** calls (address neither in the package nor confirmed as service address) appear as a **warning** – nothing went out.
+- **Blocked** calls (address neither in the package nor confirmed as service address, or a method that isn't only capital letters – shown as “?”) appear as a **warning** – nothing went out.
 - Ablago's [log](fehlersuche.md#protokoll) gets **one line** per event or action, "Paket *id*: Netzaufrufe" (level *info*), with the totals: number, blocked, hosts, bytes sent and received.
 - **Never content and no headers:** neither what was sent nor the response, no paths, no query, no keys.
 

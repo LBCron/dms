@@ -63,7 +63,7 @@ import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestl
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { dokumentsprachen, MAX_SEITENSPRACHEN, seitentexte, seitenZusammensetzen, SEITENVORSCHUB, SPRACHEN_JE_SEITE, zeichenzahl, type Seitensprache } from '../../shared/src/seitensprachen';
-import { ALLE_TYPEN, MAPPEN_EREIGNISSE, hatSchnittstelle, istKiPaket, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type KiUebersicht, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { ALLE_TYPEN, INHALT_EREIGNISSE, MAPPEN_EREIGNISSE, hatSchnittstelle, istKiPaket, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type KiUebersicht, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
@@ -3890,14 +3890,13 @@ export class Dienst {
   }
 
   /**
-   * Ein Ereignis bzw. Auftrag ging wegen der KI-Sperre nicht an das Paket (#796): Dokumente, die auf das Paket warten
-   * (Texterkennung, Volltext, Umwandlung, Archivfassung), warten nicht weiter – sie gelten als ausgelassen.
+   * Ein Ereignis ging wegen der KI-Sperre nicht an das Paket (#796): Wartet das Dokument auf die Texterkennung dieses
+   * Pakets (`volltext.fertig`), wartet es nicht weiter. Aufträge (`datei.*`) behandelt der Aufrufer von `auftrag`.
    */
   private async kiUebersprungen(paket: string, art: string, daten: Record<string, unknown>) {
     const grund = t('meldungen.dienst.ki-nicht-zugelassen');
     try {
-      if (art === 'datei.archivfassung') await this.nachTexterkennungsEreignis(paket, { art, daten }, { ok: false, text: '', fehler: grund, aufgegeben: true });
-      else if (art === 'volltext.fertig' || art === 'datei.volltext' || art === 'datei.umwandeln') await this.nachTexterkennungsEreignis(paket, { art, daten }, { ok: true, text: grund });
+      if (art === 'volltext.fertig') await this.nachTexterkennungsEreignis(paket, { art, daten }, { ok: true, text: grund });
     } catch (x) {
       protokoll.modul('werkbank').warn('Stand nach KI-Sperre nicht nachgetragen', { paket, art, fehler: (x as Error).message });
     }
@@ -3956,7 +3955,9 @@ export class Dienst {
       const l = p.laeufer;
       if (!l || !istKiPaket(l)) continue;
       const lesbar = await this.typverweise(p.id, pakete, typen);
-      const ueberKern = (l.rechte.schnittstellen ?? []).some((s) => s === 'dms:antworten' || s === 'dms:erkennen' || s === 'dms:uebersetzen');
+      // Ausschnitte vom Kern oder Ereignisse zu Dokumenten und Post (#796): kommen aus allen zugelassenen Typen, auch ohne Leserecht.
+      const ueberKern = (l.rechte.schnittstellen ?? []).some((s) => s === 'dms:antworten' || s === 'dms:erkennen' || s === 'dms:uebersetzen')
+        || l.ereignisse.some((e) => INHALT_EREIGNISSE.includes(e) && !MAPPEN_EREIGNISSE.includes(e));
       const darf = lesbar(l.rechte.lesen);
       const bekommt = liste.filter((x) => k.zugelassen.has(x.id) && (ueberKern || (darf.has(x.id) && !verwehrt[x.id]?.includes(p.id)))).map((x) => x.id);
       ki.push({ id: p.id, name: p.name, bekommt });
@@ -4816,19 +4817,18 @@ export class Dienst {
    * nicht im Ausgangskorb, sondern direkt in der Zustellung des Paket-Läufers (gleiche Wiederholung). In einer
    * Transaktion gehört er zur Änderung; sonst landen Fehler nur im Protokoll.
    */
-  async auftrag(paket: string, art: Extract<EreignisArt, 'datei.umwandeln' | 'datei.volltext' | 'datei.archivfassung' | 'paket.einstellungen_geaendert'>, daten: Record<string, unknown>): Promise<void> {
+  async auftrag(paket: string, art: Extract<EreignisArt, 'datei.umwandeln' | 'datei.volltext' | 'datei.archivfassung' | 'paket.einstellungen_geaendert'>, daten: Record<string, unknown>): Promise<'gesperrt' | void> {
     const inTx = transaktionen.getStore()?.dienst === this;
     try {
       const p = (await this.repo.listePakete()).find((x) => x.id === paket && x.laeufer?.ereignisse.includes(art));
       if (!p) return;
-      // KI-Dienste (#796): Dateien eines nicht zugelassenen Mappentyps gehen an kein KI-Paket; der Auftrag gilt als aufgegeben.
-      if (typeof daten.mappe === 'string' && istKiPaket(p.laeufer)) {
-        const typ = (await this.repo.holeMappe(daten.mappe))?.typId ?? null;
+      // KI-Dienste (#796): Dateien eines nicht zugelassenen Mappentyps gehen an kein KI-Paket. „gesperrt“: Der Aufrufer
+      // setzt den Stand selbst (bzw. stellt den Auftrag über ein anderes Dokument mit derselben Datei).
+      if (istKiPaket(p.laeufer) && (typeof daten.mappe === 'string' || typeof daten.dokument === 'string')) {
+        const typ = typeof daten.mappe === 'string' ? (await this.repo.holeMappe(daten.mappe))?.typId ?? null : null;
         if (!typ || (await this.kiSperre(p))(typ)) {
           protokoll.modul('werkbank').info('Auftrag nicht an Paket gegeben', { paket: p.id, art, grund: t('meldungen.dienst.ki-nicht-zugelassen') });
-          // Erst nach dem Aufrufer: Der setzt den Stand des Dokuments („wartet auf Paket“) oft erst danach.
-          this.danach(() => { setTimeout(() => void this.kiUebersprungen(p.id, art, daten), 1000).unref?.(); });
-          return;
+          return 'gesperrt';
         }
       }
       await this.repo.legeEreignisseAn([{ id: randomUUID(), paketId: p.id, art, daten }]);

@@ -169,7 +169,7 @@ export interface KernErgebnis {
 /** Volltext aus Paketen (#614): das zuständige Paket für einen Dateityp und die Meldung an es (paketvolltext.ts). */
 export interface TexterkennungVolltextPaket {
   paketFuer(mime: string): Promise<{ id: string; name: string; version: string; typen: string[] } | null>;
-  anfordern(d: Dokument, p: { id: string; name: string; version: string; typen: string[] }, o: { neu?: boolean }): Promise<boolean>;
+  anfordern(d: Dokument, p: { id: string; name: string; version: string; typen: string[] }, o: { neu?: boolean }): Promise<boolean | 'gesperrt'>;
 }
 
 /** Dateien umwandeln (#577): die Fassung einer Datei und das zuständige Paket (dateiumwandlung.ts). */
@@ -177,6 +177,8 @@ export interface TexterkennungUmwandlung {
   lies(sha: string): Promise<{ info: { mime: string; paket: { name: string; version: string } }; inhalt: Buffer } | null>;
   paketFuer(mime: string): Promise<{ id: string; name: string } | null>;
   anfordern(d: Dokument[]): Promise<number>;
+  /** KI-Sperre (#796): Kein Dokument mit dieser Datei darf an das Paket – die Datei ging nicht hinaus. */
+  gesperrt?(sha: string): boolean;
 }
 
 /** Fassung, aus der der Kern liest (#577 umgewandelt, #827 entsperrt); `herkunft` ersetzt den Hinweis zum Paket. */
@@ -337,7 +339,13 @@ export class Texterkennung {
     if (fassung === 'wartet') return;
     // Wartet es auf den Volltext eines Pakets (#614): Datei an das Paket; „Volltext fertig“ kommt, wenn es schreibt.
     if (ausPaket) {
-      await this.volltextPaket?.anfordern(jetzt, ausPaket, { neu }).catch((f) => log.warn('Datei nicht zum Volltext an das Paket gemeldet', { dokument: d.id, paket: ausPaket.id, fehler: (f as Error).message }));
+      const r = await this.volltextPaket?.anfordern(jetzt, ausPaket, { neu }).catch((f) => { log.warn('Datei nicht zum Volltext an das Paket gemeldet', { dokument: d.id, paket: ausPaket.id, fehler: (f as Error).message }); return false; });
+      // KI-Sperre (#796): Das Dokument wartet nicht auf das Paket; vorhandener Text bleibt.
+      if (r === 'gesperrt') {
+        const text = await this.repo.volltext(d.id).catch(() => null);
+        await this.repo.ocrSetze(d.id, { stand: text && hatText(text) ? 'fertig' : 'ausgelassen', info: t('pakete.volltext.ki-gesperrt', { paket: ausPaket.name }), seiten: e.seiten ?? null })
+          .catch((f) => log.warn('Stand nach KI-Sperre nicht gesetzt', { dokument: d.id, fehler: (f as Error).message }));
+      }
       return;
     }
     const umgewandelt = fassung ? { mime: fassung, original: jetzt.mime } : {};
@@ -377,6 +385,8 @@ export class Texterkennung {
     const p = await this.umwandlung?.paketFuer(d.mime).catch(() => null);
     if (p && d.groesse <= UMWANDELN_MAX_BYTES) {
       await this.umwandlung!.anfordern([d]);
+      // KI-Sperre (#796): Kein Dokument mit dieser Datei darf an das Paket – ausgelassen statt warten.
+      if (this.umwandlung!.gesperrt?.(d.sha256)) return { stand: 'ausgelassen', info: t('pakete.fassung.ki-gesperrt', { paket: p.name }), text: null };
       return { stand: 'paket', info: infoUmwandlung(p), seiten: d.ocr?.seiten ?? null, fassung: 'wartet' } as OcrErgebnis;
     }
     if (p) return { stand: 'ausgelassen', info: t('pakete.fassung.zu-gross', { typ: name, mb: UMWANDELN_MAX_BYTES / 1048576 }), text: null };

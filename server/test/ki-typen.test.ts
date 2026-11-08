@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { FRAGEN_STANDARD, type FrageZeile } from '../../shared/src/fragen';
 import { HILFE } from '../../shared/src/hilfe';
-import { istKiPaket, liesCode, rechtePunkte, type InstalliertesPaket, type PaketCode } from '../../shared/src/pakete';
+import { EREIGNISSE, INHALT_EREIGNISSE, istKiPaket, liesCode, rechtePunkte, type InstalliertesPaket, type PaketCode } from '../../shared/src/pakete';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { pgEinstellungen, speicherEinstellungen } from '../src/einstellungen';
@@ -70,6 +70,12 @@ describe('KI-Dienste (#796): Was ist ein KI-Paket?', () => {
     assert.equal(istKiPaket(code({ rechte: { schnittstellen: ['dms:sicherung-lesen'] }, ereignisse: ['sicherung.fertig'], netz: ['https://cloud.example.org'] })), false, 'Sicherung ist verschlüsselt');
     assert.equal(istKiPaket(code({ rechte: { lesen: ['notiz'] }, netz: ['https://api.example.org'] })), true, 'liest Mappen und darf ins Netz');
     assert.equal(istKiPaket(code({ rechte: {}, netz: ['https://api.example.org'] })), false, 'ohne Inhalte');
+    // Nur Ereignisse, ohne Rechte (Sicherheit zu #796): Dateinamen, Ids und „Für“ sind Inhalt.
+    assert.equal(istKiPaket(code({ rechte: {}, ereignisse: ['dokument.hochgeladen'], netz: ['https://api.example.org'] })), true, 'Dokument-Ereignis');
+    assert.equal(istKiPaket(code({ rechte: {}, ereignisse: ['post.angelegt'], netz: ['https://api.example.org'] })), true, 'Post-Ereignis');
+    assert.equal(istKiPaket(code({ rechte: {}, ereignisse: ['post.angelegt'], netz: [] })), false, 'ohne Netz nie');
+    assert.ok(INHALT_EREIGNISSE.includes('volltext.fertig') && !INHALT_EREIGNISSE.includes('sicherung.fertig'));
+    assert.deepEqual(Object.keys(EREIGNISSE).filter((e) => !INHALT_EREIGNISSE.includes(e as never)).sort(), ['paket.einstellungen_geaendert', 'sicherung.fertig'], 'neue Ereignisarten zählen als Inhalt');
   });
 
   it('Rechte-Vorschau nennt die Regel mit Handbuch-Stelle – nur bei KI-Paketen', () => {
@@ -122,11 +128,26 @@ describe('KI-Dienste (#796): Sperre im Kern', () => {
     assert.ok(imHaus.some((e) => e.art === 'volltext.fertig' && e.daten.dokument === x.kniebrief), 'ohne Netz wie bisher');
   });
 
+  it('Paket mit Netz, nur „Dokument hochgeladen“, ohne Rechte: nichts aus gesperrten Typen, auch kein Dateiname', async () => {
+    const x = await aufbau();
+    await x.d.speicherePaket(paket('melder', code({ rechte: {}, ereignisse: ['dokument.hochgeladen'], netz: ['https://melder.example.org/v1'] })));
+    await x.d.setzeKiTyp(x.vertrag.id, true, null);
+    const hoch = (m: string, name: string) => x.d.ladeHoch(m, { register: 'dokumente', name, typ: 'application/pdf' }, Buffer.from(`%PDF-1.4 ${name}`), x.lena.id);
+    await hoch(x.befund.id, 'roentgen-knie.pdf');
+    const ok = (await hoch(x.strom.id, 'zaehlerstand.pdf')).dokument;
+    await spaeter(10_000, () => x.d.ereignisse.verteile());
+    const melder = (await spaeter(30 * 60_000, () => x.repo.faelligeEreignisse(200))).filter((e) => e.paketId === 'melder');
+    assert.deepEqual(melder.map((e) => e.daten.dokument), [ok.id]);
+    assert.ok(!JSON.stringify(melder).includes('roentgen'), 'kein Dateiname aus dem gesperrten Typ');
+    // Übersicht: Es bekommt alle zugelassenen Typen (Ereignisse ohne Leserecht).
+    assert.deepEqual((await x.d.kiUebersicht()).pakete.find((p) => p.id === 'melder')?.bekommt, [x.vertrag.id]);
+  });
+
   it('Aufträge (datei.volltext) und Nachberechnung der Vektoren: nichts aus gesperrten Typen', async () => {
     const x = await aufbau();
     await x.d.setzeKiTyp(x.vertrag.id, true, null);
     const vorher = (await x.repo.faelligeEreignisse(500)).length;
-    await x.d.auftrag('wolke', 'datei.volltext', { dokument: x.kniebrief, mappe: x.befund.id });
+    assert.equal(await x.d.auftrag('wolke', 'datei.volltext', { dokument: x.kniebrief, mappe: x.befund.id }), 'gesperrt');
     assert.equal((await x.repo.faelligeEreignisse(500)).length, vorher, 'gesperrt: kein Auftrag');
     await x.d.auftrag('wolke', 'datei.volltext', { dokument: x.stromrechnung, mappe: x.strom.id });
     assert.equal((await x.repo.faelligeEreignisse(500)).length, vorher + 1);
