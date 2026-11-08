@@ -1652,5 +1652,13 @@
   "entdecken.aktion": "Unbekannte Handlung an einem Tipp.",
   "entdecken.tipp": "Diesen Tipp gibt es nicht.",
   "entdecken.stand": "Ein Rundgang ist „gesehen“ oder „spaeter“.",
-  "entdecken.rundgang": "Diesen Rundgang gibt es nicht."
+  "entdecken.rundgang": "Diesen Rundgang gibt es nicht.",
+  "dienst.ki-nicht-zugelassen": "Mappentyp ist nicht für KI-Dienste zugelassen",
+  "dienst.ki-benutzer": "Benutzer-Mappen gehen nie an Pakete – auch nicht an KI-Dienste.",
+  "erkennung.ki-nicht-zugelassen": "Der Mappentyp „{typ}“ ist nicht für KI-Dienste zugelassen – an {name} ging nichts, die eingebaute Erkennung hat übernommen.",
+  "uebersetzung.ki-nicht-zugelassen": "Dieser Mappentyp ist nicht für KI-Dienste zugelassen – {name} bekommt seine Inhalte nicht.",
+  "verwaltung.netz-aufruf": "Netz: {anzahl} × {methode} {host} – {status}, {hin} hin, {zurueck} zurück",
+  "verwaltung.netz-abgelehnt": "Netz abgelehnt: {anzahl} × {methode} {host} – die Adresse ist nicht erlaubt",
+  "verwaltung.netz-ohne-antwort": "keine Antwort",
+  "prozess.ungueltige-methode": "Ungültige Methode – erlaubt sind nur Großbuchstaben, z. B. GET oder POST."
 }

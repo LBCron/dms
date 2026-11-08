@@ -330,5 +330,6 @@
   "darstellung.nach-unten": "„{name}“ ein Feld nach unten",
   "darstellung.entfernt": "„{name}“ entfernt.",
   "darstellung.entfernen": "„{name}“ entfernen",
-  "darstellung.abschnitt-hinzufuegen": "+ Abschnitt"
+  "darstellung.abschnitt-hinzufuegen": "+ Abschnitt",
+  "bereich.ki": "KI-Dienste"
 }

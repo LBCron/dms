@@ -396,7 +396,7 @@ const fassungen = ordnerFassungen(fassungsOrdner(ordner.dateien, cfg.haushalt));
 const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(fassungen, vorschau));
 dienst.verbindeUmwandlung(umwandlung, vorschau);
 vorschau.fassung = (sha) => umwandlung.lies(sha);
-texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };
+texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d), gesperrt: (sha) => umwandlung.gesperrt(sha) };
 // Geschützte PDFs (#827): entsperrte Fassungen (qpdf) neben den umgewandelten; gemerkte Passwörter je Konto verschlüsselt.
 const entsperren = new PdfEntsperren(dienst.entsperrenAnbindung({ ablage: fassungen, speicher: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), zustand: zustandDb }));
 dienst.verbindeEntsperren(entsperren);

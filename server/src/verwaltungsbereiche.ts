@@ -40,6 +40,8 @@ const REGELN: Regel[] = [
   R('*', '/api/werkbank/pakete*', 'pakete'),
   R('*', '/api/typen*', 'typen'),
   R('*', '/api/werkbank/berechtigungen*', 'typen'),
+  // KI-Dienste (#796): am Mappentyp und auf der Seite eines KI-Pakets.
+  R('*', '/api/werkbank/ki-typen*', 'pakete', 'typen'),
   R('*', '/api/werkbank/archiv/vorschau', 'typen'),
   R('GET', '/api/werkbank/erkennung', 'typen', 'texterkennung', 'pakete'),
   R('*', '/api/sichten/*', 'sichten'),

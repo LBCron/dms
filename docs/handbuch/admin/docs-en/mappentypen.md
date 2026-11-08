@@ -10,7 +10,7 @@ How users work with the folders is described in the [User manual](https://help.a
 
 ## How the editor is built {#aufbau-des-editors}
 
-The editor is built in the order in which you create a folder type: **Basics → Fields → Title → Result lists → Tabs → Archive mode → Stamp when handing over → Recognition → Permissions → Test run**.
+The editor is built in the order in which you create a folder type: **Basics → Fields → Title → Result lists → Tabs → Archive mode → Stamp when handing over → Recognition → Permissions → Test run → Packages → AI services**.
 
 - Every area can be **expanded and collapsed** with a click on its heading. Collapsed, it shows the essentials in one line, e.g. "8 fields, 2 required, 1 deadline", the title template with an example or "Default: R · 3 rules".
 - A **new** folder type is fully expanded, an **existing** one starts collapsed. Your device remembers per folder type what you expand or collapse.
@@ -381,6 +381,10 @@ After archive mode you set whether a stamp is **suggested** or **required** when
 ## Permissions { #berechtigungen }
 
 Below tabs and archive mode you decide who may create, read, edit, delete folders of this folder type and see passwords in them – with the row **Default** and rules. They are saved with **Save folder type**; below them you try out the rules in the **test run** – also unsaved ones. Everything else is under [Permissions](berechtigungen.md).
+
+## AI services { #ki-dienste }
+
+At the very bottom you decide whether the folder type **may go to AI services** – packages that can send content over the network (for instance for *Ask your library* or *Fill in from document*). Without the tick no such package gets anything from this folder type. The tick takes effect immediately, independently of **Save folder type**. **New folder types – copies too – are blocked until you allow them.** More under [Packages → AI services and folder types](pakete.md#ki-dienste).
 
 ## Copying a folder type { #mappentyp-kopieren }
 

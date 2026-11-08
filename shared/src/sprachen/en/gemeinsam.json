@@ -926,5 +926,6 @@
   "darstellung.verwendung.frist": "Deadline",
   "darstellung.verwendung.frist-empfaenger": "Recipient of the deadline on “{feld}”",
   "darstellung.verwendung.archiv": "Reference date in archive mode",
-  "darstellung.verwendung.berechtigung": "Permission “{name}”"
+  "darstellung.verwendung.berechtigung": "Permission “{name}”",
+  "pakete.ki-nur-zugelassene": "AI service: only receives content from folder types you allow for AI services – new ones only once you allow them"
 }

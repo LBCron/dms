@@ -100,6 +100,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   if (u.lasttestAbbruch) h.push({ schluessel: 'lasttest', art: 'warn', text: <><strong>{t('lasttest.uebersicht')}</strong> {u.lasttestAbbruch} {t('lasttest.uebersicht.text')}</>, ziel: '/werkbank/systemzustand#version', knopf: t('lasttest.uebersicht.knopf') });
   // Pflicht-Einstellungen eines Pakets fehlen (#405, z. B. im Ablauf „später ausfüllen“): bis sie da sind, läuft das Paket nicht.
   for (const p of u.paketeEinstellungen ?? []) h.push({ schluessel: `paket-einstellungen:${p.id}`, art: 'warn', text: <><strong>{t('pakete.ablauf.aufgabe', { name: p.name })}</strong> {t('pakete.ablauf.aufgabe.text')}</>, ziel: `/werkbank/pakete/${p.id}?reiter=einstellungen`, knopf: t('pakete.ablauf.aufgabe.knopf') });
+  // KI-Dienste (#796): Nach dem Update einmal – bestehende Mappentypen gehen weiter an KI-Pakete, lassen sich aber ausschließen.
+  if (u.kiTypen?.pakete.length) h.push({ schluessel: 'ki.typen', art: 'info', text: <><strong>{t('pakete.ki.hinweis')}</strong> {t('pakete.ki.hinweis.text', { namen: u.kiTypen.pakete.map((p) => p.name).join(', ') })}</>, ziel: `/werkbank/pakete/${u.kiTypen.pakete[0].id}`, knopf: t('pakete.ki.hinweis.knopf'), erledigen: t('pakete.ki.hinweis.verstanden') });
   // Im Einrichtungsassistenten übersprungen (#119): hier nachholen.
   const nachholen: Record<string, { text: string; ziel: string; knopf: string }> = {
     optional: { text: t('werkbank.uebersicht.adresse-e-mail-versand'), ziel: '/werkbank/betrieb', knopf: t('werkbank.uebersicht.zu-e-mail-und') },

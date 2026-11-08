@@ -30,7 +30,8 @@ export interface PaketVolltextAnbindung {
   /** Installierte Pakete. */
   pakete(): Promise<InstalliertesPaket[]>;
   /** Ereignis `datei.volltext` an genau dieses Paket (Ausgangskorb des Läufers). */
-  melde(paket: string, daten: Record<string, unknown>): Promise<void>;
+  /** „gesperrt“ (#796): KI-Sperre – nichts ging an das Paket. */
+  melde(paket: string, daten: Record<string, unknown>): Promise<'gesperrt' | void>;
 }
 
 export class PaketVolltext {
@@ -71,15 +72,19 @@ export class PaketVolltext {
 
   /**
    * Ein Dokument an das zuständige Paket melden (`datei.volltext`). `neu`: ausdrücklich neu (z. B. „Volltext neu
-   * erzeugen“), auch wenn das Dokument schon unterwegs ist. Liefert, ob die Meldung hinausging.
+   * erzeugen“), auch wenn das Dokument schon unterwegs ist. Liefert, ob die Meldung hinausging – „gesperrt“, wenn der
+   * Mappentyp nicht an dieses (KI-)Paket darf (#796).
    */
-  async anfordern(d: Pick<Dokument, 'id' | 'mappeId' | 'name' | 'mime' | 'groesse' | 'sha256'>, p: VolltextPaket, o: { neu?: boolean } = {}): Promise<boolean> {
+  async anfordern(d: Pick<Dokument, 'id' | 'mappeId' | 'name' | 'mime' | 'groesse' | 'sha256'>, p: VolltextPaket, o: { neu?: boolean } = {}): Promise<boolean | 'gesperrt'> {
     const jetzt = Date.now();
     for (const [id, zeit] of this.angefordert) if (jetzt - zeit > VOLLTEXT_ANGEFORDERT_MS) this.angefordert.delete(id);
     if (d.groesse > VOLLTEXT_PAKET_MAX_BYTES) return false;
     if (!o.neu && this.angefordert.has(d.id)) return false;
     this.angefordert.set(d.id, jetzt);
-    await this.o.melde(p.id, { dokument: d.id, mappe: d.mappeId, name: d.name, mime: d.mime, groesse: d.groesse, sha256: d.sha256, ...(o.neu ? { neu: true } : {}) });
+    if ((await this.o.melde(p.id, { dokument: d.id, mappe: d.mappeId, name: d.name, mime: d.mime, groesse: d.groesse, sha256: d.sha256, ...(o.neu ? { neu: true } : {}) })) === 'gesperrt') {
+      this.angefordert.delete(d.id);
+      return 'gesperrt';
+    }
     log.info('Datei zum Volltext an das Paket gemeldet', { dokument: d.id, typ: d.mime, paket: p.id });
     return true;
   }

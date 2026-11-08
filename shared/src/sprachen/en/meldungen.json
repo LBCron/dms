@@ -1652,5 +1652,13 @@
   "entdecken.aktion": "Unknown action for a tip.",
   "entdecken.tipp": "This tip does not exist.",
   "entdecken.stand": "A tour is “gesehen” (seen) or “spaeter” (later).",
-  "entdecken.rundgang": "This tour does not exist."
+  "entdecken.rundgang": "This tour does not exist.",
+  "dienst.ki-nicht-zugelassen": "Folder type is not allowed for AI services",
+  "dienst.ki-benutzer": "User folders never go to packages – not to AI services either.",
+  "erkennung.ki-nicht-zugelassen": "The folder type “{typ}” is not allowed for AI services – nothing was sent to {name}; the built-in recognition took over.",
+  "uebersetzung.ki-nicht-zugelassen": "This folder type is not allowed for AI services – {name} does not receive its content.",
+  "verwaltung.netz-aufruf": "Network: {anzahl} × {methode} {host} – {status}, {hin} sent, {zurueck} received",
+  "verwaltung.netz-abgelehnt": "Network blocked: {anzahl} × {methode} {host} – the address is not allowed",
+  "verwaltung.netz-ohne-antwort": "no response",
+  "prozess.ungueltige-methode": "Invalid method – only capital letters are allowed, e.g. GET or POST."
 }

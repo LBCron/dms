@@ -33,7 +33,45 @@ export type VomLaeufer =
   /** Teil einer Antwort (#444, dms.teil), gehört zum Aufruf nr. */
   | { art: 'teil'; nr: number; paket: string; text: string }
   | { art: 'log'; paket: string; stufe: number; text: string }
-  | { art: 'ergebnis'; nr: number; paket: string; ok: boolean; rc: number | null; text: string; ms: number; speicherMB: number; fehler: string | null };
+  | { art: 'ergebnis'; nr: number; paket: string; ok: boolean; rc: number | null; text: string; ms: number; speicherMB: number; fehler: string | null; netz?: NetzEintrag[] };
+
+/**
+ * Netzaufrufe eines Aufrufs fürs Protokoll (#807): je Methode, Host, Status und ob abgelehnt zusammengefasst – mit
+ * Anzahl und Bytes hin und zurück. Nur der Host (mit Port), nie Pfad, Query, Zugangsdaten, Köpfe oder Inhalte.
+ * status null: keine Antwort (abgelehnt, Netzfehler, Zeitgrenze).
+ */
+export interface NetzEintrag { zeit: string; bis: string; methode: string; host: string; status: number | null; anzahl: number; hin: number; zurueck: number; abgelehnt?: true }
+/** Erfasst einen Netzaufruf; liefert den Eintrag, damit eine Antwort Stück für Stück ihre Bytes nachtragen kann. */
+type NetzLog = (x: { methode: string; url: string; status: number | null; hin: number; zurueck: number; abgelehnt?: boolean }) => NetzEintrag;
+
+/** Host einer Adresse fürs Protokoll – ohne Pfad, Query und Zugangsdaten; bei ungültiger Adresse ein Platzhalter. */
+export function netzHost(url: string): string {
+  try { return new URL(url).host || '?'; } catch { return '?'; }
+}
+
+/** Methode eines Netzaufrufs (Standard GET): nur `^[A-Z]{1,10}$` nach Großschreibung, sonst null (abgelehnt). */
+export function netzMethode(m: unknown): string | null {
+  const x = m === undefined || m === null ? 'GET' : typeof m === 'string' ? m.toUpperCase() : '';
+  return /^[A-Z]{1,10}$/.test(x) ? x : null;
+}
+
+/** Netzaufrufe eines Aufrufs sammeln (#807): gleiche (Methode, Host, Status, abgelehnt) zählen in einen Eintrag. */
+export function netzSammler(): { log: NetzLog; liste(): NetzEintrag[] } {
+  const m = new Map<string, NetzEintrag>();
+  return {
+    log: (x) => {
+      const host = netzHost(x.url);
+      const methode = /^[A-Z]{1,10}$/.test(x.methode) ? x.methode : '?';
+      const k = `${methode}|${host}|${x.status}|${x.abgelehnt ? 1 : 0}`;
+      const jetzt = new Date().toISOString();
+      let e = m.get(k);
+      if (!e) { e = { zeit: jetzt, bis: jetzt, methode, host, status: x.status, anzahl: 0, hin: 0, zurueck: 0, ...(x.abgelehnt ? { abgelehnt: true as const } : {}) }; m.set(k, e); }
+      e.anzahl++; e.hin += x.hin; e.zurueck += x.zurueck; e.bis = jetzt;
+      return e;
+    },
+    liste: () => [...m.values()],
+  };
+}
 
 const NETZ_MAX = 10 * 1024 * 1024;
 const NETZ_MS = 30_000;
@@ -84,13 +122,18 @@ export function netzErlaubt(url: string, erlaubt: string[], adressen: string[] =
 }
 
 /** Eine mit netz_strom geöffnete Antwort (#444): wird Stück für Stück gelesen, je Aufruf höchstens eine. */
-interface Strom { leser: ReadableStreamDefaultReader<Uint8Array>; gelesen: number; ende: AbortController }
+interface Strom { leser: ReadableStreamDefaultReader<Uint8Array>; gelesen: number; ende: AbortController; eintrag?: NetzEintrag }
 
-async function netz(g: Geladen, json: string, body: Uint8Array | undefined, strom: { setze(s: Strom | null): void; ms: number } | null): Promise<Hostantwort> {
+async function netz(g: Geladen, json: string, body: Uint8Array | undefined, strom: { setze(s: Strom | null): void; ms: number } | null, log: NetzLog): Promise<Hostantwort> {
   let a: { methode?: string; url?: string; kopf?: Record<string, string> };
   try { a = JSON.parse(json); } catch { return fehlerAntwort(-1, t('meldungen.prozess.ungueltige-anfrage-json')); }
   const url = String(a.url ?? '');
-  if (!netzErlaubt(url, g.info.netz, g.info.adressen)) return fehlerAntwort(-2, t('meldungen.prozess.netz-gesperrt-steht-weder', { url }));
+  // Methode nur als schlichtes Wort aus Großbuchstaben (#807, Sicherheit): sonst abgelehnt, im Protokoll als „?“.
+  const methode = netzMethode(a.methode);
+  const hin = body?.length ?? 0;
+  if (!methode) { log({ methode: '?', url, status: null, hin: 0, zurueck: 0, abgelehnt: true }); return fehlerAntwort(-1, t('meldungen.prozess.ungueltige-methode')); }
+  // Abgelehnt (#807): steht als Warnung im Protokoll des Pakets – nur der Host, nichts hinausgegangen.
+  if (!netzErlaubt(url, g.info.netz, g.info.adressen)) { log({ methode, url, status: null, hin: 0, zurueck: 0, abgelehnt: true }); return fehlerAntwort(-2, t('meldungen.prozess.netz-gesperrt-steht-weder', { url })); }
   const kopf = Object.fromEntries(Object.entries(a.kopf ?? {}).filter(([k]) => !/^(host|cookie|authorization-dms)$/i.test(k)).map(([k, v]) => [k, String(v)]));
   // Stück für Stück: Die ganze Antwort darf so lange dauern wie der Aufruf; jedes Stück höchstens NETZ_MS.
   const ende = new AbortController();
@@ -98,14 +141,20 @@ async function netz(g: Geladen, json: string, body: Uint8Array | undefined, stro
   const lang = (body?.length ?? 0) > 1024 * 1024;
   const uhr = setTimeout(() => ende.abort(new Error('Zeitgrenze erreicht')), strom ? strom.ms : lang ? grenzen.sekunden * 1000 : NETZ_MS);
   uhr.unref?.();
+  let r: Response;
   try {
-    const r = await fetch(url, { method: (a.methode ?? 'GET').toUpperCase(), headers: kopf, body: body && body.length ? body : undefined, redirect: 'manual', signal: ende.signal });
+    r = await fetch(url, { method: methode, headers: kopf, body: body && body.length ? body : undefined, redirect: 'manual', signal: ende.signal });
+  } catch (e) { clearTimeout(uhr); log({ methode, url, status: null, hin, zurueck: 0 }); return fehlerAntwort(-4, `Netzfehler: ${(e as Error).message}`); }
+  // Ins Protokoll (#807): Bytes hin und zurück; bei einer Antwort Stück für Stück zählt netzWeiter nach.
+  const eintrag = log({ methode, url, status: r.status, hin, zurueck: 0 });
+  try {
     if (strom && r.body) {
-      strom.setze({ leser: r.body.getReader(), gelesen: 0, ende });
+      strom.setze({ leser: r.body.getReader(), gelesen: 0, ende, eintrag });
       return { status: r.status, body: new Uint8Array(0) };
     }
     const buf = new Uint8Array(await r.arrayBuffer());
     clearTimeout(uhr);
+    eintrag.zurueck += buf.length;
     if (buf.length > NETZ_MAX) return fehlerAntwort(-3, t('meldungen.prozess.antwort-zu-gross'));
     return { status: r.status, body: buf };
   } catch (e) { clearTimeout(uhr); return fehlerAntwort(-4, `Netzfehler: ${(e as Error).message}`); }
@@ -122,6 +171,7 @@ async function netzWeiter(s: Strom | null): Promise<Hostantwort> {
     ]);
     if (r.done) return { status: 0, body: new Uint8Array(0) };
     s.gelesen += r.value.length;
+    if (s.eintrag) s.eintrag.zurueck += r.value.length;
     if (s.gelesen > NETZ_MAX) { s.ende.abort(); return fehlerAntwort(-3, t('meldungen.prozess.antwort-zu-gross')); }
     return { status: 200, body: r.value };
   } catch (e) { s.ende.abort(); return fehlerAntwort(-4, `Netzfehler: ${(e as Error).message}`); }
@@ -160,12 +210,14 @@ async function fuehreAus(a: Extract<AnLaeufer, { art: 'aufruf' }>) {
   }
   let fertig = false;
   let strom: Strom | null = null;
+  const netzLog = netzSammler();
   const schluss = (x: Parameters<typeof ende>[0]) => {
     if (fertig) return;
     fertig = true; clearTimeout(uhr); kanal.port1.close();
     strom?.ende.abort(); strom = null;
     void w.terminate();
-    laufend--; ende(x); weiter();
+    const n = netzLog.liste();
+    laufend--; ende({ ...x, ...(n.length ? { netz: n } : {}) }); weiter();
   };
   const uhr = setTimeout(() => schluss({ ok: false, rc: null, text: '', speicherMB: 0, fehler: t('meldungen.prozess.zeitgrenze-erreicht-s-abgebrochen', { sekunden: grenzen.sekunden }) }), grenzen.sekunden * 1000);
   const antworte = (r: Hostantwort) => { if (fertig) return; kanal.port1.postMessage(r); Atomics.store(sig, 0, 1); Atomics.notify(sig, 0); };
@@ -178,7 +230,7 @@ async function fuehreAus(a: Extract<AnLaeufer, { art: 'aufruf' }>) {
     if (q.art === 'netz') {
       // Eine neue Anfrage schließt eine noch offene Antwort.
       if (q.strom) { strom?.ende.abort(); strom = null; }
-      void netz(g, q.json, q.body, q.strom ? { setze: (x) => { if (fertig) x?.ende.abort(); else strom = x; }, ms: grenzen.sekunden * 1000 } : null).then(antworte);
+      void netz(g, q.json, q.body, q.strom ? { setze: (x) => { if (fertig) x?.ende.abort(); else strom = x; }, ms: grenzen.sekunden * 1000 } : null, netzLog.log).then(antworte);
       return;
     }
     if (q.art === 'netz_weiter') { void netzWeiter(strom).then((r) => { if (r.status !== 200) strom = null; antworte(r); }); return; }

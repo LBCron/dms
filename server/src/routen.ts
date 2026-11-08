@@ -1840,6 +1840,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         automatisierungen: x.automatisierungen ? await sicher(() => x.automatisierungen!.warnungen()) : null,
         // Pflicht-Einstellungen eines Pakets fehlen (#405: im Ablauf „später ausfüllen“) – Aufgabe für den Administrator.
         paketeEinstellungen: (await sicher(() => pakete.installierte()))?.filter((p) => p.einstellungenNoetig).map((p) => ({ id: p.id, name: p.name })) ?? [],
+        // KI-Dienste (#796): nach dem Update einmal sagen, dass sich Mappentypen jetzt ausschließen lassen (nur mit KI-Paketen).
+        kiTypen: (await sicher(async () => { const k = await dienst.kiUebersicht(); return k.hinweis ? { pakete: k.pakete.map((p) => ({ id: p.id, name: p.name })) } : null; })) ?? null,
         // Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist.
         zahlen: await werkbankZahlen({
           nummernkreise: () => dienst.listeNummernkreise(),
@@ -1869,6 +1871,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
      */
     { methode: 'POST', pfad: '/api/werkbank/uebersicht/erledigt', zugang: 'admin', handler: async (a) => {
       const k = String(b(a).schluessel ?? '');
+      // KI-Dienste (#796): „Verstanden“ zum Hinweis nach dem Update – für alle, die Pakete verwalten (sie sehen ihn).
+      if (k === 'ki.typen') {
+        if (!darfBereich(ich(a), 'pakete')) throw new Fachfehler(403, t('konten.verwaltung.fehler.vergeben'));
+        await dienst.kiHinweisGelesen(); L.werkbank.info('Hinweis „Mappentypen von KI-Diensten ausschließen“ gelesen', { von: ich(a).email });
+        return leer;
+      }
       if (!hatGesamt(ich(a))) throw new Fachfehler(403, t('konten.verwaltung.fehler.vergeben'));
       if (k === 'verwaltung.zweite-person') {
         const e = dienst.einstellungenSpeicher;
@@ -1896,6 +1904,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await dienst.setzePaketVerwehrt(a.params.typId, a.params.paketId, b(a).verwehrt === true, ich(a).email);
       return ok(await dienst.paketeAmTyp(a.params.typId));
     } },
+    // KI-Dienste (#796): welche Mappentypen an KI-Pakete gehen dürfen; neue erst nach Zulassung.
+    { methode: 'GET', pfad: '/api/werkbank/ki-typen', zugang: 'admin', handler: async () => ok(await dienst.kiUebersicht()) },
+    { methode: 'PUT', pfad: '/api/werkbank/ki-typen/:typId', zugang: 'admin', handler: async (a) => ok(await dienst.setzeKiTyp(a.params.typId, b(a).zugelassen === true, ich(a).email)) },
     { methode: 'POST', pfad: '/api/werkbank/berechtigungen/:typId/kopieren', zugang: 'admin', handler: async (a) => {
       const r = await dienst.kopiereRegel(a.params.typId, String(b(a).regelId ?? ''), b(a).ziele);
       L.werkbank.info('Regel kopiert', { typ: a.params.typId, regel: String(b(a).regelId ?? ''), kopiert: r.kopiert, ausgelassen: r.ausgelassen, von: ich(a).email });
@@ -2926,7 +2937,7 @@ const UEBERSICHT_BEREICHE: Record<string, { bereich: string; leer: unknown }> = 
   engpaesse: { bereich: 'systemzustand', leer: [] }, erweiterungen: { bereich: 'systemzustand', leer: [] }, variablen: { bereich: 'systemzustand', leer: [] },
   bestand: { bereich: 'systemzustand', leer: null }, lasttestAbbruch: { bereich: 'systemzustand', leer: null }, anbindung: { bereich: 'anbindung', leer: null },
   einrichtung: { bereich: NUR_GESAMT, leer: null }, automatisierungen: { bereich: 'automatisierungen', leer: null },
-  paketeEinstellungen: { bereich: 'pakete', leer: [] }, postfachAnmeldung: { bereich: 'postfaecher', leer: [] },
+  paketeEinstellungen: { bereich: 'pakete', leer: [] }, kiTypen: { bereich: 'pakete', leer: null }, postfachAnmeldung: { bereich: 'postfaecher', leer: [] },
   eingangsordner: { bereich: 'eingangsordner', leer: null },
 };
 export function nurEigeneBereiche<T extends Record<string, unknown>>(b: Benutzer, daten: T): T {

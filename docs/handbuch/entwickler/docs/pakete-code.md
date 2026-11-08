@@ -238,6 +238,20 @@ Ein Paket, das die Grenzen reißt, beeinträchtigt Ablago nicht; der Aufruf bric
 
 **Mappen ändern:** Schicke mit `PUT /mappen/{id}` nur die Felder, die das Paket ändert – nicht die ganze gelesene Mappe; nicht übergebene Felder bleiben. Mit `"stand"` (Wert `geaendert` der gelesenen Mappe) antwortet der Kern mit 409, wenn ein Mensch dasselbe Feld inzwischen anders gesetzt hat (#609); ein Paket lässt das Feld dann am besten so, wie es ist. Siehe [API → Mappe ändern](https://help.ablago.app/admin/aktuell/api/#mappe-aendern).
 
+### Netzaufrufe im Protokoll { #netzprotokoll }
+
+Jeden Aufruf von `netz` bzw. `netz_strom` hält der Läufer fest (#807) – im Protokoll des Pakets in der Werkbank und als Summe je Aufruf im Protokoll von Ablago (Stufe *info*, „Paket *id*: Netzaufrufe“ mit `anfragen`, `abgelehnt`, `hosts`, `hin`, `zurueck`). Je Eintrag: Zeit, Methode, **Host mit Port**, Bytes hin (Körper) und zurück (bei `netz_strom` alle mit `netz_weiter` gelesenen Stücke), Status bzw. „keine Antwort“. Gleiche Anfragen (Methode, Host, Status) eines Aufrufs und kurz hintereinander (innerhalb einer Minute, auch über Aufrufe) stehen in **einem** Eintrag mit Anzahl. Abgelehnte Adressen stehen als Warnung darin, ebenso eine Methode, die nicht auf `^[A-Z]{1,10}$` passt (nach Großschreibung; ohne Angabe `GET`) – sie wird nicht ausgeführt und steht als `?` im Protokoll. **Nie** Pfad, Query, Zugangsdaten, Köpfe oder Inhalte – trotzdem gehören Schlüssel in Köpfe (`kopf`), nicht in die Adresse. Ein Paket muss dafür nichts tun.
+
+### KI-Pakete und Mappentypen { #ki-pakete }
+
+Ein Paket, das **ins Netz darf** (`code.netz` oder eine Dienst-Adresse) und **Inhalte bekommt** (`rechte.lesen`, `rechte.dokumente` oder eine der Schnittstellen `dms:antworten`, `dms:erkennen`, `dms:uebersetzen`, `dms:vektoren`, `dms:texterkennung`, `dms:volltext`, `dms:umwandeln`, `dms:archivfassung` – oder ein Ereignis aus `INHALT_EREIGNISSE`, also jedes außer `sicherung.fertig` und `paket.einstellungen_geaendert`; neue Ereignisarten zählen von selbst dazu), ist ein **KI-Paket** (`istKiPaket` in `shared/src/pakete.ts`, #796). Es bekommt nur Inhalte aus Mappentypen, die der Administrator für KI-Dienste zugelassen hat; neue Mappentypen – auch die eines Pakets – erst nach Zulassung. Für das Paket heißt das:
+
+- Mappen und Dokumente gesperrter Typen gibt es für sein Dienstkonto nicht (404 bzw. nicht in Listen und Suche) – wie bei einem verwehrten Mappentyp.
+- Ereignisse und Aufträge dazu kommen nicht an; `volltext.fertig` der Nachberechnung (Vektoren) ebenso.
+- `dms:antworten` bekommt keine Ausschnitte daraus, `dms:erkennen` und `dms:uebersetzen` werden dafür gar nicht aufgerufen.
+
+Das Paket braucht dafür nichts zu tun und erfährt den Grund nicht. Wer ohne Netz im Haus rechnet (`netz: []`, keine Dienst-Adresse), ist davon nicht betroffen. Die Kopie außer Haus (`dms:sicherung-lesen`) zählt nicht als KI-Paket: Sie bekommt nur die verschlüsselte Sicherung.
+
 Ein Modul, das `netz_strom`, `netz_weiter` oder `teil` importiert, lädt erst ab Ablago 0.124.0 – ältere lehnen es ab („Das Modul verlangt Unbekanntes“). Gib dann `dms: ">=0.124.0"` an.
 
 ## Bauen mit C (wasi-sdk)

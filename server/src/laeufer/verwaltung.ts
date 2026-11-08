@@ -19,7 +19,8 @@ import type { PaketLaeufer } from '../pakete';
 import { ladeArgumente } from './modul';
 import { protokoll } from '../protokoll';
 import { senkePrioritaet, senkeProzess } from '../hintergrund';
-import type { AnLaeufer, Grenzen, VomLaeufer } from './prozess';
+import type { AnLaeufer, Grenzen, NetzEintrag, VomLaeufer } from './prozess';
+import { gebietsschema } from '../../../shared/src/sprache';
 import type { Hostantwort } from './arbeiter';
 import { t } from '../sprache';
 
@@ -54,6 +55,40 @@ const NACHLAUF_MS = 30_000;
 const NACHLAUF_JE_RUNDE = 50;
 /** Nach einem vollständigen Durchgang erst nach dieser Zeit wieder von vorn (Dokumente, deren Vektor fehlschlug). */
 const NACHLAUF_PAUSE_MS = 6 * 3600_000;
+/** Gleiche Netzaufrufe (#807) so kurz hintereinander – auch über mehrere Aufrufe – stehen in einem Eintrag. */
+export const NETZ_ZUSAMMEN_MS = 60_000;
+/** So viele Einträge im Protokoll eines Pakets (Ausgaben und Netzaufrufe) höchstens. */
+const PROTOKOLL_MAX = 50;
+
+/** „0 B“, „512 B“, „3,4 KB“, „12,1 MB“ – in der Sprache der Oberfläche. */
+export function bytesText(n: number): string {
+  const z = (x: number) => x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 });
+  return n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${z(n / 1024)} KB` : n < 1024 ** 3 ? `${z(n / 1024 / 1024)} MB` : `${z(n / 1024 ** 3)} GB`;
+}
+
+/** Text eines Netzaufrufs im Protokoll des Pakets (#807): Anzahl, Methode, Host, Status, Bytes – nie Inhalte. */
+export function netzText(e: NetzEintrag): string {
+  if (e.abgelehnt) return t('meldungen.verwaltung.netz-abgelehnt', { anzahl: e.anzahl, methode: e.methode, host: e.host });
+  return t('meldungen.verwaltung.netz-aufruf', { anzahl: e.anzahl, methode: e.methode, host: e.host, status: e.status ?? t('meldungen.verwaltung.netz-ohne-antwort'), hin: bytesText(e.hin), zurueck: bytesText(e.zurueck) });
+}
+
+type Protokolleintrag = { zeit: string; stufe: number; text: string; netz?: NetzEintrag };
+
+/**
+ * Netzaufrufe eines Aufrufs ins Protokoll eines Pakets (#807): Gleiche (Methode, Host, Status, abgelehnt) innerhalb von
+ * NETZ_ZUSAMMEN_MS zählen in den vorhandenen Eintrag – so fluten Teile-Uploads das Protokoll nicht. Abgelehnte als Warnung.
+ */
+export function merkeNetz(protokoll: Protokolleintrag[], neu: NetzEintrag[], max = PROTOKOLL_MAX): void {
+  const gleich = (a: NetzEintrag, b: NetzEintrag) => a.methode === b.methode && a.host === b.host && a.status === b.status && !!a.abgelehnt === !!b.abgelehnt;
+  for (const n of neu) {
+    let i = protokoll.length - 1;
+    while (i >= 0 && !(protokoll[i].netz && gleich(protokoll[i].netz!, n) && Date.parse(n.zeit) - Date.parse(protokoll[i].netz!.bis) <= NETZ_ZUSAMMEN_MS)) i--;
+    const e: NetzEintrag = i >= 0 ? { ...protokoll[i].netz!, anzahl: protokoll[i].netz!.anzahl + n.anzahl, hin: protokoll[i].netz!.hin + n.hin, zurueck: protokoll[i].netz!.zurueck + n.zurueck, bis: n.bis } : { ...n };
+    if (i >= 0) protokoll.splice(i, 1);
+    protokoll.push({ zeit: e.bis, stufe: e.abgelehnt ? 2 : 1, text: netzText(e), netz: e });
+  }
+  if (protokoll.length > max) protokoll.splice(0, protokoll.length - max);
+}
 
 /** Anfrage an die eigene API (im Betrieb über fastify.inject, ohne Netz). */
 export type ApiAufruf = (a: { methode: string; pfad: string; kopf: Record<string, string>; body?: Buffer }) => Promise<{ status: number; kopf: Record<string, string>; body: Buffer }>;
@@ -93,7 +128,8 @@ export interface PaketStand {
   aufrufe: number; fehlgeschlagen: number; letzterAufruf: string | null; dauerMs: number | null; speicherMB: number | null;
   ereignisse: { offen: number; aufgegeben: number; zugestellt: number };
   letzte: Array<{ zeit: string; art: string; ok: boolean; text: string }>;
-  protokoll: Array<{ zeit: string; stufe: number; text: string }>;
+  /** Ausgaben des Pakets und seine Netzaufrufe (#807, mit `netz`). */
+  protokoll: Array<{ zeit: string; stufe: number; text: string; netz?: NetzEintrag }>;
 }
 
 interface Aufruf { ok: (r: Extract<VomLaeufer, { art: 'ergebnis' }>) => void; teil?: (text: string) => void }
@@ -348,7 +384,7 @@ export class Paketlaeufer implements PaketLaeufer {
   private notiere(paket: string, e: { stufe: number; text: string }) {
     const s = this.standVon(paket);
     s.protokoll.push({ zeit: new Date().toISOString(), ...e });
-    if (s.protokoll.length > 50) s.protokoll.splice(0, s.protokoll.length - 50);
+    if (s.protokoll.length > PROTOKOLL_MAX) s.protokoll.splice(0, s.protokoll.length - PROTOKOLL_MAX);
     (e.stufe >= 2 ? log.warn : log.info).call(log, `Paket ${paket}: ${e.text}`, { paket });
   }
 
@@ -488,6 +524,16 @@ export class Paketlaeufer implements PaketLaeufer {
     s.letzte.push({ zeit: s.letzterAufruf, art: opt.bezeichnung ?? (art === 'aktion' ? `Aktion ${String(eingang.aktion)}` : String(eingang.art)), ok: r.ok, text: anzeige.slice(0, 300) });
     if (s.letzte.length > LETZTE) s.letzte.splice(0, s.letzte.length - LETZTE);
     if (!r.ok) log.warn(`Paket ${paket}: Aufruf fehlgeschlagen`, { paket, art, fehler: r.fehler, ms: r.ms });
+    // Netzaufrufe (#807): ins Protokoll des Pakets und eine Zeile mit der Summe ins Systemprotokoll – Hosts und Bytes, nie Inhalte.
+    if (r.netz?.length) {
+      merkeNetz(s.protokoll, r.netz);
+      const summe = (f: (x: NetzEintrag) => number) => r.netz!.reduce((a, x) => a + f(x), 0);
+      log.info(`Paket ${paket}: Netzaufrufe`, {
+        paket, aufruf: opt.bezeichnung ?? (art === 'aktion' ? `Aktion ${String(eingang.aktion)}` : String(eingang.art)),
+        anfragen: summe((x) => (x.abgelehnt ? 0 : x.anzahl)), abgelehnt: summe((x) => (x.abgelehnt ? x.anzahl : 0)),
+        hosts: [...new Set(r.netz.map((x) => x.host))].join(', '), hin: summe((x) => x.hin), zurueck: summe((x) => x.zurueck),
+      });
+    }
     return r;
   }
 

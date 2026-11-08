@@ -205,7 +205,8 @@ export interface ArchivAnbindung {
   /** Wert einer Einstellung des Pakets (gespeichert oder Vorgabe aus dem Manifest). */
   einstellung(paket: string, schluessel: string): Promise<unknown>;
   /** Ereignis `datei.archivfassung` an genau dieses Paket (Ausgangskorb des Läufers). */
-  melde(paket: string, daten: Record<string, unknown>): Promise<void>;
+  /** „gesperrt“ (#796): KI-Sperre für den Mappentyp dieses Dokuments – nichts ging an das Paket. */
+  melde(paket: string, daten: Record<string, unknown>): Promise<'gesperrt' | void>;
   dokumenteMitSha(sha: string): Promise<Dokument[]>;
   dokumenteMitTyp(mimes: string[]): Promise<Dokument[]>;
   /** Lesefassung aus dms:umwandeln (#577) für Typen, die der Kern nicht liest. */
@@ -340,13 +341,24 @@ export class Archivfassung {
     for (let i = 0; i < anzahl; i++) if (!mitText(seiten?.[i]) && !w?.seiten[i]) wortpositionen = false;
     this.angefordert.set(d.sha256, jetzt);
     await this.o.ablage.setzeStand(d.sha256, { stand: 'wartet', info: null, paket, zeit: jetztIso });
-    await this.o.melde(p.id, {
-      dokument: d.id, mappe: d.mappeId, name: d.name, mime: d.mime, groesse: d.groesse, sha256: d.sha256,
+    const daten = (x: Dokument) => ({
+      dokument: x.id, mappe: x.mappeId, name: x.name, mime: x.mime, groesse: x.groesse, sha256: x.sha256,
       quelle: q.art, ...(q.fassung ? { lesefassung: { mime: q.fassung.mime, sha256: q.fassung.sha256 } } : {}),
       seiten: seiten?.length ?? (q.mime === 'application/pdf' ? d.ocr?.seiten ?? null : 1), textebene, wortpositionen, sprache: d.sprache ?? null,
       signiert: !!befund?.signiert, erechnung: !!befund?.erechnung, formular: !!befund?.formular,
       extern: !!befund && (befund.javascript || befund.aktionen.length > 0 || befund.extern.length > 0), ...(o.neu ? { neu: true } : {}),
     });
+    // KI-Sperre (#796): Die Archivfassung gilt für alle Dokumente mit dieser Datei – ist der Typ dieses Dokuments
+    // gesperrt, geht der Auftrag über ein anderes derselben Datei in einem zugelassenen Typ; sonst ausgelassen.
+    let gemeldet = false;
+    for (const x of [d, ...(await this.o.dokumenteMitSha(d.sha256).catch(() => [])).filter((y) => y.id !== d.id)]) {
+      if ((await this.o.melde(p.id, daten(x))) !== 'gesperrt') { gemeldet = true; break; }
+    }
+    if (!gemeldet) {
+      this.angefordert.delete(d.sha256);
+      await this.o.ablage.setzeStand(d.sha256, { stand: 'ausgelassen', info: t('pakete.archiv.ki-gesperrt', { paket: p.name }), paket, zeit: jetztIso });
+      return false;
+    }
     log.info('Dokument zur Archivfassung an das Paket gemeldet', { dokument: d.id, typ: d.mime, paket: p.id, textebene, wortpositionen, neu: !!o.neu });
     return true;
   }

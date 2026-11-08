@@ -16,7 +16,7 @@ import type { UebersetzenAngebot, UebersetzenEinstellung, Uebersetzt, Uebersetzu
 import type { Abwesenheit, Aufgabe, Ausschnitt, FallOhneLeserecht, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
-import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
+import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, KiUebersicht, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
 import type { Einstellungsbeschreibung } from '../../shared/src/paketeinstellungen';
 import type { EntdeckenStand } from '../../shared/src/entdecken';
 import type { DateiFehler, Einrichtungsplan, Planprobleme } from '../../shared/src/einrichtungsplan';
@@ -674,6 +674,9 @@ export const api = {
   berechtigungenSetzen: (typId: string, berechtigungen: Regelwerk, bestaetigt = false) => anfrage<{ typ: Mappentyp; niemand: number }>('PUT', `/api/werkbank/berechtigungen/${typId}`, { berechtigungen, bestaetigt }),
   // Pakete am Mappentyp (#686).
   paketeAmTyp: (typId: string) => anfrage<PaketAmTyp[]>('GET', `/api/werkbank/berechtigungen/${typId}/pakete`),
+  // KI-Dienste (#796): Mappentypen für KI-Pakete zulassen bzw. sperren.
+  kiTypen: () => anfrage<KiUebersicht>('GET', '/api/werkbank/ki-typen'),
+  setzeKiTyp: (typId: string, zugelassen: boolean) => anfrage<KiUebersicht>('PUT', `/api/werkbank/ki-typen/${typId}`, { zugelassen }),
   paketVerwehren: (typId: string, paketId: string, verwehrt: boolean) => anfrage<PaketAmTyp[]>('PUT', `/api/werkbank/berechtigungen/${typId}/pakete/${encodeURIComponent(paketId)}`, { verwehrt }),
   regelKopieren: (typId: string, regelId: string, ziele: string[]) => anfrage<{ kopiert: number; ausgelassen: number }>('POST', `/api/werkbank/berechtigungen/${typId}/kopieren`, { regelId, ziele }),
   testlauf: (e: { mappeId: string; benutzerId: string; berechtigungen?: Regelwerk }) => anfrage<Testlauf>('POST', '/api/werkbank/berechtigungen/testlauf', e),
@@ -1293,6 +1296,8 @@ export interface WerkbankUebersicht {
   einrichtung?: EinrichtungStand | null;
   /** Pakete, deren Pflicht-Einstellungen fehlen (#405) – Aufgabe für den Administrator. */
   paketeEinstellungen?: Array<{ id: string; name: string }>;
+  /** KI-Dienste (#796): Hinweis nach dem Update, solange niemand „Verstanden“ gewählt hat. */
+  kiTypen?: { pakete: Array<{ id: string; name: string }> } | null;
   /** Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist; null = unbekannt. */
   zahlen?: { nummernkreise: number | null; pakete: number | null; benutzer: number | null; postfaecher: number | null; darfWeg: number | null };
   /** Postfächer mit abgelaufener oder fehlender OAuth-Anmeldung (#358). */
