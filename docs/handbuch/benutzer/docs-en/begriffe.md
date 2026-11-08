@@ -165,6 +165,10 @@ The menu "Folder ▾" next to a folder's title – assign task, remind, send, ex
 <a id="erweiterte-suche"></a>**Advanced search** (*Erweiterte Suche*) · ✓ everyday word · everyone  
 A search form across the fields of several folder types and the text in documents.
 
+<a id="archivfassung"></a>**Archive version** (*Archivfassung*) · ~ with explanation · everyone  
+A searchable PDF/A that a package such as PDF/A stores in addition to a document – a format that can still be opened in many years and without Ablago. The original stays unchanged. If there is one, Ablago shows it ("View: archive version (PDF/A)"). PDFs, scans, photos and emails (.eml, .msg) can get one; you read an email in it like a letter.  
+See also: [Document](#dokument), [Version](#version).
+
 <a id="zuordnen"></a>**Assign** (*Zuordnen*) · ✓ everyday word · everyone  
 Assigning post to an existing or new folder. The documents move into the folder's tab in the process.
 
@@ -439,4 +443,4 @@ See also: [Version](#version).
 
 Which German words are still being discussed, which questions have been decided and which words the German texts avoid is listed on the [German page](../../begriffe/). It concerns the German wording.
 
-*As of: 2026-11-07*
+*As of: 2026-11-08*

@@ -69,7 +69,8 @@ export const EREIGNISKATALOG = {
   'paket.einstellungen_geaendert': { gruppe: 'auftrag', felder: ['felder'], paket: true },
   'datei.umwandeln': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256'], paket: true },
   'datei.volltext': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256'], paket: true },
-  'datei.archivfassung': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256'], paket: true },
+  // #946: zeitzone (IANA, Werkbank → Region) für Datumsangaben in der Archivfassung.
+  'datei.archivfassung': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256', 'zeitzone'], paket: true },
   // Zahlen eines Benutzers (Webhooks, #627)
   'zaehler.geaendert': { gruppe: 'zaehler', felder: ['zahlen', 'stand'], webhook: true },
 } as const satisfies Record<string, Katalogeintrag>;

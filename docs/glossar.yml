@@ -22,7 +22,7 @@
 # Neue Begriffe kommen mit dem Release hierher (Qualitätskontrolle).
 # Die Personas: docs/handbuch/entwickler/docs/personas.md
 
-stand: '2026-11-07'
+stand: '2026-11-08'
 
 begriffe:
 
@@ -378,6 +378,14 @@ begriffe:
     einsteiger: alltag
     begegnet: alle
 
+  - begriff: Archivfassung
+    bereich: ablage
+    beschreibung: 'Ein durchsuchbares PDF/A, das ein Paket wie PDF/A zusätzlich zu einem Dokument ablegt – ein Format, das sich auch in vielen Jahren und ohne Ablago noch öffnen lässt. Das Original bleibt unverändert. Gibt es eine, zeigt Ablago sie an („Ansicht: Archivfassung (PDF/A)“). Auch PDFs, Scans, Fotos und E-Mails (.eml, .msg) bekommen eine; eine E-Mail liest man darin wie einen Brief.'
+    einsteiger: erklaeren
+    begegnet: alle
+    nicht_verwenden: [Archivkopie, Langzeitfassung]
+    verwandt: [Dokument, Version]
+    code: Archivfassung
   # ---------- Verwaltung (Werkbank) ----------
   - begriff: Benutzer
     bereich: werkbank

@@ -97,7 +97,7 @@ Since #724 all events come from the core's one event catalogue and outbox ([Arch
 | `paket.einstellungen_geaendert` | An administrator has saved the package's settings | `felder` (changed keys) |
 | `datei.umwandeln` | Since 0.137.0, only with `dms:umwandeln`: a file of a type from `code.umwandeln` needs a version – see [Converting files](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
 | `datei.volltext` | Since 0.145.0, only with `dms:volltext`: a file of a type from `code.volltext` needs its full text – see [Supplying full text](#volltext-liefern) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, if applicable `neu` |
-| `datei.archivfassung` | Since 0.149.0, only with `dms:archivfassung`: a document of a type from `code.archivfassung.typen` has settled full text and needs its archive version – see [Storing an archive version](#archivfassung) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, `quelle`, if applicable `lesefassung`, `seiten`, `textebene`, `wortpositionen`, `sprache`, `signiert`, `erechnung`, `formular`, `extern`, if applicable `neu` |
+| `datei.archivfassung` | Since 0.149.0, only with `dms:archivfassung`: a document of a type from `code.archivfassung.typen` has settled full text and needs its archive version – see [Storing an archive version](#archivfassung) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, `quelle`, if applicable `lesefassung`, `seiten`, `textebene`, `wortpositionen`, `sprache`, `signiert`, `erechnung`, `formular`, `extern`, `zeitzone` (since 0.221.0), if applicable `neu` |
 | `sicherung.fertig` | Since 0.142.0, only with `dms:sicherung-lesen`: a backup is finished in the backup folder – see [Off-site backup](#sicherung-ausser-haus) | `name`, `datei`, `groesse`, `sha256`, `beginn`, `format`, `schlank`, `verschluesselung` |
 | `mappe.angelegt`, `mappe.geaendert`, `mappe.geloescht`, `mappe.wiederhergestellt` | Since 0.153.0, only for types from `code.mappentypen` (since 0.166.0 also other packages' types) and only for folders the package may read: folder created, saved and changed in the process, put in the bin, restored. `mappe.geaendert` bundles quick sequences (about 5 s) into one event. Examples, demo data and restores trigger nothing. | `mappe`, `typ`, with `mappe.geaendert` `felder` (keys, never values), `ereignis` |
 | `frist.erreicht` | Since 0.153.0, only for types from `code.mappentypen`: a date field with a deadline reaches the reminder time (`zeitpunkt: vorlauf`) or the day itself (`faellig`) – exactly once per folder, field, date and time | `mappe`, `typ`, `feld`, `datum`, `zeitpunkt`, `empfaenger`, `ereignis` |
@@ -599,7 +599,8 @@ code:
     auswahl:                    # optional, per kind the key of a setting of type janein – on = gets one
       pdf_text: pdf_text        #   PDFs with text (every page has a text layer)
       pdf_scan: pdf_scan        #   scanned PDFs (no text layer, or not on every page)
-      bilder: bilder            #   photos and images (all non-PDF types from typen)
+      bilder: bilder            #   photos and images (all non-PDF types from typen except emails)
+      emails: emails            #   emails (.eml, .msg) – since 0.221.0
   rechte:
     lesen: ["*"]                # documents are in folders of any type
     dokumente: lesen            # read file, full text and word positions; write permission isn't needed
@@ -611,18 +612,20 @@ code:
         - { schluessel: pdf_text, name: "PDFs mit Text", typ: janein, standard: true }
         - { schluessel: pdf_scan, name: "Gescannte PDFs", typ: janein, standard: true }
         - { schluessel: bilder, name: "Fotos und Bilder (.jpg, .jpeg, .png, .tif, .tiff)", typ: janein, standard: true }
+        - { schluessel: emails, name: "E-Mails (.eml, .msg)", typ: janein, standard: true }
 ```
 
 - `code.archivfassung.typen`, `dms:archivfassung`, `datei.archivfassung` and `dokumente: lesen` belong together; if one is missing, Ablago and `pruefen.py` reject the package. **PDF, JPEG and PNG are allowed** (unlike with `dms:umwandeln`).
-- `auswahl` (replaces `nur_scans`): per kind the key of a yes/no setting of the package. The core determines the kind per document – for PDFs by the text layer (`voll` → `pdf_text`, `teilweise`/`keine` → `pdf_scan`), all other types are `bilder` – and only reports it if the setting is **on**. If a key is missing, the kind is always on. What is deselected is shown on the document as "skipped – according to settings" (not an error); if the administrator ticks a kind later, the core reports the existing stock afterwards.
+- `auswahl` (replaces `nur_scans`): per kind the key of a yes/no setting of the package. The core determines the kind per document – for PDFs by the text layer (`voll` → `pdf_text`, `teilweise`/`keine` → `pdf_scan`), emails are `emails`, all other types are `bilder` – and only reports it if the setting is **on**. If a key is missing, the kind is always on. What is deselected is shown on the document as "skipped – according to settings" (not an error); if the administrator ticks a kind later, the core reports the existing stock afterwards.
 - The question at installation shows "Store archive version (PDF/A) – … (dms:archivfassung): PDF, JPEG, PNG, TIFF". Other file types in an update mean confirming again; the core reports new file types for the existing stock.
 - **Responsible** per file type is one package – with several, the first by id.
+- **Emails** (since 0.221.0, kind `emails`): `message/rfc822` (`.eml`) and `application/vnd.ms-outlook` (`.msg`); files stored as `application/octet-stream` only count with the ending `.eml` or `.msg` in the name – otherwise a package never gets them reported, even if it names `application/octet-stream` in `typen`. A package that only names `message/rfc822` and `application/vnd.ms-outlook` is also responsible for such files. If you use `emails` in `auswahl`, state `dms: ">=0.221.0"` – older versions don't know the kind and reject the package.
 
 ### Process { #archivfassung-ablauf }
 
 ![Process "Archive version" between core, package Text recognition and package with dms:archivfassung](grafiken/ablauf-archivfassung.png){ loading=lazy }
 
-1. **Reporting – only with settled full text:** the core sends `datei.archivfassung` as soon as a document's full text is *ready*: after reading the text layer, after the text from text recognition or from a package with `dms:volltext`, when text recognition reports "nothing to do" (text from the PDF stays), with a **new version** and every change to the PDF (new checksum), with *Regenerate full text* (`neu: true`) and when the package is installed or gets an additional file type (**existing stock**: all documents with finished full text without an archive version). New text from a package or via the API also means `neu: true` – the old archive version then no longer matches the text.
+1. **Reporting – only with settled full text:** the core sends `datei.archivfassung` as soon as a document's full text is *ready*: after reading the text layer, after the text from text recognition or from a package with `dms:volltext`, when text recognition reports "nothing to do" (text from the PDF stays), with a **new version** and every change to the PDF (new checksum), with *Regenerate full text* (`neu: true`) and when the package is installed or gets an additional file type (**existing stock**: all documents with finished full text without an archive version). New text from a package or via the API also means `neu: true` – the old archive version then no longer matches the text. **Emails** (since 0.221.0) are reported by the core even without full text: if no package supplies it (no package with `dms:volltext` for emails installed), it counts as settled and empty. If one is installed (e.g. *Office and email*), the email waits like every document until it has written the text – even if it finds none.
 2. **Not reported:** documents without a source (other types without a readable version), over 50 MB, those with an archive version (except `neu`), **encrypted PDFs** (state *none* with the reason on the document), PDFs that **already are valid PDF/A** (the original counts as the archive version, no second file) and documents of a kind deselected in `auswahl`. The core reports the same file at most once every 30 minutes (except `neu`).
 3. **Waiting:** before the event goes out, the state "waiting" is in the Library – on the document "Archive version is being created". Until then the display shows the original.
 4. **Storing:** the package reads the source, the word positions and if needed the full text and returns the PDF/A with `PUT /dokumente/{id}/archivfassung?sha256=…` (raw data with `api_binaer`). Afterwards: state *ready*, entry in the history ("PNG → PDF/A-2b (PDF/A 1.0.0)"), display of the archive version.
@@ -637,7 +640,8 @@ code:
   "daten": { "dokument": "…", "mappe": "…", "name": "Scan 2026-11-03.pdf", "mime": "application/pdf",
              "groesse": 482113, "sha256": "9f2c…", "quelle": "original", "seiten": 3,
              "textebene": "teilweise", "wortpositionen": true, "sprache": "deu",
-             "signiert": false, "erechnung": false, "formular": false, "extern": true },
+             "signiert": false, "erechnung": false, "formular": false, "extern": true,
+             "zeitzone": "Europe/Berlin" },
   "paket": { "id": "pdfa", "version": "1.0.0" }, "einstellungen": { … } }
 ```
 
@@ -645,15 +649,16 @@ code:
 |---|---|
 | `dokument`, `mappe`, `name`, `mime`, `groesse` | as with the other file events; `mime` is a type from `code.archivfassung.typen` |
 | `sha256` | the file's checksum – belongs in `PUT …/archivfassung?sha256=…`; by it you recognise repetitions |
-| `quelle` | `original`: PDF, JPEG or PNG – read `GET /dokumente/{id}/inhalt`. `lesefassung`: another type (TIFF …) – read the readable version with `GET /dokumente/{id}/fassung`; `lesefassung` then names `{ mime, sha256 }`. A second image reader isn't needed. |
-| `seiten` | the source's pages (image: 1) |
-| `textebene` | only PDF: `voll` (every page has text – online invoice), `teilweise` (mixed: text pages and scans), `keine` (scan); images: `keine` |
-| `wortpositionen` | `true` if every page without a text layer has word positions from text recognition. `false`: older text recognition without word positions – then don't store the text "roughly" but report the reason (code `0`, e.g. "Word positions missing – update text recognition"). |
+| `quelle` | `original`: PDF, JPEG, PNG or email – read `GET /dokumente/{id}/inhalt`. `lesefassung`: another type (TIFF …) – read the readable version with `GET /dokumente/{id}/fassung`; `lesefassung` then names `{ mime, sha256 }`. A second image reader isn't needed. |
+| `seiten` | the source's pages (image: 1, email: null – the package sets the pages) |
+| `textebene` | only PDF: `voll` (every page has text – online invoice), `teilweise` (mixed: text pages and scans), `keine` (scan); images and emails: `keine` |
+| `wortpositionen` | `true` if every page without a text layer has word positions from text recognition. `false`: older text recognition without word positions – then don't store the text "roughly" but report the reason (code `0`, e.g. "Word positions missing – update text recognition"). Emails: always `true` – the core doesn't require word positions; the package sets the pages itself and writes the text as a real text layer. |
 | `sprache` | language of the full text (e.g. `deu`) or null |
 | `signiert` | the original is digitally signed – the archive version doesn't carry the signature; Ablago shows a notice on the document |
 | `erechnung` | e-invoice (ZUGFeRD/Factur-X): the XML stays in the original; you needn't take it over |
 | `formular` | form fields: **flatten** them in the archive version (values visible, no longer fillable) |
 | `extern` | the original contains JavaScript, actions or links to external content – **don't take them over** (the core rejects an archive version with them) |
+| `zeitzone` | since 0.221.0: the Library's time zone as an IANA name (e.g. `Europe/Berlin`, set under Workbench → Region) – for dates in the archive version, such as the date in an email's header. For all kinds; no separate query is needed. |
 | `neu` | create anew explicitly, even if there is already an archive version |
 
 ### Word positions { #wortpositionen }
@@ -684,6 +689,7 @@ If a package rebuilds the archive version from page images (e.g. PDFs created on
 - PDF by content (`%PDF-`), at most **100 MB** and **1000 pages**, readable, **not encrypted**;
 - XMP metadata in the catalogue (`/Metadata`), **unfiltered**, with `pdfaid:part` (1–4) and `pdfaid:conformance` (part 1: A, B; 2 and 3: A, B, U; part 4: none or E, F) in the namespace `http://www.aiim.org/pdfa/ns/id/`;
 - **never loading anything:** no JavaScript (also not in the name tree), no actions that start, send or load something (`Launch`, `URI`, `SubmitForm`, `ImportData`, `GoToR`, `GoToE`, `ResetForm`, `Sound`, `Movie`, `Rendition` …), no actions on opening (`OpenAction` except a jump) or on events (`AA`), no links to external files or addresses. Internal jumps (`GoTo`) are allowed.
+- **The basic check doesn't require a text layer:** a PDF/A without text is accepted too – for example an email's archive version whose text the package has set, or a photo without recognised text.
 
 | Status | Meaning | What the package does |
 |---|---|---|

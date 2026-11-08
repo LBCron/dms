@@ -12,7 +12,9 @@
  *   Verweise auf externe Inhalte (sonst abgelehnt). Hatte das Original welche, steht ein Hinweis am Dokument; die
  *   Adressen nur im Protokoll.
  * - **Quelle:** PDF, JPEG und PNG liest das Paket im Original; andere Typen (TIFF …) nur über die vorhandene
- *   Lesefassung (`GET /dokumente/{id}/fassung`) – kein zweiter Bildleser.
+ *   Lesefassung (`GET /dokumente/{id}/fassung`) – kein zweiter Bildleser. E-Mails (#946, Art `emails`) liest das
+ *   Paket im Original und setzt die Seiten selbst; sie werden auch ohne Volltext gemeldet (ohne Paket, das ihn liefert,
+ *   gilt er als feststehend und leer) und brauchen keine Wortpositionen.
  * - **Wortpositionen** (Frage 33, „genau an den Wörtern“): `GET /dokumente/{id}/wortpositionen` – Wörter mit Lage aus
  *   der Textebene bzw. aus der Texterkennung (die sie mit `PUT …/volltext` als `woerter` schickt).
  * - **Annahme:** `PUT /dokumente/{id}/archivfassung?sha256=…` nimmt nur PDF mit PDF/A-Kennung (Grundprüfung); sonst
@@ -27,12 +29,13 @@ import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promise
 import { join } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import {
-  ARCHIV_QUELLE_MAX_BYTES, ARCHIVFASSUNG_MAX_BYTES, ARCHIVFASSUNG_SEITEN_MAX, PDFA_STUFEN, PDFA_TEILE, pdfaKennungAus, pdfaName,
+  ARCHIV_QUELLE_MAX_BYTES, ARCHIVFASSUNG_MAX_BYTES, ARCHIVFASSUNG_SEITEN_MAX, MAIL_TYPEN, mailTyp, PDFA_STUFEN, PDFA_TEILE, pdfaKennungAus, pdfaName,
   type ArchivfassungInfo, type ArchivStand, type ArchivStandArt, type PdfaKennung, type WortSeite,
 } from '../../shared/src/archivfassung';
 import { dateitypName, kernTyp, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dokument } from '../../shared/src/model';
 import { hatSchnittstelle, type ArchivArt, type ArchivAuswahl, type InstalliertesPaket } from '../../shared/src/pakete';
+import { zeitzone } from '../../shared/src/region';
 import type { SchwaerzSeite, Wort } from '../../shared/src/schwaerzen';
 import { bildGroesse, ordnerFassungen } from './dateiumwandlung';
 import { Fachfehler } from './fehler';
@@ -236,10 +239,16 @@ export class Archivfassung {
       .map((p) => ({ id: p.id, name: p.name, version: p.version, typen: p.laeufer!.archivfassung!.typen, ...(p.laeufer!.archivfassung!.auswahl ? { auswahl: p.laeufer!.archivfassung!.auswahl } : {}) }));
   }
 
-  /** Das zuständige Paket für einen Dateityp (bei mehreren das erste nach Id; ohne Rücksicht auf Groß- und Kleinschreibung). */
-  async paketFuer(mime: string, liste?: ArchivPaket[]): Promise<ArchivPaket | null> {
+  /**
+   * Das zuständige Paket für einen Dateityp (bei mehreren das erste nach Id; ohne Rücksicht auf Groß- und
+   * Kleinschreibung). E-Mails (#946): `application/octet-stream` nur mit der Endung `.eml`/`.msg` (`name`) – dann
+   * zählt auch ein Paket, das nur `message/rfc822` bzw. `application/vnd.ms-outlook` nennt; ohne passende Endung nie.
+   */
+  async paketFuer(mime: string, liste?: ArchivPaket[], name?: string | null): Promise<ArchivPaket | null> {
     const m = mime.toLowerCase();
-    return (liste ?? await this.pakete()).find((p) => p.typen.includes(m)) ?? null;
+    const mail = mailTyp(m, name);
+    if (m === 'application/octet-stream' && !mail) return null;
+    return (liste ?? await this.pakete()).find((p) => p.typen.includes(m) || (!!mail && p.typen.includes(mail))) ?? null;
   }
 
   info(sha: string) { return this.o.ablage.info(sha).catch(() => null); }
@@ -251,9 +260,10 @@ export class Archivfassung {
   }
   belegung() { return this.o.ablage.belegung(); }
 
-  /** Quelle der Archivfassung: PDF, JPEG, PNG im Original, sonst die Lesefassung (#577) – oder null. */
-  private async quelle(d: Pick<Dokument, 'mime' | 'sha256'>): Promise<Quelle | null> {
+  /** Quelle der Archivfassung: PDF, JPEG, PNG und E-Mails (#946) im Original, sonst die Lesefassung (#577) – oder null. */
+  private async quelle(d: Pick<Dokument, 'mime' | 'sha256' | 'name'>): Promise<Quelle | null> {
     const m = d.mime.toLowerCase();
+    if (mailTyp(m, d.name)) return { art: 'original', mime: m, inhalt: () => this.o.datei(d.sha256) };
     // Geschütztes PDF mit entsperrter Fassung (#827): die ist die Quelle – das Paket liest sie über /fassung.
     if (m === 'application/pdf') {
       const e = await this.o.lesefassung(d.sha256).catch(() => null);
@@ -283,11 +293,14 @@ export class Archivfassung {
   /**
    * Ein Dokument mit fertigem Volltext an das zuständige Paket melden (`datei.archivfassung`). Nur mit Quelle, bis
    * 50 MB, ohne vorhandene Archivfassung (außer `neu`), PDFs mit vollständiger Textebene nur mit der Einstellung des
-   * Pakets. Der Stand „wartet“ steht in der Ablage, bevor das Ereignis hinausgeht. Liefert, ob gemeldet wurde.
+   * Pakets. E-Mails (#946) auch mit ausgelassenem Volltext (kein Paket liefert ihn – er steht damit fest, leer); mit
+   * einem Paket für den Volltext warten sie wie alle anderen, bis er da ist. Der Stand „wartet“ steht in der Ablage,
+   * bevor das Ereignis hinausgeht. Liefert, ob gemeldet wurde.
    */
   async anfordern(d: Dokument, o: { neu?: boolean; liste?: ArchivPaket[] } = {}): Promise<boolean> {
-    if (d.ocr?.stand !== 'fertig') return false;
-    const p = await this.paketFuer(d.mime, o.liste);
+    const mail = mailTyp(d.mime, d.name);
+    if (d.ocr?.stand !== 'fertig' && !(mail && d.ocr?.stand === 'ausgelassen')) return false;
+    const p = await this.paketFuer(d.mime, o.liste, d.name);
     if (!p) return false;
     const jetzt = Date.now();
     for (const [sha, zeit] of this.angefordert) if (jetzt - zeit > ARCHIV_ANGEFORDERT_MS) this.angefordert.delete(sha);
@@ -301,10 +314,10 @@ export class Archivfassung {
     const abgewaehlt = async (art: ArchivArt) => {
       const k = p.auswahl?.[art];
       if (!k || (await this.o.einstellung(p.id, k).catch(() => true)) === true) return false;
-      await this.o.ablage.setzeStand(d.sha256, { stand: 'ausgelassen', info: t('pakete.archiv.laut-einstellung', { art: t(({ pdf_text: 'pakete.archiv.art.pdfText', pdf_scan: 'pakete.archiv.art.pdfScan', bilder: 'pakete.archiv.art.bilder' } as const)[art]) }), paket, zeit: jetztIso });
+      await this.o.ablage.setzeStand(d.sha256, { stand: 'ausgelassen', info: t('pakete.archiv.laut-einstellung', { art: t(({ pdf_text: 'pakete.archiv.art.pdfText', pdf_scan: 'pakete.archiv.art.pdfScan', bilder: 'pakete.archiv.art.bilder', emails: 'pakete.archiv.art.emails' } as const)[art]) }), paket, zeit: jetztIso });
       return true;
     };
-    if (d.mime.toLowerCase() !== 'application/pdf' && (await abgewaehlt('bilder'))) return false;
+    if (mail ? await abgewaehlt('emails') : d.mime.toLowerCase() !== 'application/pdf' && (await abgewaehlt('bilder'))) return false;
     // Textebene (PDF): vollständig, teilweise (gemischt) oder keine.
     let textebene: 'voll' | 'teilweise' | 'keine' = 'keine';
     let seiten: SchwaerzSeite[] | null = null;
@@ -334,19 +347,24 @@ export class Archivfassung {
       textebene = !seiten || !mit ? 'keine' : mit === seiten.length ? 'voll' : 'teilweise';
       if (await abgewaehlt(textebene === 'voll' ? 'pdf_text' : 'pdf_scan')) return false;
     }
-    // Wortpositionen: für jede Seite ohne Textebene von der Texterkennung?
-    const w = await this.o.ablage.woerter(d.sha256).catch(() => null);
-    const anzahl = seiten?.length ?? (q.mime === 'application/pdf' ? d.ocr?.seiten ?? 1 : 1);
+    // Wortpositionen: für jede Seite ohne Textebene von der Texterkennung? E-Mails (#946) brauchen keine – das Paket
+    // setzt die Seiten selbst und schreibt den Text dabei als echte Textebene.
     let wortpositionen = true;
-    for (let i = 0; i < anzahl; i++) if (!mitText(seiten?.[i]) && !w?.seiten[i]) wortpositionen = false;
+    if (!mail) {
+      const w = await this.o.ablage.woerter(d.sha256).catch(() => null);
+      const anzahl = seiten?.length ?? (q.mime === 'application/pdf' ? d.ocr?.seiten ?? 1 : 1);
+      for (let i = 0; i < anzahl; i++) if (!mitText(seiten?.[i]) && !w?.seiten[i]) wortpositionen = false;
+    }
     this.angefordert.set(d.sha256, jetzt);
     await this.o.ablage.setzeStand(d.sha256, { stand: 'wartet', info: null, paket, zeit: jetztIso });
     const daten = (x: Dokument) => ({
       dokument: x.id, mappe: x.mappeId, name: x.name, mime: x.mime, groesse: x.groesse, sha256: x.sha256,
       quelle: q.art, ...(q.fassung ? { lesefassung: { mime: q.fassung.mime, sha256: q.fassung.sha256 } } : {}),
-      seiten: seiten?.length ?? (q.mime === 'application/pdf' ? d.ocr?.seiten ?? null : 1), textebene, wortpositionen, sprache: d.sprache ?? null,
+      seiten: mail ? null : seiten?.length ?? (q.mime === 'application/pdf' ? d.ocr?.seiten ?? null : 1), textebene, wortpositionen, sprache: d.sprache ?? null,
       signiert: !!befund?.signiert, erechnung: !!befund?.erechnung, formular: !!befund?.formular,
-      extern: !!befund && (befund.javascript || befund.aktionen.length > 0 || befund.extern.length > 0), ...(o.neu ? { neu: true } : {}),
+      extern: !!befund && (befund.javascript || befund.aktionen.length > 0 || befund.extern.length > 0),
+      // Zeitzone der Ablage (#946, Werkbank → Region): für Datumsangaben in der Archivfassung, z. B. im Kopf einer E-Mail.
+      zeitzone: zeitzone(), ...(o.neu ? { neu: true } : {}),
     });
     // KI-Sperre (#796): Die Archivfassung gilt für alle Dokumente mit dieser Datei – ist der Typ dieses Dokuments
     // gesperrt, geht der Auftrag über ein anderes derselben Datei in einem zugelassenen Typ; sonst ausgelassen.
@@ -372,9 +390,13 @@ export class Archivfassung {
     const liste = await this.pakete();
     if (!liste.length) return 0;
     const klein = new Set(typen.map((m) => m.toLowerCase()));
+    // E-Mails (#946) liegen oft als application/octet-stream mit Endung .eml/.msg da.
+    const mitMail = [...klein].some((m) => MAIL_TYPEN.includes(m));
+    const abfrage = new Set(mitMail ? [...klein, 'application/octet-stream'] : klein);
     let n = 0;
-    for (const d of await this.o.dokumenteMitTyp([...klein])) {
-      if (!klein.has(d.mime.toLowerCase())) continue;
+    for (const d of await this.o.dokumenteMitTyp([...abfrage])) {
+      const mail = mailTyp(d.mime, d.name);
+      if (!klein.has(d.mime.toLowerCase()) && !(mail && klein.has(mail))) continue;
       if (await this.anfordern(d, { liste }).catch((e: Error) => { log.warn('Dokument nicht zur Archivfassung gemeldet', { dokument: d.id, fehler: e.message }); return false; })) n++;
     }
     if (n) log.info('Vorhandene Dokumente zur Archivfassung gemeldet', { typen: [...klein], dokumente: n });
@@ -385,7 +407,7 @@ export class Archivfassung {
   private async zustaendig(paket: { id: string; schnittstellen?: string[] } | undefined, d: Dokument): Promise<ArchivPaket> {
     if (!paket) throw new Fachfehler(403, t('pakete.archiv.nur-pakete'));
     if (!paket.schnittstellen?.includes('dms:archivfassung')) throw new Fachfehler(403, t('pakete.archiv.recht'));
-    const p = await this.paketFuer(d.mime);
+    const p = await this.paketFuer(d.mime, undefined, d.name);
     if (!p || p.id !== paket.id) throw new Fachfehler(403, t('pakete.archiv.typ-fremd', { typ: d.mime }));
     return p;
   }

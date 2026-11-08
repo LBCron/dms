@@ -162,6 +162,10 @@ Ein Zeitraum, in dem ein Benutzer nicht da ist – mit einem Vertreter, der sein
 <a id="aktionen"></a>**Aktionen** · ✓ Alltagswort · alle  
 Das Menü „Mappe ▾“ neben dem Titel einer Mappe – Aufgabe vergeben, Erinnern, Versenden, Exportieren und mehr. Hieß früher selbst „Aktionen“.
 
+<a id="archivfassung"></a>**Archivfassung** · ~ mit Erklärung · alle  
+Ein durchsuchbares PDF/A, das ein Paket wie PDF/A zusätzlich zu einem Dokument ablegt – ein Format, das sich auch in vielen Jahren und ohne Ablago noch öffnen lässt. Das Original bleibt unverändert. Gibt es eine, zeigt Ablago sie an („Ansicht: Archivfassung (PDF/A)“). Auch PDFs, Scans, Fotos und E-Mails (.eml, .msg) bekommen eine; eine E-Mail liest man darin wie einen Brief.  
+Siehe auch: [Dokument](#dokument), [Version](#version).
+
 <a id="aufgabe"></a>**Aufgabe** · ✓ Alltagswort · alle  
 Etwas, das ein Mensch an einer Mappe tun soll. Arten sind Passt nicht, Erwähnung, Zugewiesen (von Hand vergeben), Post für dich, Frist, Erinnerung, Vertretung und Auskunft.  
 Siehe auch: [Zu erledigen](#zu-erledigen), [Frist](#frist), [Erinnerung](#erinnerung), [Auftrag](#auftrag).
@@ -522,6 +526,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Administrator | Admin (in der Oberfläche) | – |
 | Anmeldung über einen Anbieter | SSO, OIDC (in der Oberfläche) | – |
 | Ansicht | Sicht, Filter, View | `Sicht` |
+| Archivfassung | Archivkopie, Langzeitfassung | `Archivfassung` |
 | Archivmodus | – | `Archiv` |
 | Archivnummer | – | `archivnummer` |
 | Aufbewahrung abgelaufen | Darf weg | – |
@@ -590,4 +595,4 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Zum Wiederfinden nutzen | – | `Feld.wiederfinden` |
 | Zwei-Faktor-Anmeldung | 2FA, MFA (in der Oberfläche) | – |
 
-*Stand: 2026-11-07*
+*Stand: 2026-11-08*

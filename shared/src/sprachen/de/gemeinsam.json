@@ -509,7 +509,7 @@
   "pakete.code-archivfassung-typen-mindestens": "code.archivfassung.typen: mindestens ein Dateityp, z. B. [application/pdf, image/jpeg, image/png].",
   "pakete.code-archivfassung-typen-hoechstens": "code.archivfassung.typen: höchstens {ARCHIV_TYPEN_MAX} Dateitypen.",
   "pakete.code-archivfassung-gibt-es": "code.archivfassung: „{k}“ gibt es nicht (nur typen und auswahl).",
-  "pakete.code-archivfassung-auswahl-ein": "code.archivfassung.auswahl: ein Objekt mit pdf_text, pdf_scan und/oder bilder erwartet.",
+  "pakete.code-archivfassung-auswahl-ein": "code.archivfassung.auswahl: ein Objekt mit pdf_text, pdf_scan, bilder und/oder emails erwartet.",
   "pakete.code-archivfassung-auswahl-gibt": "code.archivfassung.auswahl: „{k}“ gibt es nicht (nur {ARCHIV_ARTEN}).",
   "pakete.code-archivfassung-auswahl-der": "code.archivfassung.auswahl.{art}: der Schlüssel einer Einstellung vom Typ janein (Abschnitt, keine Liste) – an: diese Dokumente bekommen eine Archivfassung.",
   "pakete.code-rechte-schnittstellen-dms-8": "code.rechte.schnittstellen: dms:archivfassung braucht code.archivfassung.typen – die Dateitypen, zu denen das Paket ein PDF/A ablegt.",

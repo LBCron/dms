@@ -97,7 +97,7 @@ Seit #724 kommen alle Ereignisse aus dem einen Ereigniskatalog und Ausgangskorb 
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
 | `datei.umwandeln` | Seit 0.137.0, nur mit `dms:umwandeln`: Eine Datei eines Typs aus `code.umwandeln` braucht eine Fassung – siehe [Dateien umwandeln](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
 | `datei.volltext` | Seit 0.145.0, nur mit `dms:volltext`: Eine Datei eines Typs aus `code.volltext` braucht ihren Volltext – siehe [Volltext liefern](#volltext-liefern) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, ggf. `neu` |
-| `datei.archivfassung` | Seit 0.149.0, nur mit `dms:archivfassung`: Ein Dokument eines Typs aus `code.archivfassung.typen` hat einen feststehenden Volltext und braucht seine Archivfassung – siehe [Archivfassung ablegen](#archivfassung) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, `quelle`, ggf. `lesefassung`, `seiten`, `textebene`, `wortpositionen`, `sprache`, `signiert`, `erechnung`, `formular`, `extern`, ggf. `neu` |
+| `datei.archivfassung` | Seit 0.149.0, nur mit `dms:archivfassung`: Ein Dokument eines Typs aus `code.archivfassung.typen` hat einen feststehenden Volltext und braucht seine Archivfassung – siehe [Archivfassung ablegen](#archivfassung) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, `quelle`, ggf. `lesefassung`, `seiten`, `textebene`, `wortpositionen`, `sprache`, `signiert`, `erechnung`, `formular`, `extern`, `zeitzone` (seit 0.221.0), ggf. `neu` |
 | `sicherung.fertig` | Seit 0.142.0, nur mit `dms:sicherung-lesen`: Eine Sicherung liegt fertig im Sicherungsordner – siehe [Sicherung außer Haus](#sicherung-ausser-haus) | `name`, `datei`, `groesse`, `sha256`, `beginn`, `format`, `schlank`, `verschluesselung` |
 | `mappe.angelegt`, `mappe.geaendert`, `mappe.geloescht`, `mappe.wiederhergestellt` | Seit 0.153.0, nur zu Typen aus `code.mappentypen` (seit 0.166.0 auch fremde) und nur zu Mappen, die das Paket lesen darf: Mappe angelegt, gespeichert und dabei geändert, in den Papierkorb gelegt, wiederhergestellt. `mappe.geaendert` bündelt schnelle Folgen (etwa 5 s) zu einem Ereignis. Beispiele, Demo-Daten und Wiederherstellungen lösen nichts aus. | `mappe`, `typ`, bei `mappe.geaendert` `felder` (Schlüssel, nie Werte), `ereignis` |
 | `frist.erreicht` | Seit 0.153.0, nur zu Typen aus `code.mappentypen`: Ein Datumsfeld mit Frist erreicht den Erinnerungszeitpunkt (`zeitpunkt: vorlauf`) bzw. den Tag selbst (`faellig`) – je Mappe, Feld, Datum und Zeitpunkt genau einmal | `mappe`, `typ`, `feld`, `datum`, `zeitpunkt`, `empfaenger`, `ereignis` |
@@ -599,7 +599,8 @@ code:
     auswahl:                    # optional, je Art der Schlüssel einer Einstellung vom Typ janein – an = bekommt eine
       pdf_text: pdf_text        #   PDFs mit Text (jede Seite hat eine Textebene)
       pdf_scan: pdf_scan        #   gescannte PDFs (keine oder nicht auf jeder Seite eine Textebene)
-      bilder: bilder            #   Fotos und Bilder (alle Nicht-PDF-Typen aus typen)
+      bilder: bilder            #   Fotos und Bilder (alle Nicht-PDF-Typen aus typen außer E-Mails)
+      emails: emails            #   E-Mails (.eml, .msg) – seit 0.221.0
   rechte:
     lesen: ["*"]                # Dokumente liegen in Mappen beliebiger Typen
     dokumente: lesen            # Datei, Volltext und Wortpositionen lesen; Schreibrecht braucht es nicht
@@ -611,18 +612,20 @@ code:
         - { schluessel: pdf_text, name: "PDFs mit Text", typ: janein, standard: true }
         - { schluessel: pdf_scan, name: "Gescannte PDFs", typ: janein, standard: true }
         - { schluessel: bilder, name: "Fotos und Bilder (.jpg, .jpeg, .png, .tif, .tiff)", typ: janein, standard: true }
+        - { schluessel: emails, name: "E-Mails (.eml, .msg)", typ: janein, standard: true }
 ```
 
 - `code.archivfassung.typen`, `dms:archivfassung`, `datei.archivfassung` und `dokumente: lesen` gehören zusammen; fehlt eins, lehnen Ablago und `pruefen.py` das Paket ab. **PDF, JPEG und PNG sind erlaubt** (anders als bei `dms:umwandeln`).
-- `auswahl` (ersetzt `nur_scans`): je Art der Schlüssel einer Ja/Nein-Einstellung des Pakets. Der Kern bestimmt die Art je Dokument – bei PDFs an der Textebene (`voll` → `pdf_text`, `teilweise`/`keine` → `pdf_scan`), alle anderen Typen sind `bilder` – und meldet es nur, wenn die Einstellung **an** ist. Fehlt ein Schlüssel, ist die Art immer an. Abgewähltes steht am Dokument als „ausgelassen – laut Einstellung“ (kein Fehler); kreuzt der Administrator eine Art später an, meldet der Kern den Bestand nach.
+- `auswahl` (ersetzt `nur_scans`): je Art der Schlüssel einer Ja/Nein-Einstellung des Pakets. Der Kern bestimmt die Art je Dokument – bei PDFs an der Textebene (`voll` → `pdf_text`, `teilweise`/`keine` → `pdf_scan`), E-Mails sind `emails`, alle anderen Typen sind `bilder` – und meldet es nur, wenn die Einstellung **an** ist. Fehlt ein Schlüssel, ist die Art immer an. Abgewähltes steht am Dokument als „ausgelassen – laut Einstellung“ (kein Fehler); kreuzt der Administrator eine Art später an, meldet der Kern den Bestand nach.
 - Die Rückfrage bei der Installation zeigt „Archivfassung (PDF/A) ablegen – … (dms:archivfassung): PDF, JPEG, PNG, TIFF“. Andere Dateitypen bei einem Update heißen neu bestätigen; neue Dateitypen meldet der Kern für den Bestand.
 - **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id.
+- **E-Mails** (seit 0.221.0, Art `emails`): `message/rfc822` (`.eml`) und `application/vnd.ms-outlook` (`.msg`); Dateien, die als `application/octet-stream` abgelegt sind, zählen nur mit der Endung `.eml` bzw. `.msg` im Namen – sonst bekommt ein Paket sie nie gemeldet, auch wenn es `application/octet-stream` in `typen` nennt. Ein Paket, das nur `message/rfc822` und `application/vnd.ms-outlook` nennt, ist auch für solche Dateien zuständig. Wer `emails` in `auswahl` nutzt, gibt `dms: ">=0.221.0"` an – ältere Versionen kennen die Art nicht und lehnen das Paket ab.
 
 ### Ablauf { #archivfassung-ablauf }
 
 ![Ablauf „Archivfassung“ zwischen Kern, Paket Texterkennung und Paket mit dms:archivfassung](grafiken/ablauf-archivfassung.png){ loading=lazy }
 
-1. **Melden – erst mit feststehendem Volltext:** Der Kern schickt `datei.archivfassung`, sobald der Volltext eines Dokuments *fertig* ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit `dms:volltext`, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer **neuen Version** und jeder Änderung am PDF (neuer Prüfwert), bei *Volltext neu erzeugen* (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (**Bestand**: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls `neu: true` – die alte Archivfassung passt dann nicht mehr zum Text.
+1. **Melden – erst mit feststehendem Volltext:** Der Kern schickt `datei.archivfassung`, sobald der Volltext eines Dokuments *fertig* ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit `dms:volltext`, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer **neuen Version** und jeder Änderung am PDF (neuer Prüfwert), bei *Volltext neu erzeugen* (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (**Bestand**: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls `neu: true` – die alte Archivfassung passt dann nicht mehr zum Text. **E-Mails** (seit 0.221.0) meldet der Kern auch ohne Volltext: Liefert kein Paket ihn (kein Paket mit `dms:volltext` für Mails installiert), gilt er als feststehend und leer. Ist eins installiert (z. B. *Office und E-Mail*), wartet die Mail wie jedes Dokument, bis es den Text geschrieben hat – auch wenn es keinen findet.
 2. **Nicht gemeldet:** Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer `neu`), **verschlüsselte PDFs** (Stand *keine* mit Grund am Dokument), PDFs, die **schon gültiges PDF/A** sind (das Original gilt als Archivfassung, keine zweite Datei) und Dokumente einer Art, die in `auswahl` abgewählt ist. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer `neu`).
 3. **Warten:** Bevor das Ereignis hinausgeht, steht der Stand „wartet“ in der Ablage – am Dokument „Archivfassung wird erstellt“. Die Anzeige zeigt bis dahin das Original.
 4. **Ablegen:** Das Paket liest die Quelle, die Wortpositionen und ggf. den Volltext und gibt das PDF/A mit `PUT /dokumente/{id}/archivfassung?sha256=…` zurück (Rohdaten mit `api_binaer`). Danach: Stand *fertig*, Eintrag in der Historie („PNG → PDF/A-2b (PDF/A 1.0.0)“), Anzeige der Archivfassung.
@@ -637,7 +640,8 @@ code:
   "daten": { "dokument": "…", "mappe": "…", "name": "Scan 2026-11-03.pdf", "mime": "application/pdf",
              "groesse": 482113, "sha256": "9f2c…", "quelle": "original", "seiten": 3,
              "textebene": "teilweise", "wortpositionen": true, "sprache": "deu",
-             "signiert": false, "erechnung": false, "formular": false, "extern": true },
+             "signiert": false, "erechnung": false, "formular": false, "extern": true,
+             "zeitzone": "Europe/Berlin" },
   "paket": { "id": "pdfa", "version": "1.0.0" }, "einstellungen": { … } }
 ```
 
@@ -645,15 +649,16 @@ code:
 |---|---|
 | `dokument`, `mappe`, `name`, `mime`, `groesse` | wie bei den anderen Datei-Ereignissen; `mime` ist ein Typ aus `code.archivfassung.typen` |
 | `sha256` | Prüfwert der Datei – gehört in `PUT …/archivfassung?sha256=…`; daran erkennst du Wiederholungen |
-| `quelle` | `original`: PDF, JPEG oder PNG – lies `GET /dokumente/{id}/inhalt`. `lesefassung`: anderer Typ (TIFF …) – lies die Lesefassung mit `GET /dokumente/{id}/fassung`; `lesefassung` nennt dann `{ mime, sha256 }`. Ein zweiter Bildleser ist nicht nötig. |
-| `seiten` | Seiten der Quelle (Bild: 1) |
-| `textebene` | nur PDF: `voll` (jede Seite hat Text – Online-Rechnung), `teilweise` (gemischt: Textseiten und Scans), `keine` (Scan); Bilder: `keine` |
-| `wortpositionen` | `true`, wenn jede Seite ohne Textebene Wortpositionen der Texterkennung hat. `false`: ältere Texterkennung ohne Wortpositionen – lege den Text dann nicht „ungefähr“ ab, sondern melde den Grund (Code `0`, z. B. „Wortpositionen fehlen – Texterkennung aktualisieren“). |
+| `quelle` | `original`: PDF, JPEG, PNG oder E-Mail – lies `GET /dokumente/{id}/inhalt`. `lesefassung`: anderer Typ (TIFF …) – lies die Lesefassung mit `GET /dokumente/{id}/fassung`; `lesefassung` nennt dann `{ mime, sha256 }`. Ein zweiter Bildleser ist nicht nötig. |
+| `seiten` | Seiten der Quelle (Bild: 1, E-Mail: null – die Seiten setzt das Paket) |
+| `textebene` | nur PDF: `voll` (jede Seite hat Text – Online-Rechnung), `teilweise` (gemischt: Textseiten und Scans), `keine` (Scan); Bilder und E-Mails: `keine` |
+| `wortpositionen` | `true`, wenn jede Seite ohne Textebene Wortpositionen der Texterkennung hat. `false`: ältere Texterkennung ohne Wortpositionen – lege den Text dann nicht „ungefähr“ ab, sondern melde den Grund (Code `0`, z. B. „Wortpositionen fehlen – Texterkennung aktualisieren“). E-Mails: immer `true` – der Kern verlangt keine Wortpositionen; das Paket setzt die Seiten selbst und schreibt den Text als echte Textebene. |
 | `sprache` | Sprache des Volltexts (z. B. `deu`) oder null |
 | `signiert` | das Original ist digital signiert – die Archivfassung trägt die Signatur nicht; Ablago zeigt am Dokument einen Hinweis |
 | `erechnung` | E-Rechnung (ZUGFeRD/Factur-X): die XML bleibt im Original; du musst sie nicht übernehmen |
 | `formular` | Formularfelder: in der Archivfassung **einfrieren** (Werte sichtbar, nicht mehr ausfüllbar) |
 | `extern` | das Original enthält JavaScript, Aktionen oder Verweise auf externe Inhalte – **nicht übernehmen** (der Kern lehnt eine Archivfassung damit ab) |
+| `zeitzone` | seit 0.221.0: Zeitzone der Ablage als IANA-Name (z. B. `Europe/Berlin`, eingestellt unter Werkbank → Region) – für Datumsangaben in der Archivfassung, etwa das Datum im Kopf einer E-Mail. Bei allen Arten; eine eigene Abfrage braucht es nicht. |
 | `neu` | ausdrücklich neu erzeugen, auch wenn es schon eine Archivfassung gibt |
 
 ### Wortpositionen { #wortpositionen }
@@ -684,6 +689,7 @@ Baut ein Paket die Archivfassung aus Seitenbildern neu auf (z. B. PDFs, die am C
 - PDF am Inhalt (`%PDF-`), höchstens **100 MB** und **1000 Seiten**, lesbar, **nicht verschlüsselt**;
 - XMP-Metadaten im Katalog (`/Metadata`), **ungefiltert**, mit `pdfaid:part` (1–4) und `pdfaid:conformance` (Teil 1: A, B; 2 und 3: A, B, U; Teil 4: ohne oder E, F) im Namensraum `http://www.aiim.org/pdfa/ns/id/`;
 - **nie nachladen:** kein JavaScript (auch nicht im Namensbaum), keine Aktionen, die etwas starten, senden oder nachladen (`Launch`, `URI`, `SubmitForm`, `ImportData`, `GoToR`, `GoToE`, `ResetForm`, `Sound`, `Movie`, `Rendition` …), keine Aktionen beim Öffnen (`OpenAction` außer Sprung) oder bei Ereignissen (`AA`), keine Verweise auf externe Dateien oder Adressen. Interne Sprünge (`GoTo`) sind erlaubt.
+- **Eine Textebene verlangt die Grundprüfung nicht:** Auch ein PDF/A ohne Text wird angenommen – etwa die Archivfassung einer E-Mail, deren Text das Paket gesetzt hat, oder ein Foto ohne erkannten Text.
 
 | Status | Bedeutung | Was das Paket tut |
 |---|---|---|

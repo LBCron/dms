@@ -498,8 +498,11 @@ export interface KiUebersicht {
 /** Alle Mappentypen (außer Benutzer) – für Pakete wie die Texterkennung, die an jedes Dokument müssen. */
 export const ALLE_TYPEN = '*';
 
-/** Arten von Dokumenten für die Archivfassung (#660): je ein Schlüssel einer Ja/Nein-Einstellung des Pakets. */
-export const ARCHIV_ARTEN = ['pdf_text', 'pdf_scan', 'bilder'] as const;
+/**
+ * Arten von Dokumenten für die Archivfassung (#660): je ein Schlüssel einer Ja/Nein-Einstellung des Pakets. `emails`
+ * (#946): `.eml` und Outlook `.msg` – siehe `mailTyp` in archivfassung.ts.
+ */
+export const ARCHIV_ARTEN = ['pdf_text', 'pdf_scan', 'bilder', 'emails'] as const;
 export type ArchivArt = (typeof ARCHIV_ARTEN)[number];
 export type ArchivAuswahl = Partial<Record<ArchivArt, string>>;
 
@@ -527,7 +530,7 @@ export interface PaketCode {
   volltext?: string[];
   /**
    * Archivfassung (#631, `code.archivfassung`, nur mit `dms:archivfassung`): Dateitypen, zu denen das Paket ein PDF/A
-   * ablegt (PDF, JPEG und PNG erlaubt), und optional je Art (#660: `pdf_text`, `pdf_scan`, `bilder`) der Schlüssel einer
+   * ablegt (PDF, JPEG und PNG erlaubt), und optional je Art (#660: `pdf_text`, `pdf_scan`, `bilder`, #946: `emails`) der Schlüssel einer
    * Ja/Nein-Einstellung des Pakets: an = diese Dokumente bekommen eine Archivfassung (fehlt der Schlüssel: immer).
    */
   archivfassung?: { typen: string[]; auswahl?: ArchivAuswahl };
@@ -662,7 +665,7 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
       for (const k of Object.keys(a)) if (k !== 'typen' && k !== 'auswahl') fehler.push(t('gemeinsam.pakete.code-archivfassung-gibt-es', { k }));
       const auswahl: ArchivAuswahl = {};
       if (a.auswahl !== undefined) {
-        // Je Art (PDFs mit Text, gescannte PDFs, Bilder) der Schlüssel einer Ja/Nein-Einstellung (Abschnitt, keine Liste): an = bekommt eine Archivfassung.
+        // Je Art (PDFs mit Text, gescannte PDFs, Bilder, E-Mails) der Schlüssel einer Ja/Nein-Einstellung (Abschnitt, keine Liste): an = bekommt eine Archivfassung.
         const w = a.auswahl as Record<string, unknown>;
         const felder = (Array.isArray(x.einstellungen) ? x.einstellungen : []).flatMap((b) => (b && typeof b === 'object' && !Array.isArray(b) && Array.isArray((b as Record<string, unknown>).felder) && (b as Record<string, unknown>).liste === undefined ? (b as Record<string, unknown>).felder as unknown[] : []));
         if (!w || typeof w !== 'object' || Array.isArray(w)) fehler.push(t('gemeinsam.pakete.code-archivfassung-auswahl-ein'));

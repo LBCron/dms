@@ -67,6 +67,9 @@ begriffe:
   Dokument:
     begriff: Document
     beschreibung: A file that lies in a document tab of a folder in Ablago. A file is uploaded; in Ablago it is a document. On an email it is called an attachment.
+  Archivfassung:
+    begriff: Archive version
+    beschreibung: 'A searchable PDF/A that a package such as PDF/A stores in addition to a document – a format that can still be opened in many years and without Ablago. The original stays unchanged. If there is one, Ablago shows it ("View: archive version (PDF/A)"). PDFs, scans, photos and emails (.eml, .msg) can get one; you read an email in it like a letter.'
   Version:
     begriff: Version
     beschreibung: A document can have several versions. Replacing creates a new version; the older ones stay underneath and can be restored. Only in tabs with versioning. Not to be confused with the version of Ablago.

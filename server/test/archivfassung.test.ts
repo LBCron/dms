@@ -15,9 +15,10 @@ import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { deflateSync } from 'node:zlib';
 import { PDFArray, PDFDocument, PDFName, PDFRawStream, PDFString, StandardFonts, decodePDFRawStream } from 'pdf-lib';
-import { pdfaKennungAus, pruefeWoerter } from '../../shared/src/archivfassung';
+import { mailTyp, pdfaKennungAus, pruefeWoerter } from '../../shared/src/archivfassung';
 import { HILFE } from '../../shared/src/hilfe';
 import { liesBeschreibung } from '../../shared/src/paketeinstellungen';
+import { setzeZeitzone, STANDARD_ZEITZONE } from '../../shared/src/region';
 import { gleicheRechte, liesCode, rechtePunkte, type InstalliertesPaket } from '../../shared/src/pakete';
 import { speicherApiSchluesselRepo, ApiSchluesselDienst } from '../src/apischluessel';
 import { Archivfassung, ordnerArchiv, speicherArchiv } from '../src/archivfassung';
@@ -106,7 +107,7 @@ const paket = (id: string, code: Record<string, unknown>, name: string): Install
 });
 const pdfaPaket = () => paket('pdfa', MANIFEST_CODE, 'PDF/A');
 
-async function aufbau(o: { mitPaket?: boolean } = {}) {
+async function aufbau(o: { mitPaket?: boolean; paket?: InstalliertesPaket } = {}) {
   const repo = speicherRepo();
   const dateien = speicherDateien();
   const einstellungen = speicherEinstellungen();
@@ -115,7 +116,10 @@ async function aufbau(o: { mitPaket?: boolean } = {}) {
   const t = new Texterkennung(repo, dateien, einstellungen, engine, async () => ({ pdftotext: true, pdftoppm: true }));
   d.verbindeTexterkennung(t);
   t.paket = () => d.texterkennungPaket();
+  t.volltextPaket = d.paketVolltext;
   t.nachher = (dok, e, k) => {
+    // Wie ablago.ts: Ausgelassen geht an die Archivfassung (E-Mails ohne Volltext-Paket, #946).
+    if (e.stand === 'ausgelassen') { void d.volltextAusgelassen(dok.id); return; }
     if (e.stand !== 'fertig' && e.stand !== 'paket') return;
     void d.volltextFertig({ dokument: dok.id, mappe: dok.mappeId }, { quelle: 'kern', text: k.text, mime: dok.mime, seiten: e.seiten ?? null, neu: k.neu });
   };
@@ -124,7 +128,7 @@ async function aufbau(o: { mitPaket?: boolean } = {}) {
   d.verbindeArchivfassung(a);
   // Texterkennung als Paket: Bilder warten auf sie; sie schreibt den Volltext mit Wortpositionen.
   await d.speicherePaket(paket('texterkennung', { sprache: 'c', ereignisse: ['volltext.fertig'], rechte: { lesen: ['*'], dokumente: 'schreiben', schnittstellen: ['dms:texterkennung'] } }, 'Texterkennung'));
-  if (o.mitPaket !== false) await d.speicherePaket(pdfaPaket());
+  if (o.mitPaket !== false) await d.speicherePaket(o.paket ?? pdfaPaket());
   const typ = await d.legeTypAn({ name: 'Rechnung', felder: [{ key: 'nr', label: 'Nr', typ: 'text', pflicht: true }], register: [
     { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['nr'] },
     { key: 'dokumente', name: 'Dokumente', art: 'dokumente', versionierung: true },
@@ -225,7 +229,7 @@ describe('Archivfassung (#631): Ablauf Ende zu Ende mit dem Test-Paket', () => {
     const [e] = await x.offen();
     const dok = await x.dok(id);
     assert.equal(e.paketId, 'pdfa');
-    assert.deepEqual({ ...e.daten }, { dokument: id, mappe: x.m.id, name: 'scan.png', mime: 'image/png', groesse: dok.groesse, sha256: dok.sha256, quelle: 'original', seiten: 1, textebene: 'keine', wortpositionen: true, sprache: dok.sprache ?? null, signiert: false, erechnung: false, formular: false, extern: false, neu: true });
+    assert.deepEqual({ ...e.daten }, { dokument: id, mappe: x.m.id, name: 'scan.png', mime: 'image/png', groesse: dok.groesse, sha256: dok.sha256, quelle: 'original', seiten: 1, textebene: 'keine', wortpositionen: true, sprache: dok.sprache ?? null, signiert: false, erechnung: false, formular: false, extern: false, zeitzone: 'Europe/Berlin', neu: true });
     // Wortpositionen über das Recht (Lesen), ohne weiteres Recht; Bildmaße in Bildpunkten.
     const wp = (await x.rufe('pdfa', 'GET', '/api/v1/dokumente/:id/wortpositionen', { id }, undefined)).body as { vollstaendig: boolean; seiten: Array<{ quelle: string; breite: number; woerter: unknown[] }> };
     assert.equal(wp.vollstaendig, true);
@@ -532,5 +536,135 @@ describe('Archivfassung (#799): bleibt unverändert, Herausgeben mit API-Schlüs
     await x.d.aendereTyp(typ.id, { ...typ, stempel: null } as never);
     const ohne = await mensch('/api/dokumente/:id/archivfassung', { id });
     assert.ok(ohne.datei.inhalt.equals(gespeichert));
+  });
+});
+
+/* ---------- E-Mails (#946) ---------- */
+
+const EML = 'message/rfc822';
+const MSG = 'application/vnd.ms-outlook';
+const OCTET = 'application/octet-stream';
+/** Eine einfache Mail (nur reservierte Domains, Persona-Namen). */
+const mail = (betreff = 'Auftragsbestätigung') => Buffer.from([
+  'From: Stadtwerke Musterstadt <kundenservice@example.org>', 'To: Markus <markus@example.com>', 'Date: Fri, 06 Nov 2026 09:15:00 +0100',
+  `Subject: ${betreff}`, 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=utf-8', '', 'Guten Tag Markus,', '', 'wir bestätigen Ihren Auftrag.', '',
+].join('\r\n'));
+/** Paket PDF/A mit E-Mails (wie dms-registry #143): Typen und Einstellung „E-Mails (.eml, .msg)“. */
+const MANIFEST_MAIL = {
+  ...MANIFEST_CODE,
+  archivfassung: { typen: [PDF, 'image/jpeg', 'image/png', EML, MSG, OCTET], auswahl: { pdf_text: 'pdf_text', pdf_scan: 'pdf_scan', bilder: 'bilder', emails: 'emails' } },
+  einstellungen: [{ abschnitt: 'PDF/A', felder: [
+    ...MANIFEST_CODE.einstellungen[0].felder,
+    { schluessel: 'emails', name: 'E-Mails (.eml, .msg)', typ: 'janein', standard: true },
+  ] }],
+};
+const mailPaket = () => paket('pdfa', MANIFEST_MAIL, 'PDF/A');
+/** Paket Office und E-Mail: liefert den Volltext von Mails (#614). */
+const officePaket = () => paket('office_email', { sprache: 'c', ereignisse: ['datei.volltext'], volltext: [EML, MSG], rechte: { lesen: ['*'], dokumente: 'lesen', schnittstellen: ['dms:volltext'] } }, 'Office und E-Mail');
+
+describe('Archivfassung für E-Mails (#946)', () => {
+  it('Art emails: message/rfc822, Outlook und octet-stream nur mit Endung .eml/.msg; Auswahl emails im Manifest', async () => {
+    assert.equal(mailTyp(EML), EML);
+    assert.equal(mailTyp('Message/RFC822', 'x.pdf'), EML);
+    assert.equal(mailTyp(MSG), MSG);
+    assert.equal(mailTyp(OCTET, 'Kündigung.EML'), EML);
+    assert.equal(mailTyp(OCTET, 'bestaetigung.msg'), MSG);
+    assert.equal(mailTyp(OCTET, 'daten.bin'), null);
+    assert.equal(mailTyp(OCTET), null);
+    assert.equal(mailTyp(PDF, 'falsch.eml'), null, 'nur octet-stream nach der Endung');
+    // Manifest: emails ist eine Art wie die übrigen (#660) – an eine Ja/Nein-Einstellung gehängt.
+    const c = liesCode(MANIFEST_MAIL);
+    assert.deepEqual(c.fehler, []);
+    assert.equal(c.code!.archivfassung!.auswahl!.emails, 'emails');
+    assert.match(liesCode({ ...MANIFEST_MAIL, archivfassung: { typen: [EML], auswahl: { mails: 'emails' } } }).fehler.join(' '), /„mails“ gibt es nicht \(nur pdf_text, pdf_scan, bilder, emails\)/);
+    assert.match(liesCode({ ...MANIFEST_MAIL, archivfassung: { typen: [EML], auswahl: { emails: 'gibts-nicht' } } }).fehler.join(' '), /auswahl\.emails/);
+    // Zuständig: octet-stream nur mit passender Endung – auch wenn das Paket octet-stream nennt; ohne octet-stream in
+    // den Typen genügt message/rfc822 bzw. Outlook.
+    const x = await aufbau({ paket: mailPaket() });
+    assert.equal((await x.a.paketFuer(OCTET, undefined, 'mail.eml'))?.id, 'pdfa');
+    assert.equal(await x.a.paketFuer(OCTET, undefined, 'daten.bin'), null);
+    assert.equal(await x.a.paketFuer(OCTET), null);
+    const ohneOctet = [{ id: 'p', name: 'P', version: '1', typen: [EML, MSG] }];
+    assert.equal((await x.a.paketFuer(OCTET, ohneOctet, 'brief.msg'))?.id, 'p');
+    assert.equal((await x.a.paketFuer(EML, ohneOctet))?.id, 'p');
+  });
+
+  it('ohne Volltext-Paket: Mails (.eml, .msg, octet-stream mit Endung) werden gemeldet – ohne Wortpositionen, mit Zeitzone; das PDF/A ohne Textebene wird angenommen und angezeigt', async () => {
+    setzeZeitzone('Europe/Vienna');
+    try {
+      const x = await aufbau({ paket: mailPaket() });
+      const eml = await x.hoch('Auftragsbestätigung.eml', mail(), EML);
+      assert.equal((await x.dok(eml)).ocr?.stand, 'ausgelassen', 'kein Paket liefert den Volltext');
+      await warte(async () => (await x.offen()).length === 1);
+      const [e] = await x.offen();
+      assert.equal(e.daten.mime, EML);
+      assert.equal(e.daten.name, 'Auftragsbestätigung.eml');
+      assert.equal(e.daten.quelle, 'original');
+      assert.equal(e.daten.textebene, 'keine');
+      assert.equal(e.daten.wortpositionen, true, 'Wortpositionen verlangt der Kern für Mails nicht');
+      assert.equal(e.daten.seiten, null);
+      assert.equal(e.daten.zeitzone, 'Europe/Vienna');
+      assert.equal((await x.a.stand(await x.dok(eml)))?.stand, 'wartet');
+      // Outlook und octet-stream mit Endung ebenso; octet-stream ohne passende Endung nie.
+      await x.hoch('Kündigung.msg', mail('Kündigungsbestätigung'), MSG);
+      await x.hoch('weitergeleitet.eml', mail('WG: Termin'), OCTET);
+      const bin = await x.hoch('daten.bin', Buffer.from('nur Bytes, keine Mail'), OCTET);
+      await warte(async () => (await x.offen()).length === 3);
+      await new Promise((r) => setTimeout(r, 100));
+      const offen = await x.offen();
+      assert.deepEqual(offen.map((y) => y.daten.mime).sort(), [MSG, OCTET, EML].sort());
+      assert.equal(offen.find((y) => y.daten.mime === OCTET)?.daten.name, 'weitergeleitet.eml');
+      assert.equal(await x.a.stand(await x.dok(bin)), null);
+      // Das Paket liest nur /inhalt und legt ein PDF/A ohne Textebene ab: Die Grob-Prüfung nimmt es an.
+      const erg = await x.laeufer(async (daten, _wp, datei) => {
+        assert.match(datei.toString('utf8'), /Subject: /, `Original von ${String(daten.name)}`);
+        return pdf({ pdfa: {} });
+      });
+      assert.deepEqual(erg, ['PDF/A-2b', 'PDF/A-2b', 'PDF/A-2b']);
+      const s = (await x.a.stand(await x.dok(eml)))!;
+      assert.equal(s.stand, 'fertig');
+      assert.equal(s.fassung?.pdfa.teil, 2);
+      const v = await x.d.archivfassungVon(eml);
+      assert.equal(v.inhalt.subarray(0, 5).toString('latin1'), '%PDF-');
+      assert.equal((await x.dok(eml)).anzeigbar, false, 'das Original zeigt der Browser nicht – „Original anzeigen“ lädt es herunter');
+      // Ein PDF trägt die Zeitzone ebenso (alle Arten).
+      await x.hoch('rechnung.pdf', await pdf({ text: TEXT }));
+      await warte(async () => (await x.offen()).length === 1);
+      assert.equal((await x.offen())[0].daten.zeitzone, 'Europe/Vienna');
+    } finally { setzeZeitzone(STANDARD_ZEITZONE); }
+  });
+
+  it('mit Office und E-Mail: die Mail wartet wie bisher auf den Volltext und wird danach gemeldet', async () => {
+    const x = await aufbau({ paket: mailPaket() });
+    await x.d.speicherePaket(officePaket());
+    const id = await x.hoch('Auftragsbestätigung.eml', mail(), EML);
+    assert.equal((await x.dok(id)).ocr?.stand, 'paket');
+    await new Promise((r) => setTimeout(r, 100));
+    assert.deepEqual(await x.offen(), [], 'erst mit feststehendem Volltext');
+    await x.d.schreibeVolltext(id, { text: 'Guten Tag Markus, wir bestätigen Ihren Auftrag über die Lieferung.' }, { id: 'konto', herkunft: 'Office und E-Mail 1.1.0', paket: true, ausgelesen: true });
+    await warte(async () => (await x.offen()).length === 1);
+    const [e] = await x.offen();
+    assert.equal(e.daten.mime, EML);
+    assert.equal(e.daten.wortpositionen, true);
+  });
+
+  it('Auswahl emails aus: „ausgelassen – laut Einstellung“; später angekreuzt: Ablago holt die Mails nach', async () => {
+    const x = await aufbau({ paket: mailPaket() });
+    await x.d.setzePaketEinstellungen('pdfa', { werte: { emails: false } });
+    const eml = await x.hoch('Auftragsbestätigung.eml', mail(), EML);
+    const oct = await x.hoch('Kündigung.eml', mail('Kündigungsbestätigung'), OCTET);
+    await warte(async () => (await x.a.stand(await x.dok(eml)))?.stand === 'ausgelassen' && (await x.a.stand(await x.dok(oct)))?.stand === 'ausgelassen');
+    assert.deepEqual(await x.offen(), []);
+    assert.match(String((await x.a.stand(await x.dok(eml)))!.info), /laut Einstellung bekommen E-Mails keine Archivfassung/);
+    // Bilder bleiben davon unberührt.
+    const bild = await x.hoch('foto.png', png(40, 20), 'image/png');
+    await x.d.schreibeVolltext(bild, { text: 'Stromrechnung', woerter: [[['Stromrechnung', 0.1, 0.1, 0.3, 0.05]]] }, { id: 'konto', herkunft: 'Texterkennung 2.2.0', paket: true });
+    await warte(async () => (await x.offen()).length === 1);
+    assert.equal((await x.offen())[0].daten.mime, 'image/png');
+    await x.laeufer();
+    // Wieder angekreuzt: beide Mails kommen nach (auch die als octet-stream mit Endung).
+    await x.d.setzePaketEinstellungen('pdfa', { werte: { emails: true } });
+    assert.equal(await x.d.archivPaketDa(MANIFEST_MAIL.archivfassung.typen), 2);
+    assert.deepEqual((await x.offen()).map((y) => y.daten.name).sort(), ['Auftragsbestätigung.eml', 'Kündigung.eml']);
   });
 });
