@@ -416,6 +416,7 @@
   "loeschprotokoll.aufbewahrung-im-papierkorb": "retention in the bin expired",
   "loeschprotokoll.papierkorb-ausgeschaltet": "bin switched off",
   "loeschprotokoll.paketinstallation-zurueckgenommen": "package installation rolled back",
+  "loeschprotokoll.post-aufgeloest": "post turned into a new folder",
   "loeschprotokoll.mappen-id": "Folder ID",
   "loeschprotokoll.dokument-id": "Document ID",
   "loeschprotokoll.groesse-bytes": "Size (bytes)",

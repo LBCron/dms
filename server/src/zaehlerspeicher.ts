@@ -113,6 +113,8 @@ export const OHNE_FOLGEN = new Set<string>([
   'erkennungLies', 'erkennungSchreibe', 'erkennungenMitAbsender', 'vektorSetze', 'vektorLoesche', 'vektorenLoeschePaket',
   'vektorenLaden', 'vektorVon', 'vektorStand', 'ohneVektor', 'mitVolltext', 'seitensprachen', 'teilenHinweisAus',
   'fragenFundstellen', 'historieArt',
+  // #936: Wohin eine Post aufgelöst wurde (nur lesend).
+  'aufgeloesteIn',
 ]);
 
 /**

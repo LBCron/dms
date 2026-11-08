@@ -35,6 +35,8 @@ export const LOESCHWEGE = {
   ablauf: t('gemeinsam.loeschprotokoll.aufbewahrung-im-papierkorb'),
   ausgeschaltet: t('gemeinsam.loeschprotokoll.papierkorb-ausgeschaltet'),
   zurueckgerollt: t('gemeinsam.loeschprotokoll.paketinstallation-zurueckgenommen'),
+  /** #936: Aus der Post wurde eine neue Mappe; Dokumente und Historie liegen dort, die leere Post kommt weg. */
+  aufgeloest: t('gemeinsam.loeschprotokoll.post-aufgeloest'),
 } as const;
 export type Loeschweg = keyof typeof LOESCHWEGE;
 

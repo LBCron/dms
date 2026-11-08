@@ -86,7 +86,26 @@ Oben in einer Post steht eine Leiste mit dem **Stand** und dem Knopf **Zuordnen 
 
 Danach liegen die Dokumente in der Mappe, und die Post verweist auf sie. Ihr Stand ist *Zugeordnet*. In der [Historie](zusammenarbeit.md#historie) beider Mappen steht, was passiert ist. Der Volltext der Dokumente zieht mit um.
 
-Bei **Weiter: neue Mappe ausfüllen** öffnet sich das Formular des Mappentyps. Betreff und Datum der Post sind als Vorschlag schon eingetragen, dazu – soweit die Erkennung etwas gefunden hat – Betrag, passende Nummern (z. B. die Rechnungsnummer) und der Verweis auf den Absender. Ein Hinweis oben nennt, was vorbelegt ist. Nach **Mappe speichern** wird die Post der neuen Mappe zugeordnet.
+Bei **Weiter: neue Mappe ausfüllen** öffnet sich das Formular des Mappentyps. Betreff und Datum der Post sind als Vorschlag schon eingetragen, dazu – soweit die Erkennung etwas gefunden hat – Betrag, passende Nummern (z. B. die Rechnungsnummer) und der Verweis auf den Absender. Ein Hinweis oben nennt, was vorbelegt ist. Nach **Mappe speichern** wird aus der Post die neue Mappe – siehe unten.
+
+### Aus der Post wird die Mappe { #post-auflosen }
+
+Legst du aus einer Post eine **neue** Mappe an, bleibt die Post nicht als zweite Fundstelle stehen: Sie wird zu dieser Mappe. Vor dem Speichern steht das unten in der Speicherleiste: „Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.“ Nach **Mappe speichern**:
+
+- Die gewählten **Dokumente** liegen im Dokumentenregister der neuen Mappe.
+- Die **ganze Historie der Post** steht in der [Historie](zusammenarbeit.md#historie) der Mappe – Eingang, Herkunft (Postfach, Eingangsordner, Ablegen …), Änderungen, Notizen und Aufgaben, jeweils mit dem Zeichen *aus der Post*. Dazu kommt der Eintrag „Aus Post „…“ angelegt“. Notizen, Aufgaben und Erinnerungen der Post gehören jetzt der Mappe; die Aufgabe *Post für dich* ist erledigt.
+- Die Post selbst kommt in den [Papierkorb](ablage.md#papierkorb). Dort steht „Aufgelöst in *Rechnung* „…““ mit Link zur Mappe. **Wiederherstellen** gibt es für sie nicht – wer das rückgängig machen will, löscht die neue Mappe. Ist der Papierkorb ausgeschaltet, ist die leere Post gleich gelöscht.
+- Die Seite zeigt danach die **nächste Post** aus *Neue Post*, oben mit einem Link zur eben angelegten Mappe; die Zahl bei *Neue Post* ist um eins kleiner. Ist keine Post mehr da, öffnet sich die neue Mappe.
+
+Hast du nur **einen Teil der Dokumente** gewählt, kommen die übrigen als **neue Post** nach *Neue Post* – Betreff mit „(abgetrennt)“, Datum, Absender und *Für* wie bisher. In ihrer Historie steht, aus welcher Post sie stammt und welche Mappe daraus wurde.
+
+So bleibt es beim Zuordnen wie bisher (die Post bleibt mit Stand *Zugeordnet* stehen):
+
+- wenn du die Post **nicht löschen** darfst – dann sagt die Speicherleiste das schon vor dem Speichern: „Die Post darfst du nicht löschen: Sie bleibt stehen und wird dieser Mappe zugeordnet.“ Dasselbe gilt, wenn nur ein Teil der Dokumente mitgeht und du keine Post anlegen darfst; dann sagt es ein Hinweis nach dem Speichern;
+- mit **Kopie in der Post behalten**;
+- bei versendeten E-Mails.
+
+Einer **vorhandenen** Mappe ordnest du Post zu wie oben; dabei wird nichts aufgelöst.
 
 ### Vorschläge beim Zuordnen
 
@@ -115,6 +134,8 @@ Warum zugeordnet wurde („Absender … eindeutig erkannt (Kundennummer 100-4711
 
 Ohne Zuordnung geht es auch: **Erledigt** für Werbung oder Dinge, die schon erledigt sind; **Wieder neu**, wenn doch noch etwas zu tun ist. Unnötige Post löschst du wie jede Mappe.
 
+**Kopie in der Post behalten** gilt auch beim Anlegen einer neuen Mappe: Dann wird die Post nicht [aufgelöst](#post-auflosen), sondern nur zugeordnet.
+
 ## Sammelscan teilen
 
 Hast du mehrere Briefe auf einmal gescannt, kommen sie als **eine Post** mit einem langen PDF an. So machst du daraus einzelne Posts:
@@ -136,4 +157,4 @@ Wird eine Mappe gelöscht, bleibt die Post erhalten. Nur der Verweis auf diese M
 
 ## Wer darf was?
 
-Wer Post sieht, anlegt, bearbeitet und löscht, regeln die [Berechtigungen](mappen.md#was-du-sehen-und-andern-darfst) des Mappentyps *Post*. Zum Zuordnen brauchst du das Recht, die Post **und** die Zielmappe zu bearbeiten.
+Wer Post sieht, anlegt, bearbeitet und löscht, regeln die [Berechtigungen](mappen.md#was-du-sehen-und-andern-darfst) des Mappentyps *Post*. Zum Zuordnen brauchst du das Recht, die Post **und** die Zielmappe zu bearbeiten. Damit aus der Post eine neue Mappe [wird](#post-auflosen), musst du die Post außerdem löschen dürfen.

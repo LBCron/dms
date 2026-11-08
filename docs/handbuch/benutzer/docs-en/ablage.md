@@ -200,6 +200,7 @@ Deleted folders and individually deleted documents go into the **Bin** below "To
 - **Restore** brings a folder back into its view. If another folder has meanwhile got the same unique value (e.g. the same invoice number), it lands under [To do](eingang.md); there you see what to change.
 - **Documents:** *Restore* puts a document with all versions back into the same tab of the same folder – for this you must be allowed to edit the folder. If the folder itself is in the bin, restore the folder first. If a folder is deleted permanently, its individually deleted documents go too.
 - **Deleted with linked folders** ([how it works](mappen.md#mit-verknupften-mappen-loschen)): these folders carry the note *with … linked* or *linked*. If you open one of them, **Restore all** brings back the whole operation – including the links that were removed from other folders in the process. **Restore only this one** brings back only that one folder.
+- **Post turned into a folder** ([how it works](post.md#post-auflosen)): a post that became a new folder shows "Turned into *Invoice* “…”", with a link to the folder when you open the post. Its documents and history are there; this post can’t be restored. To undo it, delete the new folder.
 - **Delete permanently** removes it forever, **Empty bin** all at once – folders and documents.
 - After a period set by the administrator (usually 30 days), Ablago permanently deletes deleted folders by itself. How long is shown above the list.
 - Under My account you can set that your bin is **emptied on sign-out**.

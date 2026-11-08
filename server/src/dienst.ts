@@ -121,6 +121,8 @@ const versionInfo = (v: DokumentVersion): LoeschDokument => ({ dokumentId: v.dok
 /** Zugriff eines Benutzers (#124): Rollen, Auflösung dynamischer Werte, Lesefilter (null = alles). */
 /** Dokument im Papierkorb mit Mappe und Register (#344). */
 export interface DokumentImKorb extends DokumentImPapierkorb { art: 'dokument'; typId: string; mappeTitel: string; register: string; mappe: 'da' | 'papierkorb' | 'weg' }
+/** Aufgelöste Post im Papierkorb (#936): in welche Mappe; `da` = die Mappe gibt es noch. */
+export interface AufgeloestIn { id: string; typId: string; titel: string; da: boolean }
 /** Wo eine gleiche Datei schon liegt (#333) – nur lesbare Mappen. */
 /** Bestätigter bzw. neuer (gesperrter) Schlüssel eines eigenen Katalogs (#594). */
 /** Antwort eines Pakets auf einen Aufruf eines Ereignisses (#636). rc: Rückgabewert des Pakets; beginn: Start des Aufrufs (ms). */
@@ -547,6 +549,8 @@ export interface KontenHaken {
 }
 
 export const PAPIERKORB_STANDARD_TAGE = 30;
+/** Post auflösen (#936): nur in eine Mappe, die dieselbe Person höchstens so lange vorher angelegt hat. */
+const AUFLOESEN_FRIST_MS = 60 * 60 * 1000;
 /** Anhänge einer E-Mail zusammen höchstens (#58); die Oberfläche warnt schon ab 20 MB. */
 export const EMAIL_MAX_ANHAENGE = 50_000_000;
 export const EMAIL_MAX_EMPFAENGER = 20;
@@ -6092,8 +6096,11 @@ export class Dienst {
    * Zuordnen (#192): Post gehört zu einer Mappe. Die gewählten Dokumente wandern in ein
    * Dokumentenregister der Zielmappe (oder werden kopiert – dieselbe Datei, kein zweiter Platz),
    * die Post verweist auf die Mappe und hat danach Stand „Zugeordnet“. Mehrmals möglich.
+   *
+   * Auflösen (#936, `aufloesen: true`): Ist die Zielmappe eben aus dieser Post angelegt worden, wird aus der Post die
+   * Mappe – siehe `loesePostAuf`. Darf die Person die Post nicht löschen, bleibt es beim Zuordnen, mit `hinweis`.
    */
-  async ordneZu(postId: string, eingabe: unknown, von: string | null, z?: Zugriff, auto?: { grund: string }) {
+  async ordneZu(postId: string, eingabe: unknown, von: string | null, z?: Zugriff, auto?: { grund: string }, quelle?: Ausloeser) {
     const post = z ? await this.pruefeRecht(z, postId, 'U') : await this.repo.holeMappe(postId);
     if (!post) throw new Fachfehler(404, t('meldungen.dienst.diese-post-gibt-es'));
     const typ = await this.repo.holeTyp(post.typId);
@@ -6114,17 +6121,23 @@ export class Dienst {
     const reg = regs.find((r) => r.key === text(e.register)) ?? (e.register ? undefined : regs[0]);
     if (dokumente.length && !reg) throw new Fachfehler(422, regs.length ? t('meldungen.dienst.dieses-dokumentenregister-gibt-es') : t('meldungen.dienst.hat-kein-dokumentenregister-ordne', { name: zielTyp.name }));
     const kopieren = e.kopieren === true;
+    // Auflösen (#936): nur auf Wunsch, nie automatisch, nie mit „Kopie in der Post behalten“ und nie bei versendeten E-Mails
+    // (sie bleiben Post, wie sie verschickt wurden).
+    const rest = alle.filter((d) => !ids.includes(d.id));
+    let hinweis: string | undefined;
+    if (e.aufloesen === true && !auto && !kopieren && !istVersendet(post.werte)) {
+      if (!(await this.ebenAngelegt(ziel, von))) throw new Fachfehler(422, t('meldungen.dienst.aufloesen-nur-in-neue-mappe'));
+      const grund = await this.aufloesenSperre(post, typ, rest.length > 0, z);
+      if (!grund) return this.loesePostAuf({ post, typ, ziel, zielTyp, reg, dokumente: dokumente as Dokument[], rest, von, quelle });
+      hinweis = t('meldungen.dienst.post-bleibt-zugeordnet', { grund });
+    }
     for (const d of dokumente as Dokument[]) {
       if (kopieren) {
         const neu = await this.repo.legeDokumentAn({ ...d, id: randomUUID(), mappeId: ziel.id, registerKey: reg!.key, erstellt: new Date().toISOString(), erstelltVon: von });
         const fertig = await this.repo.ocrVonSha(d.sha256, neu.id);
         if (fertig) await this.repo.ocrSetze(neu.id, { stand: 'fertig', text: fertig.text, seiten: fertig.seiten, info: fertig.info, sprache: fertig.sprache ?? null });
         else if (Dienst.volltextAn(zielTyp, reg!.key)) { await this.repo.ocrEinreihen([neu.id]); this.ocr?.anstossen(); }
-      } else {
-        await this.repo.verschiebeDokument(d.id, ziel.id, reg!.key);
-        // Im neuen Register ist die Texterkennung vielleicht aus oder an.
-        if (Dienst.volltextAn(zielTyp, reg!.key) && (d.ocr?.stand === 'keiner' || d.ocr?.stand === 'ausgelassen')) { await this.repo.ocrEinreihen([d.id]); this.ocr?.anstossen(); }
-      }
+      } else await this.verschiebeInRegister(d, ziel.id, zielTyp, reg!.key);
     }
     const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
     const zielTitel = await this.titel(ziel);
@@ -6142,8 +6155,99 @@ export class Dienst {
       await this.beruehre(post.id, typ, von);
     }
     await this.postAufgaben(post.id, von);
-    protokoll.modul('ablage').info('Post zugeordnet', { post: post.id, ziel: ziel.id, dokumente: n, kopiert: kopieren });
-    return { post: (await this.repo.holeMappe(post.id))!, ziel: (await this.repo.holeMappe(ziel.id))! };
+    protokoll.modul('ablage').info('Post zugeordnet', { post: post.id, ziel: ziel.id, dokumente: n, kopiert: kopieren, aufloesenGesperrt: hinweis ? true : undefined });
+    return { post: (await this.repo.holeMappe(post.id))!, ziel: (await this.repo.holeMappe(ziel.id))!, aufgeloest: false as const, ...(hinweis ? { hinweis } : {}) };
+  }
+
+  /** Dokument in ein anderes Register (einer anderen Mappe); dort ist die Texterkennung vielleicht aus oder an. */
+  private async verschiebeInRegister(d: Dokument, mappeId: string, typ: Mappentyp, registerKey: string) {
+    await this.repo.verschiebeDokument(d.id, mappeId, registerKey);
+    if (Dienst.volltextAn(typ, registerKey) && (d.ocr?.stand === 'keiner' || d.ocr?.stand === 'ausgelassen')) { await this.repo.ocrEinreihen([d.id]); this.ocr?.anstossen(); }
+  }
+
+  /**
+   * Eben aus dieser Post angelegt (#936)? Die Zielmappe hat dieselbe Person vor höchstens einer Stunde angelegt, und ihr
+   * ist noch keine Post zugeordnet. So lässt sich Post nicht nachträglich in eine beliebige Mappe „auflösen“.
+   */
+  private async ebenAngelegt(ziel: Mappe, von: string | null): Promise<boolean> {
+    if ((ziel.erstelltVon ?? null) !== von) return false;
+    if (Date.now() - Date.parse(ziel.erstellt) > AUFLOESEN_FRIST_MS) return false;
+    return !(await this.repo.historie(ziel.id, { arten: ['zugeordnet'], max: 1 })).length;
+  }
+
+  /**
+   * Warum sich die Post nicht auflösen lässt (#936), sonst null. Auflösen legt die Post in den Papierkorb – das darf nur,
+   * wer sie auch löschen darf (Recht D und dieselbe Prüfung wie beim Löschen). Bleibt ein Teil der Dokumente übrig, kommt
+   * er in eine neue Post – dafür braucht es das Recht, Post anzulegen.
+   */
+  private async aufloesenSperre(post: Mappe, typ: Mappentyp, mitRest: boolean, z?: Zugriff): Promise<string | null> {
+    if (z && !(await this.rechteAn(z, post)).D) return t('meldungen.dienst.kein-recht-zum-loeschen');
+    const p = await this.loeschPruefung(post, typ, await this.repo.rueckverweise(post.id));
+    if (!p.ok) return p.grund ?? t('meldungen.dienst.kein-recht-zum-loeschen');
+    if (mitRest) {
+      if (!darfPostAnlegen(typ)) return t('meldungen.dienst.post-laesst-sich-nicht');
+      if (z && !z.admin) {
+        const jetzt = new Date().toISOString();
+        const entwurf: Mappe = { id: '00000000-0000-4000-8000-000000000000', typId: typ.id, werte: { ...post.werte, stand: POST_STAND.neu, bezug: null }, erstellt: jetzt, erstelltVon: z.ich.id, geaendert: jetzt, geaendertVon: z.ich.id };
+        if (!(await this.rechteAn(z, entwurf, true)).C) return t('meldungen.dienst.post-anlegen-darfst-du');
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Post auflösen (#936): Aus der Post wird die eben angelegte Mappe. Die gewählten Dokumente wandern in ihr Register,
+   * die übrigen („abgetrennt“) in eine neue Post mit Verweis auf die Herkunft. Historie, Notizen, Aufgaben und
+   * Erinnerungen der Post gehören danach der Mappe, dazu der Eintrag „Aus Post … angelegt“. Die leere Post kommt mit
+   * „Aufgelöst in …“ in den Papierkorb (bei ausgeschaltetem Papierkorb endgültig weg); wiederherstellen lässt sie sich
+   * nicht – der Weg zurück ist, die neue Mappe zu löschen (Thomas, 07.11.2026). Alles in einer Transaktion.
+   */
+  private async loesePostAuf(x: { post: Mappe; typ: Mappentyp; ziel: Mappe; zielTyp: Mappentyp; reg: Register | undefined; dokumente: Dokument[]; rest: Dokument[]; von: string | null; quelle?: Ausloeser }) {
+    const { post, typ, ziel, zielTyp, reg, dokumente, rest, von } = x;
+    const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
+    const zielTitel = await this.titel(ziel);
+    const erg = await this.inTransaktion(async () => {
+      for (const d of dokumente) await this.verschiebeInRegister(d, ziel.id, zielTyp, reg!.key);
+      // Abgetrennt: die übrigen Dokumente als neue Post in „Neue Post“, Betreff, Datum, Absender, Kanal und „Für“ wie bisher.
+      let abgetrennt: Mappe | undefined;
+      if (rest.length) {
+        abgetrennt = await this.legePostAn({
+          betreff: t('meldungen.dienst.abgetrennt-betreff', { betreff }), datum: post.werte.datum, absender: post.werte.absender ?? '', kanal: auswahlText(post.werte.kanal),
+          fuer: alsListe(post.werte.fuer)[0] ?? null,
+        }, { id: von, name: '' }, undefined, undefined, undefined, undefined, post.werte);
+        for (const d of rest) await this.repo.verschiebeDokument(d.id, abgetrennt.id, d.registerKey);
+        await this.notiere(abgetrennt.id, von, 'post_geteilt', {
+          text: t('meldungen.dienst.abgetrennt-aus', { anzahl: rest.length, betreff, typ: zielTyp.name, zielTitel }),
+          post: post.id, postTyp: typ.id, ziel: ziel.id, zielTyp: zielTyp.id, dokumente: rest.length,
+        });
+        await this.beruehre(abgetrennt.id, typ, von);
+      }
+      // Stand „Zugeordnet“: erledigt die Aufgabe „Post für dich“ und Aufgaben mit Anlass „Post“; die Post verweist auf die Mappe.
+      const bezug = [...new Set([...alsListe(post.werte.bezug), ziel.id, ...(abgetrennt ? [abgetrennt.id] : [])])];
+      await this.schreibeSystemMappe(typ, post.id, { bezug, stand: POST_STAND.zugeordnet }, von);
+      await this.postAufgaben(post.id, von);
+      // Alles, was mit der Post passiert ist, steht jetzt bei der Mappe.
+      const mit = await this.repo.uebertrageAnMappe(post.id, ziel.id);
+      const n = dokumente.length;
+      const doks = n ? t('meldungen.dienst.mit-dokumenten-ins-register', { anzahl: n, wert: '', name: reg!.name }) : '';
+      const abg = abgetrennt ? t('meldungen.dienst.abgetrennt-als-neue-post', { anzahl: rest.length }) : '';
+      await this.notiere(ziel.id, von, 'zugeordnet', {
+        text: t('meldungen.dienst.aus-post-angelegt', { betreff, doks, abg }), post: post.id, postTyp: typ.id, dokumente: n, aufgeloest: true,
+        ...(abgetrennt ? { abgetrennt: abgetrennt.id } : {}),
+      });
+      await this.notiere(post.id, von, 'zugeordnet', { text: t('meldungen.dienst.aufgeloest-in', { typ: zielTyp.name, zielTitel }), ziel: ziel.id, zielTyp: zielTyp.id, aufgeloest: true });
+      await this.beruehre(ziel.id, zielTyp, von);
+      const vorher = (await this.repo.holeMappe(post.id))!;
+      // Löschprotokoll (#470): Weg „aufgelöst“, als Grund nur Mappentyp und Id der Mappe – keine Titel.
+      await this.loescheMappe(post.id, von, undefined, { weg: 'aufgeloest', ausloeser: x.quelle, text: t('meldungen.dienst.aufgeloest-grund', { typ: zielTyp.name, id: ziel.id }) });
+      return { vorher, abgetrennt, mit };
+    });
+    const papierkorb = (await this.papierkorbTage()) > 0;
+    protokoll.modul('ablage').info('Post aufgelöst', { post: post.id, ziel: ziel.id, dokumente: dokumente.length, abgetrennt: erg.abgetrennt?.id, papierkorb, ...erg.mit });
+    return {
+      post: erg.vorher, ziel: (await this.repo.holeMappe(ziel.id))!, aufgeloest: true as const, papierkorb,
+      ...(erg.abgetrennt ? { abgetrennt: (await this.repo.holeMappe(erg.abgetrennt.id))! } : {}),
+    };
   }
 
   /** Mappentypen mit „Post automatisch zuordnen“ (#337); Archivmodus- und Systemtypen nie (dort nur mit Bestätigung). */
@@ -6620,8 +6724,27 @@ export class Dienst {
   }
 
   /** Ablage: was ich gelöscht habe. Werkbank (alle): was alle gelöscht haben. */
-  async papierkorb(ich: { id: string; rolle: string }, alle = false): Promise<PapierkorbEintrag[]> {
-    return this.repo.papierkorb(alle && ich.rolle === 'admin' ? {} : { von: ich.id });
+  async papierkorb(ich: { id: string; rolle: string }, alle = false): Promise<Array<PapierkorbEintrag & { aufgeloestIn?: AufgeloestIn }>> {
+    return this.mitAufloesung(await this.repo.papierkorb(alle && ich.rolle === 'admin' ? {} : { von: ich.id }));
+  }
+
+  /**
+   * Aufgelöste Post (#936): „Aufgelöst in <Typ> <Titel>“ mit Link. `da` = die Mappe gibt es noch (sonst nur Typ und Titel,
+   * soweit bekannt). Nur für Post – andere Mappen werden nie aufgelöst.
+   */
+  private async mitAufloesung<T extends PapierkorbEintrag>(liste: T[]): Promise<Array<T & { aufgeloestIn?: AufgeloestIn }>> {
+    const postTyp = (await this.repo.listeTypen()).find((x) => x.system === 'post');
+    const posten = postTyp ? liste.filter((e) => e.typId === postTyp.id).map((e) => e.id) : [];
+    if (!posten.length) return liste;
+    const auf = await this.repo.aufgeloesteIn(posten);
+    if (!auf.size) return liste;
+    const bezuege = await this.repo.bezuege([...new Set([...auf.values()].map((a) => a.ziel))]);
+    return liste.map((e) => {
+      const a = auf.get(e.id);
+      if (!a) return e;
+      const b = bezuege.get(a.ziel);
+      return { ...e, aufgeloestIn: { id: a.ziel, typId: b?.typId ?? a.zielTyp, titel: b?.titel ?? '', da: !!b } };
+    });
   }
 
   /**
@@ -6706,7 +6829,7 @@ export class Dienst {
     return e;
   }
 
-  async papierkorbEintrag(id: string, ich: { id: string; rolle: string }, alle = false) { return this.eintrag(id, ich, alle); }
+  async papierkorbEintrag(id: string, ich: { id: string; rolle: string }, alle = false) { return (await this.mitAufloesung([await this.eintrag(id, ich, alle)]))[0]; }
 
   /**
    * Wiederherstellen. Verweise auf Mappen, die es nicht mehr gibt, und eindeutige Werte, die
@@ -6714,6 +6837,9 @@ export class Dienst {
    */
   async stelleWiederHer(id: string, ich: { id: string; rolle: string }, alle = false, quelle?: Ausloeser) {
     const e = await this.eintrag(id, ich, alle);
+    // Aufgelöste Post (#936): Dokumente und Historie liegen in der neuen Mappe – zurück geht es nur, indem man sie löscht.
+    const [mitAuf] = await this.mitAufloesung([e]);
+    if (mitAuf.aufgeloestIn) throw new Fachfehler(409, t('meldungen.dienst.aufgeloest-nicht-wiederherstellen', { titel: mitAuf.aufgeloestIn.titel || t('meldungen.dienst.ohne-titel-2') }), { aufgeloestIn: mitAuf.aufgeloestIn });
     const typ = await this.repo.holeTyp(e.typId);
     if (!typ) throw new Fachfehler(409, t('meldungen.dienst.den-mappentyp-dieser-mappe'));
     const r = await this.repo.stelleWiederHer(id);

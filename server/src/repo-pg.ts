@@ -2299,6 +2299,27 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     async historieArt(art, max) {
       return (await sql`SELECT * FROM historie WHERE haushalt_id = ${haushaltId} AND art = ${art} ORDER BY zeit DESC, id DESC LIMIT ${max}`).map(alsHistorie);
     },
+    async uebertrageAnMappe(von, nach) {
+      if (!istUuid(von) || !istUuid(nach)) return { historie: 0, notizen: 0, aufgaben: 0, erinnerungen: 0 };
+      // Aufgaben „Post für dich“ bleiben an der Post: Sie gelten nur dort und sind beim Auflösen schon erledigt.
+      const h = await sql`UPDATE historie SET mappe_id = ${nach}, daten = daten || ${json(sql, { ausPost: von })}::jsonb WHERE haushalt_id = ${haushaltId} AND mappe_id = ${von}`;
+      const n = await sql`UPDATE notizen SET mappe_id = ${nach} WHERE haushalt_id = ${haushaltId} AND mappe_id = ${von}`;
+      const a = await sql`UPDATE aufgaben SET mappe_id = ${nach} WHERE haushalt_id = ${haushaltId} AND mappe_id = ${von} AND art <> 'post'`;
+      const e = await sql`UPDATE erinnerungen SET mappe_id = ${nach} WHERE haushalt_id = ${haushaltId} AND mappe_id = ${von}`;
+      // Offene Fälle „Aufgabe ohne Leserecht“ (#798) folgen ihrer Aufgabe; vergangene bleiben, wie sie waren.
+      await sql`UPDATE aufgaben_ohne_leserecht SET mappe_id = ${nach} WHERE haushalt_id = ${haushaltId} AND mappe_id = ${von} AND ende IS NULL`;
+      return { historie: h.count, notizen: n.count, aufgaben: a.count, erinnerungen: e.count };
+    },
+    async aufgeloesteIn(ids) {
+      const gueltig = [...new Set(ids.filter(istUuid))];
+      const m = new Map<string, { ziel: string; zielTyp: string }>();
+      if (!gueltig.length) return m;
+      for (const r of await sql`SELECT mappe_id, daten->>'ziel' AS ziel, coalesce(daten->>'zielTyp', '') AS ziel_typ FROM historie
+        WHERE haushalt_id = ${haushaltId} AND mappe_id = ANY(${gueltig}::uuid[]) AND art = 'zugeordnet' AND daten->>'aufgeloest' = 'true' ORDER BY zeit, id`) {
+        if (r.ziel) m.set(r.mappe_id as string, { ziel: r.ziel as string, zielTyp: r.ziel_typ as string });
+      }
+      return m;
+    },
     async historieAufraeumen(vor) {
       const r = await sql`
         DELETE FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id IN (

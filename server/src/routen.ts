@@ -2346,7 +2346,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(r, 201);
     } },
     { methode: 'POST', pfad: '/api/post/:id/zusammenlegen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.legePostZusammen(a.params.id, b(a), ich(a).id, await zg(a))) },
-    { methode: 'POST', pfad: '/api/mappen/:id/zuordnen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.ordneZu(a.params.id, b(a), ich(a).id, await zg(a))) },
+    { methode: 'POST', pfad: '/api/mappen/:id/zuordnen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.ordneZu(a.params.id, b(a), ich(a).id, await zg(a), undefined, quelle(a))) },
     // „Aus Dokument ausfüllen“ (#391): Vorschläge für die Felder eines Mappentyps aus Text, Dokumenten oder einer Datei.
     { methode: 'POST', pfad: '/api/typen/:id/vorschlaege', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.erkennung.fuerTyp(a.params.id, b(a), await zg(a))) },
     { methode: 'POST', pfad: '/api/typen/:id/vorschlaege/datei', zugang: 'angemeldet', lesend: true, roh: 30 * 1024 * 1024, handler: async (a) => {

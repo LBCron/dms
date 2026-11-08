@@ -687,6 +687,13 @@ export interface Repo {
   letzterAbruf(mappeId: string, art: Historienart, benutzerId: string | null, dokumentId: string, fassung: string, version: number | null, seit: string): Promise<string | null>;
   /** Historie mehrerer Mappen (#367), je Mappe neueste zuerst. */
   historieVon(mappeIds: string[]): Promise<Historieneintrag[]>;
+  /**
+   * Post auflösen (#936): Historie, Notizen, Aufgaben (ohne „Post für dich“) und Erinnerungen der Mappe `von` gehören
+   * danach der Mappe `nach`. Jeder Historieneintrag bekommt `ausPost: von` dazu, damit man sieht, woher er stammt.
+   */
+  uebertrageAnMappe(von: string, nach: string): Promise<{ historie: number; notizen: number; aufgaben: number; erinnerungen: number }>;
+  /** Aufgelöste Post (#936): Id → Zielmappe aus dem Eintrag „Aufgelöst in …“ in ihrer Historie. */
+  aufgeloesteIn(ids: string[]): Promise<Map<string, { ziel: string; zielTyp: string }>>;
   /** Alle Einträge einer Art, neueste zuerst (#668: Verzeichnis der Auskünfte). */
   historieArt(art: Historienart, max: number): Promise<Historieneintrag[]>;
   /** Löscht die Historie von Mappen, die vor diesem Zeitpunkt endgültig gelöscht wurden. */
