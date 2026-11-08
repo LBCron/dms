@@ -138,6 +138,26 @@ describe('Systemkonten (#673)', () => {
     assert.deepEqual(await d.rechteAn(z, n), { C: true, R: true, U: true, D: false, P: false });
   });
 
+  it('Paket: Regeln der Rolle Paket, die das Lesen nicht berühren, öffnen keine fremden Mappentypen', async () => {
+    const { d, repo, konten, admin, gesundheit, rolleId } = await aufbau();
+    const andere = await d.legeTypAn({ name: 'Notiz', felder: [{ key: 'titel', label: 'Titel', typ: 'text' }] });
+    await repo.speicherePaket({
+      id: 'probe', name: 'Probe', version: '1.0.0', beschreibung: '', lizenz: 'Apache-2.0', autor: { name: 'Lena', github: 'lena' }, herkunft: 'katalog' as never,
+      installiert: new Date().toISOString(), installiertVon: admin.id, aktualisiert: null, aktualisiertVon: null,
+      typen: { notiz: andere.id }, sichten: {}, abhaengigkeiten: {}, code: true,
+      laeufer: { sprache: 'wasm', ereignisse: [], rechte: { lesen: ['notiz'], schreiben: [], dokumente: 'keine' }, netz: [] } as never,
+    });
+    const konto = await konten.dienstkonto('probe', 'Probe');
+    const g = await d.legeMappeAn({ typId: gesundheit.id, werte: { titel: 'Impfung' } }, admin.id);
+    const n = await d.legeMappeAn({ typId: andere.id, werte: { titel: 'Zettel' } }, admin.id);
+    // Eine Regel für die Rolle Paket, die nur das Löschen nimmt: Lesen bleibt für „Notiz“ offen.
+    await d.setzeBerechtigungen(andere.id, { grund: NICHTS, regeln: [{ id: 'p', name: 'Pakete löschen nicht', wenn: [{ art: 'rolle', rollen: [await rolleId('paket')] }], dann: { D: 'entziehen' }, stopp: false }] }, true);
+    const z = await d.zugriff(konto);
+    assert.ok(z.lesen, 'ein Paket hat immer einen Lesefilter – nie „alles“');
+    assert.deepEqual([...await d.lesbare(z, [g.id, n.id])], [n.id], '„Gesundheit“ hat das Paket nie bestätigt bekommen');
+    assert.equal((await d.rechteAn(z, g)).R, false);
+  });
+
   it('Testlauf der Rechte (#710): Systemkonten und Paket-Benutzer wählbar, mit entscheidender Regel', async () => {
     const { d, repo, konten, admin, auto, gesundheit, rolleId, rufe } = await aufbau();
     const m = await d.legeMappeAn({ typId: gesundheit.id, werte: { titel: 'Impfung' } }, admin.id);

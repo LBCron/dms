@@ -3839,7 +3839,10 @@ export class Dienst {
     const sichtbar = typen.filter((t) => lesbar.has(t.id) && !(p && verwehrt[t.id]?.includes(p.id)));
     // Regeln für die Rolle „Paket“ (#673) schränken die bestätigten Rechte weiter ein; ohne solche Regeln wie bisher.
     const mitRegeln = sichtbar.filter((t) => hatKontoRegeln(t, rolleId)).map((t) => kontoRegelwerk(t, rolleId));
-    const lesen = mitRegeln.length ? lesefilter(sichtbar.map((t) => mitRegeln.find((x) => x.id === t.id) ?? kontoRegelwerk(t, rolleId)), wer, a)! : { offen: sichtbar.map((t) => t.id), je: [] };
+    // Nie null („alles lesbar“): lesefilter() liefert null, wenn alle übergebenen Typen offen sind – hier sind das nur
+    // die für das Paket sichtbaren. null hieße für Repo und lesbare() aber „alle Mappen aller Typen“.
+    const offen = { offen: sichtbar.map((t) => t.id), je: [] };
+    const lesen = mitRegeln.length ? lesefilter(sichtbar.map((t) => mitRegeln.find((x) => x.id === t.id) ?? kontoRegelwerk(t, rolleId)), wer, a) ?? offen : offen;
     return {
       ich: { id: ich.id, rolle: 'mitglied' }, admin: false, wer, a, typen: new Map(sichtbar.map((t) => [t.id, t])),
       lesen,
