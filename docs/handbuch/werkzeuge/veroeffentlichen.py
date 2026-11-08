@@ -56,6 +56,9 @@ NICHT_GEFUNDEN = """<!doctype html>
   const m = location.pathname.match(/^(.*?\\/)(benutzer|admin|installieren|entwickler)\\/(.*)$/);
   if (!m) return;
   const [, basis, h, rest] = m;
+  // Nur Pfade auf diesem Server: „//andere.example/…“ oder „/\\andere.example/…“ wären für den Browser eine
+  // fremde Adresse (offene Weiterleitung). Erlaubt sind nur einfache Pfadteile.
+  if (!/^\\/([\\w.-]+\\/)*$/.test(basis)) return;
   const teile = rest.split('/');
   if (teile[0] === 'aktuell') {
     // Unbekannte Seite: auf die Startseite des Handbuchs in derselben Sprache (#730).
