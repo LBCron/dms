@@ -1,0 +1,5 @@
+art: patch
+
+## Sicherheit
+
+- **Pakete lesen nur bestätigte Mappentypen** (#955): Eine Regel für die Rolle „Paket“, die das Lesen nicht berührt (z. B. nur Löschen entzieht), gab einem Paket bisher Lesezugriff auf alle Mappen aller Typen. Jetzt bleibt es bei den Typen, die das Paket bestätigt bekommen hat.
