@@ -1,5 +1,5 @@
 /**
- * Post auflösen (#936): Wird aus einer Post eine neue Mappe angelegt, wandern Dokumente und die ganze Historie dorthin,
+ * Post auflösen (#936, seit #934 auch in bestehende Mappen): Wird aus einer Post eine Mappe, wandern Dokumente und die ganze Historie dorthin,
  * die Post kommt mit „Aufgelöst in …“ in den Papierkorb. Ein abgetrennter Teil wird eine neue Post. Wer die Post nicht
  * löschen darf, ordnet nur zu (heutiger Weg) und bekommt einen Hinweis. Im Arbeitsspeicher und – mit
  * TEST_DATABASE_URL – in PostgreSQL (eigene Datenbank über hilfe-db.ts).
@@ -111,7 +111,7 @@ for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
       assert.equal(p[0].grundText, `Post aufgelöst in Mappe ${neu.id} (Rechnung)`);
       assert.ok(!JSON.stringify(p[0]).includes('Stadtwerke') && !JSON.stringify(p[0]).includes('R-77'), 'kein Titel, kein Betreff');
       assert.equal(p[0].anzahl?.dokumente, 0, 'die Dokumente sind nicht gelöscht, sie liegen in der Mappe');
-      await assert.rejects(d.stelleWiederHer(post.id, { id: LENA, rolle: 'admin' }, true), status(409, /aufgelöst.*löscht die neue Mappe/));
+      await assert.rejects(d.stelleWiederHer(post.id, { id: LENA, rolle: 'admin' }, true), status(409, /aufgelöst.*Mappe dabei neu angelegt, löschst du sie/));
       // Der Weg zurück: die neue Mappe löschen – sie kommt samt Dokumenten und Historie in den Papierkorb.
       await d.loescheMappe(neu.id, LENA);
       const korb = await d.papierkorb({ id: LENA, rolle: 'admin' }, true);
@@ -136,17 +136,21 @@ for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
       assert.match(String((await d.historie(neu.id)).find((x) => x.daten.aufgeloest === true)!.daten.text), /1 Dokument als neue Post abgetrennt/);
     });
 
-    it('nicht aufgelöst: mit „Kopie behalten“, bei versendeten E-Mails; in fremde oder ältere Mappen nie (422)', async () => {
+    it('nicht aufgelöst: mit „Kopie behalten“ und bei versendeten E-Mails; in eine bestehende Mappe schon (#934)', async () => {
       const { d, rechnung, post } = await aufbau(pg);
       const neu = await d.legeMappeAn({ typId: rechnung.id, werte: { nr: 'R-3' } }, LENA);
       const kopie = await d.ordneZu(post.id, { ziel: neu.id, kopieren: true, aufloesen: true }, LENA);
       assert.equal(kopie.aufgeloest, false);
       assert.equal((await d.holeMappe(post.id)).dokumente.length, 2);
-      // Die Mappe hat jetzt schon Post – noch einmal auflösen geht nicht.
-      await assert.rejects(d.ordneZu(post.id, { ziel: neu.id, aufloesen: true }, LENA), status(422));
+      // Seit #934 fällt die Grenze „nur eben aus dieser Post angelegt“: auch eine Mappe, die schon Post hat, und eine,
+      // die jemand anderes angelegt hat, kann die Post aufnehmen.
+      const wieder = await d.ordneZu(post.id, { ziel: neu.id, aufloesen: true }, LENA);
+      assert.equal(wieder.aufgeloest, true);
       const zweite = await d.legePostAn({ betreff: 'Noch ein Brief' }, { id: LENA, name: 'Lena' });
       const fremd = await d.legeMappeAn({ typId: rechnung.id, werte: { nr: 'R-4' } }, null);
-      await assert.rejects(d.ordneZu(zweite.id, { ziel: fremd.id, aufloesen: true }, LENA), status(422, /eben aus dieser Post/));
+      const inFremd = await d.ordneZu(zweite.id, { ziel: fremd.id, aufloesen: true }, LENA);
+      assert.equal(inFremd.aufgeloest, true);
+      assert.match(String((await d.historie(fremd.id)).find((x) => x.daten.aufgeloest === true)!.daten.text), /^Post „Noch ein Brief“ übernommen/);
       // Versendete E-Mails bleiben Post, wie sie verschickt wurden.
       const mailer = { async sende() { /* ok */ } };
       const mail = await d.versendeMappe(fremd.id, { an: 'jonas@example.org', betreff: 'Hallo' }, { id: LENA, name: 'Lena', email: 'lena@example.org' }, mailer);

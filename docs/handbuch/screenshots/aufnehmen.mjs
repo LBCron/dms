@@ -745,16 +745,17 @@ async function main() {
   await bild(s, 'mit-verknuepften-loeschen');
   await loeschBaum.getByRole('button', { name: w('Schließen') }).click();
 
-  // Post (#192): neuer Brief in „Neue Post“, Zuordnen zum Stromvertrag
+  // Post (#192, #934): neuer Brief in „Neue Post“ öffnet die Seite „Dokument übernehmen“ – Dokument in der Mitte,
+  // rechts „Wohin gehört das?“ mit dem Mappentyp Vertrag und der Mappe darunter.
   const brief = await briefAnlegen();
   const neuePost = (await api('GET', '/api/sichten')).neuePost ?? brief.typId;
   await geheZu(s, `/ablage/${neuePost}/${brief.id}`);
-  await s.locator('.postleiste').waitFor();
-  await s.getByRole('button', { name: w(/Zuordnen/) }).click();
-  const zu = s.getByRole('region', { name: w('Zuordnen') });
-  await zu.getByLabel(w('Mappentyp')).selectOption({ value: vertrag.id });
-  await zu.getByRole('searchbox').fill('Strom');
-  await zu.locator('.zuordnen-treffer button').first().click();
+  await s.waitForURL(/\/uebernehmen$/);
+  await s.locator('.ue-wohin').waitFor();
+  await s.getByRole('combobox', { name: w('Wohin gehört das?') }).click();
+  await s.locator('.ue-wohin .wahlliste button', { hasText: vertrag.beschriftungen?.[SPRACHE]?.name ?? vertrag.name }).first().click();
+  await s.locator('.ue-rechts .mappenkopf h1').waitFor();
+  await s.locator('.ue-seite img').first().waitFor();
   await bild(s, 'post-zuordnen');
 
   // Neue Post von überall (#193): zwei Dateien irgendwo ins Fenster ziehen → eine Post mit beiden.
@@ -771,9 +772,10 @@ async function main() {
   await s.locator('.ablageflaeche').waitFor();
   await bild(s, 'post-ablegen');
   await s.dispatchEvent('.ablageflaeche .ablageziel', 'drop', { dataTransfer: dateien });
-  await s.waitForURL(/\/ablage\/[^/]+\/[0-9a-f-]{36}$/, { timeout: 20_000 });
-  await s.locator('.postleiste').waitFor();
-  const neu = await api('GET', `/api/mappen/${s.url().split('/').pop()}`);
+  // Neue Post öffnet die Seite „Dokument übernehmen“ (#934).
+  await s.waitForURL(/\/ablage\/[^/]+\/[0-9a-f-]{36}\/uebernehmen$/, { timeout: 20_000 });
+  await s.locator('.ue-wohin').waitFor();
+  const neu = await api('GET', `/api/mappen/${s.url().split('/').at(-2)}`);
   if (neu.dokumente.length !== 2) throw new Error(`Ablegen (#193): ${neu.dokumente.length} statt 2 Dokumente in der neuen Post`);
   // Auf einer Mappe mit Dokumentenregister: zwei Ziele.
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);

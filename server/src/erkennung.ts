@@ -8,7 +8,7 @@
  */
 
 import type { Fund, Nummernfund, Briefkopf, Treffer } from '../../shared/src/erkennung';
-import { eindeutigerTreffer, ENGINE_EINGEBAUT, ERKENNEN_HINWEIS, findeAngaben, findeMappen, fuellfelder, gleicheAb, istAbsenderTyp, merkmalsfelder, type Abgleich, pruefeVorschlaege, schemaFuer, vorschlaegeAus, type Angaben, type AusDokument, type Vergleichsmappe, type Vorschlaege } from '../../shared/src/erkennung';
+import { eindeutigerTreffer, ENGINE_EINGEBAUT, typAusText, type TypFund, ERKENNEN_HINWEIS, findeAngaben, findeMappen, fuellfelder, gleicheAb, istAbsenderTyp, merkmalsfelder, type Abgleich, pruefeVorschlaege, schemaFuer, vorschlaegeAus, type Angaben, type AusDokument, type Vergleichsmappe, type Vorschlaege } from '../../shared/src/erkennung';
 import { hatNetz, hatSchnittstelle } from '../../shared/src/pakete';
 import type { Einstellungen } from './einstellungen';
 import { auswahlText, geschuetzteFelder, type Betrag, type Feld, type Mappe, type Mappentyp, type MappenBezug } from '../../shared/src/model';
@@ -475,6 +475,31 @@ export class Erkennung {
     const bezuege = Object.fromEntries(await this.repo().bezuege(erg.treffer.map((x) => x.mappeId)));
     log.info('Abgleich mit vorhandenen Mappen', { zeichen: text.length, mappen: mappen.length, treffer: erg.treffer.length, doppelt: erg.doppelt.length, ...(ziel ? { typ: ziel.name } : {}) });
     return { ...erg, bezuege };
+  }
+
+  /**
+   * „Dokument übernehmen“ (#934): Abgleich für Dokumente (höchstens 10, Lesen nötig) – Belege, Vorschläge für die
+   * Verweisfelder von `typ` und die Warnung vor Doppelten (siehe `abgleich`). Ohne `typ` dazu `typ`: der Mappentyp für
+   * „Wohin gehört das?“, dessen Name im Text steht – nur aus `ausPostZiele` (Haken und Recht zum Anlegen). Dokumente
+   * ohne Volltext stehen in `ohneText`; das ist kein Fehler, die Seite zeigt dann eben keine Belege.
+   */
+  async abgleichDokumente(eingabe: unknown, z?: Zugriff): Promise<Abgleich & { bezuege: Record<string, MappenBezug>; ohneText: string[]; typ?: TypFund | null }> {
+    const e = (eingabe ?? {}) as { dokumente?: unknown; typ?: unknown };
+    const ids = [...new Set((Array.isArray(e.dokumente) ? e.dokumente : []).filter((x): x is string => typeof x === 'string'))].slice(0, 10);
+    const typ = typeof e.typ === 'string' && e.typ ? e.typ : undefined;
+    const teile: string[] = [];
+    const ohneText: string[] = [];
+    for (const id of ids) {
+      const d = await this.repo().holeDokument(id);
+      if (!d) throw new Fachfehler(404, t('meldungen.erkennung.dieses-dokument-gibt-es'));
+      await this.d.pruefeRecht(z, d.mappeId, 'R');
+      const text = await this.repo().volltext(id);
+      if (text?.trim()) teile.push(text); else ohneText.push(id);
+    }
+    const text = teile.join('\n\n').slice(0, TEXT_MAX);
+    const erg = await this.abgleich(text, typ, z);
+    if (typ) return { ...erg, ohneText };
+    return { ...erg, ohneText, typ: text.trim() ? typAusText(text, await this.d.ausPostZiele(z)) : null };
   }
 
   /** „Neue Organisation anlegen“: der erste Absender-Typ mit Namensfeld, den der Benutzer sieht und anlegen darf. */

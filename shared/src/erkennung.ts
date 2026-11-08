@@ -639,6 +639,33 @@ export function gleicheAb(text: string, typen: Array<Pick<Mappentyp, 'id' | 'fel
   return { treffer, verweise, doppelt };
 }
 
+/* ---------- Wohin gehört das? Einfacher Typ-Vorschlag ohne KI (#934) ---------- */
+
+/** Ein Mappentyp, dessen Name im Dokument steht (z. B. „Rechnung“ oben im Brief). */
+export interface TypFund { typId: string; wort: string; fundstelle: string }
+
+/**
+ * „Wohin gehört das?“ (#934) ohne KI: Der Mappentyp, dessen Name (oder eine Übersetzung) als Überschrift im Text steht –
+ * am Anfang einer Zeile oder nach „Betreff:“, als eigenes Wort: „Rechnung“, „Rechnungen“, nicht aber „Rechnungsnummer“
+ * und nicht „Ihr Vertrag …“ mitten im Satz. Es zählt die früheste Stelle in den ersten `TYP_FUND_ZEICHEN` Zeichen;
+ * kürzere Namen als 4 Zeichen nie. Nur ein Vorschlag mit Fundstelle – die Klassifizierung aus Paketen (#939) ersetzt
+ * ihn später. Reine Funktion.
+ */
+export const TYP_FUND_ZEICHEN = 1500;
+export function typAusText(text: string, typen: Array<Pick<Mappentyp, 'id' | 'name' | 'beschriftungen'>>): TypFund | null {
+  const kopf = (text ?? '').slice(0, TYP_FUND_ZEICHEN).replace(/\u00a0/g, ' ');
+  let best: (TypFund & { i: number }) | null = null;
+  for (const x of typen) {
+    const namen = [...new Set([x.name, ...Object.values(x.beschriftungen ?? {}).map((b) => (b as { name?: string } | undefined)?.name ?? '')].map((n) => n.trim()).filter((n) => n.length >= 4))];
+    for (const n of namen) {
+      const m = new RegExp(`(^[ \\t]*|(?:betreff|betr\\.|subject|re)\\s*:\\s*)(${esc(n)}(?:en|e|n|s)?)(?![\\p{L}\\p{N}])`, 'imu').exec(kopf);
+      const i = m ? m.index + m[1].length : -1;
+      if (m && (!best || i < best.i)) best = { typId: x.id, wort: m[2], fundstelle: ausschnitt(kopf, i, m[2].length), i };
+    }
+  }
+  return best ? { typId: best.typId, wort: best.wort, fundstelle: best.fundstelle } : null;
+}
+
 /* ---------- Vorschläge für die Felder eines Mappentyps ---------- */
 
 export interface Vorschlag {

@@ -45,6 +45,8 @@ If something isn't right – a required field is empty, a number too large, a nu
 
 If you have a **business card**, a till receipt or a letter in front of you, you don't have to type it out: at the top of the folder (new or existing) there is **Fill in from document** – for some folder types with its own name, e.g. **Scan business card**.
 
+**If the folder already contains a document with text**, the button opens the page [Take over document](post.md#zuordnen): the document in the middle (with several, you choose which one at the top), this folder on the right, **Back to the folder** at the top. Suggestions, coloured frames at the places found, dragging, clicking and selecting work there as for post; you save with **Save folder**. For a new photo or file, **Photo or file …** is next to it – then it works as follows:
+
 1. Tap the button. On the phone, **Take photo** opens the camera directly; **Another photo** adds e.g. the back. On the computer you choose a file – a photo, a PDF or a vCard (`.vcf`). In an existing folder, a document already in it works too.
 2. **Recognise details.** Ablago reads the text (offline, without AI) and looks for matching details: name, position, phone, mobile, email, website, address, date, amount, numbers.
 3. **Understood – please check and save.** Empty fields are now filled in as a **suggestion**; below it, it says how certain the value is and at which passage of text it was. **Undo** empties the field again. If a field is already filled in, your value stays – below it, **In the document** shows the other value with **Take over**; **Take over all alternatives** does this for all of them.

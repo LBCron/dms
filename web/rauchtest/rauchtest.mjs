@@ -244,30 +244,39 @@ rauchtest('Anmelden und Startseite', {}, async (s) => {
   await s.getByRole('link', { name: /^Zu erledigen/ }).first().waitFor();
 });
 
-rauchtest('Neue Post öffnen und einer Mappe zuordnen', { als: LENA }, async (s) => {
+// #934: Neue Post öffnet die Seite „Dokument übernehmen“. Nur ansehen und ausfüllen – gespeichert wird am Ende der Datei.
+rauchtest('Dokument übernehmen: Neue Post öffnen, Mappentyp wählen, Text vom Dokument übernehmen', { als: LENA }, async (s) => {
   await s.goto(BASIS + '/ablage/start');
   await s.getByRole('link', { name: /^Neue Post 2/ }).first().click();
   const liste = s.getByRole('region', { name: 'Mappen' });
   await liste.getByRole('heading', { name: /^Neue Post/, level: 1 }).waitFor();
-  await liste.getByText(/^2 Mappen\b/).waitFor();
   await liste.locator(`a[href$="/${daten.brief.id}"]`).click();
+  // Links bleibt „Neue Post“ markiert, in der Mitte das Dokument mit „Post … von 2“, rechts „Wohin gehört das?“.
+  await s.waitForURL(new RegExp(`/${daten.brief.id}/uebernehmen$`));
+  await s.getByRole('complementary', { name: 'Ansichten' }).locator('a.sicht.an', { hasText: 'Neue Post' }).waitFor();
+  const dokument = s.getByRole('region', { name: 'Dokument' });
+  await dokument.getByRole('heading', { name: 'Preisanpassung Strom 2027' }).waitFor();
+  await dokument.getByText(/^Post [12] von 2$/).waitFor();
+  await dokument.getByRole('img', { name: 'Seite 1' }).waitFor();
   const mappe = s.getByRole('region', { name: 'Mappe' });
+  const wohin = mappe.getByRole('combobox', { name: 'Wohin gehört das?' });
+  await wohin.click();
+  await mappe.getByRole('option', { name: /^Vertrag Laufender Vertrag/ }).click();
+  // Die Mappe darunter: Kopf mit Typ und Titel (aus dem Betreff), Felder, Speicherleiste mit Hinweis zur Post.
   await mappe.getByRole('heading', { name: 'Preisanpassung Strom 2027', level: 1 }).waitFor();
-  await mappe.getByRole('tab', { name: 'Dokumente 1' }).waitFor();
-  await mappe.getByRole('button', { name: 'Zuordnen …' }).click();
-  const zuordnen = mappe.getByRole('region', { name: 'Zuordnen' });
-  await zuordnen.getByLabel('Mappentyp').selectOption({ label: 'Vertrag' });
-  await zuordnen.getByRole('button', { name: 'Stromvertrag Haus' }).click();
-  await zuordnen.getByRole('button', { name: 'Zu „Stromvertrag Haus“ zuordnen' }).click();
-  // Ergebnis: Die Post verweist auf den Vertrag und ist aus „Neue Post“ verschwunden.
-  // (Der Verweis steht oben unter dem Stand und im Feld „Zugeordnet zu“.)
-  const verweis = mappe.getByRole('link', { name: 'Stromvertrag Haus' }).first();
-  await verweis.waitFor();
-  await liste.getByText(/^1 Mappe\b/).waitFor();
-  // Das Dokument liegt jetzt beim Vertrag.
-  await verweis.click();
-  await mappe.getByRole('heading', { name: 'Stromvertrag Haus', level: 1 }).waitFor();
-  await mappe.getByRole('tab', { name: 'Vertragsunterlagen 1' }).waitFor();
+  await mappe.getByText('Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.').waitFor();
+  await mappe.getByRole('button', { name: 'Mappe speichern' }).waitFor();
+  assert.equal(await mappe.getByRole('button', { name: /Aus Dokument ausfüllen/ }).count(), 0, '„Aus Dokument ausfüllen“ steht hier nicht');
+  // Der Betreff steht auch im Dokument: Rahmen 1 an der Fundstelle, die Nummer 1 am Feld „Bezeichnung“.
+  const rahmen = dokument.getByRole('button', { name: 'Rahmen 1: Preisanpassung Strom 2027' });
+  await rahmen.waitFor();
+  await rahmen.hover();
+  await mappe.locator('.feld.ue-hervor[data-anker="mappe.feld:bezeichnung"]').waitFor();
+  // Feld wählen, dann den Rahmen anklicken: Das Feld übernimmt den Wert.
+  await mappe.getByRole('textbox', { name: 'Vertragsnummer' }).click();
+  await rahmen.click();
+  await s.waitForFunction(() => document.querySelector('#feld-vertragsnummer')?.value === 'Preisanpassung Strom 2027');
+  await dokument.getByText('„Preisanpassung Strom 2027“ steht jetzt in „Vertragsnummer“.').waitFor();
 });
 
 rauchtest('„+ Neu“: Mappe anlegen und speichern', { als: LENA }, async (s) => {
@@ -432,17 +441,19 @@ rauchtest('Handy: Anmelden und Startseite', { handy: true }, async (s) => {
   // Am Handy: Ansicht oben als Auswahl, Startseite einspaltig mit „Post fotografieren“.
   await s.getByRole('heading', { name: /^Start/, level: 1 }).waitFor();
   await s.getByRole('button', { name: /Post fotografieren/ }).waitFor();
-  await s.getByRole('link', { name: /^Neue Post 1/ }).waitFor();
+  await s.getByRole('link', { name: /^Neue Post 2/ }).waitFor();
   await s.getByRole('button', { name: '+ Neu' }).waitFor();
   await keineWaagerechteRolle(s);
 });
 
 rauchtest('Handy: Neue Post öffnen', { handy: true, als: LENA }, async (s) => {
   await s.goto(BASIS + '/ablage/start');
-  await s.getByRole('link', { name: /^Neue Post 1/ }).first().click();
+  await s.getByRole('link', { name: /^Neue Post 2/ }).first().click();
   await s.locator(`a[href$="/${daten.briefHandy.id}"]`).click();
-  await s.getByRole('heading', { name: 'Beitragsrechnung Hausrat 2027', level: 1 }).waitFor();
-  await s.getByRole('button', { name: 'Zuordnen …' }).waitFor();
+  // „Dokument übernehmen“ (#934): bis zur mobilen Fassung alles in einer Spalte untereinander.
+  await s.waitForURL(/\/uebernehmen$/);
+  await s.getByRole('heading', { name: 'Beitragsrechnung Hausrat 2027' }).waitFor();
+  await s.getByRole('combobox', { name: 'Wohin gehört das?' }).waitFor();
   await keineWaagerechteRolle(s);
 });
 
@@ -456,44 +467,89 @@ rauchtest('Handy: Suche', { handy: true, als: LENA }, async (s) => {
 
 /* ---------- Zum Schluss: Wege, die den gemeinsamen Zustand ändern ---------- */
 
-rauchtest('Neue Post: neue Mappe anlegen, die Post wird zur Mappe (#936)', { als: LENA }, async (s) => {
-  // Steht am Ende, damit es den Zustand der übrigen Tests nicht ändert (Zahl in „Neue Post“, Vertragspartner); der
-  // Brief dafür ist ein eigener.
+/** Eigene Post für einen Test am Ende: Briefe als PDFs mit einer Zeile Text (die Textebene liest Ablago selbst). */
+async function eigenePost(betreff, zeilen = [betreff]) {
   const cookie = await sitzung(LENA);
-  const betreff = 'Rechnung Schornsteinfeger 2027';
   const brief = (await api('POST', '/api/post', { cookie, body: { betreff } })).daten;
-  await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent(`${betreff}.pdf`)}&typ=application/pdf`, { cookie, body: beispielPdf(betreff), roh: true });
-  await s.goto(BASIS + '/ablage/start');
-  await s.getByRole('link', { name: /^Neue Post 2/ }).first().click();
-  const liste = s.getByRole('region', { name: 'Mappen' });
-  await liste.locator(`a[href$="/${brief.id}"]`).click();
+  for (const z of zeilen) await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent(`${z}.pdf`)}&typ=application/pdf`, { cookie, body: beispielPdf(z), roh: true });
+  return brief;
+}
+
+rauchtest('Dokument übernehmen: Typ erkannt, Folgedokument abtrennen (#934)', { als: LENA }, async (s) => {
+  // Steht am Ende: legt Post an und trennt ein Dokument als neue Post ab.
+  const brief = await eigenePost('Werkstatt Kfz', ['Rechnung Werkstatt Beispiel 2027', 'Vertrag Leasing Kombi Beispiel 2027']);
+  await s.goto(BASIS + `/ablage/eingang/${brief.id}`);
+  // Auch von woanders geöffnet: weiter auf die Seite, unter „Neue Post“.
+  await s.waitForURL(new RegExp(`/${brief.id}/uebernehmen$`));
   const mappe = s.getByRole('region', { name: 'Mappe' });
-  await mappe.getByRole('heading', { name: betreff, level: 1 }).waitFor();
-  await mappe.getByRole('button', { name: 'Zuordnen …' }).click();
-  const zuordnen = mappe.getByRole('region', { name: 'Zuordnen' });
-  await zuordnen.getByLabel('Mappentyp').selectOption({ label: 'Vertragspartner' });
-  await zuordnen.getByLabel('neue anlegen').check();
-  await zuordnen.getByRole('button', { name: 'Weiter: neue Mappe ausfüllen' }).click();
-  await mappe.getByRole('heading', { name: 'Neue Mappe', level: 1 }).waitFor();
-  // Vor dem Speichern sagt die Speicherleiste, was mit der Post geschieht.
+  // „Rechnung“ steht als Überschrift im ersten Dokument: vorgeschlagen, mit Grund.
+  await mappe.getByText(/^Vorschlag, weil „Rechnung“ im Dokument steht/).waitFor();
+  await mappe.getByText('Eingegangene Rechnung, gehört zu einem Vertrag oder steht für sich').waitFor();
+  // Das zweite Dokument passt eher zu „Vertrag“: abtrennen.
+  const dokument = s.getByRole('region', { name: 'Dokument' });
+  await dokument.getByText('„Vertrag Leasing Kombi Beispiel 2027.pdf“ passt eher zu Vertrag.').waitFor();
+  await dokument.getByRole('button', { name: 'Ab hier abtrennen und als neue Post in „Neue Post“ legen' }).click();
+  await dokument.getByText('1 Dokument liegt jetzt als „Werkstatt Kfz (abgetrennt)“ in „Neue Post“.').waitFor();
+  await dokument.getByRole('article', { name: 'Vertrag Leasing Kombi Beispiel 2027.pdf' }).waitFor({ state: 'detached' });
+  // Text markieren (Textebene): Das zuletzt gewählte Feld übernimmt ihn.
+  await mappe.getByRole('textbox', { name: 'Rechnungsnummer*' }).click();
+  const woerter = dokument.locator('.ue-wort');
+  await woerter.nth(1).hover();
+  await s.mouse.down();
+  await woerter.nth(2).hover();
+  await s.mouse.up();
+  await s.waitForFunction(() => document.querySelector('#feld-rechnungsnummer')?.value === 'Werkstatt Beispiel');
+  await dokument.getByText('„Werkstatt Beispiel“ steht jetzt in „Rechnungsnummer“.').waitFor();
+});
+
+rauchtest('Neue Post: Mappentyp wählen, ausfüllen, speichern – die Post wird zur Mappe (#936, #934)', { als: LENA }, async (s) => {
+  const betreff = 'Schornsteinfeger 2027';
+  const brief = await eigenePost(betreff);
+  await s.goto(BASIS + `/ablage/start`);
+  await s.getByRole('link', { name: /^Neue Post \d/ }).first().click();
+  await s.getByRole('region', { name: 'Mappen' }).locator(`a[href$="/${brief.id}"]`).click();
+  await s.waitForURL(new RegExp(`/${brief.id}/uebernehmen$`));
+  const mappe = s.getByRole('region', { name: 'Mappe' });
+  await mappe.getByRole('combobox', { name: 'Wohin gehört das?' }).click();
+  await mappe.getByRole('option', { name: /^Vertragspartner/ }).click();
   await mappe.getByText('Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.').waitFor();
-  // Mit gewählten Dokumenten öffnet das Formular auf dem Dokumentenregister; die Felder stehen unter „Stammdaten“.
   await mappe.getByRole('tab', { name: 'Stammdaten' }).click();
   await mappe.getByRole('textbox', { name: 'Name*' }).fill('Schornsteinfeger Beispiel');
+  await mappe.getByRole('heading', { name: 'Schornsteinfeger Beispiel', level: 1 }).waitFor();
   await mappe.getByRole('button', { name: 'Mappe speichern' }).click();
-  // Danach die nächste Post aus „Neue Post“, oben mit Link zur neuen Mappe.
-  await mappe.getByRole('heading', { name: 'Beitragsrechnung Hausrat 2027', level: 1 }).waitFor();
+  // Danach die nächste Post aus „Neue Post“ auf derselben Seite, oben mit Link zur neuen Mappe.
   await mappe.getByText(/ist angelegt, Dokumente und Historie der Post liegen dort/).waitFor();
-  await liste.getByText(/^1 Mappe\b/).waitFor();
+  await s.waitForURL((u) => u.pathname.endsWith('/uebernehmen') && !u.pathname.includes(brief.id));
   await mappe.getByRole('link', { name: 'Schornsteinfeger Beispiel' }).click();
   await mappe.getByRole('heading', { name: 'Schornsteinfeger Beispiel', level: 1 }).waitFor();
   await mappe.getByRole('tab', { name: 'Dokumente 1' }).waitFor();
   // Die Post liegt im Papierkorb – aufgelöst, mit Link zur Mappe, ohne „Wiederherstellen“.
   await s.goto(BASIS + `/ablage/papierkorb/${brief.id}`);
-  // In der Liste und rechts im Eintrag; rechts mit Link zur Mappe und dem Weg zurück.
   await s.getByText(/^Aufgelöst in Vertragspartner „Schornsteinfeger Beispiel“\. Dokumente und Historie liegen dort/).waitFor();
   await s.getByRole('link', { name: 'Schornsteinfeger Beispiel' }).first().waitFor();
   assert.equal(await s.getByRole('button', { name: 'Wiederherstellen' }).count(), 0);
+});
+
+rauchtest('Dokument übernehmen: in eine vorhandene Mappe legen, auch dann wird die Post aufgelöst (#934)', { als: LENA }, async (s) => {
+  await s.goto(BASIS + `/ablage/start`);
+  await s.getByRole('link', { name: /^Neue Post \d/ }).first().click();
+  await s.getByRole('region', { name: 'Mappen' }).locator(`a[href$="/${daten.brief.id}"]`).click();
+  await s.waitForURL(/\/uebernehmen$/);
+  const mappe = s.getByRole('region', { name: 'Mappe' });
+  await mappe.getByRole('combobox', { name: 'Wohin gehört das?' }).click();
+  await mappe.getByRole('option', { name: /^Vertrag Laufender Vertrag/ }).click();
+  await mappe.getByRole('button', { name: 'In eine vorhandene Mappe „Vertrag“ legen …' }).click();
+  await mappe.getByPlaceholder('Vertrag suchen …').fill('Stromvertrag');
+  await mappe.getByRole('option', { name: 'Stromvertrag Haus' }).click();
+  await mappe.getByText('Dokumente und Historie der Post wandern dorthin, die Post kommt in den Papierkorb.').waitFor();
+  await mappe.getByRole('button', { name: 'Zu „Stromvertrag Haus“ legen' }).click();
+  // Weiter mit der nächsten Post; oben der Link zum Vertrag.
+  await mappe.getByText(/^Die Post liegt jetzt in Vertrag „Stromvertrag Haus“/).waitFor();
+  await mappe.getByRole('link', { name: 'Stromvertrag Haus' }).click();
+  await mappe.getByRole('heading', { name: 'Stromvertrag Haus', level: 1 }).waitFor();
+  await mappe.getByRole('tab', { name: 'Vertragsunterlagen 1' }).waitFor();
+  await s.goto(BASIS + `/ablage/papierkorb/${daten.brief.id}`);
+  await s.getByText(/^Aufgelöst in Vertrag „Stromvertrag Haus“\. Dokumente und Historie liegen dort/).waitFor();
 });
 
 /* ---------- Hilfen ---------- */

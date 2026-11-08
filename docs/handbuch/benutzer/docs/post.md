@@ -2,7 +2,7 @@
 
 Alles, was in Ablago kommt oder hinausgeht, ist **Post**: ein eingescannter Brief, ein hochgeladenes PDF, eine verschickte E-Mail, ein Scan aus dem Eingangsordner, eine aus einem Postfach abgeholte E-Mail. Du musst also nicht erst die passende Mappe suchen und das richtige Register wählen: Leg das Dokument als Post ab und **ordne es zu**, wenn du Zeit hast.
 
-![Neue Post mit Zuordnen](bilder/post-zuordnen.png)
+![Neue Post auf der Seite „Dokument übernehmen“](bilder/post-zuordnen.png)
 
 ## Neue Post
 
@@ -75,49 +75,69 @@ Kanal und *Zugeordnet zu* setzt Ablago selbst. Alles andere kannst du ändern wi
 
 Trägst du bei **Für** einen Benutzer ein, steht die Post bei ihm unter [Zu erledigen](eingang.md) mit der Aufgabe **Post für dich**. Wird sie zugeordnet, erledigt oder an jemand anderen gegeben, erledigt sich die Aufgabe von selbst. Ist der Benutzer abwesend, bekommt sie sein Vertreter.
 
-## Zuordnen
+## Dokument übernehmen { #zuordnen }
 
-Oben in einer Post steht eine Leiste mit dem **Stand** und dem Knopf **Zuordnen …**:
+Klickst du in **Neue Post** eine Post an, öffnet sich die Seite **Dokument übernehmen** – egal ob die Post abgelegt, fotografiert, gescannt, gemailt oder über das Laufwerk kam. Dieselbe Seite öffnet **Zuordnen …** in einer Post und [Aus Dokument ausfüllen](mappen.md#aus-dokument-ausfullen) in einer Mappe. Sie sieht immer gleich aus:
 
-1. Wähle den **Mappentyp**, z. B. *Rechnung*.
-2. Wähle **vorhandene wählen** und suche die Mappe, oder **neue anlegen**.
-3. Wähle die **Dokumente**, die mitgehen. Vorausgewählt sind alle. Liegt ein Dokument schon in einer anderen Mappe, die du sehen darfst, steht das darunter – mit Link. Dann brauchst du es vielleicht nicht noch einmal abzulegen. Hat der Mappentyp mehrere Dokumentenregister, wählst du das Register.
-4. **Zu „…“ zuordnen** (bei einer vorhandenen Mappe) bzw. **Weiter: neue Mappe ausfüllen**.
+- **Links** die gewohnten Ansichten, *Neue Post* ist markiert.
+- **In der Mitte** das Dokument; hat die Post mehrere, stehen sie untereinander. Oben rechts blätterst du mit **‹ Post 1 von 3 ›** durch *Neue Post*. Gibt es eine [Archivfassung](dokumente.md#archivfassung-pdfa) (PDF/A), steht über dem Dokument **Original | PDF/A**, gezeigt wird die Archivfassung. Ganz unten liegt die Fläche **Weitere Dokumente hierher ziehen**: Was du dort (oder irgendwo ins Fenster, Ziel *In diese Post*) ablegst, kommt als weiteres Dokument in diese Post.
+- **Rechts** die Mappe, in die das Dokument kommt – wie überall sonst mit Typ, Titel (so, wie er nach dem Speichern heißt), Registern, Feldern und Speicherleiste. Stern und **Mappe ▾** gehen erst nach dem Speichern.
 
-Danach liegen die Dokumente in der Mappe, und die Post verweist auf sie. Ihr Stand ist *Zugeordnet*. In der [Historie](zusammenarbeit.md#historie) beider Mappen steht, was passiert ist. Der Volltext der Dokumente zieht mit um.
+### Wohin gehört das? { #wohin-gehort-das }
 
-Bei **Weiter: neue Mappe ausfüllen** öffnet sich das Formular des Mappentyps. Betreff und Datum der Post sind als Vorschlag schon eingetragen, dazu – soweit die Erkennung etwas gefunden hat – Betrag, passende Nummern (z. B. die Rechnungsnummer) und der Verweis auf den Absender. Ein Hinweis oben nennt, was vorbelegt ist. Nach **Mappe speichern** wird aus der Post die neue Mappe – siehe unten.
+Über der Mappe wählst du den **Mappentyp**, z. B. *Rechnung*. Steht sein Name als Überschrift im Dokument (etwa „Rechnung“ oben im Brief oder in der Betreffzeile), schlägt Ablago ihn vor und sagt, woran es das erkennt; sonst steht dort **Mappentyp wählen …**. **Ändern** öffnet die Liste mit Suche. Zur Wahl stehen nur Mappentypen, die man aus Post anlegen kann und in denen du Mappen anlegen darfst – nie Benutzer, Rollen oder Post. Ein anderer Typ tauscht die Mappe darunter aus.
+
+Darunter:
+
+- **Kopie in der Post behalten** – die Dokumente bleiben zusätzlich in der Post (siehe unten).
+- **In eine vorhandene Mappe „…“ legen …** – statt einer neuen eine bestehende Mappe dieses Typs suchen und **Zu „…“ legen**.
+- **Erledigt, ohne Mappe** – für Werbung oder was schon erledigt ist: Die Post bleibt mit Stand *Erledigt* stehen.
+- **Als Post öffnen** – die Post selbst, etwa um *Für* zu ändern oder eine Notiz zu schreiben.
+
+### Werte vom Dokument übernehmen { #werte-ubernehmen }
+
+Die Mappe ist schon vorausgefüllt: Datum, Betrag, Nummern und Verweise (z. B. der Aussteller), die Ablago im Text gefunden hat, dazu Betreff und Datum der Post. Jeder Wert steht als **Vorschlag** am Feld, mit Sicherheit und Fundstelle; **Zurücknehmen** leert das Feld wieder.
+
+- **Rahmen:** Wo ein erkannter Wert im Dokument steht, ist er farbig umrahmt und nummeriert; dieselbe Nummer steht am Feld. Fährst du über einen Rahmen, leuchtet das Feld auf – und umgekehrt.
+- **Ziehen:** Einen Rahmen ziehst du in ein beliebiges Feld, auch in ein Verweisfeld.
+- **Feld wählen, dann klicken:** Klick in ein Feld und dann auf einen Rahmen – das Feld übernimmt den Wert.
+- **Markieren:** Hat das Dokument Text (ein PDF mit Text oder Text aus der Texterkennung), markierst du Wörter mit der Maus. Das zuletzt gewählte Feld übernimmt sie; Datum und Betrag liest Ablago dabei richtig, z. B. „03.11.2026“ oder „1.284,20 €“.
+
+Unter einem **Verweisfeld** steht **Woran Ablago „…“ erkennt**, etwa „Vertragsnummer WV-1043“ oder „Kundennummer 100-4711 (über Vertragspartner)“ – Werte aus Feldern mit *Zum Wiederfinden nutzen*, mit Rahmen im Dokument. Findet Ablago mehrere passende Mappen, steht darunter **Auch gefunden: „…“ stattdessen nehmen**.
+
+**Gibt es die Mappe schon?** Stehen alle Werte zum Wiederfinden einer vorhandenen Mappe des gewählten Typs im Dokument, etwa dieselbe Rechnungsnummer, warnt die Seite: „Rechnungsnummer R-2026-0815 gibt es schon: „…““. **Stattdessen dorthin legen** legt die Post in diese Mappe.
+
+**Mehrere Dokumente:** Was auf einmal abgelegt wurde, ist eine Post und wird **eine** Mappe; übergeordnete Mappen wie der Vertrag kommen als Verweis dazu. Passt ein Folgedokument erkennbar woandershin, steht davor „„…“ passt eher zu …“ mit **Ab hier abtrennen und als neue Post in „Neue Post“ legen**: Dieses und die folgenden Dokumente kommen als neue Post „… (abgetrennt)“ nach *Neue Post*; in der Historie beider steht, woher sie kommen.
+
+**Mappe speichern** legt die Mappe an, und aus der Post wird die Mappe – siehe unten. Danach zeigt die Seite die nächste Post.
 
 ### Aus der Post wird die Mappe { #post-auflosen }
 
-Legst du aus einer Post eine **neue** Mappe an, bleibt die Post nicht als zweite Fundstelle stehen: Sie wird zu dieser Mappe. Vor dem Speichern steht das unten in der Speicherleiste: „Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.“ Nach **Mappe speichern**:
+Legst du aus einer Post eine Mappe an – oder legst du sie in eine **vorhandene** –, bleibt die Post nicht als zweite Fundstelle stehen: Sie wird zu dieser Mappe. Vor dem Speichern steht das unten in der Speicherleiste: „Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.“ Danach:
 
-- Die gewählten **Dokumente** liegen im Dokumentenregister der neuen Mappe.
-- Die **ganze Historie der Post** steht in der [Historie](zusammenarbeit.md#historie) der Mappe – Eingang, Herkunft (Postfach, Eingangsordner, Ablegen …), Änderungen, Notizen und Aufgaben, jeweils mit dem Zeichen *aus der Post*. Dazu kommt der Eintrag „Aus Post „…“ angelegt“. Notizen, Aufgaben und Erinnerungen der Post gehören jetzt der Mappe; die Aufgabe *Post für dich* ist erledigt.
-- Die Post selbst kommt in den [Papierkorb](ablage.md#papierkorb). Dort steht „Aufgelöst in *Rechnung* „…““ mit Link zur Mappe. **Wiederherstellen** gibt es für sie nicht – wer das rückgängig machen will, löscht die neue Mappe. Ist der Papierkorb ausgeschaltet, ist die leere Post gleich gelöscht.
-- Die Seite zeigt danach die **nächste Post** aus *Neue Post*, oben mit einem Link zur eben angelegten Mappe; die Zahl bei *Neue Post* ist um eins kleiner. Ist keine Post mehr da, öffnet sich die neue Mappe.
+- Die **Dokumente** liegen im Dokumentenregister der Mappe.
+- Die **ganze Historie der Post** steht in der [Historie](zusammenarbeit.md#historie) der Mappe – Eingang, Herkunft (Postfach, Eingangsordner, Ablegen …), Änderungen, Notizen und Aufgaben, jeweils mit dem Zeichen *aus der Post*. Dazu kommt der Eintrag „Aus Post „…“ angelegt“ bzw. bei einer vorhandenen Mappe „Post „…“ übernommen“. Notizen, Aufgaben und Erinnerungen der Post gehören jetzt der Mappe; die Aufgabe *Post für dich* ist erledigt.
+- Die Post selbst kommt in den [Papierkorb](ablage.md#papierkorb). Dort steht „Aufgelöst in *Rechnung* „…““ mit Link zur Mappe. **Wiederherstellen** gibt es für sie nicht – war die Mappe dabei neu, löschst du sie, um es rückgängig zu machen. Ist der Papierkorb ausgeschaltet, ist die leere Post gleich gelöscht.
+- Die Seite zeigt danach die **nächste Post** aus *Neue Post*, oben mit einem Link zur Mappe; die Zahl bei *Neue Post* ist um eins kleiner. Ist keine Post mehr da, öffnet sich die Mappe.
 
-Hast du nur **einen Teil der Dokumente** gewählt, kommen die übrigen als **neue Post** nach *Neue Post* – Betreff mit „(abgetrennt)“, Datum, Absender und *Für* wie bisher. In ihrer Historie steht, aus welcher Post sie stammt und welche Mappe daraus wurde.
+Geht über die Schnittstelle (API) nur ein Teil der Dokumente mit, kommen die übrigen als **neue Post** nach *Neue Post* – Betreff mit „(abgetrennt)“, Datum, Absender und *Für* wie bisher, mit Verweis auf die Herkunft in ihrer Historie.
 
-So bleibt es beim Zuordnen wie bisher (die Post bleibt mit Stand *Zugeordnet* stehen):
+So bleibt es beim Zuordnen (die Post bleibt mit Stand *Zugeordnet* stehen und verweist auf die Mappe):
 
 - wenn du die Post **nicht löschen** darfst – dann sagt die Speicherleiste das schon vor dem Speichern: „Die Post darfst du nicht löschen: Sie bleibt stehen und wird dieser Mappe zugeordnet.“ Dasselbe gilt, wenn nur ein Teil der Dokumente mitgeht und du keine Post anlegen darfst; dann sagt es ein Hinweis nach dem Speichern;
 - mit **Kopie in der Post behalten**;
-- bei versendeten E-Mails.
-
-Einer **vorhandenen** Mappe ordnest du Post zu wie oben; dabei wird nichts aufgelöst.
+- beim [automatischen Zuordnen](#automatisch-zugeordnet) – sonst ginge **Rückgängig** nicht mehr;
+- bei versendeten E-Mails – sie bleiben als Nachweis, was verschickt wurde.
 
 ### Vorschläge beim Zuordnen
 
-Sobald der Text einer Post da ist (aus der Texterkennung, der Textebene eines PDFs oder dem Text einer E-Mail), sucht Ablago darin – ohne KI und ohne Internet, nur mit Mustern und dem Abgleich mit deinen Mappen. Was es findet, steht oben in der Post im Kasten **Erkannt**:
+Sobald der Text einer Post da ist (aus der Texterkennung, der Textebene eines PDFs oder dem Text einer E-Mail), sucht Ablago darin – ohne KI und ohne Internet, nur mit Mustern und dem Abgleich mit deinen Mappen. Auf der Seite *Dokument übernehmen* fließt das in die Vorschläge der Mappe ein. In der Post selbst (**Als Post öffnen**) steht es im Kasten **Erkannt**:
 
 - **Absender:** eine Organisation (oder Niederlassung, Person), deren Kundennummer, IBAN, E-Mail-Adresse, Internetseite, Telefonnummer oder Name im Brief steht – mit Begründung, z. B. „gefunden: Kundennummer 100-4711“. **Als Absender eintragen** schreibt den Namen ins Feld *Absender* der Post. Passt keine, aber der Briefkopf ist sicher erkennbar (z. B. die kleine Absenderzeile über dem Anschriftfeld), steht dort **Als neue Organisation anlegen** – mit Name und Anschrift vorbelegt.
 - **Datum** des Schreibens (nicht Leistungszeitraum oder Fälligkeit) – **Als Datum der Post eintragen** übernimmt es.
 - **Betrag** (der Gesamtbetrag) und **Nummern** wie Kunden-, Rechnungs- oder Vertragsnummer.
 
-Unter **Zuordnen …** stehen oben die **Vorschläge** für die Zielmappe, der beste ist schon ausgewählt und als *Vorschlag* markiert: ein Vertrag, dessen Vertragsnummer im Brief steht; Mappen, die auf den Absender verweisen (z. B. sein Stromvertrag); Mappen, zu denen frühere Post dieses Absenders ging; der Absender selbst. Unter jedem Vorschlag steht, warum. Ein Klick wählt einen anderen, die Suche darunter geht wie immer – nichts passiert, bis du **Zu „…“ zuordnen** klickst.
-
-Woran Ablago Absender wiedererkennt, legt der Mappentyp fest: Felder, an denen ein Administrator „Zum Wiederfinden nutzen“ eingestellt hat (die Pakete *Basis* & Co. bringen das mit). Hast du gerade eine Organisation angelegt oder eine Kundennummer nachgetragen, klick im Kasten auf **Neu erkennen**. Vorgeschlagen werden nur Mappen, die du sehen darfst.
+Woran Ablago Absender und andere Mappen wiedererkennt, legt der Mappentyp fest: Felder, an denen ein Administrator „Zum Wiederfinden nutzen“ eingestellt hat (die Pakete *Basis* & Co. bringen das mit). Hast du gerade eine Organisation angelegt oder eine Kundennummer nachgetragen, klick im Kasten auf **Neu erkennen**. Vorgeschlagen werden nur Mappen, die du sehen darfst.
 
 ### Automatisch zugeordnet
 
@@ -130,11 +150,11 @@ Danach steht bei dir unter [Zu erledigen](eingang.md) die Aufgabe **Automatisch 
 
 Warum zugeordnet wurde („Absender … eindeutig erkannt (Kundennummer 100-4711), einzige passende Mappe …“), steht im Kasten **Erkannt** und in der [Historie](zusammenarbeit.md#historie) der Post und der Mappe. Nie automatisch zugeordnet wird Post, deren Empfänger die Zielmappe nicht lesen darf, und Post zu Mappentypen im Archivmodus.
 
-**Kopie in der Post behalten** lässt die Dokumente zusätzlich in der Post liegen. Das kostet keinen Platz, denn Ablago speichert jede Datei nur einmal. Das ist praktisch, wenn ein Brief zu **mehreren** Mappen gehört, z. B. zur Rechnung und zum Vertrag. Du kannst eine Post beliebig oft zuordnen.
+### Kopie in der Post behalten
 
-Ohne Zuordnung geht es auch: **Erledigt** für Werbung oder Dinge, die schon erledigt sind; **Wieder neu**, wenn doch noch etwas zu tun ist. Unnötige Post löschst du wie jede Mappe.
+**Kopie in der Post behalten** (unter *Wohin gehört das?*) lässt die Dokumente zusätzlich in der Post liegen. Das kostet keinen Platz, denn Ablago speichert jede Datei nur einmal. Das ist praktisch, wenn ein Brief zu **mehreren** Mappen gehört, z. B. zur Rechnung und zum Vertrag. Die Post wird dann nicht [aufgelöst](#post-auflosen), sondern nur zugeordnet, und du kannst sie über **Zuordnen …** noch einer weiteren Mappe zuordnen.
 
-**Kopie in der Post behalten** gilt auch beim Anlegen einer neuen Mappe: Dann wird die Post nicht [aufgelöst](#post-auflosen), sondern nur zugeordnet.
+Ohne Zuordnung geht es auch: **Erledigt, ohne Mappe** für Werbung oder Dinge, die schon erledigt sind; in der Post selbst (**Als Post öffnen**) gibt es dafür **Erledigt** und **Wieder neu**, wenn doch noch etwas zu tun ist. Unnötige Post löschst du wie jede Mappe.
 
 ## Sammelscan teilen
 
@@ -157,4 +177,4 @@ Wird eine Mappe gelöscht, bleibt die Post erhalten. Nur der Verweis auf diese M
 
 ## Wer darf was?
 
-Wer Post sieht, anlegt, bearbeitet und löscht, regeln die [Berechtigungen](mappen.md#was-du-sehen-und-andern-darfst) des Mappentyps *Post*. Zum Zuordnen brauchst du das Recht, die Post **und** die Zielmappe zu bearbeiten. Damit aus der Post eine neue Mappe [wird](#post-auflosen), musst du die Post außerdem löschen dürfen.
+Wer Post sieht, anlegt, bearbeitet und löscht, regeln die [Berechtigungen](mappen.md#was-du-sehen-und-andern-darfst) des Mappentyps *Post*. Zum Zuordnen brauchst du das Recht, die Post **und** die Zielmappe zu bearbeiten. Damit aus der Post die Mappe [wird](#post-auflosen) – eine neue wie eine vorhandene –, musst du die Post außerdem löschen dürfen. Zum **Abtrennen** brauchst du das Recht, Post anzulegen.
