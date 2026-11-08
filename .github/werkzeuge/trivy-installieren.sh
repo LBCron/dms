@@ -13,7 +13,15 @@ case "$(uname -m)" in
 esac
 ZIEL="${RUNNER_TEMP:-/tmp}/trivy-${VERSION}"
 mkdir -p "$ZIEL"
-curl -sSfL --retry 8 --retry-delay 15 --retry-all-errors --connect-timeout 20 -o "$ZIEL/$DATEI" "https://github.com/aquasecurity/trivy/releases/download/v${VERSION}/${DATEI}"
+if ! curl -sSfL --retry 8 --retry-delay 15 --retry-all-errors --connect-timeout 20 -o "$ZIEL/$DATEI" "https://github.com/aquasecurity/trivy/releases/download/v${VERSION}/${DATEI}"; then
+  # Zweiter Weg über die API (anderer Einstieg als github.com/…/releases/download); Prüfsumme gilt genauso.
+  echo "::warning title=Trivy::Download über github.com gescheitert – versuche die API."
+  [ -n "${GH_TOKEN:-}" ] || { echo "::error::Trivy: kein GH_TOKEN für den zweiten Weg."; exit 1; }
+  url=$(curl -sSfL --retry 5 --retry-delay 10 --retry-all-errors -H "Authorization: Bearer $GH_TOKEN" \
+    "https://api.github.com/repos/aquasecurity/trivy/releases/tags/v${VERSION}" | jq -r --arg n "$DATEI" '.assets[] | select(.name == $n) | .url')
+  [ -n "$url" ] || { echo "::error::Trivy: Datei $DATEI im Release nicht gefunden."; exit 1; }
+  curl -sSfL --retry 8 --retry-delay 15 --retry-all-errors -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" -o "$ZIEL/$DATEI" "$url"
+fi
 echo "$SUMME  $ZIEL/$DATEI" | sha256sum -c --quiet - || { echo "::error::Trivy: Prüfsumme stimmt nicht – Download verworfen."; exit 1; }
 tar -xzf "$ZIEL/$DATEI" -C "$ZIEL" trivy
 sudo install -m 0755 "$ZIEL/trivy" /usr/local/bin/trivy
