@@ -100,7 +100,7 @@ Per package Ablago remembers version, **origin** (the catalogue), when and by wh
 
 ## Examples { #beispiele }
 
-Many packages bring **sample folders** with invented data so that you can see what belongs in a folder. Since Ablago 0.222.0 they can also bring **example documents** – for instance a maintenance contract and two invoices for the folder "Heating". Both are only created if you set the tick **Sample folders** when installing; an update creates no examples.
+Many packages bring **sample folders** with invented data so that you can see what belongs in a folder. Since Ablago 0.223.0 they can also bring **example documents** – for instance a maintenance contract and two invoices for the folder "Heating". Both are only created if you set the tick **Sample folders** when installing; an update creates no examples.
 
 - **As if uploaded:** the documents land in the tab the package names and get a preview, full text (text recognition) and – if you have switched it on – an archive version, exactly like a document you upload yourself. Origin: *from a package*; the date is the date from the package.
 - **Only safe file types:** PDF, PNG and JPEG, each at most as large as when uploading. All of them together count towards a package's size limit (128 MB).
@@ -108,7 +108,7 @@ Many packages bring **sample folders** with invented data so that you can see wh
 - **Removing again:** under **Workbench → Packages → *package***, **Remove examples** permanently deletes all of the package's sample folders **together with their documents**, without the Bin – as long as they are **unchanged**. Examples you have changed (fields, documents, notes) or that one of your folders refers to **stay** as normal folders; Ablago names them. When you [remove](#entfernen) the package, the same happens automatically. The deletion log records the removed examples as "package examples removed".
 - **Backup:** example documents are normal documents – they are in the [backup](sicherung.md) and the export until you remove them.
 
-For packages installed before 0.222.0, Ablago doesn't know the examples as such; you delete them like other folders.
+For packages installed before 0.223.0, Ablago doesn't know the examples as such; you delete them like other folders.
 
 ## Updating { #aktualisieren }
 
@@ -525,7 +525,7 @@ If you have built your own folder types and views – for instance for contracts
 
 If you have already created packages, the first step first asks: **New package** (without a selection, without details) or **New version of …** (takes over selection and details of an earlier package and suggests the next version; folder types and views that no longer exist drop out with a notice, your own types created since then you add yourself).
 
-1. **Choose** – folder types, views and **word lists** (your own groups of synonyms from Workbench → Search) with ticks, a search at the top. Word lists from installed packages are greyed out and don't come along; a package with only word lists works too (from Ablago 0.127.0 at the recipient, there under "from packages"). Optionally **sample folders**: without a choice the package contains not a single folder. If you choose folders of the chosen types, their field values come along as examples – only take folders with invented data, e.g. demo folders. With the tick **Include their documents**, these folders' documents come along too (only PDF, PNG and JPEG, under `inhalt/beispiele/`; the package then needs Ablago from 0.222.0) – only use documents with invented content for this, never real invoices, contracts or letters.
+1. **Choose** – folder types, views and **word lists** (your own groups of synonyms from Workbench → Search) with ticks, a search at the top. Word lists from installed packages are greyed out and don't come along; a package with only word lists works too (from Ablago 0.127.0 at the recipient, there under "from packages"). Optionally **sample folders**: without a choice the package contains not a single folder. If you choose folders of the chosen types, their field values come along as examples – only take folders with invented data, e.g. demo folders. With the tick **Include their documents**, these folders' documents come along too (only PDF, PNG and JPEG, under `inhalt/beispiele/`; the package then needs Ablago from 0.223.0) – only use documents with invented content for this, never real invoices, contracts or letters.
 2. **Check** – Ablago checks automatically and says what it makes of it:
     - **From a package:** a folder type or a view that an installed package brought (for instance "Organisation" from *Basis*) is **not copied** but entered as a **dependency**, e.g. `basis: ">=1.1.0"` with the version installed here. If you have changed such a type here afterwards, Ablago points this out: your changes don't belong to your package – create a type of your own for them. The type then shows **"changed"** with a summary (e.g. "+2 fields · 1 field changed"); expanded you see every field and tab that differs from the package's state. Saving without a change doesn't count. For packages installed before this version, Ablago only knows the details after the package's next update.
     - **User, role:** links to them become `dms:benutzer` and `dms:rolle` – every Ablago installation brings these.

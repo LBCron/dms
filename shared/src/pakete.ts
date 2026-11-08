@@ -587,7 +587,7 @@ export const CODE_MAX = PAKET_MAX;
 export const BEISPIEL_ORDNER = 'inhalt/beispiele/';
 export const BEISPIEL_ENDUNGEN: Readonly<Record<string, string>> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
 /** Ab dieser Version legt Ablago Beispiel-Dokumente an (#878); ältere übergehen `dokumente` an Beispielen. */
-export const BEISPIEL_DOKUMENTE_AB = '0.222.0';
+export const BEISPIEL_DOKUMENTE_AB = '0.223.0';
 /** Stand einer Beispiel-Mappe nach dem Anlegen (#878): Prüfwert der Feldwerte und Dokumente als „Id:sha256“. */
 export interface BeispielStand { id: string; werte: string; dokumente: string[] }
 

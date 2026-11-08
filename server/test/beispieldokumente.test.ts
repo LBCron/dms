@@ -22,7 +22,7 @@ const PDF = (text: string) => Buffer.from(`%PDF-1.4\n% ${text}\n1 0 obj<<>>endob
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32, 1)]);
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(32, 2)]);
 
-const MANIFEST = 'schema: 1\nid: demo\nname: Demo-Ablage\nversion: 1.0.0\nbeschreibung: Beispiele mit Dokumenten.\nautor: { name: Lena Beispiel, github: lena-beispiel }\nlizenz: MIT\ndms: ">=0.222.0"\nabhaengigkeiten: {}\ninhalt:\n  mappentypen: inhalt/mappentypen.yaml\n  sichten: inhalt/sichten.yaml\n  beispiele: inhalt/beispiele.yaml\n';
+const MANIFEST = 'schema: 1\nid: demo\nname: Demo-Ablage\nversion: 1.0.0\nbeschreibung: Beispiele mit Dokumenten.\nautor: { name: Lena Beispiel, github: lena-beispiel }\nlizenz: MIT\ndms: ">=0.223.0"\nabhaengigkeiten: {}\ninhalt:\n  mappentypen: inhalt/mappentypen.yaml\n  sichten: inhalt/sichten.yaml\n  beispiele: inhalt/beispiele.yaml\n';
 const TYPEN = [
   '- schluessel: firma', '  name: Firma', '  titelVorlage: "{name}"', '  felder:', '    - { key: name, label: Name, typ: text, pflicht: true }',
   '  register:', '    - { key: daten, name: Daten, art: felder, felder: [name] }',
@@ -114,8 +114,8 @@ function faelle(pg: boolean) {
       const dateien = speicherDateien();
       const r = await repo(pg);
       const d = new Dienst(r, dateien, { einstellungen: speicherEinstellungen() });
-      const p = new Paketverwaltung(d, { version: () => '0.222.0', katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } });
-      return { d, p, r, dateien, e: new Paketerstellung(d, { version: () => '0.222.0' }) };
+      const p = new Paketverwaltung(d, { version: () => '0.223.0', katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } });
+      return { d, p, r, dateien, e: new Paketerstellung(d, { version: () => '0.223.0' }) };
     }
     async function installiere(p: Paketverwaltung, d: Record<string, string | Buffer> = DATEIEN, beispiele = true) {
       const h = await p.hochladen(zip(d), ICH);
