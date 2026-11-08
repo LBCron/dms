@@ -1,6 +1,6 @@
 import { abschnittTitel, feldHilfe, feldLabel, optionText, registerName, typName } from '../../../shared/src/beschriftung';
 import { abschnittEinstellung, abschnittId, ausgeblendeteFelder, gruppiere, sichtbareRegister } from '../../../shared/src/darstellung';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type ReactNode } from 'react';
 import { Symbol } from '../Symbol';
 import { Stern } from './Stern';
 import { spaltenName, zelle } from './spalten';
@@ -33,6 +33,7 @@ import { mitGrund } from './Loeschgrund';
 import { AusDokument, type AusDokumentErgebnis } from './AusDokument';
 import { ausDokumentKnopf, type Sicherheit } from '../../../shared/src/erkennung';
 import type { TypVorschlaege } from '../api';
+import { farbeVon, liesNutzlast, useBruecke, ziehtWert } from './bruecke';
 import { altesFeldAusblenden } from '../../../shared/src/umwandlung';
 import { t, tn } from '../sprache';
 import { gebietsschema } from '../../../shared/src/sprache';
@@ -62,7 +63,8 @@ async function naechstePost(sicht: string | null | undefined): Promise<Mappe | u
 function useAufloesung(z: ZuordnenNachher | undefined) {
   const [x, setX] = useState<{ aufloesen?: boolean; gesperrt: boolean; dokumente: number } | null>(null);
   useEffect(() => {
-    if (!z || z.kopieren) return;
+    // Mit „Kopie in der Post behalten“ wird nicht aufgelöst (#936) – auch wenn der Haken erst später gesetzt wird (#934).
+    if (!z || z.kopieren) { setX(null); return; }
     let aktuell = true;
     api.mappe(z.post).then((p) => {
       if (!aktuell) return;
@@ -75,7 +77,11 @@ function useAufloesung(z: ZuordnenNachher | undefined) {
   return x;
 }
 
-export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: Mappentyp; verweis?: string; sicht: string; zuordnen?: ZuordnenNachher; vorbelegen?: string }) {
+export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen, vorschlagStart, kopf }: {
+  typ: Mappentyp; verweis?: string; sicht: string; zuordnen?: ZuordnenNachher; vorbelegen?: string;
+  /** Seite „Dokument übernehmen“ (#934): Vorschläge aus dem Dokument und ein eigener Kopf (Titel, wie er nach dem Speichern heißt). */
+  vorschlagStart?: TypVorschlaege; kopf?: (werte: Werte, bekannt: Bezuege) => ReactNode;
+}) {
   const start = standardRoh(typ);
   // ?vorbelegen={…} (#172): was sich aus dem Auswahlfilter eines Referenzfelds ergibt, z. B. Art = Arzt.
   try {
@@ -107,6 +113,8 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
   const mitDoks = zuordnen?.dokumente.length ? t('ablage.mappeformular.ihre-dokumente-kommen-hierher', { anzahl: zuordnen.dokumente.length }) : '';
   // Abgetrennt (#936): Nicht gewählte Dokumente kommen als neue Post nach „Neue Post“.
   const uebrig = aufloesung?.aufloesen && zuordnen ? Math.max(0, aufloesung.dokumente - zuordnen.dokumente.length) : 0;
+  // Auf der Seite „Dokument übernehmen“ (#934) zeigt der Kopf die Mappe; was mit der Post geschieht, sagt die Speicherleiste.
+  if (kopf) return <Formular typ={typ} start={start} sicht={sicht} zuordnen={zuordnen && { ...zuordnen, aufloesen: aufloesung?.aufloesen }} vorschlagStart={vorschlagStart} kopf={kopf} />;
   return (
     <>
       <div className="mappenkopf">
@@ -133,7 +141,11 @@ function NurImModus({ mappeId }: { mappeId: string }) {
   return <div className={erstes ? 'hinweis warn' : 'leise klein'} role={erstes ? 'alert' : undefined} id="nur-im-verwaltungsmodus"><p>{t('mappen.verwaltungsmodus.hinweis')}</p></div>;
 }
 
-export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { typ: Mappentyp; details: MappeDetails; sicht: string; anhang?: string; neuLaden: () => Promise<void> }) {
+export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden, vorschlagStart }: {
+  typ: Mappentyp; details: MappeDetails; sicht: string; anhang?: string; neuLaden: () => Promise<void>;
+  /** „Aus Dokument ausfüllen“ auf der Seite „Dokument übernehmen“ (#934): Vorschläge aus dem Dokument der Mitte. */
+  vorschlagStart?: TypVorschlaege;
+}) {
   const d = useDaten();
   const { ich } = useKonto();
   const mappe = details.mappe;
@@ -198,7 +210,7 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
       {mappe.passt === false && (
         <div className="hinweis warn"><p>{t('ablage.mappeformular.diese-mappe-passt-nicht', { name: typ.name, wert: mappe.problem ? ` (${mappe.problem})` : '' })}</p></div>
       )}
-      <Formular typ={typ} mappe={mappe} start={rohAusWerten(typ, mappe.werte)} sicht={sicht} anhang={anhang} details={details} neuLaden={neuLaden} registerWunsch={registerWunsch} mitVerknuepften={mitVerknuepften} loeschWunsch={loeschWunsch} />
+      <Formular typ={typ} mappe={mappe} start={rohAusWerten(typ, mappe.werte)} sicht={sicht} anhang={anhang} details={details} neuLaden={neuLaden} registerWunsch={registerWunsch} mitVerknuepften={mitVerknuepften} loeschWunsch={loeschWunsch} vorschlagStart={vorschlagStart} />
       {verwaist.length > 0 && (
         <section className="blatt">
           <h2 className="h3">{t('ablage.mappeformular.werte-ohne-felddefinition')}</h2>
@@ -282,8 +294,12 @@ function verknuepfungsGruppen(d: ReturnType<typeof useDaten>, mappe: Mappe | und
     })));
 }
 
-function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zuordnen, registerWunsch, mitVerknuepften, loeschWunsch = 0 }: {
+function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zuordnen, registerWunsch, mitVerknuepften, loeschWunsch = 0, vorschlagStart, kopf }: {
   typ: Mappentyp; mappe?: Mappe; start: RohWerte; sicht: string; anhang?: string; details?: MappeDetails | null; neuLaden?: () => Promise<void>; zuordnen?: ZuordnenNachher;
+  /** Seite „Dokument übernehmen“ (#934): Vorschläge aus dem Dokument, eingetragen wie bei „Aus Dokument ausfüllen“. */
+  vorschlagStart?: TypVorschlaege;
+  /** Kopf über dem Formular mit den aktuellen Werten (neue Mappe auf der Seite „Dokument übernehmen“). */
+  kopf?: (werte: Werte, bekannt: Bezuege) => ReactNode;
   /** „Mit verknüpften Mappen löschen …“ (#424) – als weiterer Weg unter „Warum nicht?“ (#423). */
   mitVerknuepften?: () => void;
   /** Register von außen öffnen (#427); `n` zählt, damit derselbe Wunsch erneut wirkt. */
@@ -331,7 +347,11 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   const [hinweise, setHinweise] = useState<Array<{ art: 'warn' | 'schlecht'; text: ReactNode }>>([]);
   const [sendet, setSendet] = useState(false);
   // „Aus Dokument ausfüllen“ (#391): Vorschläge je Feld – eingetragen (Feld war leer) oder als Alternative.
-  const knopf = nurLesen ? null : ausDokumentKnopf(typ);
+  const bruecke = useBruecke();
+  // Auf der Seite „Dokument übernehmen“ (#934) steht „Aus Dokument ausfüllen“ nicht – das Dokument ist schon da.
+  const knopf = nurLesen || bruecke ? null : ausDokumentKnopf(typ);
+  // Hat die Mappe ein Dokument mit Text, öffnet der Knopf die Seite mit diesem Dokument in der Mitte (#934); sonst der Dialog (Foto, Datei).
+  const mitText = mappe ? (details?.dokumente ?? []).filter((x) => x.ocr?.stand === 'fertig') : [];
   const [adOffen, setAdOffen] = useState(false);
   const [vorschlaege, setVorschlaege] = useState<Record<string, FeldVorschlag>>({});
   const [adNeu, setAdNeu] = useState<TypVorschlaege['neu']>({});
@@ -359,7 +379,11 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     if (r.art === 'verknuepfungen') return verknuepfungsGruppen(d, mappe, typ.id, r, details).reduce((a, g) => a + g.treffer.length, 0);
     return undefined;
   };
-  const verwerfen = () => { setKonflikt(undefined); setRoh(JSON.parse(basis)); setNeueDateien([]); setEntfernt([]); setFehler(null); setMeldung(undefined); setHinweise([]); setVorschlaege({}); setAdNeu({}); setAdMeldung(undefined); };
+  const verwerfen = () => {
+    setKonflikt(undefined); setRoh(JSON.parse(vorschlagStart && !mappe ? startJson : basis)); setNeueDateien([]); setEntfernt([]); setFehler(null); setMeldung(undefined); setHinweise([]); setVorschlaege({}); setAdNeu({}); setAdMeldung(undefined);
+    // Seite „Dokument übernehmen“ (#934): zurück auf die Vorschläge aus dem Dokument.
+    if (vorschlagStart) setVorschlagRunde((n) => n + 1);
+  };
 
   const reg = register.find((r) => r.key === aktiv) ?? register[0];
   // Ausgeblendete Felder (#655) zeigt die Mappe nicht; ihre Werte bleiben, wie sie sind.
@@ -423,7 +447,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   };
 
   /** Vorschläge eintragen (#391): leere Felder bekommen den Wert, gefüllte eine Alternative; nichts ist gespeichert. */
-  function uebernimmVorschlaege({ r, dateien, ablegen }: AusDokumentErgebnis) {
+  function uebernimmVorschlaege({ r, dateien, ablegen }: AusDokumentErgebnis): RohWerte {
     const neu: Record<string, FeldVorschlag> = {};
     const werte: RohWerte = {};
     for (const [k, v] of Object.entries(r.vorschlaege)) {
@@ -452,6 +476,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     // Zum ersten Feldregister mit einem Vorschlag.
     const ziel = register.find((x) => x.art === 'felder' && felderAuf(x).some((f) => neu[f.key]));
     if (ziel) setAktiv(ziel.key);
+    return werte;
   }
   function vorschlagZuruecknehmen(k: string) {
     const v = vorschlaege[k];
@@ -465,6 +490,40 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     setze(k, zuRoh(f, v.wert));
     setVorschlaege((x) => ({ ...x, [k]: { ...v, art: 'eingetragen', vorher } }));
   }
+  // Seite „Dokument übernehmen“ (#934): Vorschläge aus dem Dokument eintragen, sobald sie da sind (und nach „Verwerfen“ wieder).
+  const [vorschlagRunde, setVorschlagRunde] = useState(0);
+  useEffect(() => {
+    if (!vorschlagStart) return;
+    const werte = uebernimmVorschlaege({ r: vorschlagStart, dateien: [], ablegen: null });
+    // Neue Mappe: Die Vorschläge sind der Ausgangsstand – erst eigene Eingaben sind „ungespeichert“ (Blättern ohne Rückfrage).
+    if (!mappe) setBasis(JSON.stringify({ ...roh, ...werte }));
+  }, [vorschlagStart, vorschlagRunde]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Die Brücke setzt Werte vom Dokument und zeigt Felder; über Refs immer mit dem aktuellen Stand.
+  const anschluss = useRef({ roh, register, felderAuf, oeffneAbschnitte, geschuetzt, nurLesen, merke, setFehler });
+  anschluss.current = { roh, register, felderAuf, oeffneAbschnitte, geschuetzt, nurLesen, merke, setFehler };
+  useEffect(() => bruecke?.anschliessen({
+    setze(k, wert, bezug) {
+      const a = anschluss.current;
+      const f = typ.felder.find((x) => x.key === k);
+      if (!f || a.nurLesen || a.geschuetzt[k] !== undefined) return;
+      if (bezug) a.merke(bezug.id, { titel: bezug.titel, typId: bezug.typId });
+      setRoh((r) => {
+        const neu = zuRoh(f, wert);
+        const alt = r[k];
+        // Mehrfachfelder: dazunehmen statt ersetzen.
+        return { ...r, [k]: f.mehrfach && Array.isArray(alt) && Array.isArray(neu) ? [...new Set([...alt as string[], ...neu as string[]])] : neu };
+      });
+      a.setFehler((x) => x && x.felder[k] ? { ...x, felder: Object.fromEntries(Object.entries(x.felder).filter(([y]) => y !== k)) } : x);
+    },
+    zeige(k) {
+      const a = anschluss.current;
+      const r = a.register.find((x) => x.art === 'felder' && a.felderAuf(x).some((f) => f.key === k));
+      if (r) setAktiv(r.key);
+      a.oeffneAbschnitte([k]);
+      window.setTimeout(() => document.querySelector(`.spalte.mappe [data-anker="mappe.feld:${k}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30);
+    },
+  }), [bruecke?.anschliessen, typ]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function neuAnlegen(k: string) {
     const n = adNeu[k]; const f = typ.felder.find((x) => x.key === k); const ziel = d.typ(n?.typId);
     if (!n || !f || !ziel) return;
@@ -601,7 +660,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const naechste = aufgeloest ? await naechstePost(d.zaehler.neuePost) : undefined;
     if (naechste && d.zaehler.neuePost) {
       merkeAufloesung({ fuer: naechste.id, id: gespeichert!.id, typId: typ.id, titel: gespeichert!.titel ?? '' });
-      geheZu(`/ablage/${d.zaehler.neuePost}/${naechste.id}`);
+      geheZu(`/ablage/${d.zaehler.neuePost}/${naechste.id}/uebernehmen`);
     } else if (!mappe) geheZu(`/ablage/${sicht}/${gespeichert!.id}`);
     else setMeldung(gespeichert?.hinweis ?? (offen.length || nichtEntfernt.length ? t('ablage.mappeformular.teilweise-gespeichert') : t('ablage.mappeformular.gespeichert-2')));
   }
@@ -704,9 +763,11 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
 
   return (
     <>
+    {kopf?.(werteAusRoh(typ, roh), bekannt)}
     {knopf && (adOffen
       ? <AusDokument typ={typ} titel={knopf} mappeId={mappe?.id} dokumente={(details?.dokumente ?? []).filter((x) => x.ocr?.stand === 'fertig')} fertig={uebernimmVorschlaege} schliessen={() => setAdOffen(false)} />
-      : <div className="ad-leiste"><button type="button" className="knopf klein" onClick={() => setAdOffen(true)}><Symbol name="kamera" /> {knopf}</button></div>)}
+      : <div className="ad-leiste"><button type="button" className="knopf klein" onClick={() => (mappe && mitText.length ? geheZu(`/ablage/${sicht}/${mappe.id}/uebernehmen`) : setAdOffen(true))}><Symbol name="kamera" /> {knopf}</button>
+          {mappe && mitText.length > 0 && <button type="button" className="textknopf klein" onClick={() => setAdOffen(true)}>{t('ablage.uebernehmen.foto-oder-datei')}</button>}</div>)}
     {(adMeldung || Object.keys(adNeu).length > 0) && (
       <div className="hinweis info ad-ergebnis" role="status">
         {adMeldung && <p>{adMeldung}</p>}
@@ -751,6 +812,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         <div className="knoepfe">
           {mappe
             ? <button type="button" className="knopf" disabled={!(werteGeaendert || dokumenteGeaendert) || sendet} onClick={verwerfen}><span className="hy-nur-breit">{t('ablage.mappeformular.aenderungen-verwerfen')}</span><span className="hy-nur-schmal">{t('ablage.mappeformular.verwerfen')}</span></button>
+            : kopf ? <button type="button" className="knopf" disabled={sendet} onClick={verwerfen}><span className="hy-nur-breit">{t('ablage.mappeformular.aenderungen-verwerfen')}</span><span className="hy-nur-schmal">{t('ablage.mappeformular.verwerfen')}</span></button>
             : <Link to={`/ablage/${sicht}`} className="knopf">{t('ablage.mappeformular.abbrechen')}</Link>}
           <button type="submit" className="knopf gruen" disabled={sendet}>{sendet ? t('ablage.mappeformular.speichere') : <><span className="hy-nur-breit">{t('ablage.mappeformular.mappe-speichern')}</span><span className="hy-nur-schmal">{t('ablage.mappeformular.speichern')}</span></>}</button>
         </div>
@@ -834,6 +896,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
 }) {
   const d = useDaten();
   const id = `feld-${f.key}`;
+  const ue = useUebernahmeFeld(f, gesperrt !== undefined);
   // Übersetzung anzeigen (#732): unter dem Feld, nur lesbar – bearbeitet wird weiter das Original im Feld.
   const uebersetzung = eigeneId && typeof gespeichert === 'string' && feldUebersetzbar(f, gespeichert)
     ? <Uebersetzbar quelle={{ art: 'feld', mappe: eigeneId, feld: f.key }} original={gespeichert} ersetzen={false}
@@ -938,20 +1001,46 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
   }
 
   return (
-    <div className={`feld ${breit ? 'breit' : ''} ${fehler ? 'fehlerhaft' : ''}`} data-anker={`mappe.feld:${f.key}`}>
+    <div className={`feld ${breit ? 'breit' : ''} ${fehler ? 'fehlerhaft' : ''}${ue.klasse}`} data-anker={`mappe.feld:${f.key}`} {...ue.props}>
       <div className="feldkopf">
         {mitLabelFor ? <label htmlFor={id}>{feldLabel(f)}{f.pflicht && <span className="pflicht">*</span>}</label> : <span className="label">{feldLabel(f)}{f.pflicht && <span className="pflicht">*</span>}</span>}
+        {ue.nummern}
         {f.typ === 'referenz' && <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span>}
       </div>
       {ctl}
       {uebersetzung}
       {zusatz}
+      {ue.unter}
       {f.hilfe && <span className="hilfe">{feldHilfe(f)}</span>}
       {fehler && <p className="fehlertext">{fehler}</p>}
     </div>
   );
 }
 
+
+/**
+ * Feld auf der Seite „Dokument übernehmen“ (#934): leuchtet auf, wenn man über seinen Rahmen am Dokument fährt (und
+ * lässt beim Überfahren seine Rahmen aufleuchten), merkt sich als zuletzt gewähltes Feld, nimmt Werte vom Dokument
+ * an (Ziehen) und zeigt die Nummern seiner Rahmen. Ohne Seite (überall sonst) nichts davon.
+ */
+function useUebernahmeFeld(f: Feld, gesperrt: boolean) {
+  const b = useBruecke();
+  const [drueber, setDrueber] = useState(false);
+  if (!b || gesperrt) return { klasse: '', props: {}, nummern: null, unter: null };
+  const marken = b.marken.filter((m) => m.feldKey === f.key);
+  return {
+    klasse: `${b.hervor === f.key ? ' ue-hervor' : ''}${b.aktiv === f.key ? ' ue-aktiv' : ''}${drueber ? ' ue-drueber' : ''}`,
+    props: {
+      onMouseEnter: () => b.setHervor(f.key), onMouseLeave: () => b.setHervor(null),
+      onFocusCapture: () => b.setAktiv(f.key), onPointerDownCapture: () => b.setAktiv(f.key),
+      onDragOver: (e: ReactDragEvent) => { if (!ziehtWert(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; if (!drueber) setDrueber(true); },
+      onDragLeave: (e: ReactDragEvent) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrueber(false); },
+      onDrop: (e: ReactDragEvent) => { const n = ziehtWert(e) ? liesNutzlast(e) : null; if (!n) return; e.preventDefault(); setDrueber(false); b.setAktiv(f.key); b.nimm(f, n); },
+    },
+    nummern: marken.length ? <span className="ue-nummern">{marken.map((m) => <span key={m.nr} className={`ue-nr ${farbeVon(m.nr)}`} title={t('ablage.uebernehmen.rahmen-nr', { nr: m.nr })}>{m.nr}</span>)}</span> : null,
+    unter: b.unterFeld(f),
+  };
+}
 
 /**
  * Lohnt eine Übersetzung (#732)? Lange Texte und formatierte Texte immer; einzeilige Textfelder nur ohne Format (keine

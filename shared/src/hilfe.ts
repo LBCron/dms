@@ -196,7 +196,7 @@ export const HILFE = {
   'ablage.fragen': benutzer('startseite/', '„Frag deine Ablage“', 'frag-deine-ablage'),
   'ablage.suchvolltext': benutzer('ablage/', 'Volltext in der erweiterten Suche', 'volltext-in-dokumenten-und-notizen'),
   'ablage.post': benutzer('post/', 'Post'),
-  'post.zuordnen': benutzer('post/', 'Zuordnen', 'zuordnen'),
+  'post.zuordnen': benutzer('post/', 'Dokument übernehmen', 'zuordnen'),
   'mappe.ausdokument': benutzer('mappen/', 'Aus Dokument ausfüllen', 'aus-dokument-ausfullen'),
   'post.erkennung': benutzer('post/', 'Vorschläge beim Zuordnen', 'vorschlage-beim-zuordnen'),
   'dokumente.sortieren': benutzer('dokumente/', 'Sortieren von Dokumenten', 'sortieren'),

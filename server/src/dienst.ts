@@ -549,7 +549,7 @@ export interface KontenHaken {
 }
 
 export const PAPIERKORB_STANDARD_TAGE = 30;
-/** Post auflösen (#936): nur in eine Mappe, die dieselbe Person höchstens so lange vorher angelegt hat. */
+/** Post auflösen (#936): „Aus Post … angelegt“ nur, wenn dieselbe Person die Mappe höchstens so lange vorher angelegt hat. */
 const AUFLOESEN_FRIST_MS = 60 * 60 * 1000;
 /** Anhänge einer E-Mail zusammen höchstens (#58); die Oberfläche warnt schon ab 20 MB. */
 export const EMAIL_MAX_ANHAENGE = 50_000_000;
@@ -6188,14 +6188,13 @@ export class Dienst {
     const reg = regs.find((r) => r.key === text(e.register)) ?? (e.register ? undefined : regs[0]);
     if (dokumente.length && !reg) throw new Fachfehler(422, regs.length ? t('meldungen.dienst.dieses-dokumentenregister-gibt-es') : t('meldungen.dienst.hat-kein-dokumentenregister-ordne', { name: zielTyp.name }));
     const kopieren = e.kopieren === true;
-    // Auflösen (#936): nur auf Wunsch, nie automatisch, nie mit „Kopie in der Post behalten“ und nie bei versendeten E-Mails
-    // (sie bleiben Post, wie sie verschickt wurden).
+    // Auflösen (#936, #934): auf Wunsch – in eine neue wie in eine bestehende Mappe. Nie automatisch (wegen „Automatik
+    // rückgängig“), nie mit „Kopie in der Post behalten“ und nie bei versendeten E-Mails (Nachweis des Versands).
     const rest = alle.filter((d) => !ids.includes(d.id));
     let hinweis: string | undefined;
     if (e.aufloesen === true && !auto && !kopieren && !istVersendet(post.werte)) {
-      if (!(await this.ebenAngelegt(ziel, von))) throw new Fachfehler(422, t('meldungen.dienst.aufloesen-nur-in-neue-mappe'));
       const grund = await this.aufloesenSperre(post, typ, rest.length > 0, z);
-      if (!grund) return this.loesePostAuf({ post, typ, ziel, zielTyp, reg, dokumente: dokumente as Dokument[], rest, von, quelle });
+      if (!grund) return this.loesePostAuf({ post, typ, ziel, zielTyp, reg, dokumente: dokumente as Dokument[], rest, von, quelle, neu: await this.ebenAngelegt(ziel, von) });
       hinweis = t('meldungen.dienst.post-bleibt-zugeordnet', { grund });
     }
     for (const d of dokumente as Dokument[]) {
@@ -6234,7 +6233,8 @@ export class Dienst {
 
   /**
    * Eben aus dieser Post angelegt (#936)? Die Zielmappe hat dieselbe Person vor höchstens einer Stunde angelegt, und ihr
-   * ist noch keine Post zugeordnet. So lässt sich Post nicht nachträglich in eine beliebige Mappe „auflösen“.
+   * ist noch keine Post zugeordnet. Seit #934 nur noch für den Wortlaut der Historie („Aus Post … angelegt“ bzw.
+   * „Post … übernommen“) – auflösen lässt sich Post auch in eine bestehende Mappe.
    */
   private async ebenAngelegt(ziel: Mappe, von: string | null): Promise<boolean> {
     if ((ziel.erstelltVon ?? null) !== von) return false;
@@ -6263,32 +6263,23 @@ export class Dienst {
   }
 
   /**
-   * Post auflösen (#936): Aus der Post wird die eben angelegte Mappe. Die gewählten Dokumente wandern in ihr Register,
+   * Post auflösen (#936, #934): Aus der Post wird die Mappe – eben angelegt oder vorhanden. Die gewählten Dokumente wandern in ihr Register,
    * die übrigen („abgetrennt“) in eine neue Post mit Verweis auf die Herkunft. Historie, Notizen, Aufgaben und
    * Erinnerungen der Post gehören danach der Mappe, dazu der Eintrag „Aus Post … angelegt“. Die leere Post kommt mit
    * „Aufgelöst in …“ in den Papierkorb (bei ausgeschaltetem Papierkorb endgültig weg); wiederherstellen lässt sie sich
    * nicht – der Weg zurück ist, die neue Mappe zu löschen (Thomas, 07.11.2026). Alles in einer Transaktion.
    */
-  private async loesePostAuf(x: { post: Mappe; typ: Mappentyp; ziel: Mappe; zielTyp: Mappentyp; reg: Register | undefined; dokumente: Dokument[]; rest: Dokument[]; von: string | null; quelle?: Ausloeser }) {
+  private async loesePostAuf(x: { post: Mappe; typ: Mappentyp; ziel: Mappe; zielTyp: Mappentyp; reg: Register | undefined; dokumente: Dokument[]; rest: Dokument[]; von: string | null; quelle?: Ausloeser; neu: boolean }) {
     const { post, typ, ziel, zielTyp, reg, dokumente, rest, von } = x;
     const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
     const zielTitel = await this.titel(ziel);
     const erg = await this.inTransaktion(async () => {
       for (const d of dokumente) await this.verschiebeInRegister(d, ziel.id, zielTyp, reg!.key);
       // Abgetrennt: die übrigen Dokumente als neue Post in „Neue Post“, Betreff, Datum, Absender, Kanal und „Für“ wie bisher.
-      let abgetrennt: Mappe | undefined;
-      if (rest.length) {
-        abgetrennt = await this.legePostAn({
-          betreff: t('meldungen.dienst.abgetrennt-betreff', { betreff }), datum: post.werte.datum, absender: post.werte.absender ?? '', kanal: auswahlText(post.werte.kanal),
-          fuer: alsListe(post.werte.fuer)[0] ?? null,
-        }, { id: von, name: '' }, undefined, undefined, undefined, undefined, post.werte);
-        for (const d of rest) await this.repo.verschiebeDokument(d.id, abgetrennt.id, d.registerKey);
-        await this.notiere(abgetrennt.id, von, 'post_geteilt', {
-          text: t('meldungen.dienst.abgetrennt-aus', { anzahl: rest.length, betreff, typ: zielTyp.name, zielTitel }),
-          post: post.id, postTyp: typ.id, ziel: ziel.id, zielTyp: zielTyp.id, dokumente: rest.length,
-        });
-        await this.beruehre(abgetrennt.id, typ, von);
-      }
+      const abgetrennt = rest.length ? await this.legeAbgetrenntAn(post, typ, rest, von, {
+        text: t(x.neu ? 'meldungen.dienst.abgetrennt-aus' : 'meldungen.dienst.abgetrennt-aus-uebernommen', { anzahl: rest.length, betreff, typ: zielTyp.name, zielTitel }),
+        ziel: ziel.id, zielTyp: zielTyp.id,
+      }) : undefined;
       // Stand „Zugeordnet“: erledigt die Aufgabe „Post für dich“ und Aufgaben mit Anlass „Post“; die Post verweist auf die Mappe.
       const bezug = [...new Set([...alsListe(post.werte.bezug), ziel.id, ...(abgetrennt ? [abgetrennt.id] : [])])];
       await this.schreibeSystemMappe(typ, post.id, { bezug, stand: POST_STAND.zugeordnet }, von);
@@ -6299,7 +6290,7 @@ export class Dienst {
       const doks = n ? t('meldungen.dienst.mit-dokumenten-ins-register', { anzahl: n, wert: '', name: reg!.name }) : '';
       const abg = abgetrennt ? t('meldungen.dienst.abgetrennt-als-neue-post', { anzahl: rest.length }) : '';
       await this.notiere(ziel.id, von, 'zugeordnet', {
-        text: t('meldungen.dienst.aus-post-angelegt', { betreff, doks, abg }), post: post.id, postTyp: typ.id, dokumente: n, aufgeloest: true,
+        text: t(x.neu ? 'meldungen.dienst.aus-post-angelegt' : 'meldungen.dienst.aus-post-uebernommen', { betreff, doks, abg }), post: post.id, postTyp: typ.id, dokumente: n, aufgeloest: true,
         ...(abgetrennt ? { abgetrennt: abgetrennt.id } : {}),
       });
       await this.notiere(post.id, von, 'zugeordnet', { text: t('meldungen.dienst.aufgeloest-in', { typ: zielTyp.name, zielTitel }), ziel: ziel.id, zielTyp: zielTyp.id, aufgeloest: true });
@@ -6315,6 +6306,56 @@ export class Dienst {
       post: erg.vorher, ziel: (await this.repo.holeMappe(ziel.id))!, aufgeloest: true as const, papierkorb,
       ...(erg.abgetrennt ? { abgetrennt: (await this.repo.holeMappe(erg.abgetrennt.id))! } : {}),
     };
+  }
+
+  /**
+   * Abgetrennter Teil einer Post (#936, #934): neue Post in „Neue Post“ mit Betreff „… (abgetrennt)“, Datum, Absender,
+   * Kanal und „Für“ wie bisher; die Dokumente wandern dorthin, ihre Historie nennt die Herkunft.
+   */
+  private async legeAbgetrenntAn(post: Mappe, typ: Mappentyp, dokumente: Dokument[], von: string | null, herkunft: { text: string } & Record<string, unknown>): Promise<Mappe> {
+    const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
+    const neu = await this.legePostAn({
+      betreff: t('meldungen.dienst.abgetrennt-betreff', { betreff }), datum: post.werte.datum, absender: post.werte.absender ?? '', kanal: auswahlText(post.werte.kanal),
+      fuer: alsListe(post.werte.fuer)[0] ?? null,
+    }, { id: von, name: '' }, undefined, undefined, undefined, undefined, post.werte);
+    for (const d of dokumente) await this.repo.verschiebeDokument(d.id, neu.id, d.registerKey);
+    await this.notiere(neu.id, von, 'post_geteilt', { ...herkunft, post: post.id, postTyp: typ.id, dokumente: dokumente.length });
+    await this.beruehre(neu.id, typ, von);
+    return neu;
+  }
+
+  /**
+   * „Ab hier abtrennen“ (#934): Passt ein Folgedokument nicht zur Mappe, kommen die gewählten Dokumente als neue Post
+   * nach „Neue Post“ – mit Verweis auf die Herkunft in ihrer Historie. Die Post behält die übrigen (mindestens eins).
+   * Braucht Bearbeiten an der Post und das Recht, Post anzulegen.
+   */
+  async trennePostAb(postId: string, eingabe: unknown, von: string | null, z?: Zugriff) {
+    const post = z ? await this.pruefeRecht(z, postId, 'U') : await this.repo.holeMappe(postId);
+    if (!post) throw new Fachfehler(404, t('meldungen.dienst.diese-post-gibt-es'));
+    const typ = await this.repo.holeTyp(post.typId);
+    if (typ?.system !== 'post') throw new Fachfehler(422, t('meldungen.dienst.abtrennen-nur-post'));
+    if (istVersendet(post.werte)) throw new Fachfehler(422, t('meldungen.dienst.abtrennen-versendet'));
+    const e = (eingabe ?? {}) as Record<string, unknown>;
+    const alle = await this.repo.listeDokumente(postId);
+    const ids = Array.isArray(e.dokumente) ? [...new Set(e.dokumente.map(String))] : [];
+    const weg = ids.map((id) => alle.find((d) => d.id === id));
+    if (!ids.length || weg.some((d) => !d)) throw new Fachfehler(422, t('meldungen.dienst.ein-ausgewaehltes-dokument-gehoert-3'));
+    if (weg.length >= alle.length) throw new Fachfehler(422, t('meldungen.dienst.abtrennen-eins-bleibt'));
+    if (!darfPostAnlegen(typ)) throw new Fachfehler(403, t('meldungen.dienst.post-laesst-sich-nicht'));
+    if (z && !z.admin) {
+      const jetzt = new Date().toISOString();
+      const entwurf: Mappe = { id: '00000000-0000-4000-8000-000000000000', typId: typ.id, werte: { ...post.werte, stand: POST_STAND.neu, bezug: null }, erstellt: jetzt, erstelltVon: z.ich.id, geaendert: jetzt, geaendertVon: z.ich.id };
+      if (!(await this.rechteAn(z, entwurf, true)).C) throw new Fachfehler(403, t('meldungen.dienst.post-anlegen-darfst-du'));
+    }
+    const betreff = auswahlText(post.werte.betreff) || t('meldungen.dienst.post');
+    const neu = await this.inTransaktion(async () => {
+      const n = await this.legeAbgetrenntAn(post, typ, weg as Dokument[], von, { text: t('meldungen.dienst.abgetrennt-von', { anzahl: weg.length, betreff }) });
+      await this.notiere(post.id, von, 'post_geteilt', { text: t('meldungen.dienst.abgetrennt-nach', { anzahl: weg.length, betreff: auswahlText(n.werte.betreff) }), abgetrennt: n.id, postTyp: typ.id, dokumente: weg.length });
+      await this.beruehre(post.id, typ, von);
+      return n;
+    });
+    protokoll.modul('ablage').info('Post abgetrennt', { post: post.id, neu: neu.id, dokumente: weg.length });
+    return { post: (await this.repo.holeMappe(post.id))!, neu: (await this.repo.holeMappe(neu.id))! };
   }
 
   /** Mappentypen mit „Post automatisch zuordnen“ (#337); Archivmodus- und Systemtypen nie (dort nur mit Bestätigung). */
@@ -8146,6 +8187,28 @@ export class Dienst {
     let p = this.schwaerzBilder.get(k);
     if (!p) {
       p = (async () => schwaerzSeitenbild(await this.liesGanz(d.sha256), d.mime, nr))();
+      this.schwaerzBilder.set(k, p);
+      p.catch(() => this.schwaerzBilder.delete(k));
+      while (this.schwaerzBilder.size > 40) this.schwaerzBilder.delete(this.schwaerzBilder.keys().next().value!);
+    }
+    return p;
+  }
+
+  /**
+   * Seitenbild der Archivfassung (#934, „Dokument übernehmen“ mit „Original | PDF/A“): wie `schwaerzSeitenbild`, aber
+   * aus dem PDF/A. Steckt die Archivfassung im Original (schon PDF/A), ist es dessen Seite. null: keine Archivfassung.
+   */
+  async archivSeitenbild(id: string, nr: number): Promise<Buffer | null> {
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, t('meldungen.dienst.dieses-dokument-gibt-es'));
+    if (!Number.isInteger(nr) || nr < 1 || nr > SCHWAERZEN_MAX_SEITEN) return null;
+    const info = await this.archiv?.info(d.sha256);
+    if (!info) return null;
+    if (info.imOriginal) return this.schwaerzSeitenbild(id, nr);
+    const k = `${d.sha256}:archiv:${nr}`;
+    let p = this.schwaerzBilder.get(k);
+    if (!p) {
+      p = (async () => { const f = await this.archiv!.lies(d.sha256); return f ? schwaerzSeitenbild(f.inhalt, 'application/pdf', nr) : null; })();
       this.schwaerzBilder.set(k, p);
       p.catch(() => this.schwaerzBilder.delete(k));
       while (this.schwaerzBilder.size > 40) this.schwaerzBilder.delete(this.schwaerzBilder.keys().next().value!);

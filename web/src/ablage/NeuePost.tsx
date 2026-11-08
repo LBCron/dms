@@ -26,7 +26,8 @@ export function neuePost(dateien: File[]) {
 
 /* ---------- Ziel „in diese Mappe“: meldet die geöffnete Mappe mit Dokumentenregister an ---------- */
 
-export interface MappenZiel { name: string; nimm: (dateien: File[]) => void }
+/** `titel`/`text` (#934): eigene Beschriftung, z. B. „In diese Post“ auf der Seite „Dokument übernehmen“. */
+export interface MappenZiel { name: string; nimm: (dateien: File[]) => void; titel?: string; text?: string }
 let ziele: MappenZiel[] = [];
 const zielHoerer = new Set<() => void>();
 const zielGeaendert = () => zielHoerer.forEach((f) => f());
@@ -38,7 +39,7 @@ export function useMappenZiel(ziel: MappenZiel | null) {
   const aktiv = !!ziel;
   useEffect(() => {
     if (!aktiv) return;
-    const eintrag: MappenZiel = { get name() { return ref.current?.name ?? ''; }, nimm: (d) => ref.current?.nimm(d) };
+    const eintrag: MappenZiel = { get name() { return ref.current?.name ?? ''; }, get titel() { return ref.current?.titel; }, get text() { return ref.current?.text; }, nimm: (d) => ref.current?.nimm(d) };
     ziele = [...ziele, eintrag];
     zielGeaendert();
     return () => { ziele = ziele.filter((z) => z !== eintrag); zielGeaendert(); };
@@ -173,7 +174,7 @@ export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
         <div className={`ablageflaeche ${ziel ? 'zwei' : ''}`} role="dialog" aria-label={t('ablage.neuepost.dateien-ablegen')}>
           {ziel && (
             <div className={`ablageziel ${ueber === 'mappe' ? 'drauf' : ''}`} onDragOver={(e) => { e.preventDefault(); setUeber('mappe'); }} onDrop={ablegen('mappe')}>
-              <strong>{t('ablage.neuepost.in-diese-mappe')}</strong><span>{t('ablage.neuepost.register-uebernommen-mit-mappe', { name: ziel.name })}</span>
+              <strong>{ziel.titel ?? t('ablage.neuepost.in-diese-mappe')}</strong><span>{ziel.text ?? t('ablage.neuepost.register-uebernommen-mit-mappe', { name: ziel.name })}</span>
             </div>
           )}
           <div className={`ablageziel ${ueber === 'post' ? 'drauf' : ''}`} onDragOver={(e) => { e.preventDefault(); setUeber('post'); }} onDrop={ablegen('post')}>

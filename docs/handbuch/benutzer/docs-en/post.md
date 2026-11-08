@@ -2,7 +2,7 @@
 
 Everything that comes into Ablago or goes out is **post**: a scanned letter, an uploaded PDF, an email sent, a scan from the intake folder, an email fetched from a mailbox. So you don't have to look for the right folder and choose the right tab first: file the document as post and **assign it** when you have time.
 
-![New post with Assign](bilder/post-zuordnen.png)
+![New post on the page “Take over document”](bilder/post-zuordnen.png)
 
 ## New post {#neue-post}
 
@@ -75,49 +75,69 @@ Ablago sets channel and *Assigned to* itself. You can change everything else as 
 
 If you enter a user under **For**, the post appears under [To do](eingang.md) for them with the task **Post for you**. When it is assigned, completed or given to someone else, the task completes itself. If the user is absent, their stand-in gets it.
 
-## Assign { #zuordnen }
+## Take over document { #zuordnen }
 
-At the top of a post there is a bar with the **status** and the button **Assign …**:
+When you click a post in **New post**, the page **Take over document** opens – no matter whether the post was filed, photographed, scanned, emailed or came via the network drive. **Assign …** in a post and [Fill in from document](mappen.md#aus-dokument-ausfullen) in a folder open the same page. It always looks the same:
 
-1. Choose the **Folder type**, e.g. *Invoice*.
-2. Choose **select existing** and search for the folder, or **create new**.
-3. Choose the **documents** that go along. All are preselected. If a document is already in another folder you may see, that is shown below – with a link. Then you may not need to file it again. If the folder type has several document tabs, you choose the tab.
-4. **Assign to "…"** (for an existing folder) or **Next: fill in new folder**.
+- **On the left** the usual views, with *New post* highlighted.
+- **In the middle** the document; if the post has several, they are shown one below the other. At the top right you browse through *New post* with **‹ Post 1 of 3 ›**. If there is an [archive version](dokumente.md#archivfassung-pdfa) (PDF/A), **Original | PDF/A** appears above the document and the archive version is shown. At the very bottom there is the area **Drag more documents here**: what you drop there (or anywhere in the window, target *Into this post*) is added to this post as a further document.
+- **On the right** the folder the document goes into – as everywhere else with type, title (as it will be called after saving), tabs, fields and save bar. The star and **Folder ▾** work after saving.
 
-Afterwards the documents are in the folder, and the post links to it. Its status is *Assigned*. The [history](zusammenarbeit.md#historie) of both folders records what happened. The documents' full text moves along.
+### Where does this belong? { #wohin-gehort-das }
 
-With **Next: fill in new folder**, the folder type's form opens. The post's subject and date are already filled in as suggestions, plus – as far as recognition found anything – amount, matching numbers (e.g. the invoice number) and the link to the sender. A notice at the top says what is prefilled. After **Save folder**, the post becomes the new folder – see below.
+Above the folder you choose the **folder type**, e.g. *Invoice*. If its name appears as a heading in the document (say "Invoice" at the top of the letter or in the subject line), Ablago suggests it and says how it recognised it; otherwise it shows **Choose folder type …**. **Change** opens the list with a search. Only folder types that can be created from post and in which you may create folders are offered – never users, roles or post. Choosing another type replaces the folder below.
+
+Below that:
+
+- **Keep a copy in the post** – the documents also stay in the post (see below).
+- **Put it into an existing folder "…" …** – instead of a new folder, search for an existing one of this type and **Put it into "…"**.
+- **Done, without a folder** – for advertising or things already dealt with: the post stays with status *Done*.
+- **Open as post** – the post itself, e.g. to change *For* or write a note.
+
+### Taking values from the document { #werte-ubernehmen }
+
+The folder is already filled in: dates, amounts, numbers and links (e.g. the issuer) that Ablago found in the text, plus the post's subject and date. Each value is marked as a **Suggestion** at the field, with how certain it is and where it was found; **Take back** empties the field again.
+
+- **Frames:** where a recognised value appears in the document, it has a coloured, numbered frame; the same number appears at the field. When you move the mouse over a frame, the field lights up – and the other way round.
+- **Drag:** you can drag a frame into any field, including a link field.
+- **Choose a field, then click:** click into a field and then on a frame – the field takes the value.
+- **Select:** if the document has text (a PDF with text or text from text recognition), you select words with the mouse. The field you chose last takes them; Ablago reads dates and amounts correctly, e.g. "03.11.2026" or "1.284,20 €".
+
+Below a **link field** you see **How Ablago recognises "…"**, e.g. "Contract number WV-1043" or "Customer number 100-4711 (via contract partner)" – values from fields with *Use to find existing folders*, with frames in the document. If Ablago finds several matching folders, **Also found: "…" take this instead** appears below.
+
+**Does the folder exist already?** If all values used to find an existing folder of the chosen type appear in the document, e.g. the same invoice number, the page warns: "Invoice number R-2026-0815 already exists: "…"". **Put it there instead** puts the post into that folder.
+
+**Several documents:** what was filed in one go is one post and becomes **one** folder; parent folders such as the contract are added as links. If a following document clearly belongs elsewhere, it is preceded by ""…" fits … better" with **Split off from here and put it into "New post" as new post**: this and the following documents go to *New post* as a new post "… (split off)"; the history of both says where they came from.
+
+**Save folder** creates the folder, and the post becomes the folder – see below. The page then shows the next post.
 
 ### The post becomes the folder { #post-auflosen }
 
-If you create a **new** folder from a post, the post does not stay behind as a second place to find the documents: it becomes this folder. Before you save, the save bar says so: "When you save, the post’s documents and history move here and the post goes to the Bin." After **Save folder**:
+If you create a folder from a post – or put it into an **existing** one –, the post does not stay behind as a second place to find the documents: it becomes this folder. Before you save, the save bar says so: "When you save, the post’s documents and history move here and the post goes to the Bin." Afterwards:
 
-- The chosen **documents** are in the documents tab of the new folder.
-- The **whole history of the post** is in the folder's [history](zusammenarbeit.md#historie) – receipt, origin (mailbox, inbox folder, filing …), changes, notes and tasks, each marked *from post*. On top comes the entry "Created from post “…”". Notes, tasks and reminders of the post now belong to the folder; the task *Post for you* is done.
-- The post itself goes to the [Bin](ablage.md#papierkorb). There it says "Turned into *Invoice* “…”" with a link to the folder. It **can’t be restored** – to undo it, delete the new folder. If the Bin is switched off, the empty post is deleted straight away.
-- The page then shows the **next post** from *New post*, with a link to the folder you just created at the top; the number next to *New post* goes down by one. If there is no more post, the new folder opens.
+- The **documents** are in the folder's documents tab.
+- The **whole history of the post** is in the folder's [history](zusammenarbeit.md#historie) – receipt, origin (mailbox, inbox folder, filing …), changes, notes and tasks, each marked *from post*. On top comes the entry "Created from post “…”", or "Post “…” moved in" for an existing folder. Notes, tasks and reminders of the post now belong to the folder; the task *Post for you* is done.
+- The post itself goes to the [Bin](ablage.md#papierkorb). There it says "Turned into *Invoice* “…”" with a link to the folder. It **can’t be restored** – if the folder was newly created, delete it to undo this. If the Bin is switched off, the empty post is deleted straight away.
+- The page then shows the **next post** from *New post*, with a link to the folder at the top; the number next to *New post* goes down by one. If there is no more post, the folder opens.
 
-If you chose only **some of the documents**, the rest go to *New post* as a **new post** – subject with "(split off)", date, sender and *For* as before. Its history says which post it came from and which folder that post became.
+If only some of the documents go along via the interface (API), the rest go to *New post* as a **new post** – subject with "(split off)", date, sender and *For* as before, with a link to its origin in its history.
 
-It stays with assigning as before (the post stays with status *Assigned*):
+It stays with assigning (the post stays with status *Assigned* and links to the folder):
 
 - if you may **not delete** the post – the save bar says so before you save: "You may not delete the post: it stays and is assigned to this folder." The same applies if only some documents go along and you may not create post; then a notice tells you after saving;
 - with **Keep a copy in the post**;
-- for sent e-mails.
-
-Assigning post to an **existing** folder works as above; nothing is turned into a folder then.
+- when [assigned automatically](#automatisch-zugeordnet) – otherwise **Undo** would no longer work;
+- for sent emails – they stay as proof of what was sent.
 
 ### Suggestions when assigning {#vorschlage-beim-zuordnen}
 
-As soon as a post's text is available (from text recognition, a PDF's text layer or an email's text), Ablago searches it – without AI and without the internet, only with patterns and by matching against your folders. What it finds appears at the top of the post in the box **Recognised**:
+As soon as a post's text is available (from text recognition, a PDF's text layer or an email's text), Ablago searches it – without AI and without the internet, only with patterns and by matching against your folders. On the page *Take over document* this goes into the folder's suggestions. In the post itself (**Open as post**) it appears in the box **Recognised**:
 
 - **Sender:** an organisation (or branch, person) whose customer number, IBAN, email address, website, phone number or name appears in the letter – with a reason, e.g. "found: customer number 100-4711". **Enter as sender** writes the name into the post's field *Sender*. If none matches but the letterhead can be recognised reliably (e.g. the small sender line above the address field), it shows **Create as new organisation** – with name and address prefilled.
 - **Date** of the letter (not the service period or due date) – **Enter as date of the post** takes it over.
 - **Amount** (the total amount) and **numbers** such as customer, invoice or contract number.
 
-Under **Assign …**, the **suggestions** for the target folder are at the top, the best one already selected and marked as *Suggestion*: a contract whose contract number appears in the letter; folders that link to the sender (e.g. their electricity contract); folders that earlier post from this sender went to; the sender themselves. Below each suggestion it says why. A click chooses another; the search below works as always – nothing happens until you click **Assign to "…"**.
-
-What Ablago uses to recognise senders is set by the folder type: fields where an administrator has set "Use to find existing folders" (the packages *Basis* & co. come with this). If you have just created an organisation or added a customer number, click **Recognise again** in the box. Only folders you may see are suggested.
+What Ablago uses to recognise senders and other folders is set by the folder type: fields where an administrator has set "Use to find existing folders" (the packages *Basis* & co. come with this). If you have just created an organisation or added a customer number, click **Recognise again** in the box. Only folders you may see are suggested.
 
 ### Assigned automatically {#automatisch-zugeordnet}
 
@@ -130,11 +150,11 @@ Afterwards, the task **Assigned automatically to "…" – please check** appear
 
 Why it was assigned ("Sender … clearly recognised (customer number 100-4711), only matching folder …") is shown in the box **Recognised** and in the [history](zusammenarbeit.md#historie) of the post and the folder. Post whose recipient may not read the target folder and post to folder types in archive mode are never assigned automatically.
 
-**Keep a copy in the post** additionally leaves the documents in the post. That costs no space, because Ablago stores every file only once. This is handy when a letter belongs to **several** folders, e.g. to the invoice and the contract. You can assign a post as often as you like.
+### Keep a copy in the post {#kopie-in-der-post-behalten}
 
-It also works without assigning: **Done** for advertising or things already dealt with; **New again** if there is something to do after all. You delete unnecessary post like any folder.
+**Keep a copy in the post** (under *Where does this belong?*) additionally leaves the documents in the post. That costs no space, because Ablago stores every file only once. This is handy when a letter belongs to **several** folders, e.g. to the invoice and the contract. The post is then not [turned into the folder](#post-auflosen), only assigned, and you can assign it to a further folder via **Assign …**.
 
-**Keep a copy in the post** also applies when you create a new folder: then the post is not [turned into the folder](#post-auflosen), only assigned.
+It also works without assigning: **Done, without a folder** for advertising or things already dealt with; in the post itself (**Open as post**) there are **Done** and **New again** if there is something to do after all. You delete unnecessary post like any folder.
 
 ## Splitting a batch scan {#sammelscan-teilen}
 
@@ -157,4 +177,4 @@ If a folder is deleted, the post is kept. Only the link to this folder is remove
 
 ## Who may do what? {#wer-darf-was}
 
-Who sees, creates, edits and deletes post is governed by the [permissions](mappen.md#was-du-sehen-und-andern-darfst) of the folder type *Post*. To assign, you need the permission to edit the post **and** the target folder. For the post to [become](#post-auflosen) a new folder, you also need the permission to delete the post.
+Who sees, creates, edits and deletes post is governed by the [permissions](mappen.md#was-du-sehen-und-andern-darfst) of the folder type *Post*. To assign, you need the permission to edit the post **and** the target folder. For the post to [become](#post-auflosen) the folder – a new or an existing one –, you also need the permission to delete the post. To **split off** documents you need the permission to create post.

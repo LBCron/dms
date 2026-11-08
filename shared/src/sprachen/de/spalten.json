@@ -3,6 +3,8 @@
   "name.ablage.rechts": "Mappe",
   "name.werkbank.links": "Bereiche",
   "name.werkbank.rechts": "Bearbeitung",
+  "name.uebernehmen.links": "Ansichten",
+  "name.uebernehmen.rechts": "Mappe",
   "griff.einklappen": "{name} einklappen",
   "griff.ziehen": "{name} einklappen. Ziehen ändert die Breite, die Taste Pos1 stellt die Standardbreite her.",
   "lasche.aufklappen": "{name} aufklappen",

@@ -4,7 +4,7 @@
  * 1. Eingabefelder (#174): Kein Feld ragt über seinen Kasten oder den Bildschirm hinaus – besonders
  *    Datums- und Zeitfelder (iPhone 13).
  * 2. Handy-Größen (#489): iPhone SE (375 × 667), iPhone 15 (393 × 852), iPhone 17 Pro (402 × 874) –
- *    Startseite, Zu erledigen, Neue Post, eine Ansicht, eine Mappe, eine Post, Werkbank:
+ *    Startseite, Zu erledigen, Neue Post, eine Ansicht, eine Mappe, eine Post (Seite „Dokument übernehmen“ und als Post), Werkbank:
  *    - kein Element breiter als der Bildschirm (außer in einem Bereich, der selbst waagerecht scrollt),
  *      `scrollWidth <= clientWidth` für die Seite und jeden Hauptbereich;
  *    - Kopfzeile mit „+ Neu“ vollständig im Bild – in der Ablage, in der Werkbank gibt es keins (#649);
@@ -115,7 +115,9 @@ const HANDY = [
   ...(zaehler.neuePost ? [{ name: 'neue-post', pfad: `/ablage/${zaehler.neuePost}` }] : []),
   ...(rechnung ? [{ name: 'ablage', pfad: `/ablage/${rechnung.id}` }] : []),
   ...(eineMappe ? [{ name: 'mappe', pfad: `/ablage/${eineMappe.typId}/${eineMappe.id}`, mappenmenue: true }] : []),
-  ...(einePost ? [{ name: 'post', pfad: `/ablage/${einePost.typId}/${einePost.id}` }] : []),
+  // Neue Post öffnet „Dokument übernehmen“ (#934); die Post selbst (Dokumente, #505) mit ?als=post.
+  ...(einePost ? [{ name: 'post', pfad: `/ablage/${einePost.typId}/${einePost.id}?als=post` }] : []),
+  ...(einePost ? [{ name: 'post-uebernehmen', pfad: `/ablage/${zaehler.neuePost ?? einePost.typId}/${einePost.id}/uebernehmen` }] : []),
   // Erweiterte Suche (#426): Formular als eigener Schritt (mit Bedingungen), danach die Treffer.
   { name: 'erweiterte-suche', pfad: '/ablage/suche', suchformular: true },
   ...(rechnung ? [{ name: 'erweiterte-suche-treffer', pfad: '/ablage/suche?typ=Rechnung&bezahlt=nein' }] : []),
@@ -233,7 +235,7 @@ for (const g of GROESSEN) {
     }
     // Dokument vorzeigen (#505): Register mit Dokumenten – kein eingebetteter Rahmen, Tippziele mindestens 44 px.
     if (seite.name === 'post') {
-      await s.goto(`${BASIS}${seite.pfad}?register=dokumente`);
+      await s.goto(`${BASIS}${seite.pfad}${seite.pfad.includes('?') ? '&' : '?'}register=dokumente`);
       await s.waitForLoadState('networkidle');
       await s.waitForTimeout(300);
       const karten = await s.locator('.dokumentliste li').count();

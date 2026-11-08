@@ -1,11 +1,9 @@
-import { Vorschaubild } from './Vorschaubild';
 import { useEffect, useRef, useState } from 'react';
 import { auswahlText, darfErstellen, formatiere, POST_STAND, vorlageFelder, type Feld, type Mappe, type Mappentyp, type Wert, type Werte } from '../../../shared/src/model';
-import { Fundstellen } from './Doppelt';
-import { api, type Fundstelle, type MappeDetails, type PostErkennung } from '../api';
+import { api, type MappeDetails, type PostErkennung } from '../api';
 import { artVon } from '../../../shared/src/erkennung';
 import { useDaten } from '../daten';
-import { geheZu, Link } from '../ort';
+import { Link } from '../ort';
 import { titelOder } from '../seiten';
 import { Hilfe } from '../Hilfe';
 import { neuePost } from './NeuePost';
@@ -15,15 +13,13 @@ import { istVersendet } from '../../../shared/src/model';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
 import { gebietsschema } from '../../../shared/src/sprache';
-import { typName, registerName } from '../../../shared/src/beschriftung';
+import { typName } from '../../../shared/src/beschriftung';
 
 /**
- * Post (#192): „+ Post“ in den Sichten mit Post, die Leiste an einer Post-Mappe (Stand, Zuordnen,
- * Erledigt) und das Zuordnen zu einer vorhandenen oder neuen Mappe.
+ * Post (#192): „+ Post“ in den Sichten mit Post und die Leiste an einer Post-Mappe (Stand, Zuordnen, Erledigt).
+ * Zugeordnet wird auf der Seite „Dokument übernehmen“ (#934, Uebernehmen.tsx).
  */
 
-const ohneEndung = (n: string) => n.replace(/\.[^.]{1,8}$/, '').trim() || n;
-const dokumentenRegister = (eintrag: Mappentyp | undefined) => (eintrag?.register ?? []).filter((r) => r.art === 'dokumente');
 
 /** „+ Post“ in den Sichten mit Post: Dateien wählen → eine Post-Mappe (#193, wie Ablegen und „+ Neu“). */
 export function PostKnopf() {
@@ -42,26 +38,25 @@ export function PostKnopf() {
  * Post aufgelöst (#936): Nach dem Speichern zeigt die Seite die nächste Post aus „Neue Post“; oben steht einmal, was
  * angelegt wurde. Gemerkt nur im Speicher der Seite – nach dem Neuladen ist der Hinweis weg.
  */
-interface Aufloesung { fuer: string; id: string; typId: string; titel: string }
+interface Aufloesung { fuer: string; id: string; typId: string; titel: string; /** In eine bestehende Mappe (#934). */ vorhanden?: boolean }
 let letzteAufloesung: Aufloesung | null = null;
 export function merkeAufloesung(x: Aufloesung) { letzteAufloesung = x; }
 
-function AufloesungHinweis({ postId }: { postId: string }) {
+export function AufloesungHinweis({ postId }: { postId: string }) {
   const d = useDaten();
   const [x] = useState(() => (letzteAufloesung?.fuer === postId ? letzteAufloesung : null));
   useEffect(() => { if (x && letzteAufloesung === x) letzteAufloesung = null; }, [x]);
   if (!x) return null;
   const typ = d.typ(x.typId);
-  return <div className="hinweis gut" role="status"><p>{tn('ablage.post.aufgeloest-naechste', { typ: typ ? typName(typ) : '', link: <Link to={`/ablage/${x.typId}/${x.id}`} className="verweis">{titelOder(x.titel)}</Link> })}</p></div>;
+  return <div className="hinweis gut" role="status"><p>{tn(x.vorhanden ? 'ablage.post.uebernommen-naechste' : 'ablage.post.aufgeloest-naechste', { typ: typ ? typName(typ) : '', link: <Link to={`/ablage/${x.typId}/${x.id}`} className="verweis">{titelOder(x.titel)}</Link> })}</p></div>;
 }
 
-/** An einer Post-Mappe: Stand, „Zuordnen …“, „Erledigt“ bzw. „Wieder neu“. */
+/** An einer Post-Mappe: Stand, „Zuordnen …“ (öffnet die Seite „Dokument übernehmen“, #934), „Erledigt“ bzw. „Wieder neu“. */
 export function PostLeiste({ typ, details, neuLaden }: { typ: Mappentyp; details: MappeDetails; neuLaden: () => Promise<void> }) {
   const d = useDaten();
   const m = details.mappe;
   const stand = auswahlText(m.werte.stand) || POST_STAND.neu;
   const darf = details.rechte?.U !== false;
-  const [offen, setOffen] = useState(false);
   const [zusammen, setZusammen] = useState(false);
   const [fehler, setFehler] = useState<string>();
   const versendet = istVersendet(m.werte);
@@ -95,7 +90,7 @@ export function PostLeiste({ typ, details, neuLaden }: { typ: Mappentyp; details
           })}</span>
         )}
         <span className="luecke" aria-hidden="true" />
-        {darf && <button type="button" className={`knopf klein ${offen ? 'an' : 'primaer'}`} aria-expanded={offen} onClick={() => setOffen(!offen)}>{t('ablage.post.zuordnen')}</button>}
+        {darf && !versendet && <Link to={`/ablage/${d.zaehler.neuePost ?? typ.id}/${m.id}/uebernehmen`} className="knopf klein primaer">{t('ablage.post.zuordnen')}</Link>}
         {darf && stand !== POST_STAND.erledigt && <button type="button" className="knopf klein" onClick={() => void setzeStand(POST_STAND.erledigt)} title={t('ablage.post.nichts-mehr-zu-tun')}>{t('ablage.post.erledigt')}</button>}
         {darf && stand !== POST_STAND.neu && <button type="button" className="textknopf klein" onClick={() => void setzeStand(POST_STAND.neu)}>{t('ablage.post.wieder-neu')}</button>}
         <Hilfe ort="post.zuordnen" />
@@ -108,7 +103,6 @@ export function PostLeiste({ typ, details, neuLaden }: { typ: Mappentyp; details
       </div>
       {fehler && <div className="hinweis schlecht" role="alert"><p>{fehler}</p></div>}
       {erkennung && !versendet && <Erkannt post={m} e={erkennung} darf={darf} neuLaden={neuLaden} neu={async () => setErkennung(await api.erkennung(m.id, true))} />}
-      {offen && <ZuordnenMaske typ={typ} details={details} neuLaden={neuLaden} schliessen={() => setOffen(false)} erkennung={erkennung} />}
       {zusammen && <Zusammenlegen typ={typ} post={m} neuLaden={neuLaden} schliessen={() => setZusammen(false)} />}
     </>
   );
@@ -243,155 +237,6 @@ function Erkannt({ post, e, darf, neuLaden, neu }: { post: Mappe; e: PostErkennu
         </dl>
       )}
       {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
-    </section>
-  );
-}
-
-function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ: Mappentyp; details: MappeDetails; neuLaden: () => Promise<void>; schliessen(): void; erkennung?: PostErkennung | null }) {
-  const d = useDaten();
-  const post = details.mappe;
-  const ziele = d.typen.filter((mappentyp) => mappentyp.system !== 'post');
-  // Vorschläge der Erkennung (#336) für Mappen, die man bearbeiten könnte; der beste ist vorausgewählt.
-  const vorschlaege = (erkennung?.ziele ?? []).filter((z) => ziele.some((mappentyp) => mappentyp.id === z.typId));
-  const erster = vorschlaege[0];
-  const [art, setArt] = useState<'vorhanden' | 'neu'>('vorhanden');
-  const [typId, setTypId] = useState(() => erster?.typId ?? ziele.find((mappentyp) => dokumentenRegister(mappentyp).length)?.id ?? ziele[0]?.id ?? '');
-  const zielTyp = d.typ(typId);
-  const regs = dokumentenRegister(zielTyp);
-  const [register, setRegister] = useState('');
-  useEffect(() => { setRegister(regs[0]?.key ?? ''); }, [typId]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [gewaehlt, setGewaehlt] = useState<Set<string>>(() => new Set(details.dokumente.map((x) => x.id)));
-  // Doppelte Dateien (#333): Liegt ein Dokument dieser Post schon anderswo (in Mappen, die ich lesen darf)?
-  const [doppelt, setDoppelt] = useState<Record<string, Fundstelle[]>>({});
-  useEffect(() => {
-    const werte = [...new Set(details.dokumente.map((x) => x.sha256))];
-    if (!werte.length) return;
-    let aus = false;
-    api.gleicheDateien(werte.slice(0, 100), post.id).then((r) => { if (!aus) setDoppelt(r.fundstellen); }, () => {});
-    return () => { aus = true; };
-  }, [details.dokumente, post.id]);
-  const [kopieren, setKopieren] = useState(false);
-  const alsMappe = (z: { mappeId: string; typId: string; titel: string }) => ({ id: z.mappeId, typId: z.typId, titel: z.titel, werte: {}, erstellt: '', geaendert: '' }) as unknown as Mappe;
-  const [ziel, setZiel] = useState<Mappe | undefined>(() => (erster ? alsMappe(erster) : undefined));
-  const [vorgeschlagen, setVorgeschlagen] = useState(!!erster);
-  const [suche, setSuche] = useState('');
-  const [treffer, setTreffer] = useState<Mappe[] | null>(null);
-  const [laeuft, setLaeuft] = useState(false);
-  const [fehler, setFehler] = useState<string>();
-  const [fertig, setFertig] = useState<Mappe>();
-
-  useEffect(() => {
-    if (art !== 'vorhanden' || !typId) return;
-    let aktuell = true;
-    const timer = setTimeout(() => {
-      api.seite(`typ:${typId}`, 0, 20, suche.trim()).then((s) => { if (aktuell) setTreffer(s.mappen); }).catch(() => aktuell && setTreffer([]));
-    }, 200);
-    return () => { aktuell = false; clearTimeout(timer); };
-  }, [art, typId, suche]);
-  useEffect(() => { setZiel((z) => (z && z.typId === typId && art === 'vorhanden' ? z : undefined)); }, [typId, art]);
-  const waehleVorschlag = (z: (typeof vorschlaege)[number]) => { setArt('vorhanden'); setTypId(z.typId); setZiel(alsMappe(z)); setVorgeschlagen(true); };
-
-  const umschalten = (id: string) => setGewaehlt((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const mitDokumenten = gewaehlt.size > 0;
-  const fehltRegister = mitDokumenten && !regs.length;
-
-  async function zuordnen() {
-    if (!ziel) return;
-    setFehler(undefined); setLaeuft(true);
-    try {
-      await api.zuordnen(post.id, { ziel: ziel.id, register: mitDokumenten ? register : undefined, dokumente: [...gewaehlt], kopieren });
-      setFertig(ziel);
-      await neuLaden(); await d.neuLaden();
-    } catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
-  }
-
-  function zumFormular() {
-    if (!zielTyp) return;
-    const q = new URLSearchParams({ zuordnen: post.id, dokumente: [...gewaehlt].join(','), vorschlag: JSON.stringify(vorschlagFuer(zielTyp, post.werte, erkennung)) });
-    if (mitDokumenten && register) q.set('register', register);
-    if (kopieren) q.set('kopieren', '1');
-    geheZu(`/ablage/${zielTyp.id}/neu?${q.toString()}`);
-  }
-
-  if (fertig) {
-    return (
-      <section className="blatt" aria-label={t('ablage.post.zuordnen-2')}>
-        <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.post.zugeordnet')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.post.schliessen')}</button></div>
-        <p className="gutertext" role="status">{t('ablage.post.die-post-gehoert-jetzt', { titelOder: titelOder(fertig.titel) })}</p>
-        <div className="knoepfe"><Link to={`/ablage/${fertig.typId}/${fertig.id}`} className="knopf">{t('ablage.post.mappe-oeffnen')}</Link><button type="button" className="textknopf" onClick={() => setFertig(undefined)}>{t('ablage.post.weitere-mappe-zuordnen')}</button></div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="blatt" aria-label={t('ablage.post.zuordnen-2')}>
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.post.zuordnen-2')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.post.schliessen')}</button></div>
-      <p className="leise">{t('ablage.post.zu-welcher-mappe-gehoert')}</p>
-      {vorschlaege.length > 0 && (
-        <div className="er-ziele" role="group" aria-label={t('ablage.post.vorschlaege')}>
-          <p className="klein"><strong>{t('ablage.post.vorschlaege')}</strong> <span className="leise">{t('ablage.post.aus-dem-text-der')}</span></p>
-          <ul>{vorschlaege.slice(0, 5).map((z) => {
-            const an = vorgeschlagen && ziel?.id === z.mappeId;
-            return (
-              <li key={z.mappeId}><button type="button" className={an ? 'an' : ''} aria-pressed={an} onClick={() => waehleVorschlag(z)}>
-                <span className="er-zieltitel">{titelOder(z.titel)} <span className="leise klein">{d.typ(z.typId)?.name}</span>{an && <span className="chip">{t('ablage.post.vorschlag')}</span>}</span>
-                <span className="leise klein">{z.gruende.join(' · ')}</span>
-              </button></li>
-            );
-          })}</ul>
-        </div>
-      )}
-      <div className="raster">
-        <label className="eigenschaft"><span>{t('ablage.post.mappentyp')}</span>
-          <select value={typId} onChange={(e) => setTypId(e.target.value)}>
-            {ziele.map((mappentyp) => <option key={mappentyp.id} value={mappentyp.id}>{mappentyp.name}</option>)}
-          </select>
-        </label>
-        <fieldset className="eigenschaft wahl">
-          <legend>{t('ablage.post.mappe')}</legend>
-          <label className="haken"><input type="radio" name="zuordnen-art" checked={art === 'vorhanden'} onChange={() => setArt('vorhanden')} /><span>{t('ablage.post.vorhandene-waehlen')}</span></label>
-          <label className="haken"><input type="radio" name="zuordnen-art" checked={art === 'neu'} onChange={() => setArt('neu')} disabled={!darfErstellen(zielTyp)} /><span>{t('ablage.post.neue-anlegen')}</span></label>
-        </fieldset>
-      </div>
-
-      {art === 'vorhanden' && (
-        <div className="zuordnen-suche">
-          <label className="suche"><span className="sr">{t('ablage.post.mappe-suchen')}</span>
-            <input type="search" placeholder={t('ablage.post.suchen', { wert: zielTyp ? typName(zielTyp) : t('ablage.post.mappe') })} value={suche} onChange={(e) => setSuche(e.target.value)} autoFocus />
-          </label>
-          {treffer === null ? <p className="leise klein">{t('ablage.post.lade')}</p>
-            : !treffer.length ? <p className="leise klein">{t('ablage.post.keine-mappe-gefunden')}</p>
-            : <ul className="zuordnen-treffer">{treffer.map((x) => (
-                <li key={x.id}><button type="button" className={ziel?.id === x.id ? 'an' : ''} aria-pressed={ziel?.id === x.id} onClick={() => { setZiel(x); setVorgeschlagen(false); }}>{titelOder(x.titel)}</button></li>
-              ))}</ul>}
-        </div>
-      )}
-
-      {details.dokumente.length > 0 && (
-        <fieldset className="eigenschaft">
-          <legend>{t('ablage.post.dokumente')}</legend>
-          {details.dokumente.map((x) => (
-            <div key={x.id} className="mitdoppelt">
-              <label className="haken mitvorschau"><input type="checkbox" checked={gewaehlt.has(x.id)} onChange={() => umschalten(x.id)} /><Vorschaubild d={x} /><span>{x.name}</span></label>
-              {doppelt[x.sha256] && <Fundstellen f={doppelt[x.sha256]} />}
-            </div>
-          ))}
-          {mitDokumenten && regs.length > 1 && (
-            <label className="eigenschaft"><span>{t('ablage.post.in-das-register')}</span>
-              <select value={register} onChange={(e) => setRegister(e.target.value)}>{regs.map((r) => <option key={r.key} value={r.key}>{registerName(r)}</option>)}</select>
-            </label>
-          )}
-          {mitDokumenten && regs.length === 1 && <p className="leise klein">{t('ablage.post.kommen-ins-register', { name: regs[0].name })}</p>}
-          {mitDokumenten && <label className="haken klein"><input type="checkbox" checked={kopieren} onChange={(e) => setKopieren(e.target.checked)} /><span>{t('ablage.post.kopie-in-der-post')}</span></label>}
-        </fieldset>
-      )}
-      {fehltRegister && <div className="hinweis warn"><p>{tn('ablage.post.hat-kein-dokumentenregister-waehle', { name: zielTyp ? typName(zielTyp) : '' })}</p></div>}
-      {fehler && <div className="hinweis schlecht" role="alert"><p>{fehler}</p></div>}
-      <div className="knoepfe">
-        {art === 'vorhanden'
-          ? <button type="button" className="knopf primaer" disabled={!ziel || laeuft || fehltRegister} onClick={() => void zuordnen()}>{laeuft ? t('ablage.post.ordne-zu') : ziel ? t('ablage.post.zu-zuordnen', { titelOder: titelOder(ziel.titel) }) : t('ablage.post.mappe-waehlen')}</button>
-          : <button type="button" className="knopf primaer" disabled={fehltRegister || !darfErstellen(zielTyp)} onClick={zumFormular}>{t('ablage.post.weiter-neue-mappe-ausfuellen')}</button>}
-      </div>
     </section>
   );
 }

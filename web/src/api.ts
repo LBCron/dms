@@ -30,7 +30,8 @@ import type { Baum } from '../../shared/src/baum';
 import type { LoeschAktion, LoeschPlan, LoeschVorschau } from '../../shared/src/loeschbaum';
 import type { Luecke } from '../../shared/src/loeschkonzept';
 import type { LoeschAnlass, LoeschEintrag } from '../../shared/src/loeschprotokoll';
-import type { Sicherheit } from '../../shared/src/erkennung';
+import type { Abgleich, Sicherheit, TypFund } from '../../shared/src/erkennung';
+import type { WortSeite } from '../../shared/src/archivfassung';
 import type { Entscheidung, UmwandlungsFeld, Umwandlungsvorgang, UmwandlungsVorschau } from '../../shared/src/umwandlung';
 import type { FrageZeile, FragenGrenzen, VerlaufEintrag } from '../../shared/src/fragen';
 import type { Verwaltungsstand } from '../../shared/src/verwaltungsrecht';
@@ -728,6 +729,10 @@ export const api = {
   /** Post auflösen (#936): `aufloesen` bei einer eben aus der Post angelegten Mappe; `hinweis`, wenn es beim Zuordnen blieb. */
   zuordnen: (postId: string, e: { ziel: string; register?: string; dokumente?: string[]; kopieren?: boolean; aufloesen?: boolean }) =>
     anfrage<{ post: Mappe; ziel: Mappe; aufgeloest: boolean; papierkorb?: boolean; abgetrennt?: Mappe; hinweis?: string }>('POST', `/api/mappen/${postId}/zuordnen`, e),
+  /** „Dokument übernehmen“ (#934): Abgleich mit vorhandenen Mappen, Folgedokumente abtrennen, Wörter mit Lage. */
+  abgleich: (e: { dokumente: string[]; typ?: string }) => anfrage<Abgleich & { bezuege: Bezuege; ohneText: string[]; typ?: TypFund | null }>('POST', '/api/abgleich', e),
+  postAbtrennen: (postId: string, dokumente: string[]) => anfrage<{ post: Mappe; neu: Mappe }>('POST', `/api/mappen/${postId}/abtrennen`, { dokumente }),
+  wortpositionen: (id: string) => anfrage<{ quelle: 'original' | 'lesefassung'; mime: string; vollstaendig: boolean; seiten: WortSeite[] }>('GET', `/api/dokumente/${id}/wortpositionen`),
   /** „Aus Dokument ausfüllen“ (#391): Vorschläge aus Text bzw. Dokumenten; aus einer Datei (Foto, PDF, vCard) mit dem gelesenen Text. */
   vorschlaege: (typId: string, e: { text?: string; dokumente?: string[]; mappe?: string }) => anfrage<TypVorschlaege>('POST', `/api/typen/${typId}/vorschlaege`, e),
   vorschlaegeDatei: (typId: string, datei: Blob, name: string, mappe?: string) =>
@@ -1159,7 +1164,7 @@ export interface SchwaerzenVorschau {
   id: string; name: string; mime: string; sha256: string; seiten: SchwaerzSeite[];
   quelle: 'textebene' | 'gemischt' | 'keine'; versioniert: boolean; kopieName: string;
 }
-export const schwaerzBildUrl = (d: { id: string; sha256: string }, nr: number) => `/api/dokumente/${d.id}/schwaerzen/seiten/${nr}?v=${d.sha256.slice(0, 12)}`;
+export const schwaerzBildUrl = (d: { id: string; sha256: string }, nr: number, archiv = false) => `/api/dokumente/${d.id}/schwaerzen/seiten/${nr}?v=${d.sha256.slice(0, 12)}${archiv ? '&fassung=archiv' : ''}`;
 export interface VerkleinernVorschau {
   id: string; name: string; groesse: number; seiten: number; bilder: number; hoechsteDpi: number | null; versioniert: boolean; papierkorb: boolean; mindestens: number;
   stufen: Record<KleinStufe, { dpi: number; geschaetzt: number; lohnt: boolean; bilder: number }>;

@@ -14,6 +14,7 @@ import { geheZu, Link } from '../ort';
 import { Dreiteilung } from '../bereiche';
 import { titelOder, useSeiten } from '../seiten';
 import { MappeAnsicht, NeueMappe } from './MappeFormular';
+import { oeffnetUebernehmen, UebernehmenSeite } from './Uebernehmen';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from './Papierkorb';
 import { Startseite } from './Startseite';
 import { ZuletztListe } from './Zuletzt';
@@ -43,7 +44,8 @@ import { gebietsschema } from '../../../shared/src/sprache';
  *
  * /ablage/zuletzt                   „Zuletzt geöffnet“ (#940): die letzten 25, nur über die Startseite erreichbar
  * /ablage/:sicht                    „eingang“ (Zu erledigen mit Liste · Monat · Jahr, #725; /ablage/anstehend leitet dorthin), „favoriten“ (#62), „papierkorb“ (#43), eine verwaltete Sicht (#38) oder die Id eines Mappentyps
- * /ablage/:sicht/:mappeId           Mappe rechts geöffnet
+ * /ablage/:sicht/:mappeId           Mappe rechts geöffnet (neue Post: weiter zu …/uebernehmen, außer mit ?als=post)
+ * /ablage/:sicht/:mappeId/uebernehmen  „Dokument übernehmen“ (#934): Dokument in der Mitte, Mappe rechts
  * /ablage/:typId/neu?verweis=k:id   neue Mappe, optional mit vorbelegtem Verweis
  * /ablage/link?typ=…&feld=…         sprechender Link (#98); geöffnet: /ablage/link/:mappeId?typ=…
  * /ablage/suche?typ=…&feld.von=…    erweiterte Suche (#199, #426): Formular oben in der Mitte; geöffnet: /ablage/suche/:mappeId?…
@@ -55,7 +57,7 @@ const zahl = (n: number) => n.toLocaleString(gebietsschema());
 export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchParams }) {
   const d = useDaten();
   const { ich } = useKonto();
-  const [, sicht, dritt] = teile;
+  const [, sicht, dritt, viert] = teile;
   // #919: Zähler der Seitenleiste (Neue Post, Zu erledigen) und Startseite holen sich den neuen Stand selbst.
   useAblageStand();
 
@@ -107,7 +109,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   } else if (dritt && sicht === 'papierkorb') {
     rechts = <PapierkorbDetail key={dritt} id={dritt} werkbank={false} />;
   } else if (dritt) {
-    rechts = <MappeLader key={dritt} id={dritt} sicht={sicht} anhang={anhang} />;
+    rechts = <MappeLader key={dritt} id={dritt} sicht={sicht} anhang={anhang} alsPost={suche.get('als') === 'post'} />;
   } else {
     rechts = <div className="platzhalter"><p>{t('ablage.ablage.waehle-in-der-liste', { wert: typ ? t('ablage.ablage.oder-lege-eine-neue') : '' })}</p></div>;
   }
@@ -132,10 +134,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     ...(!!d.zaehler.papierkorbTage || !!d.zaehler.papierkorb ? [{ pfad: '/ablage/papierkorb', name: t('ablage.ablage.papierkorb'), symbol: 'geloescht' as const, zahl: d.zaehler.papierkorb, warte, an: sicht === 'papierkorb' }] : []),
   ];
 
-  return (
-    // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts. Ebenso die erweiterte
-    // Suche (#426) und der Kalender in „Zu erledigen“ (#528, #725): Sie nutzen Mitte und rechts, bis ein Eintrag geöffnet wird.
-    <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche || kalender) && !dritt)}>
+  const links = (
       <aside className="spalte sichten" aria-label={t('ablage.ablage.ansichten')} data-anker="navigation.ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
         <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? t('ablage.ablage.start') : istSuche ? t('ablage.ablage.erweiterte-suche') : sicht === 'eingang' ? t('ablage.ablage.zu-erledigen') : sicht === 'favoriten' ? t('ablage.ablage.favoriten') : sicht === 'papierkorb' ? t('ablage.ablage.papierkorb') : sicht === 'zuletzt' ? t('ablage.startseite.zuletzt-geoeffnet') : verwaltet?.name ?? typ?.name ?? t('ablage.ablage.ansicht-waehlen')}
@@ -154,6 +153,15 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
         {!d.typen.length && <p className="leise klein">{tn('ablage.ablage.noch-keine-mappentypen', { wert: ich.rolle === 'admin' ? <Link to="/werkbank/typen" className="verweis">{t('ablage.ablage.zur-werkbank')}</Link> : t('ablage.ablage.wer-ablago-verwaltet-muss') })}</p>}
         {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">{tn('ablage.ablage.noch-keine-ansichten', { wert: ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">{t('ablage.ablage.ansichten-einrichten')}</Link> : t('ablage.ablage.wer-ablago-verwaltet-muss') })}</p>}
       </aside>
+  );
+  // „Dokument übernehmen“ (#934): links die gewohnten Ansichten, in der Mitte das Dokument, rechts die Mappe.
+  if (dritt && viert === 'uebernehmen' && sicht) return <UebernehmenSeite key={dritt} id={dritt} sicht={sicht} links={links} suche={suche} />;
+
+  return (
+    // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts. Ebenso die erweiterte
+    // Suche (#426) und der Kalender in „Zu erledigen“ (#528, #725): Sie nutzen Mitte und rechts, bis ein Eintrag geöffnet wird.
+    <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche || kalender) && !dritt)}>
+      {links}
 
       <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}${kalender ? ' ka-mitte' : ''}`} aria-label={t('ablage.ablage.mappen')} data-anker="liste">
         {istSuche
@@ -209,14 +217,17 @@ function zuordnenAus(q: URLSearchParams) {
 }
 
 /** Lädt eine Mappe mit Rückverweisen, Dokumenten und Bezügen und zeigt sie an. */
-function MappeLader({ id, sicht, anhang = '' }: { id: string; sicht: string; anhang?: string }) {
+function MappeLader({ id, sicht, anhang = '', alsPost = false }: { id: string; sicht: string; anhang?: string; alsPost?: boolean }) {
   const d = useDaten();
   const [details, setDetails] = useState<MappeDetails | null | 'fehlt' | { verborgen: Aufgabe[] }>(null);
   const laden = useCallback(async () => {
     try { setDetails(await api.mappe(id)); } catch (x) { const v = verborgeneAufgaben(x); setDetails(v ? { verborgen: v } : 'fehlt'); }
   }, [id]);
   useEffect(() => { void laden(); }, [laden, d.stand]);
-  if (details === null) return <p className="leise">{t('ablage.ablage.lade')}</p>;
+  // Neue Post aus allen Eingängen (#934) öffnet die Seite „Dokument übernehmen“ – unter „Neue Post“, damit links sie markiert ist.
+  const weiter = details && details !== 'fehlt' && !('verborgen' in details) && !alsPost && oeffnetUebernehmen(details, d.typ(details.mappe.typId));
+  useEffect(() => { if (weiter) geheZu(`/ablage/${d.zaehler.neuePost ?? sicht}/${id}/uebernehmen`, true); }, [weiter]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (details === null || weiter) return <p className="leise">{t('ablage.ablage.lade')}</p>;
   if (details === 'fehlt') return <div className="leer"><p>{t('ablage.ablage.diese-mappe-gibt-es')}</p></div>;
   // Ohne Leserecht (#124): nur die eigenen Aufgaben dazu – erledigen oder weitergeben.
   if ('verborgen' in details) return (

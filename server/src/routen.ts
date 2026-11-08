@@ -2349,6 +2349,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'POST', pfad: '/api/post/:id/zusammenlegen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.legePostZusammen(a.params.id, b(a), ich(a).id, await zg(a))) },
     { methode: 'POST', pfad: '/api/mappen/:id/zuordnen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.ordneZu(a.params.id, b(a), ich(a).id, await zg(a), undefined, quelle(a))) },
+    // „Dokument übernehmen“ (#934): Folgedokumente als neue Post abtrennen; Abgleich mit vorhandenen Mappen (Belege, Doppelte, Typ).
+    { methode: 'POST', pfad: '/api/mappen/:id/abtrennen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.trennePostAb(a.params.id, b(a), ich(a).id, await zg(a))) },
+    { methode: 'POST', pfad: '/api/abgleich', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.erkennung.abgleichDokumente(b(a), await zg(a))) },
     // „Aus Dokument ausfüllen“ (#391): Vorschläge für die Felder eines Mappentyps aus Text, Dokumenten oder einer Datei.
     { methode: 'POST', pfad: '/api/typen/:id/vorschlaege', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.erkennung.fuerTyp(a.params.id, b(a), await zg(a))) },
     { methode: 'POST', pfad: '/api/typen/:id/vorschlaege/datei', zugang: 'angemeldet', lesend: true, roh: 30 * 1024 * 1024, handler: async (a) => {
@@ -2719,7 +2722,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
       const q = await seitenquelle(a, mappeId);
-      const bild = await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr), q);
+      // ?fassung=archiv (#934): die Seite der Archivfassung (PDF/A) – nicht mit Pflichtstempel, der gilt dem Original.
+      const bild = a.query.fassung === 'archiv' && !q ? await dienst.archivSeitenbild(a.params.id, Number(a.params.nr)) : await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr), q);
       if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-diese-seite-gibt'));
       const antwort: Antwort = { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
       return herausgeben(a) ? abgerufen(a, a.params.id, { fassung: 'seiten', gestempelt: !!q }, antwort) : antwort;

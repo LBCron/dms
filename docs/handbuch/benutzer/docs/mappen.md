@@ -45,6 +45,8 @@ Stimmt etwas nicht – ein Pflichtfeld ist leer, eine Zahl zu groß, eine Nummer
 
 Hast du eine **Visitenkarte**, einen Kassenbon oder einen Brief vor dir, musst du nicht abtippen: Oben in der Mappe (neu oder bestehend) steht **Aus Dokument ausfüllen** – bei manchen Mappentypen mit eigenem Namen, z. B. **Visitenkarte scannen**.
 
+**Liegt in der Mappe schon ein Dokument mit Text**, öffnet der Knopf die Seite [Dokument übernehmen](post.md#zuordnen): in der Mitte das Dokument (bei mehreren wählst du oben, welches), rechts diese Mappe, oben **Zurück zur Mappe**. Vorschläge, farbige Rahmen an den Fundstellen, Ziehen, Anklicken und Markieren gehen dort wie bei Post; gespeichert wird mit **Mappe speichern**. Für ein neues Foto oder eine Datei steht daneben **Foto oder Datei …** – dann geht es wie folgt:
+
 1. Tippe auf den Knopf. Am Handy öffnet **Foto aufnehmen** direkt die Kamera; **Weiteres Foto** nimmt z. B. die Rückseite dazu. Am Rechner wählst du eine Datei – ein Foto, ein PDF oder eine vCard (`.vcf`). In einer bestehenden Mappe geht auch ein Dokument, das schon darin liegt.
 2. **Angaben erkennen.** Ablago liest den Text (offline, ohne KI) und sucht passende Angaben: Name, Funktion, Telefon, Mobil, E-Mail, Internetseite, Anschrift, Datum, Betrag, Nummern.
 3. **Verstanden – bitte prüfen und speichern.** Leere Felder sind jetzt als **Vorschlag** ausgefüllt; darunter steht, wie sicher der Wert ist und an welcher Textstelle er stand. **Zurücknehmen** leert das Feld wieder. Ist ein Feld schon ausgefüllt, bleibt dein Wert stehen – darunter steht **Im Dokument** der andere Wert mit **Übernehmen**; **Alle Alternativen übernehmen** tut das für alle.

@@ -222,6 +222,8 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined, typ?: P
       // Abgetrennt beim Auflösen (#936): Die Ausgangspost liegt im Papierkorb – der Link führt zur Mappe, die aus ihr wurde.
       if (str(d.ziel) && str(d.zielTyp)) return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${str(d.zielTyp)}/${str(d.ziel)}`} className="verweis">{t('ablage.historie.mappe-oeffnen')}</Link></p> };
       if (!typ) return null;
+      // „Ab hier abtrennen“ (#934): Link zur neuen Post mit den abgetrennten Dokumenten.
+      if (str(d.abgetrennt)) return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${typ}/${str(d.abgetrennt)}`} className="verweis">{t('ablage.historie.abgetrennte-post-oeffnen')}</Link></p> };
       if (posten.length) return { hinweis: t('ablage.historie.posts', { posten: posten.length }), inhalt: <ul className="einzeln">{posten.map((id, i) => <li key={id}><Link to={`/ablage/${typ}/${id}`} className="verweis">{t('ablage.historie.teil-oeffnen', { wert: i + 1 })}</Link></li>)}</ul> };
       if (str(d.post)) return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${typ}/${str(d.post)}`} className="verweis">{t('ablage.historie.ausgangspost-oeffnen')}</Link></p> };
       return null;

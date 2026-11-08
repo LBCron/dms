@@ -15,7 +15,8 @@ import { Symbol } from './Symbol';
  * eine neu geöffnete Mappe klappt die rechte Spalte aber immer auf.
  * Auf schmalen Bildschirmen (Handy) bleibt die Einzelansicht ohne Griffe.
  */
-export type Ort = 'ablage' | 'werkbank';
+/** `uebernehmen` (#934): Seite „Dokument übernehmen“ – eigene Breiten, die Mitte (das Dokument) ist breiter. */
+export type Ort = 'ablage' | 'werkbank' | 'uebernehmen';
 interface Stand { l: number; m: number; linksZu: boolean; rechtsZu: boolean }
 
 const SCHMAL = 820;
@@ -27,18 +28,21 @@ const TITEL_MAX = 40;
 const RESET = 'dms:bereiche-zurueckgesetzt';
 const schluessel = (ort: Ort, benutzer: string) => `dms:bereiche:${ort}:${benutzer}`;
 
-function standard(): Stand {
+function standard(ort?: Ort): Stand {
   const mittel = typeof innerWidth === 'number' && innerWidth <= 1100;
-  return { l: mittel ? 180 : 220, m: mittel ? 280 : 340, linksZu: false, rechtsZu: false };
+  const l = mittel ? 180 : 220;
+  // Dokument übernehmen (#934): Dokument und Mappe teilen sich den Rest etwa zur Hälfte.
+  if (ort === 'uebernehmen' && typeof innerWidth === 'number') return { l, m: Math.max(MIN_M, Math.round((innerWidth - l) * 0.5)), linksZu: false, rechtsZu: false };
+  return { l, m: mittel ? 280 : 340, linksZu: false, rechtsZu: false };
 }
-function lies(k: string): Stand {
-  try { const s = JSON.parse(localStorage.getItem(k) ?? 'null') as Partial<Stand> | null; if (s) return { ...standard(), ...s }; } catch { /* Speicher nicht verfügbar */ }
-  return standard();
+function lies(k: string, ort?: Ort): Stand {
+  try { const s = JSON.parse(localStorage.getItem(k) ?? 'null') as Partial<Stand> | null; if (s) return { ...standard(ort), ...s }; } catch { /* Speicher nicht verfügbar */ }
+  return standard(ort);
 }
 
 /** Für das Profil: gemerkte Breiten dieses Benutzers auf diesem Gerät löschen. */
 export function bereicheZuruecksetzen(benutzer: string) {
-  for (const ort of ['ablage', 'werkbank'] as Ort[]) { try { localStorage.removeItem(schluessel(ort, benutzer)); } catch { /* egal */ } }
+  for (const ort of ['ablage', 'werkbank', 'uebernehmen'] as Ort[]) { try { localStorage.removeItem(schluessel(ort, benutzer)); } catch { /* egal */ } }
   dispatchEvent(new Event(RESET));
 }
 
@@ -57,13 +61,13 @@ export function Dreiteilung({ ort, ebene, offen, mitte = true, rechts = true, ch
 }) {
   const { ich } = useKonto();
   const k = schluessel(ort, ich.id);
-  const [s, setS] = useState<Stand>(() => lies(k));
+  const [s, setS] = useState<Stand>(() => lies(k, ort));
   const [breit, setBreit] = useState(() => innerWidth > SCHMAL);
   const rahmen = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setS(lies(k)); }, [k]);
+  useEffect(() => { setS(lies(k, ort)); }, [k]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const f = () => setS(lies(k));
+    const f = () => setS(lies(k, ort));
     addEventListener(RESET, f);
     return () => removeEventListener(RESET, f);
   }, [k]);
@@ -126,14 +130,14 @@ export function Dreiteilung({ ort, ebene, offen, mitte = true, rechts = true, ch
             ziehe={(dx, start) => merke({ ...s, l: Math.min(MAX_L, Math.max(MIN_L, start + dx)) })}
             start={() => l}
             einklappen={() => merke({ ...s, linksZu: true })}
-            zuruecksetzen={() => merke({ ...s, linksZu: false, l: standard().l })} />}
+            zuruecksetzen={() => merke({ ...s, linksZu: false, l: standard(ort).l })} />}
         {mitte && rechts && (rechtsZu
           ? <Lasche seite="rechts" name={name('rechts')} titel={titel} oeffnen={() => merke({ ...s, rechtsZu: false })} />
           : <Griff seite="rechts" x={l + m} wert={m} name={name('rechts')}
             ziehe={(dx, start) => merke({ ...s, m: Math.max(MIN_M, Math.min(start + dx, gesamt - l - MIN_RECHTS)) })}
             start={() => m}
             einklappen={() => merke({ ...s, rechtsZu: true })}
-            zuruecksetzen={() => merke({ ...s, rechtsZu: false, m: standard().m })} />)}
+            zuruecksetzen={() => merke({ ...s, rechtsZu: false, m: standard(ort).m })} />)}
       </>}
     </div>
   );
