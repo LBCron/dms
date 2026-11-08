@@ -39,6 +39,19 @@ describe('Konten', () => {
     await wirft(k.anmelden({ email: 'admin@example.org', passwort: 'ein-langes-passwort' }, '9.9.9.9'), 429);
   });
 
+  it('gleichzeitige Fehlversuche kommen nicht an der Grenze vorbei (#956)', async () => {
+    const k = new Konten(speicherKontoRepo(), null, 'http://nas:3000');
+    await k.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' });
+    const r = await Promise.allSettled(Array.from({ length: 20 }, () => k.anmelden({ email: 'admin@example.org', passwort: 'falsch-falsch' }, '7.7.7.7')));
+    const status = r.map((x) => (x.status === 'rejected' ? (x.reason as Fachfehler).status : 200));
+    assert.equal(status.filter((s) => s === 401).length, 5, 'nur so viele Passwörter geprüft, wie die Grenze erlaubt');
+    assert.equal(status.filter((s) => s === 429).length, 15);
+    await wirft(k.anmelden({ email: 'admin@example.org', passwort: 'ein-langes-passwort' }, '7.7.7.7'), 429);
+    // Eine andere Adresse ist nicht betroffen, und eine richtige Anmeldung setzt den Zähler zurück.
+    assert.ok(await k.anmelden({ email: 'admin@example.org', passwort: 'ein-langes-passwort' }, '8.8.8.8'));
+    await wirft(k.anmelden({ email: 'admin@example.org', passwort: 'falsch-falsch' }, '8.8.8.8'), 401);
+  });
+
   it('lädt ohne Mailserver per Link ein, der genau einmal funktioniert', async () => {
     const k = new Konten(speicherKontoRepo(), null, 'http://nas:3000/');
     await k.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' });

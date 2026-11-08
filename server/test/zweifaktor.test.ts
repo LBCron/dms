@@ -209,6 +209,17 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     await assert.rejects(konten.anmeldenMitCode({ kennung: k2, code: '111111' }, '1.1.1.1'));
     await assert.rejects(konten.anmeldenMitCode({ kennung: k2, code: codes[2] }, '1.1.1.1'), status(401));
 
+    // Gleichzeitig geraten (#956): höchstens fünf Codes werden geprüft, danach gilt die Kennung nicht mehr.
+    const r3 = await konten.anmelden({ email: 'anna@example.org', passwort: 'ein-langes-passwort' }, '4.4.4.4', '');
+    const k3 = (r3 as { zweiterSchritt: string }).zweiterSchritt;
+    const echt = z.pruefe.bind(z);
+    let geprueft = 0;
+    z.pruefe = async (...a: Parameters<typeof z.pruefe>) => { geprueft++; return echt(...a); };
+    await Promise.allSettled(Array.from({ length: 30 }, (_, i) => konten.anmeldenMitCode({ kennung: k3, code: String(100000 + i) }, '4.4.4.4')));
+    z.pruefe = echt;
+    assert.ok(geprueft <= 5, `${geprueft} Codes geprüft`);
+    await assert.rejects(konten.anmeldenMitCode({ kennung: k3, code: codes[4] }, '4.4.4.4'), status(401), 'Kennung verfallen');
+
     // Passwort-Link: neues Passwort, aber keine Sitzung ohne Code.
     const link = await konten.neuerLink(anna.id);
     const schluessel = link.link!.split('/passwort/')[1];
