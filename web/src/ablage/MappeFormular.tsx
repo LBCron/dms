@@ -7,7 +7,7 @@ import { spaltenName, zelle } from './spalten';
 import { eigeneFelderIm, vorbelegungAus } from '../../../shared/src/sichten';
 import { datumText, inFrist } from '../../../shared/src/archiv';
 import { deutschePlz, eingabemodus, formatFehler, mitSchema, pruefeFormate, telefonLink } from '../../../shared/src/feldformate';
-import { darfErstellen, darfLoeschen, formatiere, trefferlistenVon, geschuetzteFelder, istLeer, istOk,  standardRegister, VERWEISARTEN, verweisAusText, type Dokument, type Feld, type Mappe, type Abschnitt, type Mappenkonflikt, type Mappentyp, type Pruefergebnis, type Register, type Wert, type Werte } from '../../../shared/src/model';
+import { darfErstellen, darfLoeschen, formatiere, istVersendet, trefferlistenVon, geschuetzteFelder, istLeer, istOk,  standardRegister, VERWEISARTEN, verweisAusText, type Dokument, type Feld, type Mappe, type Abschnitt, type Mappenkonflikt, type Mappentyp, type Pruefergebnis, type Register, type Wert, type Werte } from '../../../shared/src/model';
 import { api, ApiFehler, type Bezuege, type MappeDetails, type Rueckverweis } from '../api';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
@@ -23,7 +23,7 @@ import { Notizen } from './Notizen';
 import { AufgabenHinweis, ErinnerungFormular, Erinnerungen, NeueAufgabe } from './Aufgaben';
 import { Aktionsmenue, Druckansicht, EmailMaske } from './Aktionen';
 import { LoeschBaum } from './LoeschBaum';
-import { PostLeiste } from './Post';
+import { merkeAufloesung, PostLeiste } from './Post';
 import { linkZuMappe } from '../../../shared/src/direktlink';
 import { Ehemalig, Person } from '../Person';
 import { Dokumente, type NeueDatei } from './Dokumente';
@@ -42,8 +42,38 @@ const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { da
 /** Register des Typs; ältere Typen ohne Register bekommen die Standardregister. Ausgeblendete (#655) zeigt die Mappe nicht. */
 const registerVon = (mappentyp: Mappentyp): Register[] => sichtbareRegister(mappentyp.register?.length ? mappentyp.register : standardRegister(mappentyp.felder));
 
-/** Neue Mappe als Ziel von „Zuordnen“ (#192): danach wird die Post ihr zugeordnet. */
-export interface ZuordnenNachher { post: string; register?: string; dokumente: string[]; kopieren: boolean; vorschlag: Record<string, Wert> }
+/**
+ * Neue Mappe als Ziel von „Zuordnen“ (#192): danach wird die Post ihr zugeordnet. `aufloesen` (#936): aus der Post wird
+ * diese Mappe (Dokumente und Historie wandern mit, die Post kommt in den Papierkorb) – true, wenn die Person die Post
+ * löschen darf; false bleibt beim Zuordnen; undefined, solange es noch nicht feststeht.
+ */
+export interface ZuordnenNachher { post: string; register?: string; dokumente: string[]; kopieren: boolean; vorschlag: Record<string, Wert>; aufloesen?: boolean }
+
+/**
+ * Lässt sich die Post beim Speichern auflösen (#936)? Nicht mit „Kopie in der Post behalten“ und nicht bei versendeten
+ * E-Mails (dann wie bisher zuordnen, ohne Hinweis); ohne Recht zum Löschen bleibt sie zugeordnet – mit Hinweis.
+ */
+/** Die nächste Post aus „Neue Post“ (#936) – wie die Ansicht sie zuerst zeigt; ohne Ansicht oder Post keine. */
+async function naechstePost(sicht: string | null | undefined): Promise<Mappe | undefined> {
+  if (!sicht) return undefined;
+  try { return (await api.seite(sicht, 0, 1)).mappen.find((m) => !m.verborgen); } catch { return undefined; }
+}
+
+function useAufloesung(z: ZuordnenNachher | undefined) {
+  const [x, setX] = useState<{ aufloesen?: boolean; gesperrt: boolean; dokumente: number } | null>(null);
+  useEffect(() => {
+    if (!z || z.kopieren) return;
+    let aktuell = true;
+    api.mappe(z.post).then((p) => {
+      if (!aktuell) return;
+      if (istVersendet(p.mappe.werte)) { setX({ gesperrt: false, dokumente: p.dokumente.length }); return; }
+      const gesperrt = p.rechte?.D === false || p.loeschbar?.ok === false;
+      setX({ aufloesen: !gesperrt, gesperrt, dokumente: p.dokumente.length });
+    }, () => {});
+    return () => { aktuell = false; };
+  }, [z?.post, z?.kopieren]); // eslint-disable-line react-hooks/exhaustive-deps
+  return x;
+}
 
 export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: Mappentyp; verweis?: string; sicht: string; zuordnen?: ZuordnenNachher; vorbelegen?: string }) {
   const start = standardRoh(typ);
@@ -73,14 +103,21 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
     const f = typ.felder.find((x) => x.key === k && x.typ === 'referenz');
     if (f && id) start[f.key] = f.mehrfach ? [id] : id;
   }
+  const aufloesung = useAufloesung(zuordnen);
+  const mitDoks = zuordnen?.dokumente.length ? t('ablage.mappeformular.ihre-dokumente-kommen-hierher', { anzahl: zuordnen.dokumente.length }) : '';
+  // Abgetrennt (#936): Nicht gewählte Dokumente kommen als neue Post nach „Neue Post“.
+  const uebrig = aufloesung?.aufloesen && zuordnen ? Math.max(0, aufloesung.dokumente - zuordnen.dokumente.length) : 0;
   return (
     <>
       <div className="mappenkopf">
         <p className="ueber">{typName(typ)}</p>
         <h1>{t('ablage.mappeformular.neue-mappe')}</h1>
       </div>
-      {zuordnen && <div className="hinweis info"><p>{t('ablage.mappeformular.nach-dem-speichern-wird', { wert: zuordnen.dokumente.length ? t('ablage.mappeformular.ihre-dokumente-kommen-hierher', { anzahl: zuordnen.dokumente.length }) : '' })}{vorbelegt.length > 0 && <> {' '}{t('ablage.mappeformular.als-vorschlag-aus-der', { vorbelegt: vorbelegt.join(', ') })}</>}</p></div>}
-      <Formular typ={typ} start={start} sicht={sicht} zuordnen={zuordnen} />
+      {zuordnen && <div className="hinweis info"><p>
+        {aufloesung?.aufloesen ? t('ablage.mappeformular.aus-der-post-wird', { wert: mitDoks }) : t('ablage.mappeformular.nach-dem-speichern-wird', { wert: mitDoks })}
+        {uebrig > 0 && <> {' '}{t('ablage.mappeformular.uebrige-als-neue-post', { anzahl: uebrig })}</>}
+        {vorbelegt.length > 0 && <> {' '}{t('ablage.mappeformular.als-vorschlag-aus-der', { vorbelegt: vorbelegt.join(', ') })}</>}</p></div>}
+      <Formular typ={typ} start={start} sicht={sicht} zuordnen={zuordnen && { ...zuordnen, aufloesen: aufloesung?.aufloesen }} />
     </>
   );
 }
@@ -271,6 +308,10 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     : details?.loeschbar?.ok === false ? { grund: details.loeschbar.grund ?? t('ablage.mappeformular.diese-mappe-laesst-sich'), rueckverweise: details.loeschbar.rueckverweise }
     : undefined;
   // Weitere Löschwege trotz Sperre (z. B. „Mit verknüpften Mappen löschen …“, #424) kommen über `wege` dazu.
+  // Post auflösen (#936): Vor dem Speichern sagt die Speicherleiste, was mit der Post geschieht.
+  const aufloesenHinweis = zuordnen?.aufloesen === true
+    ? (d.zaehler.papierkorbTage ? t('ablage.mappeformular.aufloesen-hinweis') : t('ablage.mappeformular.aufloesen-hinweis-ohne-korb'))
+    : zuordnen?.aufloesen === false ? t('ablage.mappeformular.aufloesen-gesperrt') : '';
   const loeschKnopf = loeschenZeigen ? <LoeschKnopf sperre={loeschSperre} loeschen={() => void loeschen()}
     wege={mitVerknuepften && <button type="button" className="textknopf gefahr klein" onClick={mitVerknuepften}>{t('ablage.mappeformular.mit-verknuepften-mappen-loeschen')}</button>} /> : <span />;
   // Sprung aus der Suche nach einer Archivnummer (#345): ?register=… öffnet das Register.
@@ -534,10 +575,14 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         neu.push({ art: 'schlecht', text: t('ablage.mappeformular.wurde-nicht-hochgeladen', { name: n.datei.name, message: (e as Error).message }) });
       }
     }
-    // Zuordnen (#192): Die Post gehört jetzt zu dieser neuen Mappe.
+    // Zuordnen (#192): Die Post gehört jetzt zu dieser neuen Mappe – bzw. wird zu ihr (#936, aufgelöst).
+    let aufgeloest = false;
     if (!mappe && zuordnen) {
-      try { await api.zuordnen(zuordnen.post, { ziel: gespeichert!.id, register: zuordnen.register, dokumente: zuordnen.dokumente, kopieren: zuordnen.kopieren }); }
-      catch (e) { await hinweis({ titel: t('ablage.mappeformular.post-nicht-zugeordnet'), text: t('ablage.mappeformular.die-mappe-ist-angelegt', { message: (e as Error).message }) }); }
+      try {
+        const r = await api.zuordnen(zuordnen.post, { ziel: gespeichert!.id, register: zuordnen.register, dokumente: zuordnen.dokumente, kopieren: zuordnen.kopieren, aufloesen: zuordnen.aufloesen === true });
+        aufgeloest = r.aufgeloest;
+        if (r.hinweis) await hinweis({ titel: t('ablage.mappeformular.post-bleibt-zugeordnet'), text: r.hinweis });
+      } catch (e) { await hinweis({ titel: t('ablage.mappeformular.post-nicht-zugeordnet'), text: t('ablage.mappeformular.die-mappe-ist-angelegt', { message: (e as Error).message }) }); }
     }
     const nichtEntfernt: string[] = [];
     for (const id of entfernt) {
@@ -552,7 +597,12 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     await d.neuLaden();
     await neuLaden?.();
     setSendet(false);
-    if (!mappe) geheZu(`/ablage/${sicht}/${gespeichert!.id}`);
+    // Aufgelöst (#936): weiter mit der nächsten Post aus „Neue Post“; oben steht, was angelegt wurde.
+    const naechste = aufgeloest ? await naechstePost(d.zaehler.neuePost) : undefined;
+    if (naechste && d.zaehler.neuePost) {
+      merkeAufloesung({ fuer: naechste.id, id: gespeichert!.id, typId: typ.id, titel: gespeichert!.titel ?? '' });
+      geheZu(`/ablage/${d.zaehler.neuePost}/${naechste.id}`);
+    } else if (!mappe) geheZu(`/ablage/${sicht}/${gespeichert!.id}`);
     else setMeldung(gespeichert?.hinweis ?? (offen.length || nichtEntfernt.length ? t('ablage.mappeformular.teilweise-gespeichert') : t('ablage.mappeformular.gespeichert-2')));
   }
 
@@ -697,7 +747,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         <span />
       </div> : <div className={`speicherleiste${mappe && !werteGeaendert && !dokumenteGeaendert && !sendet && !meldung ? ' hy-ruhig' : ''}`}>
         <span className="hy-nur-breit">{loeschKnopf}</span>
-        <span className={`status ${meldung && fehler ? 'schlecht' : ''}`} role="status">{sendet ? t('ablage.mappeformular.speichere') : meldung ?? (mappe && (werteGeaendert || dokumenteGeaendert) ? t('ablage.mappeformular.ungespeicherte-aenderungen') : '')}</span>
+        <span className={`status ${meldung && fehler ? 'schlecht' : ''}`} role="status">{sendet ? t('ablage.mappeformular.speichere') : meldung ?? (mappe && (werteGeaendert || dokumenteGeaendert) ? t('ablage.mappeformular.ungespeicherte-aenderungen') : !mappe ? aufloesenHinweis : '')}</span>
         <div className="knoepfe">
           {mappe
             ? <button type="button" className="knopf" disabled={!(werteGeaendert || dokumenteGeaendert) || sendet} onClick={verwerfen}><span className="hy-nur-breit">{t('ablage.mappeformular.aenderungen-verwerfen')}</span><span className="hy-nur-schmal">{t('ablage.mappeformular.verwerfen')}</span></button>

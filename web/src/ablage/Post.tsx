@@ -38,6 +38,23 @@ export function PostKnopf() {
   );
 }
 
+/**
+ * Post aufgelöst (#936): Nach dem Speichern zeigt die Seite die nächste Post aus „Neue Post“; oben steht einmal, was
+ * angelegt wurde. Gemerkt nur im Speicher der Seite – nach dem Neuladen ist der Hinweis weg.
+ */
+interface Aufloesung { fuer: string; id: string; typId: string; titel: string }
+let letzteAufloesung: Aufloesung | null = null;
+export function merkeAufloesung(x: Aufloesung) { letzteAufloesung = x; }
+
+function AufloesungHinweis({ postId }: { postId: string }) {
+  const d = useDaten();
+  const [x] = useState(() => (letzteAufloesung?.fuer === postId ? letzteAufloesung : null));
+  useEffect(() => { if (x && letzteAufloesung === x) letzteAufloesung = null; }, [x]);
+  if (!x) return null;
+  const typ = d.typ(x.typId);
+  return <div className="hinweis gut" role="status"><p>{tn('ablage.post.aufgeloest-naechste', { typ: typ ? typName(typ) : '', link: <Link to={`/ablage/${x.typId}/${x.id}`} className="verweis">{titelOder(x.titel)}</Link> })}</p></div>;
+}
+
 /** An einer Post-Mappe: Stand, „Zuordnen …“, „Erledigt“ bzw. „Wieder neu“. */
 export function PostLeiste({ typ, details, neuLaden }: { typ: Mappentyp; details: MappeDetails; neuLaden: () => Promise<void> }) {
   const d = useDaten();
@@ -68,6 +85,7 @@ export function PostLeiste({ typ, details, neuLaden }: { typ: Mappentyp; details
 
   return (
     <>
+      <AufloesungHinweis postId={m.id} />
       <div className="postleiste">
         <span className={`chip stand-${stand.toLowerCase()}`}>{stand}</span>
         {zugeordnet.length > 0 && (

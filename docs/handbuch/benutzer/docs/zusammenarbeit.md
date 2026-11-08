@@ -29,7 +29,8 @@ Hat der Mappentyp ein Register **Historie**, zeigt es die Geschichte der Mappe, 
 - in den Papierkorb gelegt und wiederhergestellt,
 - Notizen, Aufgaben und Erwähnungen, weitergegebene Aufgaben,
 - verschickte E-Mails – mit einem Link zur E-Mail,
-- wer ein Passwort angezeigt hat (nie das Passwort selbst; geänderte Passwörter erscheinen nur als „geändert“).
+- wer ein Passwort angezeigt hat (nie das Passwort selbst; geänderte Passwörter erscheinen nur als „geändert“),
+- bei einer Mappe, die aus einer Post angelegt wurde, auch die ganze Geschichte der Post – mit dem Zeichen *aus der Post* – und der Eintrag „Aus Post „…“ angelegt“ ([mehr](post.md#post-auflosen)).
 
 ![Historie einer Mappe](bilder/protokoll.png)
 

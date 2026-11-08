@@ -318,6 +318,8 @@ export interface PapierkorbEintrag {
   /** Mit verknüpften Mappen gelöscht (#424): gemeinsame Id des Vorgangs. */
   vorgang?: string | null;
   entkoppelt?: Array<{ quelleId: string; feldKey: string }>;
+  /** Aufgelöste Post (#936): die Mappe, die aus ihr wurde; `da` = es gibt sie noch. Wiederherstellen geht dann nicht. */
+  aufgeloestIn?: { id: string; typId: string; titel: string; da: boolean };
 }
 /** Anmeldung über einen Anbieter, OpenID Connect (#241). */
 export interface AnbieterEingabe {
@@ -723,8 +725,9 @@ export const api = {
   emailBereit: () => anfrage<{ bereit: boolean }>('GET', '/api/email/bereit'),
   /** Post (#192): anlegen (Dokumente danach mit ladeHoch) und einer Mappe zuordnen. */
   postAnlegen: (e: { betreff?: string; fuer?: string | null }) => anfrage<Mappe>('POST', '/api/post', e),
-  zuordnen: (postId: string, e: { ziel: string; register?: string; dokumente?: string[]; kopieren?: boolean }) =>
-    anfrage<{ post: Mappe; ziel: Mappe }>('POST', `/api/mappen/${postId}/zuordnen`, e),
+  /** Post auflösen (#936): `aufloesen` bei einer eben aus der Post angelegten Mappe; `hinweis`, wenn es beim Zuordnen blieb. */
+  zuordnen: (postId: string, e: { ziel: string; register?: string; dokumente?: string[]; kopieren?: boolean; aufloesen?: boolean }) =>
+    anfrage<{ post: Mappe; ziel: Mappe; aufgeloest: boolean; papierkorb?: boolean; abgetrennt?: Mappe; hinweis?: string }>('POST', `/api/mappen/${postId}/zuordnen`, e),
   /** „Aus Dokument ausfüllen“ (#391): Vorschläge aus Text bzw. Dokumenten; aus einer Datei (Foto, PDF, vCard) mit dem gelesenen Text. */
   vorschlaege: (typId: string, e: { text?: string; dokumente?: string[]; mappe?: string }) => anfrage<TypVorschlaege>('POST', `/api/typen/${typId}/vorschlaege`, e),
   vorschlaegeDatei: (typId: string, datei: Blob, name: string, mappe?: string) =>

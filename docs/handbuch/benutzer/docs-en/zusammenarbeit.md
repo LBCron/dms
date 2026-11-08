@@ -29,7 +29,8 @@ If the folder type has a tab **History**, it shows the story of the folder, newe
 - put in the bin and restored,
 - notes, tasks and mentions, passed-on tasks,
 - Emails sent – with a link to the email,
-- who displayed a password (never the password itself; changed passwords only appear as "changed").
+- who displayed a password (never the password itself; changed passwords only appear as "changed"),
+- for a folder created from a post, also the whole story of the post – marked *from post* – and the entry "Created from post “…”" ([more](post.md#post-auflosen)).
 
 ![History of a folder](bilder/protokoll.png)
 

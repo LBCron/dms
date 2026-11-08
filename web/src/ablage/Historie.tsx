@@ -219,6 +219,8 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined, typ?: P
     case 'post_geteilt': {
       const typ = str(d.postTyp);
       const posten = Array.isArray(d.posten) ? (d.posten as string[]) : [];
+      // Abgetrennt beim Auflösen (#936): Die Ausgangspost liegt im Papierkorb – der Link führt zur Mappe, die aus ihr wurde.
+      if (str(d.ziel) && str(d.zielTyp)) return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${str(d.zielTyp)}/${str(d.ziel)}`} className="verweis">{t('ablage.historie.mappe-oeffnen')}</Link></p> };
       if (!typ) return null;
       if (posten.length) return { hinweis: t('ablage.historie.posts', { posten: posten.length }), inhalt: <ul className="einzeln">{posten.map((id, i) => <li key={id}><Link to={`/ablage/${typ}/${id}`} className="verweis">{t('ablage.historie.teil-oeffnen', { wert: i + 1 })}</Link></li>)}</ul> };
       if (str(d.post)) return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${typ}/${str(d.post)}`} className="verweis">{t('ablage.historie.ausgangspost-oeffnen')}</Link></p> };
@@ -242,6 +244,11 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined, typ?: P
           </dl>
         ),
       };
+    }
+    case 'zugeordnet': {
+      // Aufgelöst mit abgetrenntem Teil (#936): Link zur neuen Post.
+      if (d.aufgeloest !== true || !str(d.abgetrennt) || !emailTyp) return null;
+      return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${emailTyp}/${str(d.abgetrennt)}`} className="verweis">{t('ablage.historie.abgetrennte-post-oeffnen')}</Link></p> };
     }
     case 'wiederhergestellt': {
       const n = typeof d.verweiseEntfallen === 'number' ? d.verweiseEntfallen : 0;
@@ -293,6 +300,8 @@ export function Historie({ mappeId, stand, typ, register }: { mappeId: string; s
     return {
       id: e.id, wann: zeit(e.zeit),
       wer: <Person id={e.benutzerId} ersatz={typeof e.daten.system === 'string' ? e.daten.system : undefined} />,
+      // Aus einer aufgelösten Post übernommen (#936): Eingang, Herkunft, Änderungen … der Post stehen jetzt hier.
+      ...(typeof e.daten.ausPost === 'string' ? { zustand: <span className="chip" title={t('ablage.historie.aus-der-post-titel')}>{t('ablage.historie.aus-der-post')}</span> } : {}),
       was: <><strong>{HISTORIENARTEN[e.art] ?? e.art}</strong>{kurz(e, typ) ? `: ${kurz(e, typ)}` : ''}
         {e.art === 'email' && typeof e.daten.email === 'string' && emailTyp && <> · <Link to={`/ablage/${emailTyp}/${e.daten.email}`} className="verweis">{t('ablage.historie.oeffnen')}</Link></>}</>,
       ...(x ? { mehr: x.hinweis, inhalt: x.inhalt, label: t('ablage.historie.aufklappbar', { wert: HISTORIENARTEN[e.art] ?? e.art, hinweis: x.hinweis }) } : {}),

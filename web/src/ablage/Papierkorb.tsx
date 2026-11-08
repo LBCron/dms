@@ -95,6 +95,14 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
     const n = e.vorgang ? imVorgang.get(e.vorgang) ?? 0 : 0;
     return n > 1 ? <span className="chip lb-chip" title={t('ablage.papierkorb.zusammen-mit-weiteren-mappen', { wert: n - 1 })}>{e.id === e.vorgang ? t('ablage.papierkorb.mit-verknuepften', { wert: n - 1 }) : t('ablage.papierkorb.verknuepft')}</span> : null;
   };
+  // Aufgelöste Post (#936): in welche Mappe – in der Tabelle mit Link, in der kompakten Liste nur als Text (der Eintrag ist selbst ein Link).
+  const aufgeloest = (e: PapierkorbEintrag, mitLink: boolean) => {
+    const a = e.aufgeloestIn;
+    if (!a) return null;
+    const typ = d.typ(a.typId);
+    const ziel = mitLink && a.da ? <Link to={`/ablage/${a.typId}/${a.id}`} className="verweis">{titelOder(a.titel)}</Link> : titelOder(a.titel);
+    return <span className="leise klein">{tn('ablage.papierkorb.aufgeloest-in', { typ: typ ? typName(typ) : '', link: ziel })}</span>;
+  };
   const tabelle = breite >= spalten.length * 110;
   const leerenKnopf = liste.length + z.dokumente.length > 0
     ? <button type="button" className="knopf klein gefahr-rand" disabled={laeuft} onClick={() => void leeren()}>{laeuft ? t('ablage.papierkorb.leere') : t('ablage.papierkorb.papierkorb-leeren')}</button> : null;
@@ -123,6 +131,7 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
                       <Link to={`${basis(werkbank)}/${e.id}`} className={`eintrag ${offen === e.id ? 'an' : ''}`}>
                         <span className="titel">{titelOder(e.titel)}{vorgangChip(e)}</span>
                         <span className="unter">{t('ablage.papierkorb.geloescht-2', { wert: d.typ(e.typId)?.name ?? '', datumZeit: datumZeit(e.geloescht), wert2: werkbank ? t('ablage.papierkorb.von', { person: d.person(e.geloeschtVon) }) : '' })}</span>
+                        {aufgeloest(e, false)}
                       </Link>
                     </li>
                   ))}
@@ -138,7 +147,7 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
                         <tr key={e.id} className={offen === e.id ? 'an' : ''} onClick={(ev) => { if (!(ev.target as HTMLElement).closest('a')) geheZu(ziel); }}>
                           {spalten.map(([n, wert], i) => (
                             <td key={n} className={n === 'Gelöscht' || n === SYSTEMSPALTEN._erstellt || n === SYSTEMSPALTEN._geaendert ? 'kurz' : ''}>
-                              {i === 1 ? <><Link to={ziel}>{wert(e)}</Link>{vorgangChip(e)}</> : wert(e)}
+                              {i === 1 ? <><Link to={ziel}>{wert(e)}</Link>{vorgangChip(e)}{e.aufgeloestIn && <> {aufgeloest(e, true)}</>}</> : wert(e)}
                             </td>
                           ))}
                         </tr>
@@ -283,11 +292,14 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
         <div className="hinweis info"><p>
           {zusammen.some((x) => x.id === x.vorgang) ? t('ablage.papierkorb.zusammen-geloescht-von', { anzahl: zusammen.length - 1, titel: titelOder(zusammen.find((x) => x.id === x.vorgang)!.titel) }) : t('ablage.papierkorb.zusammen-geloescht', { anzahl: zusammen.length - 1 })}{tn('ablage.papierkorb.holt-alle-zurueck-samt', { b: <strong>{t('ablage.papierkorb.alle-wiederherstellen')}</strong> })}</p></div>
       )}
-      <p className="leise klein">{t('ablage.papierkorb.beim-wiederherstellen-kommen')}</p>
+      {/* Aufgelöste Post (#936): kein Wiederherstellen – der Weg zurück ist, die neue Mappe zu löschen. */}
+      {e.aufgeloestIn
+        ? <div className="hinweis info"><p>{tn('ablage.papierkorb.aufgeloest-in', { typ: d.typ(e.aufgeloestIn.typId) ? typName(d.typ(e.aufgeloestIn.typId)!) : '', link: e.aufgeloestIn.da ? <Link to={`/ablage/${e.aufgeloestIn.typId}/${e.aufgeloestIn.id}`} className="verweis">{titelOder(e.aufgeloestIn.titel)}</Link> : titelOder(e.aufgeloestIn.titel) })}{' '}{t('ablage.papierkorb.aufgeloest-zurueck')}</p></div>
+        : <p className="leise klein">{t('ablage.papierkorb.beim-wiederherstellen-kommen')}</p>}
       {meldung && <div className="hinweis schlecht"><p>{meldung}</p></div>}
       <div className="knoepfe">
         <button type="button" className="knopf gefahr-rand" disabled={!!laeuft} onClick={() => void endgueltig()}>{laeuft === 'weg' ? t('ablage.papierkorb.loesche') : t('ablage.papierkorb.endgueltig-loeschen-2')}</button>
-        <button type="button" className={`knopf ${zusammen.length > 1 ? '' : 'gruen'}`} disabled={!!laeuft} onClick={() => void wiederherstellen()}>{laeuft === 'zurueck' ? t('ablage.papierkorb.stelle-wieder-her') : zusammen.length > 1 ? t('ablage.papierkorb.nur-diese-wiederherstellen') : t('ablage.papierkorb.wiederherstellen')}</button>
+        {!e.aufgeloestIn && <button type="button" className={`knopf ${zusammen.length > 1 ? '' : 'gruen'}`} disabled={!!laeuft} onClick={() => void wiederherstellen()}>{laeuft === 'zurueck' ? t('ablage.papierkorb.stelle-wieder-her') : zusammen.length > 1 ? t('ablage.papierkorb.nur-diese-wiederherstellen') : t('ablage.papierkorb.wiederherstellen')}</button>}
         {zusammen.length > 1 && <button type="button" className="knopf gruen" disabled={!!laeuft} onClick={() => void alleWiederherstellen()}>{laeuft === 'alle' ? t('ablage.papierkorb.stelle-wieder-her') : t('ablage.papierkorb.alle-wiederherstellen-2', { zusammen: zusammen.length })}</button>}
       </div>
     </div>

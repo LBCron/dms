@@ -86,7 +86,26 @@ At the top of a post there is a bar with the **status** and the button **Assign 
 
 Afterwards the documents are in the folder, and the post links to it. Its status is *Assigned*. The [history](zusammenarbeit.md#historie) of both folders records what happened. The documents' full text moves along.
 
-With **Next: fill in new folder**, the folder type's form opens. The post's subject and date are already filled in as suggestions, plus – as far as recognition found anything – amount, matching numbers (e.g. the invoice number) and the link to the sender. A notice at the top says what is prefilled. After **Save folder**, the post is assigned to the new folder.
+With **Next: fill in new folder**, the folder type's form opens. The post's subject and date are already filled in as suggestions, plus – as far as recognition found anything – amount, matching numbers (e.g. the invoice number) and the link to the sender. A notice at the top says what is prefilled. After **Save folder**, the post becomes the new folder – see below.
+
+### The post becomes the folder { #post-auflosen }
+
+If you create a **new** folder from a post, the post does not stay behind as a second place to find the documents: it becomes this folder. Before you save, the save bar says so: "When you save, the post’s documents and history move here and the post goes to the Bin." After **Save folder**:
+
+- The chosen **documents** are in the documents tab of the new folder.
+- The **whole history of the post** is in the folder's [history](zusammenarbeit.md#historie) – receipt, origin (mailbox, inbox folder, filing …), changes, notes and tasks, each marked *from post*. On top comes the entry "Created from post “…”". Notes, tasks and reminders of the post now belong to the folder; the task *Post for you* is done.
+- The post itself goes to the [Bin](ablage.md#papierkorb). There it says "Turned into *Invoice* “…”" with a link to the folder. It **can’t be restored** – to undo it, delete the new folder. If the Bin is switched off, the empty post is deleted straight away.
+- The page then shows the **next post** from *New post*, with a link to the folder you just created at the top; the number next to *New post* goes down by one. If there is no more post, the new folder opens.
+
+If you chose only **some of the documents**, the rest go to *New post* as a **new post** – subject with "(split off)", date, sender and *For* as before. Its history says which post it came from and which folder that post became.
+
+It stays with assigning as before (the post stays with status *Assigned*):
+
+- if you may **not delete** the post – the save bar says so before you save: "You may not delete the post: it stays and is assigned to this folder." The same applies if only some documents go along and you may not create post; then a notice tells you after saving;
+- with **Keep a copy in the post**;
+- for sent e-mails.
+
+Assigning post to an **existing** folder works as above; nothing is turned into a folder then.
 
 ### Suggestions when assigning {#vorschlage-beim-zuordnen}
 
@@ -115,6 +134,8 @@ Why it was assigned ("Sender … clearly recognised (customer number 100-4711), 
 
 It also works without assigning: **Done** for advertising or things already dealt with; **New again** if there is something to do after all. You delete unnecessary post like any folder.
 
+**Keep a copy in the post** also applies when you create a new folder: then the post is not [turned into the folder](#post-auflosen), only assigned.
+
 ## Splitting a batch scan {#sammelscan-teilen}
 
 If you scanned several letters at once, they arrive as **one post** with a long PDF. This is how you make separate posts from it:
@@ -136,4 +157,4 @@ If a folder is deleted, the post is kept. Only the link to this folder is remove
 
 ## Who may do what? {#wer-darf-was}
 
-Who sees, creates, edits and deletes post is governed by the [permissions](mappen.md#was-du-sehen-und-andern-darfst) of the folder type *Post*. To assign, you need the permission to edit the post **and** the target folder.
+Who sees, creates, edits and deletes post is governed by the [permissions](mappen.md#was-du-sehen-und-andern-darfst) of the folder type *Post*. To assign, you need the permission to edit the post **and** the target folder. For the post to [become](#post-auflosen) a new folder, you also need the permission to delete the post.

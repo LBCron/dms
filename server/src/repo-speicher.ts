@@ -872,6 +872,24 @@ export function speicherRepo(): Repo {
     },
     async historieVon(mappeIds) { const ids = new Set(mappeIds); return historie.filter((h) => ids.has(h.mappeId)).map(kopie).reverse(); },
     async historieArt(art, max) { return historie.filter((h) => h.art === art).map(kopie).reverse().slice(0, max); },
+    async uebertrageAnMappe(von, nach) {
+      const n = { historie: 0, notizen: 0, aufgaben: 0, erinnerungen: 0 };
+      for (const h of historie) if (h.mappeId === von) { h.mappeId = nach; h.daten = { ...h.daten, ausPost: von }; n.historie++; }
+      for (const x of notizen.values()) if (x.mappeId === von) { x.mappeId = nach; n.notizen++; }
+      for (const a of aufgaben.values()) if (a.mappeId === von && a.art !== 'post') { a.mappeId = nach; n.aufgaben++; }
+      for (const e of erinnerungen.values()) if (e.mappeId === von) { e.mappeId = nach; n.erinnerungen++; }
+      for (const f of faelle.values()) if (f.mappeId === von && !f.ende) f.mappeId = nach;
+      return n;
+    },
+    async aufgeloesteIn(ids) {
+      const m = new Map<string, { ziel: string; zielTyp: string }>();
+      const gesucht = new Set(ids);
+      for (const h of historie) {
+        if (!gesucht.has(h.mappeId) || h.art !== 'zugeordnet' || h.daten.aufgeloest !== true || typeof h.daten.ziel !== 'string') continue;
+        m.set(h.mappeId, { ziel: h.daten.ziel, zielTyp: String(h.daten.zielTyp ?? '') });
+      }
+      return m;
+    },
     async historieAufraeumen(vor) {
       const weg = new Set(historie.filter((h) => h.art === 'endgueltig' && h.zeit < vor && !mappen.has(h.mappeId) && !korb.has(h.mappeId)).map((h) => h.mappeId));
       const vorher = historie.length;
