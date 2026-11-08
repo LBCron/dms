@@ -1,13 +1,39 @@
 # Release
 
-Ein Release entsteht, sobald auf `main` eine Versionsnummer steht, für die es noch kein Tag gibt.
+Ein Release entsteht, sobald auf `main` eine Versionsnummer steht, für die es noch kein Tag gibt. Die Nummer vergibt seit #952 der Merge, nicht der Pull Request.
 
-1. **Pull Request** mit erhöhter Nummer in `package.json`, `server/package.json`, `web/package.json` und neuen Release-Notizen `docs/releases/v<version>.md`.
-2. Nach dem Merge baut **image.yml** (*Prüfen und Image bauen*) **zwei Images** nativ für amd64 und arm64 und pusht sie: `ghcr.io/motom001/dms:<version>` und `ghcr.io/motom001/dms-komplett:<version>`.
-3. Danach ruft image.yml **release.yml** auf. Der Workflow legt das Tag `v<version>` und das GitHub-Release an. Den Text übernimmt er aus `docs/releases/v<version>.md`; fehlt die Datei, nimmt er die Commit-Überschriften seit dem vorigen Tag.
-4. **handbuch.yml** baut alle vier Handbücher und veröffentlicht sie über GitHub Actions (`actions/upload-pages-artifact`, `actions/deploy-pages`) unter `https://help.ablago.app/<handbuch>/aktuell/`. Ältere Fassungen gibt es online nicht mehr: Jede Installation bringt ihr Handbuch unter `/hilfe/` mit, und aus jedem Tag lässt es sich neu bauen. Die 404-Seite leitet alte Adressen (`v0.xx/…`, `entwicklung/…`) auf dieselbe Seite unter `aktuell` um (`docs/handbuch/werkzeuge/veroeffentlichen.py`). Die englische Fassung jedes Handbuchs (#730) liegt unter `…/<handbuch>/aktuell/en/`; die kurze Adresse `/emergency` führt auf die englische Notfallseite. Die Seite *Neu in dieser Version* entsteht aus den Release-Notizen. Die eigene Adresse steht in den Pages-Einstellungen (Quelle „GitHub Actions“); einen Zweig `gh-pages` gibt es nicht mehr.
-5. `:stabil` wandert **nicht** mit jedem Release (#907). Das Release entsteht mit `--latest=false`; einmal pro Woche (dienstags 04:23 UTC, auch von Hand unter Actions) wählt **stabil.yml** (*:stabil befördern*) das neueste Release, das mindestens 24 Stunden alt ist, über dem bisherigen „Latest“ liegt und alle Regeln erfüllt (#714): Nummer X.Y.Z (keine Vorabversion), Release-Notizen vorhanden, kein Label `nicht-stabil` am Pull Request (sonst das nächstältere; nie zurück; zeigt `:stabil` schon darauf, passiert nichts). Geprüft werden beide Images für amd64 und arm64 mit Herkunftsnachweis (`gh attestation verify`) und der Update-Test vom bisherigen `:stabil` grün (`.github/werkzeuge/update-test.sh`: alter Stand einrichten, Dokument ablegen, sichern → neuer Stand mit denselben Ordnern → Daten da, Probe-Wiederherstellung gelingt). Dann zeigen `dms:stabil` und `dms-komplett:stabil` auf die neue Version, das Release wird „Latest“ (danach richtet sich der Hinweis „neue Version“ in Ablago) und bekommt den Abschnitt *Seit der letzten stabilen Version* mit Links auf alle Versionen seit dem bisherigen `:stabil`. Mit dem Label `sofort-stabil` am Pull Request ruft image.yml denselben Workflow gleich nach dem Release für genau diese Version auf (ohne 24 Stunden Wartezeit). Die Regeln stehen in `.github/werkzeuge/stabil-pruefen.sh` und `stabil-auswahl.sh` und werden in jedem Pull Request getestet; den Update-Test vom letzten stabilen Stand auf den Stand des Pull Requests macht `image-probe` ebenfalls.
-6. **[motom001/dms-appstore](https://github.com/motom001/dms-appstore)** übernimmt die neue Version am nächsten Morgen, mit Images per Digest, für Umbrel, ZimaOS und CasaOS. Von Hand geht es sofort über den Workflow *Store aktualisieren*.
+1. **Pull Request** mit einem **Notizschnipsel** `docs/releases/neu/<name>.md` statt einer Versionsnummer (Aufbau unten, [Versionsnummer beim Merge](#versionsnummer-beim-merge)). Die CI prüft im Job `pruefen`: Wer das Programm ändert (`server/`, `web/`, `shared/` ohne Tests, `Dockerfile`, `docker/`), bringt genau einen Schnipsel mit.
+2. Nach dem Merge vergibt **version.yml** (*Version vergeben*) die nächste Nummer: höchste `art` der neuen Schnipsel, drei `package.json`, Schnipsel zusammengefasst nach `docs/releases/v<version>.md`, Schnipsel gelöscht. Das steht als eigener Commit „Version X.Y.Z“ auf `main`, mit `Pull-Request: #…` im Text.
+3. Auf diesen Commit hin baut **image.yml** (*Prüfen und Image bauen*) **zwei Images** nativ für amd64 und arm64 und pusht sie: `ghcr.io/motom001/dms:<version>` und `ghcr.io/motom001/dms-komplett:<version>`.
+4. Danach ruft image.yml **release.yml** auf. Der Workflow legt das Tag `v<version>` und das GitHub-Release an. Den Text übernimmt er aus `docs/releases/v<version>.md`; fehlt die Datei, nimmt er die Commit-Überschriften seit dem vorigen Tag.
+5. **handbuch.yml** baut alle vier Handbücher und veröffentlicht sie über GitHub Actions (`actions/upload-pages-artifact`, `actions/deploy-pages`) unter `https://help.ablago.app/<handbuch>/aktuell/`. Ältere Fassungen gibt es online nicht mehr: Jede Installation bringt ihr Handbuch unter `/hilfe/` mit, und aus jedem Tag lässt es sich neu bauen. Die 404-Seite leitet alte Adressen (`v0.xx/…`, `entwicklung/…`) auf dieselbe Seite unter `aktuell` um (`docs/handbuch/werkzeuge/veroeffentlichen.py`). Die englische Fassung jedes Handbuchs (#730) liegt unter `…/<handbuch>/aktuell/en/`; die kurze Adresse `/emergency` führt auf die englische Notfallseite. Die Seite *Neu in dieser Version* entsteht aus den Release-Notizen. Die eigene Adresse steht in den Pages-Einstellungen (Quelle „GitHub Actions“); einen Zweig `gh-pages` gibt es nicht mehr.
+6. `:stabil` wandert **nicht** mit jedem Release (#907). Das Release entsteht mit `--latest=false`; einmal pro Woche (dienstags 04:23 UTC, auch von Hand unter Actions) wählt **stabil.yml** (*:stabil befördern*) das neueste Release, das mindestens 24 Stunden alt ist, über dem bisherigen „Latest“ liegt und alle Regeln erfüllt (#714): Nummer X.Y.Z (keine Vorabversion), Release-Notizen vorhanden, kein Label `nicht-stabil` am Pull Request (sonst das nächstältere; nie zurück; zeigt `:stabil` schon darauf, passiert nichts). Geprüft werden beide Images für amd64 und arm64 mit Herkunftsnachweis (`gh attestation verify`) und der Update-Test vom bisherigen `:stabil` grün (`.github/werkzeuge/update-test.sh`: alter Stand einrichten, Dokument ablegen, sichern → neuer Stand mit denselben Ordnern → Daten da, Probe-Wiederherstellung gelingt). Dann zeigen `dms:stabil` und `dms-komplett:stabil` auf die neue Version, das Release wird „Latest“ (danach richtet sich der Hinweis „neue Version“ in Ablago) und bekommt den Abschnitt *Seit der letzten stabilen Version* mit Links auf alle Versionen seit dem bisherigen `:stabil`. Mit dem Label `sofort-stabil` am Pull Request ruft image.yml denselben Workflow gleich nach dem Release für genau diese Version auf (ohne 24 Stunden Wartezeit). Die Regeln stehen in `.github/werkzeuge/stabil-pruefen.sh` und `stabil-auswahl.sh` und werden in jedem Pull Request getestet; den Update-Test vom letzten stabilen Stand auf den Stand des Pull Requests macht `image-probe` ebenfalls.
+7. **[motom001/dms-appstore](https://github.com/motom001/dms-appstore)** übernimmt die neue Version am nächsten Morgen, mit Images per Digest, für Umbrel, ZimaOS und CasaOS. Von Hand geht es sofort über den Workflow *Store aktualisieren*.
+
+## Versionsnummer beim Merge
+
+Seit #952 kollidieren Pull Requests nicht mehr an der Versionsnummer: Jeder bringt nur einen Schnipsel mit, die Nummer entsteht in der Reihenfolge der Merges.
+
+```markdown
+art: minor
+
+## Neu
+
+- **Mappen zusammenführen** (#123): …
+
+## Behoben
+
+- **Suche** (#124): …
+```
+
+- **Erste Zeile** `art: minor` (neue Funktion), `art: patch` (Korrektur) oder `art: keine` (kein Release, etwa reine Tests oder CI). Darunter die Release-Notizen wie bisher, mit `## Sicherheit`, `## Neu`, `## Geändert`, `## Behoben`, `## Entfernt`. Ohne Überschrift landet ein Punkt unter „Geändert“.
+- **Name:** der Branch, klein (`fs-890.md`). Je Pull Request genau ein Schnipsel.
+- **Mehrere Merges vor dem Lauf:** Die höchste `art` gewinnt, die Notizen stehen gebündelt unter einer Version. Schnipsel mit `art: keine` verschwinden mit dem nächsten Release.
+- **Ohne Schnipsel:** Pull Requests nur an Handbuch, CI oder Tests und Dependabot. Sie kommen mit dem nächsten Release mit.
+- **Im Übergang** geht noch die alte Art (Nummer und `docs/releases/v<version>.md` im Pull Request) – mit Warnung. Beides zusammen lehnt die CI ab.
+- **Labels** `sofort-stabil`/`nicht-stabil` bleiben am Pull Request: Der Versions-Commit nennt ihn mit `Pull-Request: #…`, `.github/werkzeuge/pr-labels.sh` liest die Labels von dort.
+- **Schreibrecht:** Nur der Job in `version.yml` schreibt ohne Pull Request auf `main` – mit dem Token der GitHub-App *Ablago Version* (nur „Contents: lesen und schreiben“, nur in diesem Repository installiert). Ihr Schlüssel liegt als `VERSION_APP_SCHLUESSEL` in der Umgebung `versionieren`, die nur von `main` aus nutzbar ist; die App-Id als Variable `VERSION_APP_ID`. Im Ruleset von `main` darf allein diese App vorbei. Das Werkzeug selbst (`.github/werkzeuge/version.mjs`, Tests in `version.test.mjs`) läuft ohne das Token.
+- **Migrationen** werden weiter in der Reservierungsliste der Chats vergeben; Versionen reserviert niemand mehr.
 
 ## Versionsnummern
 

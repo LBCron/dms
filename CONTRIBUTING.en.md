@@ -7,7 +7,7 @@ Thank you for your interest in Ablago! **Issues and pull requests are welcome in
 1. **Start with an issue**, written as a user story ("As a … I want …, so that …") with acceptance criteria. This applies to feature requests and bugs alike.
 2. **Discussion happens in the issue** until it is clear what will be built.
 3. **Only issues labelled `freigegeben` (approved) get implemented.** This label is set by the maintainer ([@motom001](https://github.com/motom001)) alone. Pull requests for issues that are not approved will not be merged.
-4. **Pull request** with `Closes #…`, tests, an updated manual and, for a new version, release notes. Only the maintainer merges.
+4. **Pull request** with `Closes #…`, tests, an updated manual and – if it changes the program – a notes snippet `docs/releases/neu/<branch>.md` (first line `art: patch`, `art: minor` or `art: keine`, below it the release notes). The version number is assigned on merge (developer manual → Release). Only the maintainer merges.
 
 ## New dependencies only with a reason
 
