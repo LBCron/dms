@@ -270,41 +270,6 @@ rauchtest('Neue Post öffnen und einer Mappe zuordnen', { als: LENA }, async (s)
   await mappe.getByRole('tab', { name: 'Vertragsunterlagen 1' }).waitFor();
 });
 
-rauchtest('Neue Post: neue Mappe anlegen, die Post wird zur Mappe (#936)', { als: LENA }, async (s) => {
-  // Eigener Brief für diesen Weg; danach liegt in „Neue Post“ wieder nur der Brief für die Handy-Tests.
-  const cookie = await sitzung(LENA);
-  const betreff = 'Rechnung Schornsteinfeger 2027';
-  const brief = (await api('POST', '/api/post', { cookie, body: { betreff } })).daten;
-  await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent(`${betreff}.pdf`)}&typ=application/pdf`, { cookie, body: beispielPdf(betreff), roh: true });
-  await s.goto(BASIS + '/ablage/start');
-  await s.getByRole('link', { name: /^Neue Post 2/ }).first().click();
-  const liste = s.getByRole('region', { name: 'Mappen' });
-  await liste.locator(`a[href$="/${brief.id}"]`).click();
-  const mappe = s.getByRole('region', { name: 'Mappe' });
-  await mappe.getByRole('heading', { name: betreff, level: 1 }).waitFor();
-  await mappe.getByRole('button', { name: 'Zuordnen …' }).click();
-  const zuordnen = mappe.getByRole('region', { name: 'Zuordnen' });
-  await zuordnen.getByLabel('Mappentyp').selectOption({ label: 'Vertragspartner' });
-  await zuordnen.getByLabel('neue anlegen').check();
-  await zuordnen.getByRole('button', { name: 'Weiter: neue Mappe ausfüllen' }).click();
-  await mappe.getByRole('heading', { name: 'Neue Mappe', level: 1 }).waitFor();
-  // Vor dem Speichern sagt die Speicherleiste, was mit der Post geschieht.
-  await mappe.getByText('Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.').waitFor();
-  await mappe.getByRole('textbox', { name: 'Name*' }).fill('Schornsteinfeger Beispiel');
-  await mappe.getByRole('button', { name: 'Mappe speichern' }).click();
-  // Danach die nächste Post aus „Neue Post“, oben mit Link zur neuen Mappe.
-  await mappe.getByRole('heading', { name: 'Beitragsrechnung Hausrat 2027', level: 1 }).waitFor();
-  await mappe.getByText(/ist angelegt, Dokumente und Historie der Post liegen dort/).waitFor();
-  await liste.getByText(/^1 Mappe\b/).waitFor();
-  await mappe.getByRole('link', { name: 'Schornsteinfeger Beispiel' }).click();
-  await mappe.getByRole('heading', { name: 'Schornsteinfeger Beispiel', level: 1 }).waitFor();
-  await mappe.getByRole('tab', { name: 'Dokumente 1' }).waitFor();
-  // Die Post liegt im Papierkorb – aufgelöst, mit Link zur Mappe, ohne „Wiederherstellen“.
-  await s.goto(BASIS + `/ablage/papierkorb/${brief.id}`);
-  await s.getByText(/Aufgelöst in Vertragspartner/).waitFor();
-  assert.equal(await s.getByRole('button', { name: 'Wiederherstellen' }).count(), 0);
-});
-
 rauchtest('„+ Neu“: Mappe anlegen und speichern', { als: LENA }, async (s) => {
   await s.goto(BASIS + '/ablage/start');
   await s.getByRole('button', { name: '+ Neu' }).click();
@@ -487,6 +452,48 @@ rauchtest('Handy: Suche', { handy: true, als: LENA }, async (s) => {
   await s.getByRole('link', { name: 'Stromvertrag Haus' }).click();
   await s.getByRole('heading', { name: 'Stromvertrag Haus', level: 1 }).waitFor();
   await keineWaagerechteRolle(s);
+});
+
+/* ---------- Zum Schluss: Wege, die den gemeinsamen Zustand ändern ---------- */
+
+rauchtest('Neue Post: neue Mappe anlegen, die Post wird zur Mappe (#936)', { als: LENA }, async (s) => {
+  // Steht am Ende, damit es den Zustand der übrigen Tests nicht ändert (Zahl in „Neue Post“, Vertragspartner); der
+  // Brief dafür ist ein eigener.
+  const cookie = await sitzung(LENA);
+  const betreff = 'Rechnung Schornsteinfeger 2027';
+  const brief = (await api('POST', '/api/post', { cookie, body: { betreff } })).daten;
+  await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent(`${betreff}.pdf`)}&typ=application/pdf`, { cookie, body: beispielPdf(betreff), roh: true });
+  await s.goto(BASIS + '/ablage/start');
+  await s.getByRole('link', { name: /^Neue Post 2/ }).first().click();
+  const liste = s.getByRole('region', { name: 'Mappen' });
+  await liste.locator(`a[href$="/${brief.id}"]`).click();
+  const mappe = s.getByRole('region', { name: 'Mappe' });
+  await mappe.getByRole('heading', { name: betreff, level: 1 }).waitFor();
+  await mappe.getByRole('button', { name: 'Zuordnen …' }).click();
+  const zuordnen = mappe.getByRole('region', { name: 'Zuordnen' });
+  await zuordnen.getByLabel('Mappentyp').selectOption({ label: 'Vertragspartner' });
+  await zuordnen.getByLabel('neue anlegen').check();
+  await zuordnen.getByRole('button', { name: 'Weiter: neue Mappe ausfüllen' }).click();
+  await mappe.getByRole('heading', { name: 'Neue Mappe', level: 1 }).waitFor();
+  // Vor dem Speichern sagt die Speicherleiste, was mit der Post geschieht.
+  await mappe.getByText('Beim Speichern wandern Dokumente und Historie der Post hierher, die Post kommt in den Papierkorb.').waitFor();
+  // Mit gewählten Dokumenten öffnet das Formular auf dem Dokumentenregister; die Felder stehen unter „Stammdaten“.
+  await mappe.getByRole('tab', { name: 'Stammdaten' }).click();
+  await mappe.getByRole('textbox', { name: 'Name*' }).fill('Schornsteinfeger Beispiel');
+  await mappe.getByRole('button', { name: 'Mappe speichern' }).click();
+  // Danach die nächste Post aus „Neue Post“, oben mit Link zur neuen Mappe.
+  await mappe.getByRole('heading', { name: 'Beitragsrechnung Hausrat 2027', level: 1 }).waitFor();
+  await mappe.getByText(/ist angelegt, Dokumente und Historie der Post liegen dort/).waitFor();
+  await liste.getByText(/^1 Mappe\b/).waitFor();
+  await mappe.getByRole('link', { name: 'Schornsteinfeger Beispiel' }).click();
+  await mappe.getByRole('heading', { name: 'Schornsteinfeger Beispiel', level: 1 }).waitFor();
+  await mappe.getByRole('tab', { name: 'Dokumente 1' }).waitFor();
+  // Die Post liegt im Papierkorb – aufgelöst, mit Link zur Mappe, ohne „Wiederherstellen“.
+  await s.goto(BASIS + `/ablage/papierkorb/${brief.id}`);
+  // In der Liste und rechts im Eintrag; rechts mit Link zur Mappe und dem Weg zurück.
+  await s.getByText(/^Aufgelöst in Vertragspartner „Schornsteinfeger Beispiel“\. Dokumente und Historie liegen dort/).waitFor();
+  await s.getByRole('link', { name: 'Schornsteinfeger Beispiel' }).first().waitFor();
+  assert.equal(await s.getByRole('button', { name: 'Wiederherstellen' }).count(), 0);
 });
 
 /* ---------- Hilfen ---------- */
