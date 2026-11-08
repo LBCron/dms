@@ -1,0 +1,95 @@
+# Versionsnummer erst beim Merge (#952): Pull Requests bringen einen Notizschnipsel docs/releases/neu/<name>.md
+# mit („art: patch|minor|keine“). Nach dem Merge vergibt dieser Workflow die nächste Nummer, setzt die drei
+# package.json, fasst die Schnipsel zu docs/releases/vX.Y.Z.md zusammen und schreibt das als eigenen Commit auf
+# main. Dieser Push startet „Prüfen und Image bauen“ – dort entstehen wie bisher Images, Tag und Release.
+#
+# Schreibrecht: nur dieser Job, nur über die GitHub-App „Ablago Version“ (Repository-Rechte: nur Contents
+# lesen/schreiben, nur in motom001/dms installiert). Ihr Schlüssel liegt in der Umgebung „versionieren“, die
+# nur von main aus nutzbar ist; im Ruleset von main darf allein diese App ohne Pull Request schreiben.
+name: Version vergeben
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/releases/neu/**']
+  workflow_dispatch:
+
+permissions: {}
+
+# Mehrere Merges kurz hintereinander: nacheinander, keiner wird verworfen (der nächste Lauf findet, was übrig ist).
+concurrency:
+  group: version-vergeben
+  cancel-in-progress: false
+
+jobs:
+  vergeben:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: versionieren
+    permissions:
+      contents: read
+      # Pull Requests zu den Schnipseln finden (für „Pull-Request: #…“ im Commit, Labels sofort-/nicht-stabil).
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Werkzeug prüfen
+        run: node --test .github/werkzeuge/version.test.mjs
+      # Erst nachsehen, ob es etwas zu vergeben gibt – das Token der App gibt es nur dann.
+      - id: noetig
+        name: Schnipsel vorhanden?
+        run: |
+          treffer=$(find docs/releases/neu -maxdepth 1 -name '*.md' ! -name README.md -exec grep -lE '^art: *(patch|minor) *$' {} + 2>/dev/null || true)
+          if [ -n "$treffer" ]; then
+            echo "ja=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Keine Schnipsel mit Release – nichts zu tun."; echo "ja=false" >> "$GITHUB_OUTPUT"
+          fi
+      - id: app
+        if: steps.noetig.outputs.ja == 'true'
+        name: Token der App „Ablago Version“
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.VERSION_APP_ID }}
+          private-key: ${{ secrets.VERSION_APP_SCHLUESSEL }}
+          permission-contents: write
+      - name: Version vergeben und auf main schreiben
+        if: steps.noetig.outputs.ja == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for versuch in 1 2 3; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            rm -f "$RUNNER_TEMP/ausgabe"
+            # Das Werkzeug läuft ohne das Token der App.
+            env -u APP_TOKEN GITHUB_OUTPUT="$RUNNER_TEMP/ausgabe" node .github/werkzeuge/version.mjs vergeben
+            version=$(sed -n 's/^version=//p' "$RUNNER_TEMP/ausgabe" 2>/dev/null || true)
+            if [ -z "$version" ]; then echo "Nichts zu vergeben."; exit 0; fi
+            # Pull Requests zu den Schnipseln: der Commit, der den Schnipsel angelegt hat, und dessen PR.
+            prs=""
+            for n in $(sed -n 's/^schnipsel=//p' "$RUNNER_TEMP/ausgabe"); do
+              c=$(git log -n1 --diff-filter=A --format=%H -- "docs/releases/neu/$n")
+              [ -n "$c" ] && prs="$prs $(gh api "repos/$REPO/commits/$c/pulls" -q '.[].number' | tr '\n' ' ')"
+            done
+            nachricht="Version $version"$'\n'
+            for p in $(echo "$prs" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -un); do nachricht+=$'\n'"Pull-Request: #$p"; done
+            git add -A
+            git commit -q -m "$nachricht"
+            if git push -q "https://x-access-token:${APP_TOKEN}@github.com/${REPO}.git" HEAD:main; then
+              echo "::notice title=Version::v$version auf main geschrieben${prs:+ (PR$prs)}"
+              exit 0
+            fi
+            echo "main hat sich bewegt – neuer Versuch ($versuch)."; sleep $((versuch * 5))
+          done
+          echo "::error::Version konnte nicht auf main geschrieben werden."; exit 1

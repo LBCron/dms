@@ -7,7 +7,7 @@ Danke für dein Interesse an Ablago! **Issues und Pull Requests sind auf Deutsch
 1. **Erst ein Issue**, als User Story („Als … möchte ich …, damit …“) mit Akzeptanzkriterien. Das gilt für Wünsche wie für Fehler.
 2. **Diskussion im Issue**, bis klar ist, was gebaut wird.
 3. **Umgesetzt wird nur, was das Label `freigegeben` trägt.** Dieses Label vergibt allein der Maintainer ([@motom001](https://github.com/motom001)). Pull Requests zu nicht freigegebenen Issues werden nicht gemergt.
-4. **Pull Request** mit `Closes #…`, Tests, angepasstem Handbuch und, für eine neue Version, Release-Notizen. Gemergt wird nur vom Maintainer.
+4. **Pull Request** mit `Closes #…`, Tests, angepasstem Handbuch und – wenn er das Programm ändert – einem Notizschnipsel `docs/releases/neu/<branch>.md` (erste Zeile `art: patch`, `art: minor` oder `art: keine`, darunter die Release-Notizen). Die Versionsnummer entsteht erst beim Merge (Entwicklerhandbuch → Release). Gemergt wird nur vom Maintainer.
 
 ## Neue Abhängigkeiten nur mit Begründung
 

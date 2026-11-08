@@ -37,6 +37,16 @@ jobs:
         with:
           node-version: 24
       # Genau die Versionen aus package-lock.json (#215).
+      # Versionsnummer erst beim Merge (#952): Wer das Programm ändert, bringt genau einen Schnipsel
+      # docs/releases/neu/<name>.md mit („art: patch|minor|keine“). Dependabot ist ausgenommen.
+      - name: Release-Notiz
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          BASIS: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch -q --depth 1 origin "$BASIS"
+          node --test .github/werkzeuge/version.test.mjs
+          node .github/werkzeuge/version.mjs pruefen "$BASIS"
       - run: npm ci --no-audit --no-fund
       # Bekannte Sicherheitslücken in den Abhängigkeiten, die im Image landen (#215): ab „hoch“ schlägt die Prüfung fehl.
       - name: Sicherheitslücken in Abhängigkeiten
@@ -184,7 +194,7 @@ jobs:
       # Einrichtungsskript für den Raspberry Pi (#578); shellcheck ist auf den GitHub-Rechnern vorinstalliert.
       - name: Einrichtungsskript prüfen
         if: matrix.plattform == 'linux/amd64'
-        run: shellcheck deploy/raspberry-pi/einrichten.sh .github/werkzeuge/update-test.sh .github/werkzeuge/stabil-pruefen.sh .github/werkzeuge/stabil-pruefen.test.sh .github/werkzeuge/stabil-bisher.sh .github/werkzeuge/stabil-auswahl.sh
+        run: shellcheck deploy/raspberry-pi/einrichten.sh .github/werkzeuge/update-test.sh .github/werkzeuge/stabil-pruefen.sh .github/werkzeuge/stabil-pruefen.test.sh .github/werkzeuge/stabil-bisher.sh .github/werkzeuge/stabil-auswahl.sh .github/werkzeuge/pr-labels.sh
       # dms-komplett (#208): Ablago und PostgreSQL in einem Container – auf beiden Architekturen.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -248,7 +258,8 @@ jobs:
             echo "neu=true" >> "$GITHUB_OUTPUT"
             echo "Neue Version v$version – nach dem Image entsteht das Release."
             # Dringende Fehlerbehebung (#907): mit „sofort-stabil“ am Pull Request wandert :stabil gleich mit.
-            sofort=$(gh api "repos/$REPO/commits/$SHA/pulls" -q 'any(.[].labels[].name; . == "sofort-stabil")' || echo false)
+            # Seit #952 gehört der Versions-Commit zu keinem PR; pr-labels.sh liest dann „Pull-Request: #…“ im Commit.
+            sofort=$(.github/werkzeuge/pr-labels.sh "$REPO" "$SHA" | tr ',' '\n' | grep -qx sofort-stabil && echo true || echo false)
             echo "sofort=$sofort" >> "$GITHUB_OUTPUT"
             if [ "$sofort" = true ]; then echo "Label sofort-stabil: :stabil wandert direkt nach dem Release."; fi
           fi
