@@ -108,6 +108,11 @@ describe('Aus Dokument ausfüllen per Paket (#511)', () => {
     await assert.rejects(x.d.erkennung.setzeStandard({ paket: 'gibtsnicht' }), (e: Fachfehler) => e.status === 422);
     const s = await x.d.erkennung.setzeStandard({ paket: 'wolke', abfluss: true });
     assert.deepEqual(s.standard, { paket: 'wolke', abfluss: true });
+    // KI-Dienste (#796): Ein neuer Mappentyp geht erst nach der Zulassung an ein Paket mit Netz – bis dahin eingebaut, mit Hinweis.
+    const gesperrt = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A);
+    assert.deepEqual(gesperrt.engine, { art: 'eingebaut' });
+    assert.match(String(gesperrt.hinweis), /nicht für KI-Dienste zugelassen/);
+    await x.d.setzeKiTyp(x.person.id, true, null);
     assert.deepEqual((await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A)).engine, { art: 'paket', id: 'wolke', name: 'Erkennung wolke' });
     // Am Typ: eingebaut – überschreibt den Standard.
     await x.d.aendereTyp(x.person.id, { ...x.person, ausDokument: { engine: 'eingebaut' } });

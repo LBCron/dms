@@ -109,6 +109,7 @@ Two notices you close with a button of their own instead – they don't come bac
 | Database connection changed, restart needed | yellow | `anbindung.neustart` |
 | DMS_LASTTEST in a real installation | yellow | `lasttest` |
 | Package still needs settings | yellow | `paket-einstellungen` |
+| New: exclude folder types from AI services (once after the update, with AI packages; “Got it”) | notice | `ki.typen` |
 | Skipped during setup | notice | `einrichtung` |
 | Good if someone else can manage – only one person may manage | notice | `verwaltung.zweite-person` |
 | Environment variables that are no longer needed (each with a reason) | notice | `variablen` |

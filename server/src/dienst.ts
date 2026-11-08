@@ -63,7 +63,7 @@ import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestl
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { dokumentsprachen, MAX_SEITENSPRACHEN, seitentexte, seitenZusammensetzen, SEITENVORSCHUB, SPRACHEN_JE_SEITE, zeichenzahl, type Seitensprache } from '../../shared/src/seitensprachen';
-import { ALLE_TYPEN, MAPPEN_EREIGNISSE, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { ALLE_TYPEN, MAPPEN_EREIGNISSE, hatSchnittstelle, istKiPaket, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type KiUebersicht, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
@@ -1180,11 +1180,15 @@ export class Dienst {
    * Ereignis „volltext.fertig“ an das Paket (nach = Dokument-Id, ab der weitergesucht wird). Liefert die Ids.
    */
   async vektorNachlauf(paket: string, modell: string, max: number, nach: string | null): Promise<string[]> {
-    const liste = await this.grundRepo.ohneVektor(modell, max, nach);
-    if (!liste.length) return [];
-    await this.grundRepo.legeEreignisseAn(liste.map((d) => ({ id: randomUUID(), paketId: paket, art: 'volltext.fertig', daten: { dokument: d.id, mappe: d.mappeId, nachberechnung: true } })));
+    const alle = await this.grundRepo.ohneVektor(modell, max, nach);
+    if (!alle.length) return [];
+    // KI-Dienste (#796): Dokumente nicht zugelassener Mappentypen bekommt ein KI-Paket auch hier nicht (Stelle rückt trotzdem weiter).
+    const gesperrt = await this.kiSperreFuer(paket);
+    const typen = await this.grundRepo.typenVon([...new Set(alle.map((d) => d.mappeId))]);
+    const liste = alle.filter((d) => { const typ = typen.get(d.mappeId); return !!typ && !gesperrt(typ); });
+    if (liste.length) await this.grundRepo.legeEreignisseAn(liste.map((d) => ({ id: randomUUID(), paketId: paket, art: 'volltext.fertig', daten: { dokument: d.id, mappe: d.mappeId, nachberechnung: true } })));
     this.ereignisWecker?.();
-    return liste.map((d) => d.id);
+    return alle.map((d) => d.id);
   }
 
   /** Das Repo – innerhalb von `inTransaktion` das der Transaktion. */
@@ -3836,7 +3840,9 @@ export class Dienst {
     // „Pakete“ am Mappentyp (#686): Der Admin kann einem Paket einzelne Mappentypen verwehren – dann sieht es sie gar nicht.
     const verwehrt = await this.paketVerwehrt();
     const lesbar = aufloesen(r.lesen);
-    const sichtbar = typen.filter((t) => lesbar.has(t.id) && !(p && verwehrt[t.id]?.includes(p.id)));
+    // KI-Dienste (#796): Ein KI-Paket sieht nur Mappentypen, die für KI-Dienste zugelassen sind – sonst gar nicht.
+    const kiGesperrt = await this.kiSperre(p);
+    const sichtbar = typen.filter((t) => lesbar.has(t.id) && !(p && verwehrt[t.id]?.includes(p.id)) && !kiGesperrt(t.id));
     // Regeln für die Rolle „Paket“ (#673) schränken die bestätigten Rechte weiter ein; ohne solche Regeln wie bisher.
     const mitRegeln = sichtbar.filter((t) => hatKontoRegeln(t, rolleId)).map((t) => kontoRegelwerk(t, rolleId));
     const lesen = mitRegeln.length ? lesefilter(sichtbar.map((t) => mitRegeln.find((x) => x.id === t.id) ?? kontoRegelwerk(t, rolleId)), wer, a)! : { offen: sichtbar.map((t) => t.id), je: [] };
@@ -3877,10 +3883,24 @@ export class Dienst {
   private async paketSiehtNicht(p: InstalliertesPaket, typId: string, mappeId: string | null): Promise<string | null> {
     const konto = (await this.konten?.dienstkonten?.())?.find((b) => b.paketId === p.id);
     const z = await this.zugriff({ id: konto?.id ?? `paket:${p.id}`, rolle: 'mitglied', art: 'dienst', paketId: p.id });
-    if (!z.typen.has(typId)) return (await this.paketVerwehrt())[typId]?.includes(p.id) ? t('meldungen.dienst.mappentyp-fuer-dieses-paket') : t('meldungen.dienst.kein-leserecht-am-mappentyp');
+    if (!z.typen.has(typId)) return (await this.paketVerwehrt())[typId]?.includes(p.id) ? t('meldungen.dienst.mappentyp-fuer-dieses-paket') : (await this.kiSperre(p))(typId) ? t('meldungen.dienst.ki-nicht-zugelassen') : t('meldungen.dienst.kein-leserecht-am-mappentyp');
     const m = mappeId ? await this.repo.holeMappe(mappeId) : null;
     if (m && !(await this.rechteAn(z, m)).R) return t('meldungen.dienst.kein-leserecht-an-dieser');
     return null;
+  }
+
+  /**
+   * Ein Ereignis bzw. Auftrag ging wegen der KI-Sperre nicht an das Paket (#796): Dokumente, die auf das Paket warten
+   * (Texterkennung, Volltext, Umwandlung, Archivfassung), warten nicht weiter – sie gelten als ausgelassen.
+   */
+  private async kiUebersprungen(paket: string, art: string, daten: Record<string, unknown>) {
+    const grund = t('meldungen.dienst.ki-nicht-zugelassen');
+    try {
+      if (art === 'datei.archivfassung') await this.nachTexterkennungsEreignis(paket, { art, daten }, { ok: false, text: '', fehler: grund, aufgegeben: true });
+      else if (art === 'volltext.fertig' || art === 'datei.volltext' || art === 'datei.umwandeln') await this.nachTexterkennungsEreignis(paket, { art, daten }, { ok: true, text: grund });
+    } catch (x) {
+      protokoll.modul('werkbank').warn('Stand nach KI-Sperre nicht nachgetragen', { paket, art, fehler: (x as Error).message });
+    }
   }
 
   /** Je Mappentyp-Id die Pakete, denen der Admin diesen Typ verwehrt hat (Einstellung, Teil der Sicherung). */
@@ -3888,6 +3908,83 @@ export class Dienst {
     const v = await this.einstellungen?.lies('paket_verwehrt');
     if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
     return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, x]) => Array.isArray(x)).map(([k, x]) => [k, (x as unknown[]).map(String)]));
+  }
+
+  /* ---------- KI-Dienste und Mappentypen (#796) ---------- */
+
+  /**
+   * Mappentypen, die für KI-Dienste zugelassen sind (Einstellung `ki_typen`, Teil der Sicherung). Was nicht darin steht –
+   * auch jeder neue Mappentyp –, geht an kein KI-Paket. Fehlt die Einstellung (frische Installation), ist nichts
+   * zugelassen. `hinweis`: nach dem Update einmal in der Werkbank sagen, dass man jetzt ausschließen kann.
+   */
+  async kiTypen(): Promise<{ zugelassen: Set<string>; hinweis: boolean }> {
+    const v = await this.einstellungen?.lies('ki_typen') as { zugelassen?: unknown; hinweis?: unknown } | null | undefined;
+    const liste = v && typeof v === 'object' && Array.isArray(v.zugelassen) ? v.zugelassen.map(String) : [];
+    return { zugelassen: new Set(liste), hinweis: !!v && v.hinweis === true };
+  }
+
+  private async schreibeKiTypen(k: { zugelassen: Set<string>; hinweis: boolean }) {
+    if (!this.einstellungen) throw new Fachfehler(404, t('meldungen.dienst.einstellungen-sind-nicht'));
+    await this.einstellungen.schreibe('ki_typen', { zugelassen: [...k.zugelassen].sort(), ...(k.hinweis ? { hinweis: true } : {}) });
+  }
+
+  /**
+   * Für ein Paket: Ist dieser Mappentyp für es gesperrt, weil es ein KI-Paket ist und der Typ nicht zugelassen ist?
+   * Für Pakete ohne Netz (oder ohne Zugriff auf Inhalte) immer nein. Je Aufruf neu gelesen – Änderungen wirken sofort.
+   */
+  async kiSperre(p: Pick<InstalliertesPaket, 'laeufer'> | null | undefined): Promise<(typId: string) => boolean> {
+    if (!p || !istKiPaket(p.laeufer)) return () => false;
+    const { zugelassen } = await this.kiTypen();
+    return (typId) => !zugelassen.has(typId);
+  }
+
+  /** Wie `kiSperre`, für ein Paket nach Id (Erkennen, Antworten, Übersetzen). Unbekanntes Paket: nichts gesperrt. */
+  async kiSperreFuer(paketId: string): Promise<(typId: string) => boolean> {
+    return this.kiSperre((await this.repo.listePakete()).find((x) => x.id === paketId));
+  }
+
+  /**
+   * Für die Werkbank: alle Mappentypen (außer Benutzer) mit „zugelassen“, die KI-Pakete und welche Mappentypen jedes
+   * bekommt – bei Paketen mit Leserecht die lesbaren (bestätigte Rechte, nicht verwehrt) und zugelassenen, bei
+   * Paketen, die Ausschnitte vom Kern bekommen (Antworten, Erkennen, Übersetzen), alle zugelassenen.
+   */
+  async kiUebersicht(): Promise<KiUebersicht> {
+    const [typen, pakete, verwehrt, k] = [await this.repo.listeTypen(), await this.repo.listePakete(), await this.paketVerwehrt(), await this.kiTypen()];
+    const liste = typen.filter((x) => x.system !== 'benutzer').sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    const ki: KiUebersicht['pakete'] = [];
+    for (const p of pakete) {
+      const l = p.laeufer;
+      if (!l || !istKiPaket(l)) continue;
+      const lesbar = await this.typverweise(p.id, pakete, typen);
+      const ueberKern = (l.rechte.schnittstellen ?? []).some((s) => s === 'dms:antworten' || s === 'dms:erkennen' || s === 'dms:uebersetzen');
+      const darf = lesbar(l.rechte.lesen);
+      const bekommt = liste.filter((x) => k.zugelassen.has(x.id) && (ueberKern || (darf.has(x.id) && !verwehrt[x.id]?.includes(p.id)))).map((x) => x.id);
+      ki.push({ id: p.id, name: p.name, bekommt });
+    }
+    return {
+      typen: liste.map((x) => ({ id: x.id, name: x.name, zugelassen: k.zugelassen.has(x.id), ...(x.system ? { system: x.system } : {}) })),
+      pakete: ki.sort((a, b) => a.name.localeCompare(b.name, 'de')),
+      hinweis: k.hinweis && ki.length > 0,
+    };
+  }
+
+  /** Einen Mappentyp für KI-Dienste zulassen bzw. sperren; wirkt sofort (Lesen, Ereignisse, Antworten, Erkennen, Übersetzen). */
+  async setzeKiTyp(typId: string, zugelassen: boolean, von: string | null): Promise<KiUebersicht> {
+    const typ = await this.repo.holeTyp(typId);
+    if (!typ) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
+    if (typ.system === 'benutzer') throw new Fachfehler(422, t('meldungen.dienst.ki-benutzer'));
+    const k = await this.kiTypen();
+    if (zugelassen) k.zugelassen.add(typId); else k.zugelassen.delete(typId);
+    await this.schreibeKiTypen(k);
+    protokoll.modul('werkbank').info(zugelassen ? 'Mappentyp für KI-Dienste zugelassen' : 'Mappentyp für KI-Dienste gesperrt', { typ: typ.name, von });
+    return this.kiUebersicht();
+  }
+
+  /** Den Hinweis nach dem Update („Mappentypen lassen sich jetzt ausschließen“) nicht mehr zeigen. */
+  async kiHinweisGelesen(): Promise<KiUebersicht> {
+    const k = await this.kiTypen();
+    if (k.hinweis) await this.schreibeKiTypen({ ...k, hinweis: false });
+    return this.kiUebersicht();
   }
 
   /**
@@ -4688,6 +4785,17 @@ export class Dienst {
         const grund = await this.paketSiehtNicht(p, e.daten.typ, typeof e.daten.mappe === 'string' ? e.daten.mappe : null);
         if (grund) { protokoll.modul('werkbank').info('Ereignis nicht an Paket zugestellt', { paket: p.id, ereignis: e.art, mappe: e.daten.mappe ?? null, grund }); continue; }
       }
+      // KI-Dienste (#796): Ereignisse zu Dokumenten und Mappen eines nicht zugelassenen Mappentyps bekommt ein KI-Paket
+      // nicht – auch nicht Dateiname oder Ids. Lässt sich der Typ nicht bestimmen, gilt er als gesperrt (nie falsch).
+      if (!k.mappentyp && istKiPaket(l) && (l.ereignisse.includes(e.art as EreignisArt) || alt.some((a) => l.ereignisse.includes(a)))) {
+        const mappe = typeof e.daten.mappe === 'string' ? e.daten.mappe : null;
+        const typ = typeof e.daten.typ === 'string' ? e.daten.typ : mappe ? (await this.grundRepo.holeMappe(mappe))?.typId ?? null : null;
+        if ((typ && (await this.kiSperre(p))(typ)) || (!typ && (mappe || typeof e.daten.dokument === 'string'))) {
+          protokoll.modul('werkbank').info('Ereignis nicht an Paket zugestellt', { paket: p.id, ereignis: e.art, mappe, grund: t('meldungen.dienst.ki-nicht-zugelassen') });
+          await this.kiUebersprungen(p.id, e.art, e.daten);
+          continue;
+        }
+      }
       const ohneText = e.art === 'volltext.fertig' && e.daten.text === false && !kenntVolltextOhneText(p);
       if (l.ereignisse.includes(e.art as EreignisArt) && !ohneText) zustellungen.push({ paket: p, art: e.art as EreignisArt });
       for (const a of alt) if (l.ereignisse.includes(a) && e.daten.quelle === 'kern') zustellungen.push({ paket: p, art: a });
@@ -4713,6 +4821,16 @@ export class Dienst {
     try {
       const p = (await this.repo.listePakete()).find((x) => x.id === paket && x.laeufer?.ereignisse.includes(art));
       if (!p) return;
+      // KI-Dienste (#796): Dateien eines nicht zugelassenen Mappentyps gehen an kein KI-Paket; der Auftrag gilt als aufgegeben.
+      if (typeof daten.mappe === 'string' && istKiPaket(p.laeufer)) {
+        const typ = (await this.repo.holeMappe(daten.mappe))?.typId ?? null;
+        if (!typ || (await this.kiSperre(p))(typ)) {
+          protokoll.modul('werkbank').info('Auftrag nicht an Paket gegeben', { paket: p.id, art, grund: t('meldungen.dienst.ki-nicht-zugelassen') });
+          // Erst nach dem Aufrufer: Der setzt den Stand des Dokuments („wartet auf Paket“) oft erst danach.
+          this.danach(() => { setTimeout(() => void this.kiUebersprungen(p.id, art, daten), 1000).unref?.(); });
+          return;
+        }
+      }
       await this.repo.legeEreignisseAn([{ id: randomUUID(), paketId: p.id, art, daten }]);
       this.danach(() => this.ereignisWecker?.());
     } catch (e) {

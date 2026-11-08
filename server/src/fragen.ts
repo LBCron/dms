@@ -63,11 +63,11 @@ export class FragenAnDieAblage {
    * Ausschnitte zu einer Frage – nur aus Mappen, die der Fragende lesen darf. Reihenfolge: abwechselnd beste
    * Dokumente, passende Mappen (Angaben) und ähnliche Dokumente; je Dokument und je Mappe (Angaben) einmal.
    */
-  async ausschnitte(z: Zugriff | undefined, frage: string, vorher: string[], g: FragenGrenzen): Promise<FrageAusschnitt[]> {
+  async ausschnitte(z: Zugriff | undefined, frage: string, vorher: string[], g: FragenGrenzen, kiGesperrt: (typId: string) => boolean = () => false): Promise<FrageAusschnitt[]> {
     const woerter = frageWoerter([frage, ...vorher].join(' '));
     const typen = new Map((await this.repo().listeTypen()).map((t) => [t.id, t]));
-    // Benutzer-Mappen gehen nie an ein Paket (wie bei Paketen allgemein).
-    const erlaubt = (typId: string) => { const t = typen.get(typId); return !!t && t.system !== 'benutzer'; };
+    // Benutzer-Mappen gehen nie an ein Paket (wie bei Paketen allgemein); an ein KI-Paket nur zugelassene Mappentypen (#796).
+    const erlaubt = (typId: string) => { const t = typen.get(typId); return !!t && t.system !== 'benutzer' && !kiGesperrt(typId); };
     const anzahl = g.ausschnitte;
     const f = await this.repo().fragenFundstellen({ woerter, lesen: z?.lesen ?? null, dokumente: anzahl * 2, mappen: anzahl });
     const aehnlich = await this.d.aehnlicheZuText(z, frage, anzahl * 2, VEKTOR_MS).catch(() => []);
@@ -75,7 +75,7 @@ export class FragenAnDieAblage {
     const je = Math.max(200, Math.min(AUSSCHNITT_MAX, Math.floor((g.zeichen / Math.max(1, anzahl)) * 1.5)));
     type Kandidat = { mappeId: string; quelle: FrageAusschnitt['quelle']; text: () => Promise<string> };
     const dok: Kandidat[] = f.dokumente.map((x) => ({ mappeId: x.mappeId, quelle: { art: 'dokument', id: x.id, name: x.name }, text: async () => ausschnittUm(x.text, woerter, je) }));
-    const angaben: Kandidat[] = f.mappen.map((m) => ({ mappeId: m.id, quelle: { art: 'angaben' }, text: () => this.angabenText(z, m, typen.get(m.typId), je) }));
+    const angaben: Kandidat[] = f.mappen.map((m) => ({ mappeId: m.id, quelle: { art: 'angaben' }, text: () => this.angabenText(z, m, typen.get(m.typId), je, kiGesperrt) }));
     const volltexte = await this.repo().volltexte(aehnlich.map((x) => x.dokumentId).filter((id) => !f.dokumente.some((d) => d.id === id)));
     const namen = new Map<string, string>();
     for (const x of aehnlich) if (volltexte.has(x.dokumentId)) namen.set(x.dokumentId, (await this.repo().holeDokument(x.dokumentId))?.name ?? '');
@@ -109,11 +109,13 @@ export class FragenAnDieAblage {
   }
 
   /** Angaben einer Mappe als Text: Feld: Wert – ohne Passwortfelder; Verweise mit dem Titel, wenn lesbar. */
-  private async angabenText(z: Zugriff | undefined, m: Mappe, t: Mappentyp | undefined, max: number): Promise<string> {
+  private async angabenText(z: Zugriff | undefined, m: Mappe, t: Mappentyp | undefined, max: number, kiGesperrt: (typId: string) => boolean = () => false): Promise<string> {
     if (!t) return '';
     const zeilen: string[] = [];
     const ziele = t.felder.filter((f) => f.typ === 'referenz').flatMap((f) => (Array.isArray(m.werte[f.key]) ? m.werte[f.key] as string[] : typeof m.werte[f.key] === 'string' ? [m.werte[f.key] as string] : []));
     const lesbar = ziele.length ? await this.d.lesbare(z, ziele) : new Set<string>();
+    // Titel verknüpfter Mappen auch nur aus Mappentypen, die an das (KI-)Paket dürfen (#796).
+    if (lesbar.size) { const zt = await this.repo().typenVon([...lesbar]); for (const id of [...lesbar]) { const x = zt.get(id); if (!x || kiGesperrt(x)) lesbar.delete(id); } }
     const titel = ziele.length ? await this.repo().titelVon([...lesbar]) : new Map<string, string>();
     for (const f of t.felder) {
       const w = this.wertText(f, m.werte[f.key], (id) => (lesbar.has(id) ? titel.get(id) ?? null : null));
@@ -154,7 +156,7 @@ export class FragenAnDieAblage {
       const verlauf = liesVerlauf(e.verlauf);
       const g = await this.grenzen();
       const vorige = verlauf.filter((v) => v.rolle === 'frage').slice(-1).map((v) => v.text);
-      ausschnitte = await this.ausschnitte(z, frage, vorige, g);
+      ausschnitte = await this.ausschnitte(z, frage, vorige, g, await this.d.kiSperreFuer(paket.id));
       const mappen = new Set(ausschnitte.map((a) => a.mappe.id)).size;
       schreibe({ art: 'ausschnitte', ausschnitte, mappen });
       geschrieben = true;

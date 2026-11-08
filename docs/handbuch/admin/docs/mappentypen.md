@@ -10,7 +10,7 @@ Wie Benutzer mit den Mappen arbeiten, beschreibt das [Benutzerhandbuch](https://
 
 ## Aufbau des Editors
 
-Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: **Grunddaten → Felder → Titel → Trefferlisten → Register → Archivmodus → Stempel beim Weitergeben → Erkennung → Berechtigungen → Testlauf**.
+Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: **Grunddaten → Felder → Titel → Trefferlisten → Register → Archivmodus → Stempel beim Weitergeben → Erkennung → Berechtigungen → Testlauf → Pakete → KI-Dienste**.
 
 - Jeder Bereich lässt sich mit einem Klick auf seine Überschrift **ein- und ausklappen**. Eingeklappt zeigt er das Wichtigste in einer Zeile, z. B. „8 Felder, 2 Pflicht, 1 Frist“, die Titel-Vorlage mit einem Beispiel oder „Standard: R · 3 Regeln“.
 - Ein **neuer** Mappentyp ist ganz aufgeklappt, ein **bestehender** startet eingeklappt. Was du auf- oder zuklappst, merkt sich dein Gerät je Mappentyp.
@@ -381,6 +381,10 @@ Nach dem Archivmodus stellst du ein, ob beim Herunterladen, Exportieren und Vers
 ## Berechtigungen
 
 Unter Registern und Archivmodus legst du fest, wer Mappen dieses Mappentyps anlegen, lesen, bearbeiten, löschen und Passwörter darin sehen darf – mit der Zeile **Standard** und Regeln. Gespeichert wird mit **Mappentyp speichern**; darunter probierst du die Regeln im **Testlauf** aus – auch ungespeicherte. Alles Weitere steht unter [Berechtigungen](berechtigungen.md).
+
+## KI-Dienste { #ki-dienste }
+
+Ganz unten legst du fest, ob der Mappentyp **an KI-Dienste gehen darf** – an Pakete, die Inhalte ins Netz schicken können (etwa für *Frag deine Ablage* oder *Aus Dokument ausfüllen*). Ohne Haken bekommt kein solches Paket etwas aus diesem Mappentyp. Der Haken gilt sofort, unabhängig von **Mappentyp speichern**. **Neue Mappentypen – auch Kopien – sind gesperrt, bis du sie zulässt.** Alles Weitere unter [Pakete → KI-Dienste und Mappentypen](pakete.md#ki-dienste).
 
 ## Mappentyp kopieren
 

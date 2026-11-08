@@ -176,7 +176,7 @@ Some packages bring **code** – for instance their own text recognition or rule
 - **Limits:** every call has at most 256 MB of memory and 2 minutes of time; at most two calls run at the same time. Whatever breaks the limits is cancelled without disturbing Ablago.
 - **Retrying:** Ablago remembers events. If a call fails, the runner tries again after 1, 5, 30, 120 and 360 minutes and then gives up. During maintenance (e.g. when restoring) the runner rests.
 
-**Workbench → Packages → *package*** shows in the section **Package runner** the state, the latest calls with duration and memory, open and given-up events and the package's log. Messages are additionally in Ablago's [log](fehlersuche.md#protokoll). The **state** is one of these:
+**Workbench → Packages → *package*** shows in the section **Package runner** the state, the latest calls with duration and memory, open and given-up events and the package's log – with its [network calls](#netzaufrufe). Messages are additionally in Ablago's [log](fehlersuche.md#protokoll). The **state** is one of these:
 
 | State | Meaning |
 |---|---|
@@ -271,6 +271,41 @@ A package such as **AI assistant** doesn't compute itself but asks a service tha
 - **Confirm.** When saving a new or changed address, Ablago asks **"Send data to this address?"** and names it. Only with **Confirm address and save** does it apply; the log records "Service address of package … confirmed" with the address.
 - **Only there.** The package runner only allows network access to this address and paths below it (same computer, same port), without redirects. Because services in the home network rarely speak HTTPS, `http://` is also allowed here. Credentials don't belong in the address but in a field of their own (secret).
 - **Operating and hosting this service is outside Ablago.** If it runs at your place in your own network, the data doesn't leave the house. If it belongs to another provider, that is a **relationship of trust with this service provider** – as with hosting Ablago itself: location, data processing, storage, use for training. You make this decision by entering and confirming; Ablago has no further switch for it. It already shows the notice in the preview before installation.
+
+### AI services and folder types { #ki-dienste }
+
+An **AI package** – Ablago also says *AI service* – is a package with code that **may use the network** (a fixed address or a [service address](#dienst-adresse)) and **can receive content**: read folders or documents, or get excerpts, text and files from the core (e.g. *Ask your library*, *Fill in from document*, *Show translation*, vectors, full text). Packages that compute in the house **without network** – such as *KI lokal – Ähnlichkeit* or *Texterkennung* – are not AI packages. Neither is the *off-site copy*: it only gets the encrypted backup.
+
+An AI package **only receives content from folder types that are allowed for AI services**:
+
+- **Per folder type:** Workbench → Folder types → *folder type* → section **AI services** → **May go to AI services**. Without the tick no AI package gets anything from this folder type – no folders, no documents, no excerpts, no events. This takes effect immediately and for all AI packages.
+- **On the package's page:** Workbench → Packages → *AI package* → **AI service: folder types** shows which folder types the package receives content from, and below all folder types to allow or block. For packages that read folders themselves, their permissions and [Packages on the folder type](berechtigungen.md#pakete-am-mappentyp) also count.
+- **New folder types are blocked until you allow them.** That way sensitive folder types such as *Health* never go out unintentionally – not even when a package brings them or you copy a folder type. A **new installation** has nothing allowed yet; after installing an AI package you allow on its page what it should receive.
+- **After the update** your existing folder types stay allowed as before, so nothing quietly stops working. The [Overview](uebersicht.md) points this out once (*New: exclude folder types from AI services*) as long as AI packages are installed; **Got it** hides the notice.
+- **Users** never go to a package.
+
+**What blocked means, per path:**
+
+| Path | Blocked folder type |
+|---|---|
+| Reading via the API (folders, documents, full text, search, similar) | The package doesn't see the folder type – as with [Packages on the folder type](berechtigungen.md#pakete-am-mappentyp). |
+| Events (e.g. *Full text finished*, *Document uploaded*, folder events) | Don't go to the package, not even ids or file names; the log records "Ereignis nicht an Paket zugestellt". |
+| Jobs (full text, conversion, archive version) and recalculating vectors | Don't go to the package; waiting documents stop waiting. |
+| Ask your library | No excerpts from this folder type, nor titles of linked folders from it. |
+| Fill in from document | If the target folder type or that of a source document is blocked, nothing goes to the package; the built-in recognition takes over with a notice. |
+| Show translation | Refused with a notice – nothing goes to the package. |
+
+Not affected: search terms sent to a vector package for the similarity search don't belong to any folder type.
+
+### Network calls in the log { #netzaufrufe }
+
+The package runner writes every call a package makes to the network into the **package's log** (Workbench → Packages → *package* → Package runner → **Log: output and network calls**): time, method, **host** (with port, without path, query and credentials), bytes **sent** and **received** and the status, e.g. "Network: 12 × PUT cloud.example.org – 201, 3.4 MB sent, 2 KB received". Identical calls in quick succession (within one minute) share one entry, so that e.g. chunked uploads of the off-site copy don't flood the log.
+
+- **Blocked** calls (address neither in the package nor confirmed as service address) appear as a **warning** – nothing went out.
+- Ablago's [log](fehlersuche.md#protokoll) gets **one line** per event or action, "Paket *id*: Netzaufrufe" (level *info*), with the totals: number, blocked, hosts, bytes sent and received.
+- **Never content and no headers:** neither what was sent nor the response, no paths, no query, no keys.
+
+This is how you check a package you trusted: when it sent how much to which service.
 
 ### Recognition by a package { #erkennung-durch-ein-paket }
 

@@ -926,5 +926,6 @@
   "darstellung.verwendung.frist": "Frist",
   "darstellung.verwendung.frist-empfaenger": "Empfänger der Frist bei „{feld}“",
   "darstellung.verwendung.archiv": "Stichtag im Archivmodus",
-  "darstellung.verwendung.berechtigung": "Berechtigung „{name}“"
+  "darstellung.verwendung.berechtigung": "Berechtigung „{name}“",
+  "pakete.ki-nur-zugelassene": "KI-Dienst: bekommt nur Inhalte aus Mappentypen, die du für KI-Dienste zulässt – neue erst nach Zulassung"
 }

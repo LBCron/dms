@@ -369,10 +369,12 @@ export class Erkennung {
     const { typ, mappe } = await this.typFuer(typId, typeof e.mappe === 'string' && e.mappe ? e.mappe : undefined, z);
     const teile: string[] = [];
     if (typeof e.text === 'string' && e.text.trim()) teile.push(e.text.slice(0, TEXT_MAX));
+    // Mappentypen, aus denen der Text stammt (#796): Gesperrte gehen an kein KI-Paket.
+    const quellTypen = new Set<string>([typ.id]);
     for (const id of (Array.isArray(e.dokumente) ? e.dokumente : []).filter((x): x is string => typeof x === 'string').slice(0, 10)) {
       const d = await this.repo().holeDokument(id);
       if (!d) throw new Fachfehler(404, t('meldungen.erkennung.dieses-dokument-gibt-es'));
-      await this.d.pruefeRecht(z, d.mappeId, 'R');
+      quellTypen.add((await this.d.pruefeRecht(z, d.mappeId, 'R')).typId);
       const eintrag = await this.repo().volltext(id);
       if (!eintrag?.trim()) throw new Fachfehler(409, t('meldungen.erkennung.hat-noch-keinen-volltext', { name: d.name }));
       teile.push(eintrag);
@@ -389,9 +391,15 @@ export class Erkennung {
     const wahl = text.trim() ? await this.wahlFuer(typ.id) : { engine: ENGINE_EINGEBAUT, abfluss: false };
     if (wahl.engine !== ENGINE_EINGEBAUT) {
       const p = this.anbieter?.pakete().find((x) => x.id === wahl.engine);
+      const gesperrt = p ? await this.d.kiSperreFuer(p.id) : () => false;
+      const kiTyp = [...quellTypen].find((x) => gesperrt(x));
       if (!p) hinweis = t('meldungen.erkennung.das-paket-fuer-die', { engine: wahl.engine });
       else if (p.netz && !wahl.abfluss) hinweis = t('meldungen.erkennung.fuer-ist-der-datenabfluss', { name: p.name });
-      else {
+      else if (kiTyp) {
+        // KI-Dienste (#796): Ziel- oder Quell-Mappentyp nicht zugelassen – nichts an das Paket, die eingebaute Erkennung übernimmt.
+        hinweis = t('meldungen.erkennung.ki-nicht-zugelassen', { name: p.name, typ: (await this.repo().holeTyp(kiTyp))?.name ?? '' });
+        log.info('Erkennung nicht an Paket gegeben (Mappentyp nicht für KI-Dienste zugelassen)', { typ: typ.name, paket: p.id });
+      } else {
         try {
           const r = await this.perPaket(p, typ, text, dokIds, erlaubt);
           // Geantwortet, aber nichts, was die Prüfung übersteht (#564): wie bei einem Fehler die eingebaute Erkennung.

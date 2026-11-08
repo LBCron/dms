@@ -1748,7 +1748,7 @@
   "pakete.grenzen": "Grenzen",
   "pakete.mb-speicher-s-je": "{speicherMB} MB Speicher, {sekunden} s je Aufruf, {parallel} gleichzeitig",
   "pakete.ok": "ok",
-  "pakete.ausgaben-des-pakets": "Ausgaben des Pakets",
+  "pakete.ausgaben-des-pakets": "Protokoll: Ausgaben und Netzaufrufe",
   "pakete.vorschau": "Vorschau",
   "pakete.update-auf": "Update auf {version}",
   "pakete.vorschau-2": "Vorschau: {name} {version}",

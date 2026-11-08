@@ -178,7 +178,7 @@ Manche Pakete bringen **Code** mit – etwa eine eigene Texterkennung oder Regel
 - **Grenzen:** Jeder Aufruf hat höchstens 256 MB Speicher und 2 Minuten Zeit; es laufen höchstens zwei Aufrufe gleichzeitig. Was die Grenzen reißt, bricht ab, ohne Ablago zu stören.
 - **Wiederholen:** Ereignisse merkt sich Ablago. Scheitert ein Aufruf, versucht es der Läufer nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf. Während einer Wartung (z. B. beim Wiederherstellen) ruht der Läufer.
 
-**Werkbank → Pakete → *Paket*** zeigt im Abschnitt **Paket-Läufer** den Stand, die letzten Aufrufe mit Dauer und Speicher, offene und aufgegebene Ereignisse und das Protokoll des Pakets. Meldungen stehen zusätzlich im [Protokoll](fehlersuche.md#protokoll) von Ablago. Der **Stand** ist einer von diesen:
+**Werkbank → Pakete → *Paket*** zeigt im Abschnitt **Paket-Läufer** den Stand, die letzten Aufrufe mit Dauer und Speicher, offene und aufgegebene Ereignisse und das Protokoll des Pakets – mit seinen [Netzaufrufen](#netzaufrufe). Meldungen stehen zusätzlich im [Protokoll](fehlersuche.md#protokoll) von Ablago. Der **Stand** ist einer von diesen:
 
 | Stand | Bedeutung |
 |---|---|
@@ -273,6 +273,41 @@ Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst,
 - **Bestätigen.** Beim Speichern einer neuen oder geänderten Adresse fragt Ablago **„Daten an diese Adresse schicken?“** und nennt sie. Erst mit **Adresse bestätigen und speichern** gilt sie; das Protokoll vermerkt „Dienst-Adresse von Paket … bestätigt“ mit der Adresse.
 - **Nur dorthin.** Der Paket-Läufer erlaubt Netz nur zu dieser Adresse und Pfaden darunter (gleicher Rechner, gleicher Port), ohne Weiterleitungen. Weil Dienste im Heimnetz selten HTTPS sprechen, ist hier auch `http://` erlaubt. Zugangsdaten gehören nicht in die Adresse, sondern in ein eigenes Feld (Geheimnis).
 - **Betrieb und Hosting dieses Dienstes liegen außerhalb von Ablago.** Läuft er bei dir im eigenen Netz, verlassen die Daten das Haus nicht. Gehört er einem anderen Anbieter, ist das eine **Vertrauensbeziehung zu diesem Dienstleister** – wie beim Hosten von Ablago selbst: Standort, Auftragsverarbeitung, Speicherung, Nutzung zum Training. Diese Entscheidung triffst du mit dem Eintragen und Bestätigen; Ablago hat dafür keinen weiteren Schalter. Den Hinweis zeigt es auch schon in der Vorschau vor der Installation.
+
+### KI-Dienste und Mappentypen { #ki-dienste }
+
+Ein **KI-Paket** – Ablago sagt auch *KI-Dienst* – ist ein Paket mit Code, das **ins Netz darf** (feste Adresse oder [Dienst-Adresse](#dienst-adresse)) und **Inhalte bekommen kann**: Mappen oder Dokumente lesen oder Ausschnitte, Text und Dateien vom Kern bekommen (z. B. *Frag deine Ablage*, *Aus Dokument ausfüllen*, *Übersetzung anzeigen*, Vektoren, Volltext). Pakete, die **ohne Netz** im Haus rechnen – etwa *KI lokal – Ähnlichkeit* oder *Texterkennung* –, sind keine KI-Pakete. Auch die *Kopie außer Haus* nicht: Sie bekommt nur die verschlüsselte Sicherung.
+
+Ein KI-Paket bekommt **nur Inhalte aus Mappentypen, die für KI-Dienste zugelassen sind**:
+
+- **Je Mappentyp:** Werkbank → Mappentypen → *Mappentyp* → Abschnitt **KI-Dienste** → **Darf an KI-Dienste gehen**. Ohne Haken bekommt kein KI-Paket etwas aus diesem Mappentyp – keine Mappen, keine Dokumente, keine Ausschnitte, keine Ereignisse. Das gilt sofort und für alle KI-Pakete.
+- **Auf der Seite des Pakets:** Werkbank → Pakete → *KI-Paket* → **KI-Dienst: Mappentypen** zeigt, aus welchen Mappentypen das Paket Inhalte bekommt, und darunter alle Mappentypen zum Zulassen oder Sperren. Bei Paketen, die selbst Mappen lesen, zählen dafür auch ihre Rechte und [Pakete am Mappentyp](berechtigungen.md#pakete-am-mappentyp).
+- **Neue Mappentypen sind gesperrt, bis du sie zulässt.** So gehen sensible Mappentypen wie *Gesundheit* nie ungewollt hinaus – auch nicht, wenn ein Paket sie mitbringt oder du einen Mappentyp kopierst. Eine **neue Installation** hat noch nichts zugelassen; nach dem Installieren eines KI-Pakets lässt du auf seiner Seite zu, was es bekommen soll.
+- **Nach dem Update** bleiben deine bisherigen Mappentypen wie vorher zugelassen, damit nichts unbemerkt aufhört zu funktionieren. Die [Übersicht](uebersicht.md) weist einmal darauf hin (*Neu: Mappentypen von KI-Diensten ausschließen*), solange KI-Pakete installiert sind; **Verstanden** blendet den Hinweis aus.
+- **Benutzer** gehen nie an ein Paket.
+
+**Was gesperrt heißt, je Weg:**
+
+| Weg | Gesperrter Mappentyp |
+|---|---|
+| Lesen über die API (Mappen, Dokumente, Volltext, Suche, Ähnliche) | Das Paket sieht den Mappentyp nicht – wie bei [Pakete am Mappentyp](berechtigungen.md#pakete-am-mappentyp). |
+| Ereignisse (z. B. *Volltext fertig*, *Dokument hochgeladen*, Mappen-Ereignisse) | Gehen nicht an das Paket, auch nicht Ids oder Dateinamen; das Protokoll vermerkt „Ereignis nicht an Paket zugestellt“. |
+| Aufträge (Volltext, Umwandeln, Archivfassung) und Nachberechnung der Vektoren | Gehen nicht an das Paket; wartende Dokumente warten nicht weiter. |
+| Frag deine Ablage | Keine Ausschnitte aus diesem Mappentyp, auch keine Titel verknüpfter Mappen daraus. |
+| Aus Dokument ausfüllen | Ist der Ziel-Mappentyp oder der eines Quelldokuments gesperrt, geht nichts an das Paket; die eingebaute Erkennung übernimmt mit Hinweis. |
+| Übersetzung anzeigen | Abgelehnt mit Hinweis – nichts geht an das Paket. |
+
+Nicht betroffen: Suchbegriffe, die für die Ähnlichkeitssuche an ein Vektor-Paket gehen, gehören zu keinem Mappentyp.
+
+### Netzaufrufe im Protokoll { #netzaufrufe }
+
+Jeden Aufruf eines Pakets ins Netz schreibt der Paket-Läufer ins **Protokoll des Pakets** (Werkbank → Pakete → *Paket* → Paket-Läufer → **Protokoll: Ausgaben und Netzaufrufe**): Zeit, Methode, **Host** (mit Port, ohne Pfad, Query und Zugangsdaten), Bytes **hin** und **zurück** und den Status, etwa „Netz: 12 × PUT cloud.example.org – 201, 3,4 MB hin, 2 KB zurück“. Gleiche Aufrufe kurz hintereinander (innerhalb einer Minute) stehen in einem Eintrag, damit z. B. Teile-Uploads der Kopie außer Haus das Protokoll nicht fluten.
+
+- **Abgelehnte** Aufrufe (Adresse weder im Paket noch als Dienst-Adresse bestätigt) stehen als **Warnung** darin – hinaus ging dabei nichts.
+- Im [Protokoll](fehlersuche.md#protokoll) von Ablago steht je Ereignis bzw. Aktion **eine Zeile** „Paket *id*: Netzaufrufe“ (Stufe *info*) mit der Summe: Anzahl, abgelehnte, Hosts, Bytes hin und zurück.
+- **Nie Inhalte und keine Köpfe:** weder was geschickt wurde noch die Antwort, keine Pfade, keine Query, keine Schlüssel.
+
+So prüfst du ein Paket, dem du vertraut hast: wann es wie viel an welchen Dienst geschickt hat.
 
 ### Erkennung durch ein Paket { #erkennung-durch-ein-paket }
 

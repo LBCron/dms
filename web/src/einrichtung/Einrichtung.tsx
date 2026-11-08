@@ -10,7 +10,7 @@ import { feldVerwendung, registerAusblendbar } from '../../../shared/src/darstel
 import { FILTER } from '../../../shared/src/titelfilter';
 import { wirksameTypen } from '../../../shared/src/sichten';
 import { OFFENES_REGELWERK, regelProblem, regelwerkVon, type Regelwerk } from '../../../shared/src/rechte';
-import { PaketeAmTyp, RegelwerkAbschnitt, TestlaufBlatt } from '../werkbank/Berechtigungen';
+import { KiAmTyp, PaketeAmTyp, RegelwerkAbschnitt, TestlaufBlatt } from '../werkbank/Berechtigungen';
 import { FRIST_STANDARD } from '../../../shared/src/fristen';
 import { api, ApiFehler, type Bezuege } from '../api';
 import { useDaten } from '../daten';
@@ -497,6 +497,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
         gespeichert={gespeichert ? regelwerkVon(gespeichert) : null} typ={entwurfTyp} klappe={klappe('berechtigungen')} />
       <TestlaufBlatt typId={gespeichert?.id ?? ''} entwurf={e.berechtigungen} klappe={klappe('testlauf')} />
       {typ?.system !== 'benutzer' && <PaketeAmTyp typId={gespeichert?.id ?? ''} klappe={klappe('pakete')} />}
+      {typ?.system !== 'benutzer' && <KiAmTyp typId={gespeichert?.id ?? ''} klappe={klappe('ki')} />}
 
       <Speicherleiste ent={ent} gegenstand={t('mappentypen.editor.mappentyp')} sendet={sendet} meldung={meldung ? { art: fehler ? 'schlecht' : 'gut', text: meldung } : undefined}
         links={neu || system ? undefined : <button type="button" className="textknopf gefahr" onClick={() => void loeschen()}>{t('mappentypen.editor.mappentyp-loeschen')}</button>} />

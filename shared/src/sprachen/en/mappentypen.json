@@ -330,5 +330,6 @@
   "darstellung.nach-unten": "Move “{name}” down one field",
   "darstellung.entfernt": "“{name}” removed.",
   "darstellung.entfernen": "Remove “{name}”",
-  "darstellung.abschnitt-hinzufuegen": "+ Section"
+  "darstellung.abschnitt-hinzufuegen": "+ Section",
+  "bereich.ki": "AI services"
 }

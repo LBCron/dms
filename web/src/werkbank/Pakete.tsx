@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { ergaenzungenVon, hatSchnittstelle, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type AblaufErgebnis, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { ergaenzungenVon, hatSchnittstelle, istKiPaket, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type AblaufErgebnis, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -10,6 +10,7 @@ import { PaketEinstellungen } from './PaketEinstellungen';
 import { VektorStandBlock } from '../ablage/Aehnlich';
 import { FragenGrenzenBlock } from './FragenGrenzen';
 import { ErkennungPaketBlock } from './ErkennungPaket';
+import { KiTypenBlock } from './KiTypen';
 import { PaketErstellen, SELBST } from './PaketErstellen';
 import { SelbstErstelltAnsicht } from './SelbstErstellt';
 import { rueckfrage } from '../rueckfrage';
@@ -515,6 +516,8 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:vektoren') && <VektorStandBlock />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:antworten') && <FragenGrenzenBlock />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:erkennen') && <ErkennungPaketBlock paket={inst.id} />}
+        {/* KI-Dienste (#796): welche Mappentypen das Paket bekommt; zulassen und sperren. */}
+        {inst?.laeufer && istKiPaket(inst.laeufer) && <KiTypenBlock paket={inst.id} />}
         {inst && (Object.keys(inst.typen).length > 0 || Object.keys(inst.sichten).length > 0) && (
           <>
             <h2 className="h3">{t('werkbank.pakete.gehoert-dazu')}</h2>

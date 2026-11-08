@@ -465,6 +465,25 @@ export function kenntVolltextOhneText(p: Pick<InstalliertesPaket, 'dms' | 'laeuf
 export const WORTLISTEN_MAX = 1000;
 /** Darf ein Paket mit Code ins Netz (feste Adressen oder Dienst-Adresse)? Dann verlassen Daten das DMS. */
 export const hatNetz = (c: PaketCode | undefined) => !!c && (c.netz.length > 0 || (c.adressen?.length ?? 0) > 0);
+/**
+ * Schnittstellen, über die ein Paket Inhalte bekommt (#796): Ausschnitte, Text, Dateien. `dms:sicherung-lesen` fehlt
+ * bewusst – die Sicherung ist verschlüsselt und enthält immer alles.
+ */
+export const INHALT_SCHNITTSTELLEN: readonly Schnittstelle[] = ['dms:antworten', 'dms:erkennen', 'dms:uebersetzen', 'dms:vektoren', 'dms:texterkennung', 'dms:volltext', 'dms:umwandeln', 'dms:archivfassung'];
+/**
+ * KI-Paket bzw. „KI-Dienst“ (#796): ein Paket, das Inhalte lesen oder bekommen kann (Mappen, Dokumente, Volltext,
+ * Ausschnitte) und ins Netz darf. Es bekommt nur Inhalte aus Mappentypen, die der Administrator für KI-Dienste
+ * zugelassen hat – neue Mappentypen erst nach ausdrücklicher Zulassung. Pakete ohne Netz rechnen im Haus und
+ * sind davon nicht betroffen.
+ */
+export const istKiPaket = (c: PaketCode | undefined): boolean => !!c && hatNetz(c)
+  && (c.rechte.lesen.length > 0 || c.rechte.dokumente !== 'keine' || (c.rechte.schnittstellen ?? []).some((s) => INHALT_SCHNITTSTELLEN.includes(s)));/** Werkbank (#796): Mappentypen mit „für KI-Dienste zugelassen“, KI-Pakete und welche Mappentypen jedes bekommt. */
+export interface KiUebersicht {
+  typen: Array<{ id: string; name: string; zugelassen: boolean; system?: string }>;
+  pakete: Array<{ id: string; name: string; bekommt: string[] }>;
+  /** Nach dem Update einmal: Mappentypen lassen sich jetzt ausschließen (nur, wenn es KI-Pakete gibt). */
+  hinweis: boolean;
+}
 /** Alle Mappentypen (außer Benutzer) – für Pakete wie die Texterkennung, die an jedes Dokument müssen. */
 export const ALLE_TYPEN = '*';
 
@@ -740,6 +759,8 @@ export function rechtePunkte(c: PaketCode, typName: (verweis: string) => string)
   const typen = (s: Schnittstelle) => (s === 'dms:umwandeln' ? c.umwandeln : s === 'dms:volltext' ? c.volltext : s === 'dms:archivfassung' ? c.archivfassung?.typen : undefined);
   for (const s of c.rechte.schnittstellen ?? []) z.push({ text: `${SCHNITTSTELLEN[s]} (${s})${typen(s)?.length ? `: ${[...new Set(typen(s)!.map(dateitypName))].join(', ')}` : ''}`, hilfe: SCHNITTSTELLE_HILFE[s] });
   z.push({ text: netzText(c.netz, (c.adressen ?? []).map((a) => a.name)), hilfe: c.adressen?.length ? 'pakete.recht.adresse' : 'pakete.recht.netz' });
+  // KI-Dienst (#796): Inhalte nur aus Mappentypen, die für KI-Dienste zugelassen sind.
+  if (istKiPaket(c)) z.push({ text: t('gemeinsam.pakete.ki-nur-zugelassene'), hilfe: 'pakete.ki' });
   // Mappen-Ereignisse (#670) mit den Mappentypen, zu denen das Paket sie bekommt.
   // #686: „*“ heißt hier „alle, die das Paket lesen darf“ – am Mappentyp lässt sich einzelnen Paketen der Zugriff verwehren.
   const zuTypen = c.mappentypen?.length ? ` – zu: ${c.mappentypen.map((v) => (v === ALLE_TYPEN ? t('gemeinsam.pakete.allen-mappentypen-die-das') : typName(v))).join(', ')}` : '';

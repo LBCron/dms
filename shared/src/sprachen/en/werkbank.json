@@ -1748,7 +1748,7 @@
   "pakete.grenzen": "Limits",
   "pakete.mb-speicher-s-je": "{speicherMB} MB memory, {sekunden} s per call, {parallel} at once",
   "pakete.ok": "ok",
-  "pakete.ausgaben-des-pakets": "Package output",
+  "pakete.ausgaben-des-pakets": "Log: output and network calls",
   "pakete.vorschau": "Preview",
   "pakete.update-auf": "Update to {version}",
   "pakete.vorschau-2": "Preview: {name} {version}",

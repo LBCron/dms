@@ -273,6 +273,9 @@ describe('Inhalte übersetzen (#732): abschaltbar und Datenabfluss', () => {
     await assert.rejects(x.rufe(x.markus, 'PUT', '/api/werkbank/uebersetzen', { body: { paket: 'gibtsnicht' } }), status(422));
     const s = (await x.rufe(x.markus, 'PUT', '/api/werkbank/uebersetzen', { body: { paket: 'wolke', abfluss: true } })).body as { wirksam: { id: string } };
     assert.equal(s.wirksam.id, 'wolke');
+    // KI-Dienste (#796): Der neue Mappentyp „Brief“ ist für Pakete mit Netz gesperrt, bis er zugelassen ist.
+    await assert.rejects(x.uebersetze(x.lena, { art: 'feld', mappe: x.m.id, feld: 'inhalt' }), (e: Fachfehler) => e.status === 409 && /KI-Dienste/.test(e.message));
+    await x.d.setzeKiTyp(x.brief.id, true, null);
     const r = await x.uebersetze(x.lena, { art: 'feld', mappe: x.m.id, feld: 'inhalt' });
     assert.deepEqual(r.netz, ['uebersetzer.example']);
     assert.equal(x.eingaenge.at(-1)!.paket, 'wolke');

@@ -238,6 +238,20 @@ A package that breaks the limits doesn't affect Ablago; the call is cancelled an
 
 **Changing folders:** with `PUT /mappen/{id}` only send the fields the package changes – not the whole folder read; fields not passed stay. With `"stand"` (value `geaendert` of the folder read), the core answers with 409 if a person has meanwhile set the same field differently (#609); a package then best leaves the field as it is. See [API → Changing a folder](https://help.ablago.app/admin/aktuell/en/api/#mappe-aendern).
 
+### Network calls in the log { #netzprotokoll }
+
+The runner records every call of `netz` or `netz_strom` (#807) – in the package's log in the Workbench and as a total per call in Ablago's log (level *info*, "Paket *id*: Netzaufrufe" with `anfragen`, `abgelehnt`, `hosts`, `hin`, `zurueck`). Per entry: time, method, **host with port**, bytes sent (body) and received (for `netz_strom` all chunks read with `netz_weiter`), status or "no response". Identical requests (method, host, status) within a call and in quick succession (within one minute, also across calls) share **one** entry with a count. Blocked addresses appear as a warning. **Never** path, query, credentials, headers or content – keys still belong in headers (`kopf`), not in the address. A package doesn't have to do anything for this.
+
+### AI packages and folder types { #ki-pakete }
+
+A package that **may use the network** (`code.netz` or a service address) and **receives content** (`rechte.lesen`, `rechte.dokumente` or one of the interfaces `dms:antworten`, `dms:erkennen`, `dms:uebersetzen`, `dms:vektoren`, `dms:texterkennung`, `dms:volltext`, `dms:umwandeln`, `dms:archivfassung`) is an **AI package** (`istKiPaket` in `shared/src/pakete.ts`, #796). It only receives content from folder types the administrator has allowed for AI services; new folder types – a package's own too – only once allowed. For the package this means:
+
+- Folders and documents of blocked types don't exist for its service account (404, or missing from lists and search) – as with a denied folder type.
+- Events and jobs about them don't arrive; neither does `volltext.fertig` from recalculating vectors.
+- `dms:antworten` gets no excerpts from them; `dms:erkennen` and `dms:uebersetzen` aren't called for them at all.
+
+The package doesn't need to do anything and isn't told the reason. Whoever computes in the house without network (`netz: []`, no service address) isn't affected. The off-site copy (`dms:sicherung-lesen`) doesn't count as an AI package: it only gets the encrypted backup.
+
 A module that imports `netz_strom`, `netz_weiter` or `teil` only loads from Ablago 0.124.0 – older ones reject it ("The module requires something unknown"). Then state `dms: ">=0.124.0"`.
 
 ## Building with C (wasi-sdk) { #bauen-mit-c-wasi-sdk }

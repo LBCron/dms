@@ -109,6 +109,7 @@ Zwei Hinweise schließt du stattdessen mit einem eigenen Knopf ab – sie kommen
 | Datenbank-Anbindung geändert, Neustart nötig | gelb | `anbindung.neustart` |
 | DMS_LASTTEST in einer echten Installation | gelb | `lasttest` |
 | Paket braucht noch Einstellungen | gelb | `paket-einstellungen` |
+| Neu: Mappentypen von KI-Diensten ausschließen (einmal nach dem Update, mit KI-Paketen; „Verstanden“) | Hinweis | `ki.typen` |
 | Aus der Einrichtung übersprungen | Hinweis | `einrichtung` |
 | Gut, wenn noch jemand verwalten kann – nur eine Person darf verwalten | Hinweis | `verwaltung.zweite-person` |
 | Umgebungsvariablen, die nicht mehr nötig sind (je mit Grund) | Hinweis | `variablen` |

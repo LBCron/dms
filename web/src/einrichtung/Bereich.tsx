@@ -34,7 +34,7 @@ export function Bereich({ id, titel, hilfe, kurz, beschreibung, klappe, children
 
 export const TYP_BEREICHE = [
   ['grunddaten', t('mappentypen.bereich.grunddaten')], ['felder', t('mappentypen.bereich.felder')], ['titel', t('mappentypen.bereich.titel')], ['trefferlisten', t('mappentypen.bereich.trefferlisten')],
-  ['register', t('mappentypen.bereich.register')], ['archiv', t('mappentypen.bereich.archivmodus')], ['stempel', t('mappentypen.bereich.stempel-beim-weitergeben')], ['erkennung', t('mappentypen.bereich.erkennung')], ['berechtigungen', t('mappentypen.bereich.berechtigungen')], ['testlauf', t('mappentypen.bereich.testlauf')], ['pakete', t('mappentypen.bereich.pakete')],
+  ['register', t('mappentypen.bereich.register')], ['archiv', t('mappentypen.bereich.archivmodus')], ['stempel', t('mappentypen.bereich.stempel-beim-weitergeben')], ['erkennung', t('mappentypen.bereich.erkennung')], ['berechtigungen', t('mappentypen.bereich.berechtigungen')], ['testlauf', t('mappentypen.bereich.testlauf')], ['pakete', t('mappentypen.bereich.pakete')], ['ki', t('mappentypen.bereich.ki')],
 ] as const;
 export type TypBereich = (typeof TYP_BEREICHE)[number][0];
 
